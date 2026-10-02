@@ -56,7 +56,7 @@ function arcResample(pts, n) {
 function normaliseXY(strokes) {
   const b = bbox(strokes), m = Math.max(b.w, b.h, 1e-6);
   const sw = Math.max(b.w, 0.35 * m), sh = Math.max(b.h, 0.35 * m);
-  return strokes.map((s) => s.map(([x, y]) => [((x - b.cx) / sw) * (sw / m < 0.999 ? sw / m : 1), ((y - b.cy) / sh) * (sh / m < 0.999 ? sh / m : 1)]));
+  return strokes.map((s) => s.map(([x, y]) => [(x - b.cx) / sw, (y - b.cy) / sh]));
 }
 function strokeCost(a, b) {
   let f = 0, r = 0;
@@ -75,10 +75,52 @@ function matchStrokes(drawn, target) {
   return costs;
 }
 
+
+// ---------- structural check (tolerant of a child's proportions) ----------
+const ang = (v) => Math.atan2(v[1], v[0]);
+const angDiff = (a, b) => { let d = Math.abs(a - b) % (2 * Math.PI); return d > Math.PI ? 2 * Math.PI - d : d; };
+function feats(s) {
+  const r = arcResample(s, 9);
+  const c = r.reduce((a, p) => [a[0] + p[0] / 9, a[1] + p[1] / 9], [0, 0]);
+  const len = s.length < 2 ? 0 : s.slice(1).reduce((a, p, i) => a + dist(p, s[i]), 0);
+  const v1 = [r[4][0] - r[0][0], r[4][1] - r[0][1]], v2 = [r[8][0] - r[4][0], r[8][1] - r[4][1]];
+  return { c, len, a1: ang(v1), a2: ang(v2), rev1: ang([-v2[0], -v2[1]]), rev2: ang([-v1[0], -v1[1]]) };
+}
+function pairCost(d, t) {
+  const cd = dist(d.c, t.c);
+  let ad = 0;
+  if (d.len > 0.1 && t.len > 0.1) {
+    const fwd = (angDiff(d.a1, t.a1) + angDiff(d.a2, t.a2)) / 2;
+    const rev = (angDiff(d.rev1, t.a1) + angDiff(d.rev2, t.a2)) / 2;
+    ad = Math.min(fwd, rev);
+  }
+  return { cd, ad, cost: cd + ad * 0.25 };
+}
+function structural(drawn, target, opts = {}) {
+  const D = drawn.map(feats), T = target.map(feats);
+  const pairs = [];
+  D.forEach((d, i) => T.forEach((t, j) => pairs.push({ i, j, ...pairCost(d, t) })));
+  pairs.sort((a, b) => a.cost - b.cost);
+  const ui = new Set(), uj = new Set(), m = new Array(T.length);
+  for (const p of pairs) { if (ui.has(p.i) || uj.has(p.j)) continue; ui.add(p.i); uj.add(p.j); m[p.j] = p; }
+  const deg = Math.PI / 180;
+  const strokesOk = m.every((p) => p && p.cd < (opts.cd ?? 0.25) && p.ad < (opts.ad ?? 38) * deg);
+  // the strokes must keep their layout: what is left/above in the real character stays left/above
+  let flips = 0;
+  for (let j = 0; j < T.length; j++) for (let k = j + 1; k < T.length; k++) {
+    const dj = D[m[j].i].c, dk = D[m[k].i].c, tj = T[j].c, tk = T[k].c;
+    for (const ax of [0, 1]) {
+      const td = tk[ax] - tj[ax];
+      if (Math.abs(td) > (opts.rel ?? 0.15) && Math.sign(dk[ax] - dj[ax]) !== Math.sign(td)) flips++;
+    }
+  }
+  return { ok: strokesOk && flips === 0, flips, worstCd: Math.max(...m.map((p) => p.cd)), worstAd: Math.max(...m.map((p) => p.ad)) / deg };
+}
+
 // ---------- judging ----------
 // drawn: array of strokes, each an array of [x, y] in screen pixels (y down)
 // data: hanzi-writer-data JSON for the target character
-export function judge(drawn, data, { tol = 0.09, cov = 0.75, prec = 0.8, maxStroke = 0.13 } = {}) {
+export function judge(drawn, data, { tol = 0.09, cov = 0.75, prec = 0.8, maxStroke = 0.13, sopts = {} } = {}) {
   const ink = drawn.filter((s) => s.length > 0);
   if (!ink.length) return { ok: false, reason: 'empty' };
   const target = data.medians.map((m) => m.map(([x, y]) => [x, 900 - y]));
@@ -115,17 +157,18 @@ export function judge(drawn, data, { tol = 0.09, cov = 0.75, prec = 0.8, maxStro
 
   // Same number of strokes: match stroke to stroke (any order, either direction).
   // Different number (strokes joined or split): fall back to a stricter shape overlap.
-  let ok, worst = null;
+  let ok, worst = null, struct = null;
   if (ink.length === target.length) {
-    const costs = matchStrokes(normaliseXY(ink), normaliseXY(target));
-    worst = Math.max(...costs);
-    ok = aspectOk && (worst < maxStroke || (minCover >= cov && minPrecise >= prec && worst < maxStroke * 1.4));
+    const nI = normaliseXY(ink), nT = normaliseXY(target);
+    worst = Math.max(...matchStrokes(nI, nT));
+    struct = structural(nI, nT, sopts);
+    ok = aspectOk && (struct.ok || worst < maxStroke || (minCover >= cov && minPrecise >= prec && worst < maxStroke * 1.4));
   } else {
     // fewer strokes is OK (she may join two strokes); extra strokes are not
     const countOk = ink.length < target.length && target.length - ink.length <= Math.max(1, Math.round(target.length * 0.25));
     ok = aspectOk && countOk && minCover >= cov && minPrecise >= prec;
   }
-  return { ok, worst, minCover, minPrecise, strokes: ink.length, expected: target.length, aspectOk };
+  return { ok, worst, struct, minCover, minPrecise, strokes: ink.length, expected: target.length, aspectOk };
 }
 
 // ---------- drawing pad ----------
