@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>喵喵中文 Meow Chinese</title>
+<meta name="description" content="Chinese spelling practice with a kitten friend">
+<meta name="theme-color" content="#0f1029">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="喵喵中文">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800&family=Pixelify+Sans:wght@500;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<header class="topbar" id="topbar"></header>
+<main id="app"></main>
+<div id="toasts" aria-live="polite"></div>
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true"></div>
+<script src="hanzi-writer.min.js"></script>
+<script src="pinyin-pro.min.js"></script>
+<script type="module" src="app.js?v=1"></script>
+</body>
+</html>
