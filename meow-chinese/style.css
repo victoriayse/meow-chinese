@@ -144,7 +144,7 @@ canvas.sprite, .kitten-canvas { display: block; }
 /* ---------- home ---------- */
 .home { display: grid; height: 100%; grid-template-columns: 1fr minmax(360px, 430px); }
 .stage { position: relative; height: 100%; }
-.stage .ground { position: absolute; left: 50%; bottom: 12%; transform: translateX(-50%); }
+.stage > .ground { position: absolute; left: 50%; bottom: 12%; transform: translateX(-50%); }
 .kitten-wrap { position: relative; display: flex; flex-direction: column; align-items: center; }
 .kitten-canvas { cursor: pointer; filter: drop-shadow(0 6px 0 rgba(30, 60, 30, .35)); }
 .kitten-canvas.bob { animation: bob 1.6s steps(2) infinite; }
@@ -327,7 +327,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 /* ---------- responsive ---------- */
 @media (orientation: portrait), (max-width: 900px) {
   .home { grid-template-columns: 1fr; grid-template-rows: 54% 46%; }
-  .stage .ground { bottom: 4%; }
+
   .side { padding: 4px 16px calc(20px + var(--safe-b)); }
   .side > .card:first-child { margin-top: 2px; }
   .shop { grid-template-columns: 1fr; height: auto; }
@@ -386,3 +386,88 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .grave .stone-name { position: absolute; top: 9%; font-family: var(--zh); font-size: 26px; color: #4a4f5c; }
 .card.alert .btn { white-space: nowrap; font-size: 19px; min-height: 58px; }
 .card.alert .btn .zh { font-size: 1em; }
+
+.btn .zh, .btn .en { white-space: nowrap; }
+@media (max-width: 600px) {
+  .shop .preview { grid-template-columns: 150px 1fr; column-gap: 12px; padding: 12px; }
+  .shop .preview .stage-mini { padding: 4px 0; }
+  .shop .preview .stage-mini .kitten-canvas { width: 120px !important; height: auto !important; }
+  .shop .preview .h-title { font-size: 20px !important; }
+  .tab { font-size: 15px; padding: 6px 10px; }
+}
+.brand .logo-zh { white-space: nowrap; }
+
+/* ---------- the kitten's house ---------- */
+.house { position: absolute; left: 4%; right: 4%; top: 4%; bottom: 4%; display: flex; flex-direction: column; filter: drop-shadow(0 8px 0 rgba(30, 60, 30, .35)); }
+.house .roof { display: block; width: 100%; height: 8%; min-height: 26px; }
+.house .room { position: relative; flex: 1; border: 6px solid #7a4a2a; border-top-width: 4px; background: #fbe8d3; overflow: hidden; }
+.house .room-bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.house .room .ground { position: absolute; left: 50%; bottom: 3%; transform: translateX(-50%); z-index: 5; }
+.house .decor { position: absolute; filter: drop-shadow(0 3px 0 rgba(60, 30, 20, .25)); }
+
+/* ---------- 喵喵商店 storefront ---------- */
+.store { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; }
+.storefront { position: relative; background: #c98f58; border: 4px solid var(--ink); border-bottom: 0; border-radius: 10px 10px 0 0; padding: 0 16px 16px;
+  background-image: repeating-linear-gradient(0deg, transparent 0 22px, rgba(122, 74, 42, .35) 22px 24px); }
+.awning { height: 54px; margin: 0 -16px; border-radius: 6px 6px 0 0; position: relative;
+  background: repeating-linear-gradient(90deg, #ef5d73 0 44px, #fff4e6 44px 88px); border-bottom: 4px solid var(--ink); }
+.awning::after { content: ""; position: absolute; left: 0; right: 0; bottom: -18px; height: 18px;
+  background: radial-gradient(circle at 22px 0, #ef5d73 0 17px, transparent 18px) 0 0 / 88px 18px repeat-x,
+              radial-gradient(circle at 66px 0, #fff4e6 0 17px, transparent 18px) 0 0 / 88px 18px repeat-x;
+  filter: drop-shadow(0 3px 0 rgba(43, 33, 64, .55)); }
+.signboard { position: relative; z-index: 2; width: fit-content; margin: 26px auto 14px; padding: 6px 26px 8px; text-align: center;
+  background: #6b4426; border: 4px solid var(--ink); border-radius: 8px; box-shadow: 0 5px 0 rgba(43, 33, 64, .45), inset 0 -4px 0 #553419; }
+.signboard .zh { display: block; font-size: 34px; color: var(--yellow); text-shadow: 2px 2px 0 #3a2210; letter-spacing: 4px; }
+.signboard small { display: block; font-family: var(--px); font-weight: 700; color: #ffe9b0; letter-spacing: .3em; font-size: 13px; }
+.signboard::before, .signboard::after { content: ""; position: absolute; top: -26px; width: 4px; height: 24px; background: var(--ink); }
+.signboard::before { left: 26px; } .signboard::after { right: 26px; }
+.front-row { display: grid; grid-template-columns: minmax(200px, 300px) 1fr; gap: 16px; align-items: stretch; }
+.shopwindow { background: #dff2ff; border: 6px solid #fff4e6; outline: 4px solid var(--ink); border-radius: 6px; padding: 8px; position: relative; }
+.shopwindow .window-label { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: var(--pink); color: var(--ink); border: 3px solid var(--ink); border-radius: 6px; padding: 1px 10px; font-weight: 800; font-size: 13px; z-index: 2; }
+.shopwindow .stage-mini { border: 0; border-radius: 2px; }
+.counter { background: var(--paper); border: 4px solid var(--ink); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px; box-shadow: inset 0 -10px 0 #f1e2c6; }
+.wallet { display: flex; align-items: center; gap: 8px; font-family: "Nunito", sans-serif; font-weight: 800; font-size: 32px; }
+.wallet small { font-size: 14px; color: var(--ink-2); margin-left: 4px; }
+.aisles { display: flex; gap: 8px; overflow-x: auto; padding: 12px 10px 0; background: #6b4426; border-left: 4px solid var(--ink); border-right: 4px solid var(--ink); scrollbar-width: none; }
+.aisles::-webkit-scrollbar { display: none; }
+.aisle { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 0; padding: 6px 12px 8px; border: 3px solid var(--ink); border-bottom: 0; border-radius: 8px 8px 0 0; background: #e9d2a8; line-height: 1.1; }
+.aisle .ic { font-size: 20px; }
+.aisle .zh { font-size: 18px; }
+.aisle small { font-family: var(--px); font-weight: 700; font-size: 11px; color: var(--ink-2); }
+.aisle.on { background: #fff4e6; transform: translateY(2px); box-shadow: 0 -4px 0 var(--yellow) inset; }
+.shelves { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 0; background: #8a5a32; border: 4px solid var(--ink); border-radius: 0 0 10px 10px; padding: 14px 12px 18px; box-shadow: 0 6px 0 rgba(43, 33, 64, .45); }
+.product { position: relative; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; padding: 10px 8px 14px; margin: 6px; background: #fff8ec; border: 3px solid var(--ink); border-radius: 8px; cursor: pointer; }
+.product .art { height: 88px; display: flex; align-items: flex-end; justify-content: center; }
+.product .shelf-board { width: calc(100% + 16px); height: 10px; margin: 0 -8px 4px; background: #b07a48; border-top: 3px solid var(--ink); border-bottom: 3px solid var(--ink); box-shadow: inset 0 -3px 0 #8a5a32; }
+.product .nm { font-family: var(--zh); font-size: 19px; line-height: 1.1; }
+.product .nm-en { font-size: 12px; font-weight: 800; color: var(--ink-2); }
+.product .eff { font-size: 12px; font-weight: 800; color: var(--green-d); }
+.product.sel { box-shadow: 0 0 0 4px var(--yellow); }
+.product.is-owned { background: #eef7ea; }
+.product .owned { position: absolute; top: 6px; right: 6px; background: var(--green-d); color: #fff; font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 4px; }
+.product .count { position: absolute; top: 6px; right: 6px; background: var(--ink); color: #fff; font-family: "Nunito", sans-serif; font-weight: 800; font-size: 13px; padding: 1px 7px; border-radius: 4px; }
+.tag { position: relative; margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px 4px 20px; font-size: 18px; border: 3px solid var(--ink); background: var(--yellow); color: var(--ink);
+  clip-path: polygon(12px 0, 100% 0, 100% 100%, 12px 100%, 0 50%); border-radius: 0 6px 6px 0; box-shadow: inset 0 -4px 0 var(--yellow-d); }
+.tag::before { content: ""; position: absolute; left: 9px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: #fff8ec; border: 2px solid var(--ink); }
+.tag.off { background: #e2d8c8; box-shadow: none; opacity: .75; }
+.tag.done { background: var(--green); color: #fff; font-weight: 800; font-size: 15px; box-shadow: none; }
+.tag:not(.off):not(.done):active { transform: translateY(2px); }
+@media (max-width: 600px) {
+  .front-row { grid-template-columns: 140px 1fr; gap: 10px; }
+  .shopwindow .stage-mini .kitten-canvas { width: 110px !important; height: auto !important; }
+  .signboard .zh { font-size: 26px; }
+  .wallet { font-size: 24px; }
+  .counter { padding: 10px; }
+  .counter .help { font-size: 13px; }
+  .shelves { grid-template-columns: repeat(2, 1fr); padding: 10px 6px 14px; }
+  .product { margin: 4px; }
+}
+@media (max-width: 600px) {
+  .topbar { gap: 8px; padding-left: 10px; padding-right: 10px; }
+  .topbar .pill { min-height: 36px; padding: 2px 8px 2px 6px; font-size: 15px; gap: 4px; }
+  .topbar .icon-btn { width: 38px; height: 38px; font-size: 17px; }
+  .brand .logo-zh { font-size: 18px; }
+  .front-row { grid-template-columns: 130px minmax(0, 1fr); }
+  .counter { min-width: 0; }
+  .bubble { white-space: normal; width: max-content; max-width: 46vw; left: 55%; font-size: 15px; }
+}

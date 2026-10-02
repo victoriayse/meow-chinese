@@ -44,7 +44,7 @@ function fresh() {
     version: 1,
     onboarded: false,
     childName: '',
-    kitten: { name: '咪咪', fur: 'ginger', hunger: 75, water: 75, happy: 75, lastTick: Date.now(), equipped: { head: null, neck: null, face: null }, xp: 0, petsToday: 0 },
+    kitten: { name: '咪咪', fur: 'ginger', hunger: 75, water: 75, happy: 75, lastTick: Date.now(), equipped: { head: null, body: null, feet: null, neck: null, face: null }, xp: 0, petsToday: 0 },
     coins: 30,
     pantry: { fish: 2, milk: 1, water: 2 },
     prices: {},      // parent overrides: { itemId: price }
@@ -83,6 +83,9 @@ function migrate(s) {
   out.streak = { ...base.streak, ...(s.streak || {}) };
   out.health = { ...base.health, ...(s.health || {}) };
   out.prices = { ...(s.prices || {}) };
+  // the garden fence was retired when the garden became a home: refund it
+  if ((out.owned || []).includes('fence')) { out.owned = out.owned.filter((x) => x !== 'fence'); out.coins += 40; }
+  out.owned = (out.owned || []).filter((x) => ITEMS[x]);
   if (typeof out.kitten.water !== 'number') out.kitten.water = 75;
   if (typeof out.daily.tried !== 'number') { out.daily.tried = 0; out.daily.right = 0; }
   if (!out.lists || !out.lists.length) { const l = sampleList(); out.lists = [l]; out.activeListId = l.id; }
@@ -166,7 +169,7 @@ export function treat(id) {
 // the kitten has died: choose a new kitten. Word lists, progress, coins and items are kept.
 export function restartKitten() {
   const base = fresh();
-  state.kitten = { ...base.kitten, equipped: { head: null, neck: null, face: null } };
+  state.kitten = { ...base.kitten, equipped: { head: null, body: null, feet: null, neck: null, face: null } };
   state.health = base.health;
   state.streak = { ...base.streak, freezes: state.streak.freezes || 0 };
   state.daily = base.daily;

@@ -169,6 +169,24 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
     [[27, 5], [26, 6], [27, 6], [28, 6], [26, 7], [27, 7], [28, 7], [27, 8]].forEach(([x, y]) => { out[Y(y)][x] = mood === 'thirsty' ? T1 : T2; });
     out[Y(6)][27] = '#ffffff';
   }
+  // clothes: recolour the body; shoes: recolour the paws
+  const body = equipped.body && ITEMS[equipped.body];
+  if (body && body.paint) {
+    for (let y = 0; y < KH; y++) for (let x = 0; x < KW; x++) {
+      if (region[y][x] !== 'body' || out[y][x] === P.o) continue;
+      const c = body.paint(x - 16, y - OY - 18, body.pal);
+      if (c) out[y][x] = c;
+    }
+  }
+  const feet = equipped.feet && ITEMS[equipped.feet];
+  if (feet && feet.pal) {
+    for (let y = 0; y < KH; y++) for (let x = 0; x < KW; x++) {
+      if (region[y][x] !== 'paw' || out[y][x] === P.o) continue;
+      const sole = !region[y + 1] || region[y + 1][x] !== 'paw';
+      const top = !region[y - 1] || region[y - 1][x] !== 'paw';
+      out[y][x] = sole ? feet.pal.b : (top && (x === 11 || x === 19) ? feet.pal.l : feet.pal.a);
+    }
+  }
   // accessories
   ['neck', 'face', 'head'].forEach((slot) => {
     const id = equipped[slot];
@@ -213,7 +231,7 @@ export function spriteCanvas(id, px = 48) {
   const c = document.createElement('canvas');
   c.className = 'sprite';
   const g = artGrid(it.art, it.pal);
-  drawGrid(c, g, Math.max(1, Math.floor(px / Math.max(g.length, g[0].length))));
+  drawGrid(c, g, Math.max(1, Math.min(6, Math.floor(px / Math.max(g.length, g[0].length)))));
   return c;
 }
 
@@ -528,7 +546,7 @@ export const ITEMS = {
       '..oooddddddddddddddddddddooo..',
       '.....oooooooooooooooooooo.....',
     ] },
-  yarn: { cat: 'decor', name: '毛线球', en: 'Yarn ball', price: 60, spot: 'front-right', toy: true,
+  yarn: { cat: 'decor', name: '毛线球', en: 'Yarn ball', price: 60, spot: 'toy-right', toy: true,
     pal: { o: O, b: '#7ab8f5', d: '#4f8fd4', l: '#c7e3ff' },
     art: [
       '...oooo....',
@@ -541,7 +559,7 @@ export const ITEMS = {
       '..oooooo.ooo',
       '..........o',
     ] },
-  sunflower: { cat: 'decor', name: '向日葵', en: 'Sunflower', price: 80, spot: 'left',
+  sunflower: { cat: 'decor', name: '向日葵盆栽', en: 'Sunflower pot', price: 80, spot: 'plant',
     pal: { o: O, y: '#ffd23f', d: '#e0a524', b: '#7a4a2a', g: '#5aa84a', l: '#8fd17a', r: '#c8643a', p: '#e08a5a' },
     art: [
       '...o.ooo.o...',
@@ -566,7 +584,7 @@ export const ITEMS = {
       '....orrrro...',
       '....oooooo...',
     ] },
-  cathouse: { cat: 'decor', name: '小猫屋', en: 'Kitty house', price: 160, spot: 'right',
+  cathouse: { cat: 'decor', name: '小猫屋', en: 'Kitty house', price: 160, spot: 'house',
     pal: { o: O, r: '#e8576b', d: '#b83a4e', w: '#f6e7cf', s: '#dcc6a4', k: '#3a2a35', y: '#ffd23f' },
     art: [
       '..........oo..........',
@@ -585,7 +603,7 @@ export const ITEMS = {
       '.osssssskkkkkksssssso.'.slice(0, 22),
       '.oooooooooooooooooooo.',
     ] },
-  lantern: { cat: 'decor', name: '中秋灯笼', en: 'Lantern', price: 90, spot: 'far-left',
+  lantern: { cat: 'decor', name: '中秋灯笼', en: 'Lantern', price: 90, spot: 'ceiling',
     pal: { o: O, r: '#e8576b', d: '#b83a4e', y: '#ffd23f', b: '#7a4a2a', l: '#ffe58a' },
     art: [
       '......o......',
@@ -604,7 +622,7 @@ export const ITEMS = {
       '.....oyo.....',
       '......o......',
     ] },
-  mouse: { cat: 'decor', name: '玩具老鼠', en: 'Toy mouse', price: 50, spot: 'front-left', toy: true,
+  mouse: { cat: 'decor', name: '玩具老鼠', en: 'Toy mouse', price: 50, spot: 'toy-left', toy: true,
     pal: { o: O, g: '#b8bcc8', p: '#f6a3b7', e: '#2b2140' },
     art: [
       '.....oo......',
@@ -615,21 +633,6 @@ export const ITEMS = {
       '.oggggggggo.o',
       '..oooooooo.o.',
       '..........o..',
-    ] },
-  fence: { cat: 'decor', name: '小木栅栏', en: 'Picket fence', price: 40, spot: 'back',
-    pal: { o: O, w: '#e8c89a', d: '#c49a64' },
-    art: [
-      '.o....o....o....o....o....o.',
-      'owo..owo..owo..owo..owo..owo',
-      'owoooowoooowoooowoooowoooowo',
-      'owddddwddddwddddwddddwddddwo',
-      'owoooowoooowoooowoooowoooowo',
-      'owo..owo..owo..owo..owo..owo',
-      'owoooowoooowoooowoooowoooowo',
-      'owddddwddddwddddwddddwddddwo',
-      'owoooowoooowoooowoooowoooowo',
-      'odo..odo..odo..odo..odo..odo',
-      'ooo..ooo..ooo..ooo..ooo..ooo',
     ] },
 };
 
@@ -809,3 +812,429 @@ export const TOMB = {
     'oooooooooooooooooo',
   ],
 };
+
+// ---------- home furniture ----------
+Object.assign(ITEMS, {
+  sofa: { cat: 'decor', name: '沙发', en: 'Sofa', price: 150, spot: 'back-right',
+    pal: { o: O, r: '#6cc3b8', d: '#3f948b', l: '#a6e3da', w: '#7a4a2a', p: '#ff9ec4', y: '#ffd23f' },
+    art: [
+      '..................................',
+      '..................................',
+      '.oooooooooooooooooooooooooooooooo.',
+      'oddddddddddddddddddddddddddddddddo',
+      'odrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrdo',
+      'odrrrrrrrrppppprrrryyyyyrrrrrrrrdo',
+      'odrrrrrrrrppppprrrryyyyyrrrrrrrrdo',
+      'olllllrrrrppppprrrryyyyyrrrrlllllo',
+      'olllllrrrrrrrrrrrrrrrrrrrrrrlllllo',
+      'orrrrrlllllllllldlllllllllllrrrrro',
+      'orrrrrrrrrrrrrrrdrrrrrrrrrrrrrrrro',
+      'orrrrrrrrrrrrrrrdrrrrrrrrrrrrrrrro',
+      'orrrrrrrrrrrrrrrdrrrrrrrrrrrrrrrro',
+      'orrrrrrrrrrrrrrrdrrrrrrrrrrrrrrrro',
+      '.owwoooooooooooooooooooooooooowwo.',
+      '.owwo........................owwo.',
+      '..oo..........................oo..',
+    ] },
+  bookshelf: { cat: 'decor', name: '书架', en: 'Bookshelf', price: 130, spot: 'back-left',
+    pal: { o: O, w: '#b07a48', d: '#6b4426', r: '#e8576b', b: '#5fa8e8', g: '#5cc46e', y: '#ffd23f', p: '#c58bf0' },
+    art: [
+      '.oooooooooooooooo.',
+      'owwwwwwwwwwwwwwwwo',
+      'owdddddddppbbdrdwo',
+      'owgdddppdppbbdrdwo',
+      'owgppdppdppbbdrdwo',
+      'owgppdppdppbbdrdwo',
+      'owgppdppdppbbdrdwo',
+      'owgppdppdppbbdrdwo',
+      'owwwwwwwwwwwwwwwwo',
+      'owdddyybbdggddddwo',
+      'owpdyyybbdggppggwo',
+      'owpdyyybbbggppggwo',
+      'owpdyyybbbggppggwo',
+      'owpdyyybbbggppggwo',
+      'owpdyyybbbggppggwo',
+      'owwwwwwwwwwwwwwwwo',
+      'owdddddddrrbdrrdwo',
+      'owppddggdrrbdrrdwo',
+      'owppbbggdrrbdrrdwo',
+      'owppbbggdrrbdrrdwo',
+      'owppbbggdrrbdrrdwo',
+      'owppbbggdrrbdrrdwo',
+      'owwwwwwwwwwwwwwwwo',
+      'owddddddddddddddwo',
+      'owddppdrdddbbggdwo',
+      'owyyppdrdbbbbggdwo',
+      'owyyppdrdbbbbggdwo',
+      'owyyppdrdbbbbggdwo',
+      'owyyppwrwbbbbggwwo',
+      '.owwwwwwwwwwwwwwo.',
+    ] },
+  lamp: { cat: 'decor', name: '落地灯', en: 'Floor lamp', price: 70, spot: 'back-mid-left',
+    pal: { o: O, y: '#ffe58a', l: '#fff6c8', d: '#e0b84a', k: '#5a4d6e' },
+    art: [
+      '.oooooooooo.',
+      'oyllllllllyo',
+      'oyyyyyyyyyyo',
+      'oyyyyyyyyyyo',
+      'oyyyyyyyyyyo',
+      'oyyyyyyyyyyo',
+      'oyyyyyyyyyyo',
+      'oddddddddddo',
+      '.ooookkoooo.',
+      '....okko....',
+      '....okko....',
+      '....okko....',
+      '....okko....',
+      '....okko....',
+      '....okko....',
+      '....okko....',
+      '....okko....',
+      '....okko....',
+      '....okko....',
+      '....okko....',
+      '....okko....',
+      '....okko....',
+      '....okko....',
+      '....okko....',
+      '....okko....',
+      '....okko....',
+      '..oookkooo..',
+      '.okkkkkkkko.',
+      '.okkkkkkkko.',
+      '..oooooooo..',
+    ] },
+  painting: { cat: 'decor', name: '挂画', en: 'Painting', price: 60, spot: 'wall-left',
+    pal: { o: O, w: '#c9963c', s: '#bfe6ff', g: '#6db35c', h: '#4f9147', y: '#ffd23f' },
+    art: [
+      '.oooooooooooooooooo.',
+      'owwwwwwwwwwwwwwwwwwo',
+      'owwwwwwwwwwwwwwwwwwo',
+      'owwssssssssssyysswwo',
+      'owwsssssssssyyyyswwo',
+      'owwsssssssssyyyyswwo',
+      'owwsssssssshhyysswwo',
+      'owwsggggghhhhhhhhwwo',
+      'owwgggggghhhhhhhhwwo',
+      'owwgggggghhhhhhhhwwo',
+      'owwgggggghhhhhhhhwwo',
+      'owwgggggggghhhhggwwo',
+      'owwggggggggggggggwwo',
+      'owwwwwwwwwwwwwwwwwwo',
+      'owwwwwwwwwwwwwwwwwwo',
+      '.oooooooooooooooooo.',
+    ] },
+  clock: { cat: 'decor', name: '挂钟', en: 'Wall clock', price: 50, spot: 'wall-right',
+    pal: { o: O, w: '#e8576b', f: '#fffaf0', k: '#2b2140', r: '#e8576b' },
+    art: [
+      '....oooooo....',
+      '..oowwwwwwoo..',
+      '.owwfffkffwwo.',
+      '.owffffffffwo.',
+      'owfffffkffffwo',
+      'owfffffkffffwo',
+      'owfffffkffffwo',
+      'owkffffrrrffko',
+      'owffffffffffwo',
+      'owffffffffffwo',
+      '.owffffffffwo.',
+      '.owwffffffwwo.',
+      '..oowwwkwwoo..',
+      '....oooooo....',
+    ] },
+  rug: { cat: 'decor', name: '圆地毯', en: 'Round rug', price: 60, spot: 'rug',
+    pal: { o: O, r: '#c58bf0', p: '#f7c6e0', y: '#fff3a8' },
+    art: [
+      '......oooooooorrrrrrrrrrrroooooooo......',
+      '...ooorrrrrrrrrrrrrrrrrrrrrrrrrrrrooo...',
+      '.oorrrrrpppppppppppppppppppppppprrrrroo.',
+      'orrrrppppppyyyyyyyyyyyyyyyyyypppppprrrro',
+      'rrrrpppppyyyyyyyyyyyyyyyyyyyyyyppppprrrr',
+      'orrrrppppppyyyyyyyyyyyyyyyyyypppppprrrro',
+      '.oorrrrrpppppppppppppppppppppppprrrrroo.',
+      '...ooorrrrrrrrrrrrrrrrrrrrrrrrrrrrooo...',
+      '......oooooooorrrrrrrrrrrroooooooo......',
+    ] },
+  curtains: { cat: 'decor', name: '窗帘', en: 'Curtains', price: 55, spot: 'curtain',
+    pal: { o: O, w: '#b07a48', r: '#ff9ec4', d: '#e0628c', y: '#ffd23f' },
+    art: [
+      'wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww',
+      'wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww',
+      'orrrrrrrrroooooooooooooooorrrrrrrrro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'oyyyyyyyyyo..............oyyyyyyyyyo',
+      'oyyyyyyyyyo..............oyyyyyyyyyo',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      'ordrrdrrdro..............ordrrdrrdro',
+      '.ooooooooo................ooooooooo.',
+      '....................................',
+    ] },
+  table: { cat: 'decor', name: '小茶桌', en: 'Tea table', price: 80, spot: 'front-left',
+    pal: { o: O, w: '#c9905a', l: '#e6b483', d: '#8a5a32', b: '#7ec3e8', c: '#ffffff' },
+    art: [
+      '.......obbbo..........',
+      '......obbbbo..........',
+      '.....obbbbbboo.ooo....',
+      '.....obbbbbbbboccco...',
+      '.....obbbbbboooccco...',
+      '.oooooobbbboooocccooo.',
+      'owllllllllllllllllllwo',
+      'owwwwwwwwwwwwwwwwwwwwo',
+      'owwwwwwwwwwwwwwwwwwwwo',
+      '.ooddooooooooooooddoo.',
+      '..oddo..........oddo..',
+      '..oddo..........oddo..',
+      '..oddo..........oddo..',
+      '..oddo..........oddo..',
+      '..oddo..........oddo..',
+      '...oo............oo...',
+    ] },
+  cattree: { cat: 'decor', name: '猫爬架', en: 'Cat tree', price: 140, spot: 'front-right',
+    pal: { o: O, t: '#c9905a', s: '#e8d3a8', d: '#c4ad80', p: '#ff9ec4', k: '#5a4d6e', y: '#ffd23f' },
+    art: [
+      '.oppppo...........',
+      '.oppppo...........',
+      '.oppppo...........',
+      '.oppppoooo........',
+      'ottttttttto.......',
+      'ottttttttto.......',
+      'otttttttttso......',
+      '.ooooooddddo......',
+      '......osssso......',
+      '......osssso......',
+      '......oddddo......',
+      '......osssso......',
+      '......osssso......',
+      '......oddddo......',
+      '......ossssoooooo.',
+      '......osstttttttto',
+      '......oddtttttttto',
+      '......osstttttttto',
+      '......ossssokoooo.',
+      '......oddddoko....',
+      '......ossssoko....',
+      '.oooooossssyyo....',
+      'ottttttttddyyo....',
+      'ottttttttssoo.....',
+      'ottttttttsso......',
+      '.ooooooddddo......',
+      '......osssso......',
+      '......osssso......',
+      '......oddddo......',
+      '..ooooossssooooo..',
+      '.otttttttttttttto.',
+      '.otttttttttttttto.',
+      '.otttttttttttttto.',
+      '..oooooooooooooo..',
+    ] },
+  fishtank: { cat: 'decor', name: '鱼缸', en: 'Fish tank', price: 120, spot: 'back-mid-right',
+    pal: { o: O, b: '#8fd0f5', l: '#d6f0ff', s: '#e8d3a8', w: '#7a4a2a', y: '#ffb020', r: '#ef5d73', k: '#2b2140', g: '#5cc46e' },
+    art: [
+      '......................',
+      '.oooooooooooooooooooo.',
+      'ollllllllllllllllllllo',
+      'ollllllllllllllllllllo',
+      'obbbbbbbbbbbbbbbbbbbbo',
+      'obbbbbbbbbbbbbbbbbbbbo',
+      'obbbbyyyybybbbbbbbgbbo',
+      'obbbbykyybybbbbbbbgbbo',
+      'obbbgbbbbbybbrrrrbggbo',
+      'obbggbbbbbbbbrkrrrgbbo',
+      'obbbgbbbbbbbbbbbbbgbbo',
+      'obbbgbbbbbbbbbbbbbgbbo',
+      'osssssssssssssssssssso',
+      'osssssssssssssssssssso',
+      'owwwwwwwwwwwwwwwwwwwwo',
+      'owwwwwwwwwwwwwwwwwwwwo',
+      'owwwwwwwwwwwwwwwwwwwwo',
+      '.oooooooooooooooooooo.',
+    ] },
+  tv: { cat: 'decor', name: '电视', en: 'TV', price: 160, spot: 'shelf',
+    pal: { o: O, k: '#3a3a4a', s: '#8fd0f5', g: '#6db35c', y: '#ffd23f', w: '#7a4a2a' },
+    art: [
+      '.oooooooooooooooooooooo.',
+      'okkkkkkkkkkkkkkkkkkkkkko',
+      'okkkkkkkkkkkkkkkkkkkkkko',
+      'okksssssssssssssssssskko',
+      'okksssssssssssssssssskko',
+      'okkssssyysssssssssssskko',
+      'okksssyyyyssssssssssskko',
+      'okksssyyyyssssssssssskko',
+      'okkssssyysssssssssssskko',
+      'okkggggggggggggggggggkko',
+      'okkggggggggggggggggggkko',
+      'okkggggggggggggggggggkko',
+      'okkggggggggggggggggggkko',
+      'okkkkkkkkkkkkkkkkkkkkkko',
+      'okkkkkkkkkkkkkkkkkkkkkko',
+      '.oooooooookkkkooooooooo.',
+      '......ooookkkkoooo......',
+      '.....owwwwwwwwwwwwo.....',
+      '.....owwwwwwwwwwwwo.....',
+      '......oooooooooooo......',
+    ] },
+});
+
+// ---------- clothes, shoes and hair accessories ----------
+// shop icons are drawn from shared templates in each item's colours
+const SHIRT = [
+  '..oo....oo..',
+  '.oaao..oaao.',
+  'oaaaaooaaaao',
+  'oaaaabbaaaao',
+  '.ooaaaaaaoo.',
+  '..oaaaaaao..',
+  '..oaacaaao..',
+  '..oaaaaaao..',
+  '..occcccco..',
+  '..oooooooo..',
+];
+const DRESS = [
+  '...oo..oo...',
+  '..oaaooaao..',
+  '..oaaaaaao..',
+  '..oaabbaao..',
+  '..oaaaaaao..',
+  '.oaaaaaaaao.',
+  '.oaacaacaao.',
+  'oaaaaaaaaaao',
+  'occcccccccco',
+  'oooooooooooo',
+];
+const SHOE = [
+  '............',
+  '..ooooo.....',
+  '.oaaaaao....',
+  '.oalaaaaooo.',
+  'oaaaaaaaaaao',
+  'obbbbbbbbbbo',
+  '.oooooooooo.',
+];
+const wearBody = (id, name, en, price, pal, paint, tpl = SHIRT) => [id, { cat: 'wear', slot: 'body', name, en, price, pal: { o: O, ...pal }, art: tpl, paint }];
+const wearFeet = (id, name, en, price, pal) => [id, { cat: 'wear', slot: 'feet', name, en, price, pal: { o: O, ...pal }, art: SHOE }];
+Object.assign(ITEMS, Object.fromEntries([
+  wearBody('tshirt', '蓝色T恤', 'Blue T-shirt', 45, { a: '#5fa8e8', b: '#ffffff', c: '#3f7fc0' },
+    (x, y, p) => (y === 4 || y === 5 ? p.b : p.a)),
+  wearBody('sailor', '水手服', 'Sailor top', 70, { a: '#ffffff', b: '#2f4f8f', c: '#e8576b' },
+    (x, y, p) => (y <= 2 ? p.b : (y >= 3 && y <= 5 && (x === 0 || x === -1)) ? p.c : y >= 11 ? p.b : p.a)),
+  wearBody('dress', '粉色连衣裙', 'Pink dress', 80, { a: '#ff9ec4', b: '#ffffff', c: '#ffffff' },
+    (x, y, p) => (y >= 11 ? p.c : (y > 3 && (x + y * 3) % 4 === 0) ? p.b : p.a), DRESS),
+  wearBody('raincoat', '黄色雨衣', 'Yellow raincoat', 65, { a: '#ffd23f', b: '#7a4a12', c: '#e0a524' },
+    (x, y, p) => (x === 0 && y % 3 === 1 ? p.b : x === 0 || y >= 12 ? p.c : p.a)),
+  wearBody('hoodie', '灰色卫衣', 'Grey hoodie', 60, { a: '#aab3c2', b: '#8a93a3', c: '#ffffff' },
+    (x, y, p) => ((x === -1 || x === 1) && y <= 3 ? p.c : (y >= 7 && y <= 9 && Math.abs(x) <= 3) ? p.b : p.a)),
+  wearBody('qipao', '小旗袍', 'Little qipao', 120, { a: '#e8394f', b: '#ffd23f', c: '#ffd23f' },
+    (x, y, p) => (y === 0 ? p.b : (x === y - 1 && y <= 5) ? p.c : ((x * 3 + y * 5) % 9 === 0 ? p.b : p.a)), DRESS),
+  wearBody('uniform', '校服', 'School uniform', 75, { a: '#ffffff', b: '#2f4f8f', c: '#2f4f8f' },
+    (x, y, p) => (y >= 7 ? p.b : (x === 0 && y >= 1 && y <= 4) ? p.b : p.a)),
+  wearFeet('sneakers', '红色球鞋', 'Red sneakers', 40, { a: '#e8576b', b: '#ffffff', l: '#ffb3c0' }),
+  wearFeet('boots', '黄色雨靴', 'Rain boots', 45, { a: '#ffd23f', b: '#a8781a', l: '#fff3a8' }),
+  wearFeet('flats', '芭蕾鞋', 'Ballet flats', 50, { a: '#ff9ec4', b: '#d65f89', l: '#ffd6e6' }),
+  wearFeet('schoolshoes', '白色校鞋', 'School shoes', 35, { a: '#ffffff', b: '#8a93a3', l: '#dfe6ee' }),
+  wearFeet('slippers', '毛绒拖鞋', 'Fluffy slippers', 30, { a: '#c9a7f0', b: '#9a78c8', l: '#efe2ff' }),
+]));
+ITEMS.clip = { cat: 'wear', slot: 'head', name: '星星发夹', en: 'Star hair clip', price: 30,
+  pal: { o: O, y: '#ffd23f', d: '#e0a524' },
+  art: [
+    '..o..',
+    '.oyo.',
+    'oyyyo',
+    '.ydy.',
+    'oo.oo',
+  ], wear: { x: 22, y: 7 } };
+ITEMS.headband = { cat: 'wear', slot: 'head', name: '草莓发箍', en: 'Strawberry headband', price: 55,
+  pal: { o: O, r: '#e8394f', g: '#5cc46e', w: '#ffffff', p: '#ff9ec4' },
+  art: [
+    '....ogo.......ogo....',
+    '...orwro.....orwro...',
+    '...orrro.....orrro...',
+    'ooooorooooooooorooooo',
+    'opppppppppppppppppppo',
+    'ooooooooooooooooooooo',
+  ], wear: { x: 5, y: 7 } };
+
+export const WEAR_SLOTS = [
+  ['head', '头饰', 'Hair'],
+  ['body', '衣服', 'Clothes'],
+  ['feet', '鞋子', 'Shoes'],
+  ['face', '眼镜', 'Glasses'],
+  ['neck', '围巾领结', 'Neckwear'],
+];
+
+// ---------- the kitten's home: cut-away house on the meadow ----------
+function lowres(canvas, W, H, paint) {
+  const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
+  if (!cssW || !cssH) return;
+  const off = document.createElement('canvas'); off.width = W; off.height = H;
+  const ctx = off.getContext('2d');
+  const R = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+  paint(R, W, H);
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
+  const out = canvas.getContext('2d'); out.imageSmoothingEnabled = false;
+  out.drawImage(off, 0, 0, canvas.width, canvas.height);
+}
+// window position inside the room (fractions), shared with the curtains
+export const ROOM_WINDOW = { x0: 0.39, x1: 0.61, y0: 0.08, y1: 0.42 };
+export function drawRoom(canvas) {
+  const cssW = canvas.clientWidth || 300, cssH = canvas.clientHeight || 200;
+  const W = 120, H = Math.max(40, Math.round(W * cssH / cssW));
+  lowres(canvas, W, H, (R) => {
+    const floorY = Math.round(H * 0.64);
+    // wallpaper: cream with soft pink stripes and tiny dots
+    R(0, 0, W, floorY, '#fbe8d3');
+    for (let x = 0; x < W; x += 8) R(x, 0, 3, floorY, '#f8dccb');
+    for (let y = 3; y < floorY - 4; y += 7) for (let x = (y % 14 ? 1 : 5); x < W; x += 8) R(x, y, 1, 1, '#f2b8c6');
+    // picture rail + baseboard
+    R(0, Math.round(H * 0.05), W, 1, '#e9c7a8');
+    R(0, floorY - 3, W, 3, '#b07a48'); R(0, floorY - 3, W, 1, '#c9905a');
+    // wooden floor planks
+    for (let y = floorY, row = 0; y < H; y += 4, row++) {
+      R(0, y, W, 4, row % 2 ? '#d29c64' : '#c98f58');
+      R(0, y + 3, W, 1, '#b07a48');
+      for (let x = (row * 13) % 24; x < W; x += 24) R(x, y, 1, 3, '#b07a48');
+    }
+    // window with the sky outside
+    const wx0 = Math.round(W * ROOM_WINDOW.x0), wx1 = Math.round(W * ROOM_WINDOW.x1), wy0 = Math.round(H * ROOM_WINDOW.y0), wy1 = Math.round(H * ROOM_WINDOW.y1);
+    R(wx0 - 2, wy0 - 2, wx1 - wx0 + 4, wy1 - wy0 + 4, '#ffffff');
+    R(wx0, wy0, wx1 - wx0, wy1 - wy0, '#8cc6f0');
+    R(wx0, wy0, wx1 - wx0, Math.round((wy1 - wy0) * 0.35), '#6aaee8');
+    R(wx0 + 2, wy0 + 3, 6, 2, '#ffffff'); R(wx0 + 3, wy0 + 2, 3, 1, '#ffffff');
+    R(wx0, wy1 - 4, wx1 - wx0, 4, '#6db35c'); R(wx0 + 4, wy1 - 6, 7, 2, '#5fa252');
+    const mx = Math.round((wx0 + wx1) / 2), my = Math.round((wy0 + wy1) / 2);
+    R(mx, wy0, 1, wy1 - wy0, '#ffffff'); R(wx0, my, wx1 - wx0, 1, '#ffffff');
+    R(wx0 - 3, wy1 + 1, wx1 - wx0 + 6, 2, '#e9e1d4');
+  });
+}
+export function drawRoof(canvas) {
+  const cssW = canvas.clientWidth || 300, cssH = canvas.clientHeight || 60;
+  const W = 120, H = Math.max(10, Math.round(W * cssH / cssW));
+  lowres(canvas, W, H, (R) => {
+    // chimney
+    R(Math.round(W * 0.74), 0, 8, H, '#9a5a4a'); R(Math.round(W * 0.74) - 1, 0, 10, 2, '#7a4038');
+    // stepped roof, wider at the bottom, with tile rows
+    for (let y = 0; y < H; y++) {
+      const inset = Math.round((H - 1 - y) * (W * 0.16) / H);
+      const c = (Math.floor(y / 2) % 2) ? '#e8576b' : '#d94a5e';
+      R(inset, y, W - inset * 2, 1, c);
+      if (y % 2 === 0) for (let x = inset + ((y / 2) % 2 ? 2 : 5); x < W - inset; x += 6) R(x, y, 1, 1, '#b83a4e');
+    }
+    R(0, H - 1, W, 1, '#7a2a3a');
+  });
+}

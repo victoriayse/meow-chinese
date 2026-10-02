@@ -1,6 +1,6 @@
 // 喵喵中文 Meow Chinese — app shell, router, top bar, welcome and home screen.
 import * as S from './state.js';
-import { drawLandscape, FURS, ITEMS, spriteCanvas, itemEffect, drawGrid, artGrid, TOMB } from './pixel.js';
+import { drawLandscape, FURS, ITEMS, spriteCanvas, itemEffect, drawGrid, artGrid, TOMB, drawRoom, drawRoof, ROOM_WINDOW } from './pixel.js';
 import { $, $$, html, esc, hydrateIcons, coinI, KittenView, burst, toast, openModal, closeModal, tapSound, confirmBox, confetti } from './ui.js';
 import { sfx } from './audio.js';
 import { spellingScreen } from './spell.js';
@@ -138,13 +138,23 @@ function setupScreen() {
 }
 
 // ---------- home ----------
+// where each home item sits inside the room (percent of the room box)
 const DECOR_POS = {
-  'far-left': 'left:2%;bottom:6%',
-  left: 'left:12%;bottom:22%',
-  right: 'right:5%;bottom:20%',
-  'front-left': 'left:27%;bottom:3%',
-  'front-right': 'right:24%;bottom:4%',
-  back: 'left:50%;bottom:34%;transform:translateX(-50%)',
+  ceiling: 'left:27%;top:0',
+  'wall-left': 'left:5%;top:9%',
+  'wall-right': 'right:7%;top:5%',
+  shelf: 'right:5%;top:24%',
+  curtain: 'curtain',
+  'back-left': 'left:2%;bottom:30%',
+  'back-mid-left': 'left:21%;bottom:31%',
+  'back-mid-right': 'right:25%;bottom:31%',
+  'back-right': 'right:2%;bottom:29%',
+  'front-left': 'left:2%;bottom:3%',
+  plant: 'left:21%;bottom:3%',
+  'toy-left': 'left:32%;bottom:2%',
+  'toy-right': 'right:32%;bottom:2%',
+  house: 'right:17%;bottom:3%',
+  'front-right': 'right:2%;bottom:3%',
 };
 
 function homeScreen() {
@@ -157,7 +167,10 @@ function homeScreen() {
   const reviewN = S.reviewWords().length;
   const d = s.daily;
   const portrait = window.innerHeight > window.innerWidth || window.innerWidth <= 900;
-  const scale = portrait ? Math.max(4, Math.min(7, Math.floor((window.innerHeight * 0.36) / 38))) : Math.max(5, Math.min(9, Math.floor((window.innerHeight * 0.5) / 38)));
+  // size the kitten to the room: the room is most of the stage under the roof
+  const stageH = (window.innerHeight - 70) * (portrait ? 0.54 : 1);
+  const roomH = stageH * 0.92 * 0.84;
+  const scale = Math.max(3, Math.min(9, Math.floor((roomH * 0.5) / 38)));
 
   const task = (done, zh, en, coins, prog = '') => `
     <div class="task ${done ? 'done' : ''}">
@@ -168,9 +181,15 @@ function homeScreen() {
 
   const n = html`<section class="home">
     <div class="stage" id="stage">
-      <div class="ground" id="ground">
-        <div class="kitten-wrap" id="kwrap">
-          <div class="fx-layer" id="fx"></div>
+      <div class="house">
+        <canvas class="roof" id="roof"></canvas>
+        <div class="room" id="room">
+          <canvas class="room-bg" id="roombg"></canvas>
+          <div class="ground" id="ground">
+            <div class="kitten-wrap" id="kwrap">
+              <div class="fx-layer" id="fx"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -232,18 +251,27 @@ function homeScreen() {
 
   renderAlert($('#alert', n), md, k);
 
-  const stage = $('#stage', n);
-  s.owned.filter((id) => ITEMS[id].cat === 'decor' && id !== 'cushion' && !s.decorHidden.includes(id)).forEach((id) => {
+  const room = $('#room', n);
+  const dscale = Math.max(2, Math.round(scale * 0.72));
+  s.owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && id !== 'cushion' && !s.decorHidden.includes(id)).forEach((id) => {
     const it = ITEMS[id];
     const w = Math.max(...it.art.map((r) => r.length)), h = it.art.length;
-    const px = Math.max(3, Math.round(scale * 0.8)) * Math.max(w, h);
-    const c = spriteCanvas(id, px);
+    const c = document.createElement('canvas');
+    drawGrid(c, artGrid(it.art, it.pal), dscale);
     const wrap = document.createElement('div');
-    wrap.className = 'decor'; wrap.style.cssText = DECOR_POS[it.spot] || 'left:10%;bottom:10%';
-    if (it.spot === 'back') wrap.style.zIndex = 0;
+    wrap.className = 'decor';
+    const pos = DECOR_POS[it.spot] || 'left:10%;bottom:10%';
+    if (pos === 'curtain') {
+      wrap.style.cssText = `left:${(ROOM_WINDOW.x0 + ROOM_WINDOW.x1) * 50}%;top:${ROOM_WINDOW.y0 * 100 - 3}%;transform:translateX(-50%);z-index:1`;
+    } else if (it.spot === 'rug') {
+      wrap.style.cssText = 'left:50%;bottom:2%;transform:translateX(-50%);z-index:1';
+    } else {
+      wrap.style.cssText = pos + `;z-index:${pos.includes('bottom:3%') || pos.includes('bottom:2%') ? 6 : 2}`;
+    }
     wrap.appendChild(c);
-    stage.insertBefore(wrap, stage.firstChild);
+    room.appendChild(wrap);
   });
+  if (s.owned.includes('rug') && !s.decorHidden.includes('rug')) $('#ground', n).style.bottom = '4%';
 
   function petKitten() {
     const sick = ['faint', 'dizzy', 'cough'].includes(md.face);
@@ -265,6 +293,7 @@ function homeScreen() {
   $('#b-shop', n).onclick = () => go('shop');
   $('#b-dress', n).onclick = () => go('wardrobe');
   $('#b-feed', n).onclick = () => openFeed(kv, fx, afterCare);
+  n._mounted = () => { drawRoom($('#roombg', n)); drawRoof($('#roof', n)); };
   return n;
 }
 
