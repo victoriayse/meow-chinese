@@ -27,7 +27,7 @@ const WRITER_STYLE = {
 export function spellingScreen({ mode = 'list', go }) {
   const st = S.get();
   const list = S.activeList();
-  let source = mode === 'review' ? S.reviewWords() : (list ? list.words.map((x) => ({ ...x })) : []);
+  let source = mode === 'review' ? S.reviewWords() : mode === 'play' ? S.playWords(10) : (list ? list.words.map((x) => ({ ...x })) : []);
   if (st.settings.shuffle !== false) source = shuffle(source.slice());
   const items = source.map((x, i) => ({ ...x, i, attempt: 0 }));
   const status = items.map(() => null);           // per original item: 'first' | 'retry' | 'wrong'
@@ -131,6 +131,7 @@ export function spellingScreen({ mode = 'list', go }) {
     });
     main.appendChild(boxes);
     const actions = html`<div class="spell-actions">
+        <button class="btn white" id="undo">↶ <span class="zh">撤销</span> Undo</button>
         <button class="btn white" id="idk">🤔 <span class="zh">不会写</span> I don't know</button>
         <button class="btn white" id="skip"><span class="zh">跳过</span> Skip ➜</button>
       </div>`;
@@ -138,6 +139,7 @@ export function spellingScreen({ mode = 'list', go }) {
     hydrateIcons(main);
 
     let finished = false;
+    const undoStack = []; // which box each accepted stroke went into, newest last
     // each stroke she draws snaps into the matching real stroke, in any order;
     // a stroke that doesn't match anything fades away
     charState.forEach((c) => {
@@ -145,14 +147,14 @@ export function spellingScreen({ mode = 'list', go }) {
       loadChar(c.ch).then((data) => {
         if (finished) return;
         c.snap = new SnapBox(c.box, s - 8, data, {
-          onHit: () => sfx.stroke(),
+          onHit: () => { sfx.stroke(); undoStack.push(c); },
           onMiss: () => sfx.miss(),
           onHint: () => { c.wrong = true; },
           onComplete: () => {
             c.done = true;
             c.box.classList.remove('active');
             c.box.classList.add(c.snap.hinted ? 'bad' : 'ok');
-            if (charState.every((x) => x.done)) setTimeout(() => endWord(false), 300);
+            if (charState.every((x) => x.done)) setTimeout(() => { if (charState.every((x) => x.done)) endWord(false); }, 900);
           },
         });
       }).catch(() => { c.done = true; c.box.classList.remove('active'); c.box.classList.add('fixed'); c.box.textContent = c.ch; if (charState.every((x) => x.done)) endWord(false); });
@@ -169,6 +171,16 @@ export function spellingScreen({ mode = 'list', go }) {
       if (!wrongIdx.length) onCorrect(item, charState);
       else onWrong(item, charState, wrongIdx, s);
     }
+    $('#undo', actions).onclick = () => {
+      if (finished) return;
+      while (undoStack.length) {
+        const c = undoStack.pop();
+        if (c.snap && c.snap.undo()) {
+          if (c.done) { c.done = false; c.box.classList.remove('ok', 'bad'); c.box.classList.add('active'); }
+          return;
+        }
+      }
+    };
     $('#idk', actions).onclick = () => endWord(true);
     // skip: move on without marking it right or wrong (a retry word stays in the mistakes book)
     $('#skip', actions).onclick = () => {
@@ -299,8 +311,12 @@ export function spellingScreen({ mode = 'list', go }) {
     const skipped = status.filter((x) => x === 'skip').length;
     const d = S.get().daily;
     if (skipped < total) { d.spell = true; S.save(); } // skipping every word doesn't count as a round
-    S.logSession({ mode, listName: mode === 'review' ? '错词本 Mistakes' : (list ? list.name : ''), total, firstTry: first, retry, wrong, skipped, coins: roundCoins });
+    S.logSession({ mode, listName: mode === 'review' ? '错词本 Mistakes' : mode === 'play' ? '陪我玩 Play with me' : (list ? list.name : ''), total, firstTry: first, retry, wrong, skipped, coins: roundCoins });
     const rewards = S.checkDaily();
+    if (mode === 'play') {
+      const won = S.finishPlay(first, total);
+      rewards.push(won ? { label: `🎮 ${S.RIGHT_TARGET}/${S.WORDS_TARGET}! 小猫好开心 Play reward`, coins: won } : { label: `🎮 ${first}/${total} — 下次加油！Need ${S.RIGHT_TARGET} in ${S.WORDS_TARGET} for the prize`, coins: 0 });
+    }
     const great = first / total >= 0.8;
     kv.setMood('happy');
     main.innerHTML = '';

@@ -9,10 +9,11 @@ const TABS = [
   { key: 'wear', zh: '衣服', en: 'Clothes' },
   { key: 'decor', zh: '花园', en: 'Garden' },
   { key: 'special', zh: '道具', en: 'Special' },
+  { key: 'pharmacy', zh: '药房', en: 'Pharmacy' },
 ];
 
-export function shopScreen({ go }) {
-  let tab = 'food', preview = null;
+export function shopScreen({ go, tab = 'food' }) {
+  let preview = null;
   const n = html`<section class="screen"><div class="shop">
       <div class="preview card">
         <div class="h-title" style="font-size:24px"><span class="zh">喵喵商店</span><span class="en">Shop</span></div>
@@ -33,6 +34,7 @@ export function shopScreen({ go }) {
     if (preview && ITEMS[preview].cat === 'wear') eq[ITEMS[preview].slot] = preview;
     if (kv) kv.canvas.remove();
     kv = new KittenView({ scale: 5, equipped: eq });
+    kv.setMood(S.mood().face);
     mini.appendChild(kv.canvas);
   };
 
@@ -47,9 +49,12 @@ export function shopScreen({ go }) {
       const owned = (it.cat === 'wear' || it.cat === 'decor') && s.owned.includes(id);
       const have = it.cat === 'food' ? s.pantry[id] || 0 : special ? s.streak.freezes || 0 : 0;
       const full = special && have >= S.MAX_FREEZES;
-      const can = s.coins >= cost && !full;
+      const pharm = it.cat === 'pharmacy';
+      const needed = !pharm || S.health() === it.cures;
+      const can = s.coins >= cost && !full && needed;
       const eff = it.cat === 'food' ? itemEffect(it) : it.toy ? '可以一起玩 Toy'
-        : special ? `漏了一天也不会断连胜 · Keeps your streak if you miss a day${full ? ` (max ${S.MAX_FREEZES})` : ''}` : '';
+        : special ? `漏了一天也不会断连胜 · Keeps your streak if you miss a day${full ? ` (max ${S.MAX_FREEZES})` : ''}`
+        : pharm ? (needed ? `治好${it.cures === 'cough' ? '咳嗽' : '头晕'}！Cures ${it.cures === 'cough' ? 'a cough' : 'dizziness'}` : `小猫${it.cures === 'cough' ? '咳嗽' : '头晕'}时才需要 · Only when your kitten ${it.cures === 'cough' ? 'coughs' : 'is dizzy'}`) : '';
       const card = html`<div class="item ${preview === id ? 'sel' : ''}">
           ${owned ? '<span class="owned">已有 Owned</span>' : have ? `<span class="count">×${have}</span>` : ''}
           <div class="art"></div>
@@ -68,6 +73,13 @@ export function shopScreen({ go }) {
   }
   function buy(id) {
     const it = ITEMS[id];
+    if (it.cat === 'pharmacy') {
+      if (!S.buy(id)) { toast('金币不够 · Not enough coins'); return; }
+      sfx.fanfare(); preview = null; drawKitten(); kv.flash('happy', 1800); kv.jump();
+      burst($('#fx', n), 'heart', 4, '50%', '20%');
+      toast(`<span class="zh">${esc(S.get().kitten.name)}吃了药，好多了！</span> All better!`, { ms: 3500 });
+      render(); return;
+    }
     if (!S.buy(id)) { toast(it.cat === 'special' && (S.get().streak.freezes || 0) >= S.MAX_FREEZES ? `最多${S.MAX_FREEZES}张 · You can hold ${S.MAX_FREEZES} at most` : '金币不够 · Not enough coins'); return; }
     sfx.coin();
     preview = null;

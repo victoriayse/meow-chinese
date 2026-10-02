@@ -276,11 +276,29 @@ export function strokeFit(drawn, median, leniency = 1) {
   const ratio = Ld / Math.max(Lt, 1);
   if (avgDT > 150 * leniency || avgTD > 170 * leniency) return Infinity;
   if (!tiny && ends > 230 * leniency) return Infinity;
-  if (!tiny && (ratio < 0.35 / leniency || ratio > 2.6 * leniency)) return Infinity;
+  // a scribble is much longer than the real stroke, so cap how long she can draw
+  if (!tiny && (ratio < 0.4 / leniency || ratio > 1.55 * leniency)) return Infinity;
+  if (tiny && Ld > 260 * leniency) return Infinity;
   if (!tiny) {
     const vd = [d[15][0] - d[0][0], d[15][1] - d[0][1]], vt = [t[15][0] - t[0][0], t[15][1] - t[0][1]];
     const cos = Math.abs(vd[0] * vt[0] + vd[1] * vt[1]) / ((Math.hypot(...vd) * Math.hypot(...vt)) || 1);
     if (Lt > 250 && Math.hypot(...vt) > 150 && cos < 0.55) return Infinity; // clearly the wrong direction
+    // the stroke must bend the same way as the real one: compare the direction of each small piece
+    const segAng = (q) => { const a = []; for (let i = 1; i < q.length; i++) a.push(Math.atan2(q[i][1] - q[i - 1][1], q[i][0] - q[i - 1][0])); return a; };
+    const d9 = arcResample(drawn, 9), t9 = arcResample(median, 9);
+    const td = fwdEnds <= revEnds ? t9 : t9.slice().reverse();
+    const A = segAng(d9), B = segAng(td);
+    let diff = 0; for (let i = 0; i < A.length; i++) { let x = Math.abs(A[i] - B[i]) % (2 * Math.PI); if (x > Math.PI) x = 2 * Math.PI - x; diff += x; }
+    diff /= A.length;
+    if (diff > (Math.PI / 180) * 40 * leniency) return Infinity;
+    // and it must not wiggle back and forth: compare its length with a smoothed copy of itself
+    const wig = (line) => {
+      const q = arcResample(line, 25);
+      const sm = q.map((_, i) => { let x = 0, y = 0, n = 0; for (let k = Math.max(0, i - 2); k <= Math.min(q.length - 1, i + 2); k++) { x += q[k][0]; y += q[k][1]; n++; } return [x / n, y / n]; });
+      return polyLen(q) / Math.max(polyLen(sm), 1);
+    };
+    // (a corner in the real stroke also shrinks when smoothed, so compare with the real stroke)
+    if (Lt >= 200 && wig(drawn) - wig(median) > 0.25) return Infinity;
   }
   return avgDT + avgTD + ends * 0.5;
 }
@@ -368,16 +386,25 @@ export class SnapBox {
       if (this.misses >= this.hintAfter) this.hint();
       return;
     }
-    // keep only strokes that are still matched (rarely one gets pushed out), then redraw
-    const keep = new Set(result.map(([i]) => i));
-    const remap = new Map(); const ink2 = [];
-    this.ink.forEach((s, i) => { if (keep.has(i)) { remap.set(i, ink2.length); ink2.push(s); } });
-    this.ink = ink2;
-    this.done = new Set(result.map(([, j]) => j));
+    this.apply(result);
     this.misses = 0;
-    this.paths.forEach((p, j) => p.setAttribute('fill', this.done.has(j) ? '#2b2140' : (this.outline ? '#e4d9c6' : 'transparent')));
     this.onHit && this.onHit(this);
     if (this.done.size === this.paths.length) { this.complete = true; this.onComplete && this.onComplete(this); }
+  }
+  // keep only strokes that are still matched (rarely one gets pushed out), then redraw
+  apply(result) {
+    const keep = new Set(result.map(([i]) => i));
+    this.ink = this.ink.filter((_, i) => keep.has(i));
+    this.done = new Set(result.map(([, j]) => j));
+    this.paths.forEach((p, j) => p.setAttribute('fill', this.done.has(j) ? '#2b2140' : (this.outline ? '#e4d9c6' : 'transparent')));
+  }
+  // take back her most recent stroke
+  undo() {
+    if (!this.ink.length || !this.pad.enabled) return false;
+    this.ink.pop();
+    this.complete = false;
+    this.apply(this.ink.length ? this.solve() : []);
+    return true;
   }
   hint() {
     const j = this.medians.findIndex((_, k) => !this.done.has(k));

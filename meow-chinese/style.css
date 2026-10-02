@@ -374,3 +374,15 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .price-row .nm { display: flex; flex-direction: column; font-size: 18px; }
 .price-row small { font-weight: 700; color: var(--ink-2); font-size: 12px; }
 .price-row input { font: inherit; font-family: "Nunito", sans-serif; font-weight: 800; font-size: 20px; width: 100%; padding: 6px 8px; border: 3px solid var(--ink); border-radius: 6px; text-align: right; }
+
+.kitten-canvas.fainted { animation: none; transform: rotate(-90deg) translateX(-18%); filter: drop-shadow(-6px 0 0 rgba(30, 60, 30, .35)) saturate(.7); }
+.card.alert.warn { background: #fff4d6; }
+.card.alert.danger { background: #ffe3e7; border-color: var(--red-d); animation: pulse 1.6s ease-in-out infinite; }
+.card.alert.play { background: #e5f8e8; }
+@keyframes pulse { 50% { box-shadow: 0 6px 0 rgba(43,33,64,.45), 0 0 0 6px rgba(239,93,115,.25); } }
+.grave { position: relative; min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 20px 0; }
+.grave .night { position: fixed; inset: 0; background: linear-gradient(rgba(20, 18, 50, .78), rgba(20, 18, 50, .45)); z-index: -1; pointer-events: none; }
+.grave .stone { position: relative; display: grid; place-items: center; }
+.grave .stone-name { position: absolute; top: 9%; font-family: var(--zh); font-size: 26px; color: #4a4f5c; }
+.card.alert .btn { white-space: nowrap; font-size: 19px; min-height: 58px; }
+.card.alert .btn .zh { font-size: 1em; }

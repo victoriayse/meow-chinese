@@ -125,7 +125,7 @@ function editList(list, rerender) {
   const box = html`<div class="card stack">
       <h3>${isNew ? 'New spelling list' : 'Edit list'}</h3>
       <label class="field">List name<input id="nm" value="${esc(list ? list.name : `听写 ${new Date().toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}`)}"></label>
-      <label class="field">Words — one per line
+      <label class="field">Words — one per line (or separated by spaces / commas)
         <textarea id="tx" placeholder="公园 | 我们去公园玩&#10;朋友&#10;高兴 | 我今天很高兴">${esc(text)}</textarea>
         <small>Optional: after a <b>|</b> add a short sentence. The kitten reads it when she taps 💬 Sentence, which helps with words that sound alike (e.g. 公园 vs 公元).</small>
       </label>
@@ -267,7 +267,7 @@ function settingsView(rerender, go) {
 
 // ---------- shop prices ----------
 function pricesView(rerender) {
-  const groups = [['food', '食物 Food & drink'], ['special', '道具 Special'], ['wear', '衣服 Clothes'], ['decor', '花园 Garden']];
+  const groups = [['food', '食物 Food & drink'], ['special', '道具 Special'], ['pharmacy', '药房 Pharmacy'], ['service', '医院 Hospital'], ['wear', '衣服 Clothes'], ['decor', '花园 Garden']];
   const n = html`<div class="stack">
       <p class="help">Set how many coins each item costs. Changes apply straight away. For reference, a perfect day earns about ${S.REWARDS.taskSpell + S.REWARDS.taskPerfect + S.REWARDS.taskCare + S.REWARDS.allBonus} coins from tasks, plus ${S.REWARDS.firstTry} per word written right first time.</p>
       <div id="groups" class="stack"></div>

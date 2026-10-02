@@ -75,6 +75,14 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
   set(15, Y(13), NOSE); set(16, Y(13), NOSE);
   if (mood === 'eat') {
     set(15, Y(15), EYE); set(16, Y(15), EYE); set(15, Y(16), NOSE); set(16, Y(16), NOSE);
+  } else if (mood === 'cough') {
+    // open "ko!" mouth
+    set(15, Y(15), EYE); set(16, Y(15), EYE); set(15, Y(16), EYE); set(16, Y(16), EYE);
+  } else if (mood === 'bored') {
+    set(14, Y(15), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(15), P.o);
+  } else if (mood === 'dizzy' || mood === 'faint') {
+    // wobbly mouth
+    set(13, Y(16), P.o); set(14, Y(15), P.o); set(15, Y(16), P.o); set(16, Y(15), P.o); set(17, Y(16), P.o); set(18, Y(15), P.o);
   } else if (mood === 'cry' || mood === 'hungry') {
     // frown
     set(14, Y(16), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(16), P.o);
@@ -91,6 +99,17 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
       set(ex - 1, Y(12), EYE); set(ex, Y(11), EYE); set(ex + 1, Y(11), EYE); set(ex + 2, Y(12), EYE);
     } else if (mood === 'sleepy' || mood === 'blink') {
       for (let i = -1; i <= 2; i++) set(ex + i, Y(12), EYE);
+    } else if (mood === 'dizzy') {
+      // spiral eyes
+      [[0, 10], [1, 10], [-1, 11], [2, 11], [0, 12], [1, 12]].forEach(([dx, y]) => set(ex + dx, Y(y), EYE));
+    } else if (mood === 'faint') {
+      // X eyes
+      [[-1, 10], [2, 10], [0, 11], [1, 11], [-1, 12], [2, 12]].forEach(([dx, y]) => set(ex + dx, Y(y), EYE));
+    } else if (mood === 'bored') {
+      for (let i = -1; i <= 2; i++) set(ex + i, Y(11), P.o);
+      set(ex, Y(12), EYE); set(ex + 1, Y(12), EYE);
+    } else if (mood === 'cough') {
+      set(ex - 1, Y(11), EYE); set(ex, Y(12), EYE); set(ex + 1, Y(12), EYE); set(ex + 2, Y(11), EYE);
     } else if (mood === 'cry') {
       // squeezed-shut eyes
       set(ex - 1, Y(11), EYE); set(ex, Y(12), EYE); set(ex + 1, Y(12), EYE); set(ex + 2, Y(11), EYE);
@@ -130,6 +149,21 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
     const drop = frame % 2;
     [[9, 13], [9, 14], [9, 15 + drop], [22, 13], [22, 14], [22, 15 + drop]].forEach(([x, y]) => { out[Y(y)][x] = T1; });
     [[10, 13], [21, 13]].forEach(([x, y]) => { out[Y(y)][x] = T2; });
+  }
+  if (mood === 'cough') {
+    const f = frame % 2, C1 = '#ffffff', C2 = '#cfd6e0';
+    const puff = f ? [[20, 16], [21, 16], [21, 15], [22, 15], [22, 16], [23, 15], [21, 17], [22, 17]] : [[19, 16], [20, 16], [20, 17], [21, 16]];
+    puff.forEach(([x, y], i) => { if (out[Y(y)] && x < KW) out[Y(y)][x] = i % 3 ? C1 : C2; });
+    // pale, greenish cheeks
+    [[7, 14], [8, 14], [24, 14], [23, 14]].forEach(([x, y]) => { out[Y(y)][x] = '#b9dca8'; });
+  }
+  if (mood === 'dizzy') {
+    const pos = [[7, -4], [16, -6], [25, -4], [12, -5], [21, -5]];
+    const S = '#ffd23f', D = '#e0a524';
+    [0, 1, 2].forEach((k) => {
+      const [x, y] = pos[(k * 2 + frame) % pos.length];
+      [[0, 0, S], [1, 0, D], [-1, 0, D], [0, 1, D], [0, -1, D]].forEach(([dx, dy, c]) => { const yy = Y(y) + dy; if (yy >= 0 && out[yy] && x + dx >= 0 && x + dx < KW) out[yy][x + dx] = c; });
+    });
   }
   if (mood === 'thirsty' || mood === 'hungry') {
     [[27, 5], [26, 6], [27, 6], [28, 6], [26, 7], [27, 7], [28, 7], [27, 8]].forEach(([x, y]) => { out[Y(y)][x] = mood === 'thirsty' ? T1 : T2; });
@@ -309,6 +343,53 @@ export const ITEMS = {
       'oggggggggggo',
       '.odddddddddo',
       '..oooooooo..',
+    ] },
+
+  // ---- pharmacy (only when the kitten is ill) ----
+  syrup: { cat: 'pharmacy', cures: 'cough', name: '止咳糖浆', en: 'Cough syrup', price: 30,
+    pal: { o: O, r: '#d94a6a', p: '#f28aa3', w: '#ffffff', g: '#e8e0d0', b: '#7a4a2a' },
+    art: [
+      '...oooo...',
+      '...obbo...',
+      '...oooo...',
+      '..owwwwo..',
+      '.orrrrrro.',
+      '.orpwwrro.',
+      '.orwrrwro.',
+      '.orpwwrro.',
+      '.orrrrrro.',
+      '.orrrrrpo.',
+      '..oooooo..',
+    ] },
+  panadol: { cat: 'pharmacy', cures: 'dizzy', name: '头痛药 Panadol', en: 'Headache pills', price: 40,
+    pal: { o: O, b: '#3f7fc0', l: '#9fd0ff', w: '#ffffff', r: '#e8576b' },
+    art: [
+      '.oooooooooo.',
+      'obbbbbbbbbbo',
+      'obwwwwwwwwbo',
+      'obwowwwwowbo',
+      'obwwwwwwwwbo',
+      'obwowwwwowbo',
+      'obwwwwwwwwbo',
+      'obbbrrbbbbbo',
+      '.oooooooooo.',
+    ] },
+  hospital: { cat: 'service', cures: 'faint', name: '送医院', en: 'Kitty hospital', price: 200,
+    pal: { o: O, w: '#ffffff', g: '#dfe6ee', r: '#e8576b', b: '#7ec8f5' },
+    art: [
+      '....oooooo....',
+      '....owrrwo....',
+      '....orrrro....',
+      '....owrrwo....',
+      'oooooooooooooo',
+      'owwwwwwwwwwwwo',
+      'owbbwwbbwwbbwo',
+      'owbbwwbbwwbbwo',
+      'owwwwwwwwwwwwo',
+      'owbbwwoowwbbwo',
+      'owbbwwoowwbbwo',
+      'oggggggggggggo',
+      'oooooooooooooo',
     ] },
 
   // ---- special ----
@@ -706,3 +787,25 @@ export function itemEffect(it) {
   if (it.happy) parts.push(`+${it.happy} ❤`);
   return parts.join(' · ');
 }
+
+export const TOMB = {
+  pal: { o: '#2e2a3a', s: '#9aa1ad', l: '#c3c8d1', d: '#717887', g: '#4f8f48', f: '#ff9ec4', y: '#ffd23f' },
+  art: [
+    '.....oooooooo.....',
+    '...oolllssssssoo..',
+    '..olllssssssssddo.',
+    '..ollssssssssssdo.',
+    '..ollssdssdsssddo.',
+    '..ollsdssssdssddo.',
+    '..ollsssddssssddo.',
+    '..ollssddddsssddo.',
+    '..ollsssddssssddo.',
+    '..ollssssssssssdo.',
+    '..ollssssssssssdo.',
+    '..ollsssssssssddo.',
+    '.oooooooooooooooo.',
+    'oggggggggggggggggo',
+    'ogfggggyggggggfggo',
+    'oooooooooooooooooo',
+  ],
+};

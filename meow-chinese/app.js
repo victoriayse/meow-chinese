@@ -1,7 +1,7 @@
 // 喵喵中文 Meow Chinese — app shell, router, top bar, welcome and home screen.
 import * as S from './state.js';
-import { drawLandscape, FURS, ITEMS, spriteCanvas, itemEffect } from './pixel.js';
-import { $, $$, html, esc, hydrateIcons, coinI, KittenView, burst, toast, openModal, closeModal, tapSound } from './ui.js';
+import { drawLandscape, FURS, ITEMS, spriteCanvas, itemEffect, drawGrid, artGrid, TOMB } from './pixel.js';
+import { $, $$, html, esc, hydrateIcons, coinI, KittenView, burst, toast, openModal, closeModal, tapSound, confirmBox, confetti } from './ui.js';
 import { sfx } from './audio.js';
 import { spellingScreen } from './spell.js';
 import { shopScreen, wardrobeScreen } from './shop.js';
@@ -27,9 +27,10 @@ const screens = {
   setup: setupScreen,
   home: homeScreen,
   spell: (p) => spellingScreen({ ...p, go }),
-  shop: () => shopScreen({ go }),
+  shop: (p) => shopScreen({ go, ...p }),
   wardrobe: () => wardrobeScreen({ go }),
   parent: (p) => parentScreen({ ...p, go }),
+  grave: graveScreen,
 };
 export function go(name, params = {}) {
   if (window.speechSynthesis) speechSynthesis.cancel();
@@ -128,6 +129,7 @@ function setupScreen() {
     st.childName = $('#cname', n).value.trim();
     const first = !st.onboarded;
     st.onboarded = true;
+    delete st.needsSetup;
     S.save();
     go('home');
     if (first) setTimeout(() => toast(`<span class="zh">你有${S.get().coins}个金币！</span> Coins to start`), 400);
@@ -147,6 +149,9 @@ const DECOR_POS = {
 
 function homeScreen() {
   S.tick();
+  if (S.health() === 'dead') return graveScreen();
+  if (S.get().needsSetup) return setupScreen();
+  S.maybeBored();
   const s = S.get(), k = s.kitten, md = S.mood();
   const list = S.activeList();
   const reviewN = S.reviewWords().length;
@@ -170,6 +175,7 @@ function homeScreen() {
       </div>
     </div>
     <div class="side">
+      <div id="alert"></div>
       <div class="card stack" style="gap:8px">
         <div class="stat"><span><i data-icon="fish" data-size="22"></i></span><span>饱饱 <span class="en">Food</span></span><div class="bar segmented"><i style="width:${k.hunger}%;--c:#f59b2a"></i></div></div>
         <div class="stat"><span style="font-size:20px;text-align:center">💧</span><span>喝水 <span class="en">Water</span></span><div class="bar segmented"><i style="width:${k.water ?? 75}%;--c:#4fb3ef"></i></div></div>
@@ -209,7 +215,11 @@ function homeScreen() {
   kv.canvas.style.position = 'relative'; kv.canvas.style.zIndex = 1;
   kwrap.appendChild(kv.canvas);
   kwrap.appendChild(html`<div class="nametag">${esc(k.name)}<span class="lv">Lv${S.level()}</span></div>`);
-  if (md.face === 'cry') kwrap.appendChild(html`<div class="bubble sad">😿 ${esc(md.text)}</div>`);
+  if (md.face === 'faint') { kv.canvas.classList.add('fainted'); kwrap.appendChild(html`<div class="zzz" style="left:60%;top:30%">@ @ @</div>`); }
+  else if (md.face === 'dizzy') kwrap.appendChild(html`<div class="bubble sad">😵‍💫 ${esc(md.text)}</div>`);
+  else if (md.face === 'cough') kwrap.appendChild(html`<div class="bubble sad">🤒 ${esc(md.text)}</div>`);
+  else if (md.face === 'bored') kwrap.appendChild(html`<div class="bubble">🥱 ${esc(md.text)}</div>`);
+  else if (md.face === 'cry') kwrap.appendChild(html`<div class="bubble sad">😿 ${esc(md.text)}</div>`);
   else if (md.face === 'thirsty') kwrap.appendChild(html`<div class="bubble">💧 ${esc(md.text)}</div>`);
   else if (md.face === 'hungry') kwrap.appendChild(html`<div class="bubble">🐟 ${esc(md.text)}</div>`);
   else if (md.face === 'sleepy') kwrap.appendChild(html`<div class="zzz">z Z z</div>`);
@@ -219,6 +229,8 @@ function homeScreen() {
     const n = s.freezeUsed; delete s.freezeUsed; S.save();
     setTimeout(() => toast(`❄️ <span class="zh">冰冻卡保护了你的连胜！</span> Streak freeze used${n > 1 ? ` ×${n}` : ''}`, { ms: 4000 }), 500);
   }
+
+  renderAlert($('#alert', n), md, k);
 
   const stage = $('#stage', n);
   s.owned.filter((id) => ITEMS[id].cat === 'decor' && id !== 'cushion' && !s.decorHidden.includes(id)).forEach((id) => {
@@ -234,7 +246,9 @@ function homeScreen() {
   });
 
   function petKitten() {
-    sfx.purr(); kv.flash('happy', 1400); kv.jump();
+    const sick = ['faint', 'dizzy', 'cough'].includes(md.face);
+    sfx.purr();
+    if (!sick) { kv.flash('happy', 1400); kv.jump(); }
     burst(fx, 'heart', 3, '50%', '25%');
     const before = S.get().daily.paid.care;
     S.pet();
@@ -251,6 +265,63 @@ function homeScreen() {
   $('#b-shop', n).onclick = () => go('shop');
   $('#b-dress', n).onclick = () => go('wardrobe');
   $('#b-feed', n).onclick = () => openFeed(kv, fx, afterCare);
+  return n;
+}
+
+// warnings / sickness / play prompt at the top of the side panel
+function renderAlert(box, md, k) {
+  const name = esc(k.name), missed = S.missedDays();
+  const card = (cls, title, body, btn) => {
+    box.innerHTML = `<div class="card alert ${cls}"><div class="h-title" style="font-size:21px">${title}</div><p class="help" style="margin:4px 0 10px">${body}</p>${btn}</div>`;
+    hydrateIcons(box);
+  };
+  const daysLeft = (stage) => S.SICK_AFTER[stage] - missed;
+  if (md.face === 'faint') {
+    const cost = S.price('hospital'), can = S.get().coins >= cost, left = Math.max(1, daysLeft('dead'));
+    card('danger', `😵 ${name}晕倒了！<span class="en">Fainted</span>`,
+      `${name}已经${missed}天没有人照顾了。快送去医院！再过${left}天就救不回来了。<br>Your kitten fainted after ${missed} days without tasks. Take it to the hospital — only ${left} day${left > 1 ? 's' : ''} left!`,
+      `<button class="btn big red block" id="hosp" ${can ? '' : 'disabled'}>🏥 <span class="zh">送医院</span> Hospital · ${cost}${coinI(20)}</button>${can ? '' : `<p class="help" style="margin:8px 0 0">金币不够：做听写赚金币 · Not enough coins — do spelling to earn ${cost - S.get().coins} more.</p>`}`);
+    const b = $('#hosp', box);
+    if (b) b.onclick = async () => {
+      if (!(await confirmBox(`送${name}去医院？`, `Spend ${cost} coins to make ${name} better?`, '送医院 Go', '取消 Cancel'))) return;
+      if (S.treat('hospital')) { sfx.fanfare(); confetti(); toast(`<span class="zh">${name}康复了！</span> Back to health!`, { ms: 3500 }); go('home'); }
+    };
+  } else if (md.face === 'dizzy' || md.face === 'cough') {
+    const med = md.face === 'dizzy' ? 'panadol' : 'syrup', it = ITEMS[med];
+    card('warn', md.face === 'dizzy' ? `😵‍💫 ${name}头晕了 <span class="en">Dizzy</span>` : `🤒 ${name}咳嗽了 <span class="en">Coughing</span>`,
+      `${name}已经${missed}天没做任务，生病了。去药房买${it.name}，再每天做任务！<br>Missed ${missed} days of tasks. Buy ${it.en.toLowerCase()} from the pharmacy, and do your daily tasks to keep ${name} well.`,
+      `<button class="btn big block" id="med">💊 <span class="zh">去药房</span> Pharmacy · ${S.price(med)}${coinI(20)}</button>`);
+    $('#med', box).onclick = () => go('shop', { tab: 'pharmacy' });
+  } else if (md.face === 'bored') {
+    card('play', `🎮 ${name}好无聊！<span class="en">Bored</span>`,
+      `复习10个以前的词语，写对8个得${S.PLAY_REWARD}金币！<br>Revise 10 old words — get 8 right to win ${S.PLAY_REWARD} coins!`,
+      `<button class="btn big green block" id="play">🎮 Play with Me!</button>`);
+    $('#play', box).onclick = () => { sfx.unlock(); go('spell', { mode: 'play' }); };
+  } else if (missed >= 1) {
+    const left = daysLeft('cough');
+    card('warn', `⚠️ <span class="zh">${missed}天没做任务了</span>`,
+      `再过${left}天不做任务，${name}会生病哦！<br>${missed} day${missed > 1 ? 's' : ''} without tasks — ${name} gets ill after ${S.SICK_AFTER.cough}. Do a task today!`, '');
+  } else box.remove();
+}
+
+// ---------- graveyard ----------
+function graveScreen() {
+  const s = S.get(), k = s.kitten;
+  const n = html`<section class="screen"><div class="grave">
+      <div class="night"></div>
+      <div class="stone" id="stone"></div>
+      <div class="card stack" style="max-width:560px;text-align:center;align-items:center">
+        <div class="h-title" style="justify-content:center"><span class="zh">${esc(k.name)}回到喵星了…</span></div>
+        <p class="help">${S.SICK_AFTER.dead}天没有人照顾，${esc(k.name)}离开了。<br>After ${S.SICK_AFTER.dead} days without any tasks, ${esc(k.name)} has gone back to the cat stars.</p>
+        <p class="help">每天做任务，好好照顾新的小猫吧！<br>Look after your next kitten by doing your daily tasks.</p>
+        <button class="btn big" id="restart">↻ Restart · <span class="zh">重新开始</span></button>
+      </div>
+    </div></section>`;
+  const t = document.createElement('canvas');
+  drawGrid(t, artGrid(TOMB.art, TOMB.pal), Math.max(7, Math.min(15, Math.floor(window.innerHeight / 60))));
+  $('#stone', n).appendChild(t);
+  $('#stone', n).appendChild(html`<div class="stone-name">${esc(k.name)}</div>`);
+  $('#restart', n).onclick = () => { S.restartKitten(); go('setup'); };
   return n;
 }
 

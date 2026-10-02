@@ -56,6 +56,7 @@ function fresh() {
     sessions: [],    // { at, listName, total, firstTry, coins, mode }
     daily: { date: todayStr(), spell: false, tried: 0, right: 0, care: false, paid: { spell: false, perfect: false, care: false, bonus: false } },
     streak: { count: 0, lastDate: null, freezes: 0 },
+    health: { stage: 'ok', lastActive: todayStr(), treated: null },
     settings: { rate: 0.75, voiceURI: null, pin: null, sound: true },
     updatedAt: Date.now(),
   };
@@ -80,6 +81,7 @@ function migrate(s) {
   out.daily = { ...base.daily, ...(s.daily || {}) };
   out.daily.paid = { ...base.daily.paid, ...((s.daily || {}).paid || {}) };
   out.streak = { ...base.streak, ...(s.streak || {}) };
+  out.health = { ...base.health, ...(s.health || {}) };
   out.prices = { ...(s.prices || {}) };
   if (typeof out.kitten.water !== 'number') out.kitten.water = 75;
   if (typeof out.daily.tried !== 'number') { out.daily.tried = 0; out.daily.right = 0; }
@@ -121,6 +123,54 @@ export function tick() {
       }
     }
   }
+  updateHealth();
+  save();
+}
+
+// ---------- health: skipping tasks for days makes the kitten ill ----------
+// A day counts as active if she finished a spelling round, the 8/10 task, or fed the kitten (petting doesn't count).
+export const STAGES = ['ok', 'cough', 'dizzy', 'faint', 'dead'];
+export const SICK_AFTER = { cough: 3, dizzy: 5, faint: 7, dead: 10 };
+export function missedDays() {
+  const h = state.health, t = todayStr();
+  const from = [h.lastActive, h.treated].filter(Boolean).sort().pop() || t;
+  return Math.max(0, daysBetween(from, t) - 1);   // full days missed, not counting today
+}
+function stageFor(missed) {
+  if (missed >= SICK_AFTER.dead) return 'dead';
+  if (missed >= SICK_AFTER.faint) return 'faint';
+  if (missed >= SICK_AFTER.dizzy) return 'dizzy';
+  if (missed >= SICK_AFTER.cough) return 'cough';
+  return 'ok';
+}
+export function updateHealth() {
+  const h = state.health;
+  const next = stageFor(missedDays());
+  // illness only gets worse by itself; medicine or the hospital makes it better
+  if (STAGES.indexOf(next) > STAGES.indexOf(h.stage)) h.stage = next;
+}
+export const health = () => state.health.stage;
+export function markActive() { state.health.lastActive = todayStr(); }
+export const CURES = { syrup: 'cough', panadol: 'dizzy', hospital: 'faint' };
+export function treat(id) {
+  const h = state.health, need = CURES[id];
+  if (!need || h.stage !== need) return false;
+  const cost = price(id);
+  if (state.coins < cost) return false;
+  state.coins -= cost;
+  h.stage = 'ok'; h.treated = todayStr();
+  if (id === 'hospital') { const k = state.kitten; k.hunger = Math.max(k.hunger, 60); k.water = Math.max(k.water ?? 0, 60); k.happy = Math.max(k.happy, 60); }
+  save();
+  return true;
+}
+// the kitten has died: choose a new kitten. Word lists, progress, coins and items are kept.
+export function restartKitten() {
+  const base = fresh();
+  state.kitten = { ...base.kitten, equipped: { head: null, neck: null, face: null } };
+  state.health = base.health;
+  state.streak = { ...base.streak, freezes: state.streak.freezes || 0 };
+  state.daily = base.daily;
+  state.needsSetup = true;
   save();
 }
 
@@ -129,6 +179,11 @@ export function mood() {
   const k = state.kitten, needs = [];
   if (k.hunger < 30) needs.push('hungry');
   if ((k.water ?? 75) < 30) needs.push('thirsty');
+  const st = state.health.stage;
+  if (st === 'faint') return { face: 'faint', needs, text: '' };
+  if (st === 'dizzy') return { face: 'dizzy', needs, text: '头好晕…需要药药' };
+  if (st === 'cough') return { face: 'cough', needs, text: '咳咳…咳咳…' };
+  if (state.daily.bored && !state.daily.playDone) return { face: 'bored', needs, text: '好无聊…陪我玩嘛！' };
   if (!tasksDone()) return { face: 'cry', needs, text: '呜呜…今天的任务还没做完' };
   if (needs.includes('thirsty')) return { face: 'thirsty', needs, text: '好渴…想喝水' };
   if (needs.includes('hungry')) return { face: 'hungry', needs, text: '肚子饿了…' };
@@ -148,6 +203,7 @@ export function perfectDone() {
 // returns list of {label, coins} rewards newly granted
 export function checkDaily() {
   const d = state.daily, got = [];
+  if (d.spell || d.fed || perfectDone()) markActive();
   const pay = (key, coins, label) => { if (!d.paid[key]) { d.paid[key] = true; state.coins += coins; got.push({ label, coins }); } };
   if (d.spell) pay('spell', REWARDS.taskSpell, '完成听写 Spelling done');
   if (perfectDone()) pay('perfect', REWARDS.taskPerfect, `${RIGHT_TARGET}/${WORDS_TARGET} 写对 Great accuracy`);
@@ -172,6 +228,8 @@ export function feed(id) {
   state.kitten.happy = Math.min(100, state.kitten.happy + (it.happy || 0));
   state.kitten.water = Math.min(100, (state.kitten.water ?? 75) + (it.water || 0));
   state.daily.care = true;
+  state.daily.fed = true;
+  markActive();
   save();
   return true;
 }
@@ -199,6 +257,7 @@ export function setPrice(id, v) {
 export function buy(id) {
   const it = ITEMS[id], cost = it ? price(id) : Infinity;
   if (!it || state.coins < cost) return false;
+  if (it.cat === 'pharmacy' || it.cat === 'service') return treat(id);
   if (it.cat === 'special') {
     if ((state.streak.freezes || 0) >= MAX_FREEZES) return false;
     state.coins -= cost; state.streak.freezes = (state.streak.freezes || 0) + 1; save(); return true;
@@ -255,10 +314,42 @@ export function logSession(sess) {
   save();
 }
 
-// parse the parent's word list text: one entry per line, optional hint after | or ｜ or tab
+// parse the parent's word list text: one entry per line, optional hint sentence after | or ｜ or tab.
+// Several words on one line (separated by spaces, commas or 、) become separate words.
 export function parseWords(text) {
-  return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
-    const [w, ...rest] = line.split(/[|｜\t]/);
-    return { w: w.replace(/\s+/g, '').trim(), hint: rest.join(' ').trim() };
-  }).filter((x) => x.w);
+  const out = [];
+  text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).forEach((line) => {
+    const [left, ...rest] = line.split(/[|｜\t]/);
+    const hint = rest.join(' ').trim();
+    const words = left.split(/[\s,，、;；。.]+/).map((w) => w.trim()).filter(Boolean);
+    words.forEach((w) => out.push({ w, hint: words.length === 1 || hint.includes(w) ? hint : '' }));
+  });
+  return out;
+}
+
+// ---------- "Play with me": a surprise revision round of past words ----------
+export const PLAY_REWARD = 15;
+export function maybeBored() {
+  const d = state.daily;
+  if (d.bored || d.playDone || state.health.stage !== 'ok') return false;
+  if (Object.keys(state.words).length < 5) return false;     // needs some past words to revise
+  if (Math.random() < 0.2) { d.bored = true; save(); return true; }
+  return false;
+}
+export function playWords(n = 10) {
+  const hints = {};
+  state.lists.forEach((l) => l.words.forEach((x) => { if (x.hint && !hints[x.w]) hints[x.w] = x.hint; }));
+  const all = Object.keys(state.words);
+  for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
+  return all.slice(0, n).map((w) => ({ w, hint: hints[w] || '' }));
+}
+// returns coins won (0 if not good enough)
+export function finishPlay(first, total) {
+  const d = state.daily;
+  d.playDone = true; d.bored = false;
+  let won = 0;
+  if (total > 0 && first / total >= RIGHT_TARGET / WORDS_TARGET && !d.playPaid) { d.playPaid = true; state.coins += PLAY_REWARD; won = PLAY_REWARD; }
+  state.kitten.happy = Math.min(100, state.kitten.happy + 15);
+  save();
+  return won;
 }
