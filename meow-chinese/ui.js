@@ -75,13 +75,14 @@ export function burst(layer, kind = 'heart', n = 3, x = '50%', y = '30%') {
   }
 }
 
-export function toast(content, { coins = 0 } = {}) {
+export function toast(content, { coins = 0, ms = 2700 } = {}) {
   const t = document.createElement('div');
   t.className = 'toast';
   t.innerHTML = content + (coins ? ` <span class="price">+${coins} ${coinI(20)}</span>` : '');
   hydrateIcons(t);
+  t.style.animationDuration = (ms - 100) / 1000 + 's';
   $('#toasts').appendChild(t);
-  setTimeout(() => t.remove(), 2700);
+  setTimeout(() => t.remove(), ms);
   if (coins) sfx.coin();
 }
 

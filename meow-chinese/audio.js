@@ -23,21 +23,46 @@ function pickVoice() {
 }
 export const canSpeak = () => 'speechSynthesis' in window;
 
-export function speak(text, { slow = false } = {}) {
-  if (!canSpeak()) return Promise.resolve();
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const keep = new Set(); // hold utterances so Chrome doesn't garbage-collect them mid-speech
+let stuckWarned = false;
+
+function speakOnce(text, slow) {
   return new Promise((resolve) => {
-    speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     const v = pickVoice();
     if (v) u.voice = v;
     u.lang = v ? v.lang : 'zh-CN';
     const base = get().settings.rate || 0.75;
     u.rate = slow ? Math.max(0.35, base * 0.6) : base;
-    u.pitch = 1.05;
-    u.onend = u.onerror = () => resolve();
+    let started = false, done = false;
+    const finish = (ok) => { if (done) return; done = true; keep.delete(u); resolve(ok); };
+    u.onstart = () => { started = true; };
+    u.onend = () => finish(true);
+    u.onerror = (e) => finish(e.error === 'interrupted' || e.error === 'canceled' ? true : started);
+    keep.add(u);
     speechSynthesis.speak(u);
-    setTimeout(resolve, 12000);
+    if (speechSynthesis.paused) speechSynthesis.resume();
+    // watchdog: if the engine never starts, report failure so we can retry
+    setTimeout(() => { if (!started && !done && !speechSynthesis.speaking) finish(false); }, 1800);
+    setTimeout(() => { if (!started) finish(false); else finish(true); }, 2600 + text.length * 900);
   });
+}
+
+export async function speak(text, { slow = false } = {}) {
+  if (!canSpeak()) return;
+  speechSynthesis.cancel();
+  await new Promise((r) => setTimeout(r, 60)); // Chrome drops a speak() issued straight after cancel()
+  let ok = await speakOnce(text, slow);
+  if (!ok) {
+    speechSynthesis.cancel();
+    await new Promise((r) => setTimeout(r, 250));
+    ok = await speakOnce(text, slow);
+  }
+  if (!ok && !stuckWarned) {
+    stuckWarned = true;
+    window.dispatchEvent(new CustomEvent('speech-stuck'));
+  }
 }
 export function stopSpeaking() { if (canSpeak()) speechSynthesis.cancel(); }
 
@@ -72,6 +97,6 @@ export const sfx = {
   unlock() {
     ac();
     // iOS only lets a page speak after speech starts inside a tap, so warm it up here
-    if (canSpeak() && !window.__speechWarm) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); window.__speechWarm = true; }
+    if (canSpeak() && isIOS && !window.__speechWarm) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); window.__speechWarm = true; }
   },
 };

@@ -32,7 +32,7 @@ const screens = {
   parent: (p) => parentScreen({ ...p, go }),
 };
 export function go(name, params = {}) {
-  if (window.speechSynthesis && window.__speechWarm) speechSynthesis.cancel();
+  if (window.speechSynthesis) speechSynthesis.cancel();
   current = name;
   app.innerHTML = '';
   const node = screens[name](params);
@@ -292,6 +292,10 @@ function openFeed(kv, fx, afterCare) {
 }
 
 // ---------- boot ----------
+window.addEventListener('speech-stuck', () => {
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  toast(`<span><span class="zh">听不到声音？</span> No sound? ${ios ? 'Turn up the volume and check silent mode is off, then tap 再听 again.' : 'Fully quit the browser (⌘Q), reopen it and check the volume.'}</span>`, { ms: 7000 });
+});
 tapSound(document.body);
 paintSky(true);
 S.tick();

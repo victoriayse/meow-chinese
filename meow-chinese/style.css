@@ -230,7 +230,7 @@ canvas.sprite, .kitten-canvas { display: block; }
 .box .box-tag { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); font-family: var(--px); font-weight: 700; font-size: 13px; background: var(--ink); color: #fff; padding: 1px 8px; border-radius: 4px; white-space: nowrap; z-index: 2; }
 .box.bad .box-tag { background: var(--red); }
 .box.ok .box-tag { background: var(--green-d); }
-.box .pinyin { position: absolute; top: -34px; left: 0; right: 0; text-align: center; font-weight: 800; font-size: 20px; color: var(--ink); }
+.box .pinyin { position: absolute; top: -34px; left: -6px; right: -6px; text-align: center; font-weight: 800; font-size: clamp(13px, calc(var(--s) * .12), 20px); color: var(--ink); white-space: nowrap; }
 
 .spell-actions { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
 .feedback { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
@@ -318,7 +318,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .modal .card { width: min(640px, 100%); max-height: 88vh; overflow-y: auto; }
 .pantry { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
 #toasts { position: fixed; top: calc(var(--top-h) + var(--safe-t) + 12px); left: 50%; transform: translateX(-50%); z-index: 60; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
-.toast { background: var(--paper); border: 3px solid var(--ink); border-radius: 8px; padding: 8px 16px; font-family: var(--px); font-weight: 700; font-size: 20px; box-shadow: 0 4px 0 rgba(43,33,64,.4); display: flex; gap: 8px; align-items: center; animation: toast 2.6s forwards; }
+.toast { max-width: min(620px, calc(100vw - 28px)); line-height: 1.25; background: var(--paper); border: 3px solid var(--ink); border-radius: 8px; padding: 8px 16px; font-family: var(--px); font-weight: 700; font-size: 20px; box-shadow: 0 4px 0 rgba(43,33,64,.4); display: flex; gap: 8px; align-items: center; animation: toast 2.6s forwards; }
 .toast .zh { font-size: 1.05em; }
 @keyframes toast { 0% { opacity: 0; transform: translateY(-10px); } 10%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-10px); } }
 
@@ -340,4 +340,22 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .pill { font-size: 16px; padding: 2px 8px 2px 6px; }
   .menu-grid .btn { font-size: 17px; }
   .fur-pick { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 600px) {
+  .screen { padding: 12px 10px calc(20px + var(--safe-b)); }
+  .card { padding: 14px 12px; }
+  .teacher { gap: 8px; align-items: flex-start; }
+  .teacher .kitten-canvas { width: 66px !important; height: auto !important; }
+  .teacher .say { padding: 10px 12px; }
+  .teacher .say .line1 { font-size: 20px; }
+  .listen-row { gap: 6px; }
+  .listen-row .btn.small { min-height: 38px; font-size: 14px; padding: 2px 8px; }
+  .feedback .big-msg { font-size: 28px; }
+  .toast { font-size: 16px; }
+  .steps span { font-size: 12px; padding: 2px 6px; }
+}
+
+/* numbers: the pixel font makes 2/3/5 look like 8, so use a clear rounded font for all counts and prices */
+.pill, .price, .round-coins, .kpi b, .task .reward, .task .prog, .item .count, .nametag .lv, .dots, #coin-n {
+  font-family: "Nunito", system-ui, sans-serif; font-weight: 800;
 }
