@@ -2,7 +2,7 @@
 import * as S from './state.js';
 import { $, $$, html, esc, coinI, hydrateIcons, KittenView, toast, confetti, confirmBox, burst } from './ui.js';
 import { speak, stopSpeaking, sfx, canSpeak } from './audio.js';
-import { InkPad, judge, loadChar } from './handwriting.js';
+import { SnapBox, loadChar } from './handwriting.js';
 
 const isHan = (ch) => /\p{Script=Han}/u.test(ch);
 const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -121,84 +121,68 @@ export function spellingScreen({ mode = 'list', go }) {
 
     const s = boxSize(chars.length);
     const boxes = html`<div class="boxes" style="margin-top:22px"></div>`;
-    const charState = chars.map((ch) => ({ ch, han: isHan(ch), wrong: false }));
-    let lastPad = null;
+    const charState = chars.map((ch) => ({ ch, han: isHan(ch), wrong: false, done: !isHan(ch) }));
     chars.forEach((ch, i) => {
       const c = charState[i];
-      const b = html`<div class="box ${c.han ? '' : 'fixed'}" style="--s:${s}px"></div>`;
+      const b = html`<div class="box ${c.han ? 'active' : 'fixed'}" style="--s:${s}px"></div>`;
       if (!c.han) b.textContent = ch;
-      else {
-        c.pad = new InkPad(b, s - 8, { width: Math.max(5, Math.round(s / 24)), onStroke: (p) => { lastPad = p; sfx.stroke(); } });
-        c.data = loadChar(ch).catch(() => null);   // fetch the real character while she writes
-      }
       boxes.appendChild(b);
       c.box = b;
     });
     main.appendChild(boxes);
     const actions = html`<div class="spell-actions">
-        <button class="btn white" id="undo">↶ <span class="zh">撤销</span> Undo</button>
-        <button class="btn white" id="clr">🧽 <span class="zh">擦掉</span> Clear</button>
-        <button class="btn big green" id="chk">✓ <span class="zh">写好了</span> Check</button>
         <button class="btn white" id="idk">🤔 <span class="zh">不会写</span> I don't know</button>
+        <button class="btn white" id="skip"><span class="zh">跳过</span> Skip ➜</button>
       </div>`;
     main.appendChild(actions);
     hydrateIcons(main);
 
-    const pads = charState.filter((c) => c.han);
-    $('#undo', actions).onclick = () => { if (lastPad) lastPad.undo(); };
-    $('#clr', actions).onclick = () => {
-      const target = lastPad || pads.find((c) => !c.pad.empty)?.pad;
-      if (target) target.clear();
-    };
-
     let finished = false;
-    async function check() {
-      if (finished) return;
-      const blank = pads.find((c) => c.pad.empty);
-      if (blank) { toast('<span class="zh">每个格子都要写哦</span> Write in every box'); blank.box.classList.add('active'); setTimeout(() => blank.box.classList.remove('active'), 900); return; }
-      $('#chk', actions).disabled = true;
-      for (const c of pads) {
-        const data = await c.data;
-        c.wrong = data ? !judge(c.pad.strokes, data).ok : false; // no data (offline) → can't check, so accept
-      }
-      $('#chk', actions).disabled = false;
-      const wrongIdx = charState.map((c, i) => (c.wrong ? i : -1)).filter((i) => i >= 0);
-      if (!wrongIdx.length) return endWord(false);
-      // show which boxes are wrong, and give one chance to fix them
-      charState.forEach((c) => { if (c.han) { c.box.classList.toggle('bad', c.wrong); c.box.classList.toggle('ok', !c.wrong); } });
-      if (item.fixUsed) return endWord(false);
-      sfx.oops();
-      const fix = html`<div class="feedback">
-          <div class="big-msg bad">有${wrongIdx.length > 1 ? '几' : '一'}个字不太对哦 <span class="en">Not quite right</span></div>
-          <div class="sub">红色格子里的字再看看 · Check the red box${wrongIdx.length > 1 ? 'es' : ''}</div>
-          <div class="row" style="justify-content:center">
-            <button class="btn big" id="fix">✏️ <span class="zh">改一改</span> Fix it</button>
-            <button class="btn white" id="show">📖 <span class="zh">教我</span> Show me</button>
-          </div>
-        </div>`;
-      actions.replaceWith(fix);
-      $('#fix', fix).onclick = () => {
-        item.fixUsed = true;
-        charState.forEach((c) => { if (c.wrong) { c.pad.clear(); c.box.classList.remove('bad'); } });
-        fix.replaceWith(actions);
-      };
-      $('#show', fix).onclick = () => endWord(false);
-    }
+    // each stroke she draws snaps into the matching real stroke, in any order;
+    // a stroke that doesn't match anything fades away
+    charState.forEach((c) => {
+      if (!c.han) return;
+      loadChar(c.ch).then((data) => {
+        if (finished) return;
+        c.snap = new SnapBox(c.box, s - 8, data, {
+          onHit: () => sfx.stroke(),
+          onMiss: () => sfx.miss(),
+          onHint: () => { c.wrong = true; },
+          onComplete: () => {
+            c.done = true;
+            c.box.classList.remove('active');
+            c.box.classList.add(c.snap.hinted ? 'bad' : 'ok');
+            if (charState.every((x) => x.done)) setTimeout(() => endWord(false), 300);
+          },
+        });
+      }).catch(() => { c.done = true; c.box.classList.remove('active'); c.box.classList.add('fixed'); c.box.textContent = c.ch; if (charState.every((x) => x.done)) endWord(false); });
+    });
+
     function endWord(gaveUp) {
       if (finished) return; finished = true;
-      if (gaveUp) charState.forEach((c) => { if (c.han) c.wrong = true; });
-      pads.forEach((c) => { c.pad.enabled = false; c.pad.tint(c.wrong ? '#ef5d73' : '#2f8f45'); });
+      charState.forEach((c) => {
+        if (!c.han) return;
+        if (gaveUp && !c.done) c.wrong = true;
+        if (c.snap) { c.snap.enabled = false; if (c.snap.hinted) c.wrong = true; }
+      });
       const wrongIdx = charState.map((c, i) => (c.wrong ? i : -1)).filter((i) => i >= 0);
       if (!wrongIdx.length) onCorrect(item, charState);
       else onWrong(item, charState, wrongIdx, s);
     }
-    $('#chk', actions).onclick = check;
     $('#idk', actions).onclick = () => endWord(true);
+    // skip: move on without marking it right or wrong (a retry word stays in the mistakes book)
+    $('#skip', actions).onclick = () => {
+      if (finished) return; finished = true;
+      charState.forEach((c) => { if (c.snap) c.snap.enabled = false; });
+      status[item.i] = item.attempt > 0 ? 'wrong' : 'skip';
+      drawDots();
+      next();
+    };
     setTimeout(() => sayWord(item), 450);
   }
 
   function onCorrect(item, charState) {
-    const result = item.attempt === 0 && !item.fixUsed ? 'first' : 'retry';
+    const result = item.attempt === 0 ? 'first' : 'retry';
     status[item.i] = result;
     S.recordWord(item.w, result);
     const coins = result === 'first' ? S.REWARDS.firstTry : S.REWARDS.retry;
@@ -210,7 +194,7 @@ export function spellingScreen({ mode = 'list', go }) {
     const praise = ['太棒了！', '写对了！', '真厉害！', '好极了！', '你真棒！'][Math.floor(Math.random() * 5)];
     const actions = $('.spell-actions, .feedback', main);
     actions.replaceWith(html`<div class="feedback">
-        <div class="big-msg good">${praise} <span class="en">${result === 'first' ? 'Correct!' : item.fixUsed ? 'You fixed it!' : 'You remembered it!'}</span></div>
+        <div class="big-msg good">${praise} <span class="en">${result === 'first' ? 'Correct!' : 'You remembered it!'}</span></div>
         <div class="answer"><div class="py">${esc(pinyinOf(item.w))}</div></div>
         <div class="row" style="justify-content:center"><span class="price" style="font-size:22px">+${coins} ${coinI(22)}</span></div>
         <button class="btn big green" id="nx">${queue.length ? '下一个 Next ➜' : '完成 Finish ★'}</button>
@@ -276,30 +260,14 @@ export function spellingScreen({ mode = 'list', go }) {
     }
     async function trace() {
       $('#st2', lesson).className = 'on';
-      tact.innerHTML = '<div class="sub" style="font-weight:800;color:var(--ink-2)">沿着灰色的字描一遍 · Trace over the grey character</div>';
+      tact.innerHTML = '<div class="sub" style="font-weight:800;color:var(--ink-2)">沿着灰色的字描一遍，什么顺序都可以 · Trace over the grey character, in any order</div>';
       for (const i of wrongIdx) {
         if (!tw[i]) continue;
-        tw[i].hideCharacter();
+        tw[i].hideCharacter(); tw[i].hideOutline();
         const box = tboxes.children[i];
         box.classList.add('active');
-        const pad = new InkPad(box, tsize - 8, { width: Math.max(5, Math.round(tsize / 24)), onStroke: () => sfx.stroke() });
-        pad.canvas.style.position = 'absolute'; pad.canvas.style.left = '0'; pad.canvas.style.top = '0';
         const data = await loadChar(chars[i]).catch(() => null);
-        await new Promise((done) => {
-          const bar = html`<div class="row" style="justify-content:center">
-              <button class="btn white" data-a="clr">🧽 <span class="zh">擦掉</span> Clear</button>
-              <button class="btn green" data-a="ok">✓ <span class="zh">描好了</span> Done</button></div>`;
-          tact.appendChild(bar);
-          bar.onclick = (e) => {
-            const a = e.target.closest('[data-a]'); if (!a) return;
-            if (a.dataset.a === 'clr') return pad.clear();
-            if (pad.empty) return;
-            if (data && !judge(pad.strokes, data, { maxStroke: 0.17, tol: 0.12, cov: 0.6, prec: 0.65 }).ok) {
-              toast('<span class="zh">再描一次</span> Try tracing it again'); sfx.miss(); pad.clear(); return;
-            }
-            pad.enabled = false; pad.tint('#2f8f45'); bar.remove(); done();
-          };
-        });
+        if (data) await new Promise((done) => new SnapBox(box, tsize - 8, data, { outline: true, hintAfter: 2, leniency: 1.4, onHit: () => sfx.stroke(), onMiss: () => sfx.miss(), onComplete: done }));
         box.classList.remove('active');
       }
       $('#st2', lesson).className = 'done'; $('#st3', lesson).className = 'on';
@@ -328,9 +296,10 @@ export function spellingScreen({ mode = 'list', go }) {
     const first = status.filter((x) => x === 'first').length;
     const retry = status.filter((x) => x === 'retry').length;
     const wrong = status.filter((x) => x === 'wrong').length;
+    const skipped = status.filter((x) => x === 'skip').length;
     const d = S.get().daily;
-    d.spell = true; S.save();
-    S.logSession({ mode, listName: mode === 'review' ? '错词本 Mistakes' : (list ? list.name : ''), total, firstTry: first, retry, wrong, coins: roundCoins });
+    if (skipped < total) { d.spell = true; S.save(); } // skipping every word doesn't count as a round
+    S.logSession({ mode, listName: mode === 'review' ? '错词本 Mistakes' : (list ? list.name : ''), total, firstTry: first, retry, wrong, skipped, coins: roundCoins });
     const rewards = S.checkDaily();
     const great = first / total >= 0.8;
     kv.setMood('happy');
@@ -342,10 +311,10 @@ export function spellingScreen({ mode = 'list', go }) {
         <div class="kpis" style="width:100%">
           <div class="kpi"><b style="color:var(--green-d)">${first}/${total}</b><span>一次写对 First try</span></div>
           <div class="kpi"><b style="color:var(--blue-d)">${retry}</b><span>学会了 Learned</span></div>
-          <div class="kpi"><b style="color:var(--red-d)">${wrong}</b><span>再练习 To practise</span></div>
+          <div class="kpi"><b style="color:var(--red-d)">${wrong}</b><span>再练习 To practise${skipped ? ` · 跳过 ${skipped} skipped` : ''}</span></div>
           <div class="kpi"><b>${roundCoins + rewards.reduce((a, r) => a + r.coins, 0)}</b><span>金币 Coins earned</span></div>
         </div>
-        <div class="result-list" style="width:100%">${items.map((it, i) => `<div>${esc(it.w)}<span class="tag ${status[i]}">${status[i] === 'first' ? '✓' : status[i] === 'retry' ? '学会' : '再练'}</span></div>`).join('')}</div>
+        <div class="result-list" style="width:100%">${items.map((it, i) => `<div>${esc(it.w)}<span class="tag ${status[i]}">${status[i] === 'first' ? '✓' : status[i] === 'retry' ? '学会' : status[i] === 'skip' ? '跳过' : '再练'}</span></div>`).join('')}</div>
         <div class="row" style="justify-content:center">
           ${wrong ? '<button class="btn pink" id="rv"><span class="zh">练习错词</span> Mistakes</button>' : ''}
           <button class="btn white" id="ag"><span class="zh">再来一次</span> Again</button>

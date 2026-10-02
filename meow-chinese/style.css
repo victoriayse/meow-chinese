@@ -201,6 +201,7 @@ canvas.sprite, .kitten-canvas { display: block; }
 .dots i.first { background: var(--green); }
 .dots i.retry { background: var(--blue); }
 .dots i.wrong { background: var(--red); }
+.dots i.skip { background: #b9b0c4; }
 .round-coins { font-family: var(--px); font-weight: 700; font-size: 20px; background: var(--paper); border: 3px solid var(--ink); border-radius: 6px; padding: 6px 12px; display: flex; gap: 6px; align-items: center; }
 
 .teacher { display: flex; align-items: center; gap: 14px; }
@@ -256,6 +257,7 @@ canvas.sprite, .kitten-canvas { display: block; }
 .tag.first { background: var(--green-d); }
 .tag.retry { background: var(--blue-d); }
 .tag.wrong { background: var(--red); }
+.tag.skip { background: #8a7f99; }
 .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; overflow: hidden; }
 .confetti i { position: absolute; top: -20px; width: 10px; height: 10px; animation: fall linear forwards; }
 @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }

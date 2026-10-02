@@ -67,14 +67,36 @@ function strokeCost(a, b) {
 function matchStrokes(drawn, target) {
   const N = 16;
   const A = drawn.map((s) => arcResample(s, N)), B = target.map((s) => arcResample(s, N));
-  const pairs = [];
-  A.forEach((a, i) => B.forEach((b, j) => pairs.push([strokeCost(a, b), i, j])));
-  pairs.sort((x, y) => x[0] - y[0]);
-  const ua = new Set(), ub = new Set(), costs = [];
-  for (const [c, i, j] of pairs) { if (ua.has(i) || ub.has(j)) continue; ua.add(i); ub.add(j); costs.push(c); }
+  const C = A.map((a) => B.map((b) => strokeCost(a, b)));
+  const rowFor = assign(C);
+  const costs = B.map((b, j) => C[rowFor[j]][j]);
   return costs;
 }
 
+
+
+// optimal one-to-one assignment (Hungarian algorithm); cost[i][j], n x n
+function assign(cost) {
+  const n = cost.length, INF = 1e9;
+  const u = new Array(n + 1).fill(0), v = new Array(n + 1).fill(0), p = new Array(n + 1).fill(0), way = new Array(n + 1).fill(0);
+  for (let i = 1; i <= n; i++) {
+    p[0] = i; let j0 = 0;
+    const minv = new Array(n + 1).fill(INF), used = new Array(n + 1).fill(false);
+    do {
+      used[j0] = true; const i0 = p[j0]; let delta = INF, j1 = 0;
+      for (let j = 1; j <= n; j++) if (!used[j]) {
+        const cur = cost[i0 - 1][j - 1] - u[i0] - v[j];
+        if (cur < minv[j]) { minv[j] = cur; way[j] = j0; }
+        if (minv[j] < delta) { delta = minv[j]; j1 = j; }
+      }
+      for (let j = 0; j <= n; j++) { if (used[j]) { u[p[j]] += delta; v[j] -= delta; } else minv[j] -= delta; }
+      j0 = j1;
+    } while (p[j0] !== 0);
+    do { const j1 = way[j0]; p[j0] = p[j1]; j0 = j1; } while (j0);
+  }
+  const rowFor = new Array(n); for (let j = 1; j <= n; j++) rowFor[j - 1] = p[j] - 1; // target j -> drawn row
+  return rowFor;
+}
 
 // ---------- structural check (tolerant of a child's proportions) ----------
 const ang = (v) => Math.atan2(v[1], v[0]);
@@ -98,11 +120,9 @@ function pairCost(d, t) {
 }
 function structural(drawn, target, opts = {}) {
   const D = drawn.map(feats), T = target.map(feats);
-  const pairs = [];
-  D.forEach((d, i) => T.forEach((t, j) => pairs.push({ i, j, ...pairCost(d, t) })));
-  pairs.sort((a, b) => a.cost - b.cost);
-  const ui = new Set(), uj = new Set(), m = new Array(T.length);
-  for (const p of pairs) { if (ui.has(p.i) || uj.has(p.j)) continue; ui.add(p.i); uj.add(p.j); m[p.j] = p; }
+  const C = D.map((d) => T.map((t) => pairCost(d, t)));
+  const rowFor = assign(C.map((r) => r.map((x) => x.cost)));
+  const m = T.map((t, j) => ({ i: rowFor[j], ...C[rowFor[j]][j] }));
   const deg = Math.PI / 180;
   const strokesOk = m.every((p) => p && p.cd < (opts.cd ?? 0.25) && p.ad < (opts.ad ?? 38) * deg);
   // the strokes must keep their layout: what is left/above in the real character stays left/above
@@ -166,7 +186,24 @@ export function judge(drawn, data, { tol = 0.09, cov = 0.75, prec = 0.8, maxStro
   } else {
     // fewer strokes is OK (she may join two strokes); extra strokes are not
     const countOk = ink.length < target.length && target.length - ink.length <= Math.max(1, Math.round(target.length * 0.25));
-    ok = aspectOk && countOk && minCover >= cov && minPrecise >= prec;
+    // judge the overlap more loosely here, since joined strokes change the shape a little
+    const loose = (() => {
+      const t2 = tol * 1.25;
+      const covered = tPts.map((s) => new Array(s.length).fill(false));
+      let worstP = 1;
+      dPts.forEach((s) => {
+        let good = 0;
+        s.forEach((p) => {
+          let best = null, bd = Infinity;
+          for (const t of flatT) { const d = (p[0] - t.p[0]) ** 2 + (p[1] - t.p[1]) ** 2; if (d < bd) { bd = d; best = t; } }
+          if (Math.sqrt(bd) < t2) { good++; const row = covered[best.j]; for (let k = best.k - 2; k <= best.k + 2; k++) if (k >= 0 && k < row.length) row[k] = true; }
+        });
+        worstP = Math.min(worstP, good / s.length);
+      });
+      const worstC = Math.min(...covered.map((r) => r.filter(Boolean).length / r.length));
+      return worstC >= 0.65 && worstP >= 0.7;
+    })();
+    ok = aspectOk && countOk && ((minCover >= cov && minPrecise >= prec) || loose);
   }
   return { ok, worst, struct, minCover, minPrecise, strokes: ink.length, expected: target.length, aspectOk };
 }
@@ -213,4 +250,144 @@ export class InkPad {
   clear() { this.strokes = []; this.redraw(); }
   get empty() { return this.strokes.length === 0; }
   tint(color) { this.color = color; this.redraw(); }
+}
+
+// ---------- snap writing: each stroke she draws snaps into the real stroke, in any order ----------
+const SVGNS = 'http://www.w3.org/2000/svg';
+function polyLen(pts) { let L = 0; for (let i = 1; i < pts.length; i++) L += dist(pts[i - 1], pts[i]); return L; }
+function distToPoly(p, poly) {
+  let m = Infinity;
+  for (let i = 1; i < poly.length; i++) {
+    const a = poly[i - 1], b = poly[i], dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1e-6;
+    let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2; t = Math.max(0, Math.min(1, t));
+    m = Math.min(m, Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy));
+  }
+  return poly.length === 1 ? dist(p, poly[0]) : m;
+}
+// how well a drawn stroke (char coords) fits one real stroke median; lower is better, Infinity = no match
+export function strokeFit(drawn, median, leniency = 1) {
+  const d = arcResample(drawn, 16), t = arcResample(median, 16);
+  const Ld = polyLen(drawn), Lt = polyLen(median);
+  const avgDT = d.reduce((a, p) => a + distToPoly(p, median), 0) / d.length;
+  const avgTD = t.reduce((a, p) => a + distToPoly(p, drawn), 0) / t.length;
+  const fwdEnds = (dist(d[0], t[0]) + dist(d[15], t[15])) / 2, revEnds = (dist(d[0], t[15]) + dist(d[15], t[0])) / 2;
+  const ends = Math.min(fwdEnds, revEnds);
+  const tiny = Lt < 120; // dots: just need to be in the right place
+  const ratio = Ld / Math.max(Lt, 1);
+  if (avgDT > 150 * leniency || avgTD > 170 * leniency) return Infinity;
+  if (!tiny && ends > 230 * leniency) return Infinity;
+  if (!tiny && (ratio < 0.35 / leniency || ratio > 2.6 * leniency)) return Infinity;
+  if (!tiny) {
+    const vd = [d[15][0] - d[0][0], d[15][1] - d[0][1]], vt = [t[15][0] - t[0][0], t[15][1] - t[0][1]];
+    const cos = Math.abs(vd[0] * vt[0] + vd[1] * vt[1]) / ((Math.hypot(...vd) * Math.hypot(...vt)) || 1);
+    if (Lt > 250 && Math.hypot(...vt) > 150 && cos < 0.55) return Infinity; // clearly the wrong direction
+  }
+  return avgDT + avgTD + ends * 0.5;
+}
+
+export class SnapBox {
+  // box: element; size: px; data: hanzi-writer-data JSON
+  constructor(box, size, data, { padding = Math.round(size * 0.07), outline = false, leniency = 1.25, hintAfter = 3, onHit, onMiss, onComplete, onHint } = {}) {
+    Object.assign(this, { box, size, data, padding, leniency, hintAfter, onHit, onMiss, onComplete, onHint });
+    this.scale = (size - 2 * padding) / 1024;
+    this.done = new Set(); this.misses = 0; this.hinted = false; this.complete = false;
+    this.ink = []; // her accepted strokes so far, in character coordinates
+    this.medians = data.medians.map((m) => m.map(([x, y]) => [x, y]));
+    const svg = document.createElementNS(SVGNS, 'svg');
+    svg.setAttribute('width', size); svg.setAttribute('height', size);
+    svg.style.cssText = 'position:absolute;left:0;top:0;pointer-events:none';
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('transform', `translate(${padding}, ${padding + 900 * this.scale}) scale(${this.scale}, ${-this.scale})`);
+    svg.appendChild(g);
+    this.paths = data.strokes.map((d) => {
+      const p = document.createElementNS(SVGNS, 'path');
+      p.setAttribute('d', d);
+      p.setAttribute('fill', outline ? '#e4d9c6' : 'transparent');
+      p.style.transition = 'fill .25s';
+      g.appendChild(p);
+      return p;
+    });
+    this.outline = outline;
+    box.appendChild(svg);
+    this.svg = svg;
+    this.pad = new InkPad(box, size, { width: Math.max(5, Math.round(size / 24)), onStroke: (pad) => this.stroke(pad) });
+    this.pad.canvas.style.position = 'absolute'; this.pad.canvas.style.left = '0'; this.pad.canvas.style.top = '0';
+  }
+  toChar([x, y]) { return [(x - this.padding) / this.scale, 900 - (y - this.padding) / this.scale]; }
+  // learn how her writing is shifted / squashed compared with the real character
+  fitFrom(assignments) {
+    const P = [];
+    assignments.forEach(([i, j]) => {
+      const d = arcResample(this.ink[i], 8), t = arcResample(this.medians[j], 8);
+      const fwd = dist(d[0], t[0]) + dist(d[7], t[7]), rev = dist(d[0], t[7]) + dist(d[7], t[0]);
+      const tt = fwd <= rev ? t : t.slice().reverse();
+      d.forEach((p, k) => P.push([p, tt[k]]));
+    });
+    if (!P.length) return { ax: 1, bx: 0, ay: 1, by: 0 };
+    const axis = (k) => {
+      const n = P.length, mx = P.reduce((a, q) => a + q[0][k], 0) / n, my = P.reduce((a, q) => a + q[1][k], 0) / n;
+      let sxy = 0, sxx = 0;
+      P.forEach(([d, t]) => { sxy += (d[k] - mx) * (t[k] - my); sxx += (d[k] - mx) ** 2; });
+      let a = sxx > 250 * n ? sxy / sxx : 1;   // need some spread before trusting a scale
+      a = Math.max(0.65, Math.min(1.6, a));
+      return [a, my - a * mx];
+    };
+    const [ax, bx] = axis(0), [ay, by] = axis(1);
+    return { ax, bx, ay, by };
+  }
+  // match ALL her strokes so far to the real strokes at once, so an early wrong guess gets corrected
+  solve() {
+    const nI = this.ink.length, nT = this.medians.length, N = Math.max(nI, nT), BIG = 1e6;
+    let fit = { ax: 1, bx: 0, ay: 1, by: 0 }, result = [];
+    for (let iter = 0; iter < 3; iter++) {
+      const L = this.leniency * (iter === 0 && nI <= 2 ? 1.2 : 1);
+      const cost = Array.from({ length: N }, (_, i) => Array.from({ length: N }, (_, j) => {
+        if (i >= nI || j >= nT) return BIG / 2;               // dummy: stroke left unmatched
+        const raw = this.ink[i], adj = raw.map(([x, y]) => [fit.ax * x + fit.bx, fit.ay * y + fit.by]);
+        const c = Math.min(strokeFit(adj, this.medians[j], L), iter === 0 ? strokeFit(raw, this.medians[j], L) : Infinity);
+        return Number.isFinite(c) ? c : BIG;
+      }));
+      const rowFor = assign(cost);
+      result = [];
+      rowFor.forEach((i, j) => { if (i < nI && j < nT && cost[i][j] < BIG / 2) result.push([i, j]); });
+      fit = this.fitFrom(result);
+    }
+    return result;
+  }
+  stroke(pad) {
+    const raw = pad.strokes[pad.strokes.length - 1];
+    pad.clear();
+    if (this.complete || !raw) return;
+    this.ink.push(raw.map((p) => this.toChar(p)));
+    const result = this.solve();
+    const newIdx = this.ink.length - 1;
+    if (!result.some(([i]) => i === newIdx)) {
+      this.ink.pop();                                          // didn't match anything: let it fade
+      this.misses++;
+      this.onMiss && this.onMiss(this);
+      if (this.misses >= this.hintAfter) this.hint();
+      return;
+    }
+    // keep only strokes that are still matched (rarely one gets pushed out), then redraw
+    const keep = new Set(result.map(([i]) => i));
+    const remap = new Map(); const ink2 = [];
+    this.ink.forEach((s, i) => { if (keep.has(i)) { remap.set(i, ink2.length); ink2.push(s); } });
+    this.ink = ink2;
+    this.done = new Set(result.map(([, j]) => j));
+    this.misses = 0;
+    this.paths.forEach((p, j) => p.setAttribute('fill', this.done.has(j) ? '#2b2140' : (this.outline ? '#e4d9c6' : 'transparent')));
+    this.onHit && this.onHit(this);
+    if (this.done.size === this.paths.length) { this.complete = true; this.onComplete && this.onComplete(this); }
+  }
+  hint() {
+    const j = this.medians.findIndex((_, k) => !this.done.has(k));
+    if (j < 0) return;
+    this.hinted = true; this.misses = 0;
+    const p = this.paths[j], back = this.outline ? '#e4d9c6' : 'transparent';
+    p.setAttribute('fill', '#ffb020');
+    setTimeout(() => { if (!this.done.has(j)) p.setAttribute('fill', back); }, 900);
+    this.onHint && this.onHint(this);
+  }
+  set enabled(v) { this.pad.enabled = v; }
+  showAll(color = '#2b2140') { this.paths.forEach((p) => p.setAttribute('fill', color)); }
 }
