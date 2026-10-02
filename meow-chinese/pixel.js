@@ -75,6 +75,13 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
   set(15, Y(13), NOSE); set(16, Y(13), NOSE);
   if (mood === 'eat') {
     set(15, Y(15), EYE); set(16, Y(15), EYE); set(15, Y(16), NOSE); set(16, Y(16), NOSE);
+  } else if (mood === 'cry' || mood === 'hungry') {
+    // frown
+    set(14, Y(16), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(16), P.o);
+  } else if (mood === 'thirsty') {
+    // open mouth, tongue out
+    set(14, Y(15), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(15), P.o);
+    set(15, Y(16), '#ff7f9f'); set(16, Y(16), '#ff7f9f'); set(15, Y(17), '#ff7f9f'); set(16, Y(17), '#e8607f');
   } else {
     set(14, Y(15), P.o); set(15, Y(14), P.o); set(16, Y(14), P.o); set(17, Y(15), P.o);
   }
@@ -84,6 +91,14 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
       set(ex - 1, Y(12), EYE); set(ex, Y(11), EYE); set(ex + 1, Y(11), EYE); set(ex + 2, Y(12), EYE);
     } else if (mood === 'sleepy' || mood === 'blink') {
       for (let i = -1; i <= 2; i++) set(ex + i, Y(12), EYE);
+    } else if (mood === 'cry') {
+      // squeezed-shut eyes
+      set(ex - 1, Y(11), EYE); set(ex, Y(12), EYE); set(ex + 1, Y(12), EYE); set(ex + 2, Y(11), EYE);
+    } else if (mood === 'hungry' || mood === 'thirsty') {
+      // tired, half-closed eyes with a worried brow
+      set(ex - 1, Y(11), EYE); set(ex, Y(11), EYE); set(ex + 1, Y(11), EYE); set(ex + 2, Y(11), EYE);
+      set(ex, Y(12), EYE); set(ex + 1, Y(12), EYE);
+      if (ex < 16) { set(ex - 1, Y(9), P.o); set(ex, Y(8), P.o); } else { set(ex + 2, Y(9), P.o); set(ex + 1, Y(8), P.o); }
     } else {
       for (let yy = 10; yy <= 12; yy++) { set(ex, Y(yy), EYE); set(ex + 1, Y(yy), EYE); }
       set(ex, Y(10), '#ffffff');
@@ -108,6 +123,17 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
     if (r === 'paw' && (up === 'body')) out[y][x] = P.o;
     if (r === 'paw' && (region[y][x - 1] === 'body' || region[y][x + 1] === 'body') && y < Y(30)) out[y][x] = P.o;
     if (r === 'tail' && (region[y][x - 1] === 'body' || region[y + 1]?.[x] === 'body')) out[y][x] = P.o;
+  }
+  // tears / sweat drop (drawn on top, after outlines)
+  const T1 = '#7ec8f5', T2 = '#bfe6ff';
+  if (mood === 'cry') {
+    const drop = frame % 2;
+    [[9, 13], [9, 14], [9, 15 + drop], [22, 13], [22, 14], [22, 15 + drop]].forEach(([x, y]) => { out[Y(y)][x] = T1; });
+    [[10, 13], [21, 13]].forEach(([x, y]) => { out[Y(y)][x] = T2; });
+  }
+  if (mood === 'thirsty' || mood === 'hungry') {
+    [[27, 5], [26, 6], [27, 6], [28, 6], [26, 7], [27, 7], [28, 7], [27, 8]].forEach(([x, y]) => { out[Y(y)][x] = mood === 'thirsty' ? T1 : T2; });
+    out[Y(6)][27] = '#ffffff';
   }
   // accessories
   ['neck', 'face', 'head'].forEach((slot) => {
@@ -172,7 +198,7 @@ export const ITEMS = {
       '...oobbbboo.oo',
       '.....oooo.....',
     ] },
-  milk: { cat: 'food', name: '牛奶', en: 'Milk', price: 10, hunger: 15, happy: 8,
+  milk: { cat: 'food', name: '牛奶', en: 'Milk', price: 10, hunger: 15, water: 25, happy: 8,
     pal: { o: O, w: '#ffffff', g: '#dfe7f0', b: '#5fa8e8', r: '#f27a8f' },
     art: [
       '...oooo...',
@@ -271,6 +297,36 @@ export const ITEMS = {
       '.occcccccdo.',
       '..odddddddo.',
       '...oooooo...',
+    ] },
+
+  water: { cat: 'food', name: '清水', en: 'Fresh water', price: 3, hunger: 0, water: 35, happy: 2,
+    pal: { o: O, b: '#7ec8f5', l: '#d6f0ff', g: '#c7ced8', d: '#9aa4b2' },
+    art: [
+      '............',
+      '.oooooooooo.',
+      'olllbbbbbblo',
+      'obbbbbbbbbbo',
+      'oggggggggggo',
+      '.odddddddddo',
+      '..oooooooo..',
+    ] },
+
+  // ---- special ----
+  freeze: { cat: 'special', name: '连胜冰冻卡', en: 'Streak freeze', price: 60,
+    pal: { o: '#2b4a7a', b: '#9fd8ff', l: '#e3f5ff', d: '#5aa8e8', w: '#ffffff' },
+    art: [
+      '....oooo....',
+      '..oollbboo..',
+      '.olwllbbbdo.',
+      '.olllbbbbdo.',
+      'olllbbwbbbdo',
+      'ollbbbbwbbdo',
+      'olbbbbwwbbdo',
+      'obbbbbbbbbdo',
+      '.obbbbbbbdo.',
+      '.odbbbbbddo.',
+      '..ooddddoo..',
+      '....oooo....',
     ] },
 
   // ---- clothes (worn, kept) ----
@@ -641,4 +697,12 @@ export function drawLandscape(canvas, opts = {}) {
   out.imageSmoothingEnabled = false;
   out.drawImage(off, 0, 0, canvas.width, canvas.height);
   return { horizon: horizon / H };
+}
+
+export function itemEffect(it) {
+  const parts = [];
+  if (it.hunger) parts.push(`+${it.hunger} 饱`);
+  if (it.water) parts.push(`+${it.water} 💧`);
+  if (it.happy) parts.push(`+${it.happy} ❤`);
+  return parts.join(' · ');
 }

@@ -1,6 +1,6 @@
 // Parent area: PIN gate, spelling lists, progress and settings.
 import * as S from './state.js';
-import { FURS } from './pixel.js';
+import { FURS, ITEMS, spriteCanvas } from './pixel.js';
 import { $, $$, html, esc, coinI, hydrateIcons, KittenView, toast, confirmBox, openModal, closeModal } from './ui.js';
 import { speak, chineseVoices, sfx } from './audio.js';
 
@@ -16,6 +16,7 @@ export function parentScreen({ go, tab = 'lists' }) {
       <div class="tabs" id="tabs">
         <button class="tab" data-tab="lists"><span class="zh">听写词语</span> Lists</button>
         <button class="tab" data-tab="progress"><span class="zh">学习进度</span> Progress</button>
+        <button class="tab" data-tab="shop"><span class="zh">商店价格</span> Prices</button>
         <button class="tab" data-tab="settings"><span class="zh">设置</span> Settings</button>
       </div>
       <div class="card" id="body" style="border-top-left-radius:0"></div>
@@ -25,7 +26,7 @@ export function parentScreen({ go, tab = 'lists' }) {
     tab = t;
     $$('.tab', n).forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
     body.innerHTML = '';
-    body.appendChild(t === 'lists' ? listsView(rerender) : t === 'progress' ? progressView(rerender) : settingsView(rerender, go));
+    body.appendChild(t === 'lists' ? listsView(rerender) : t === 'progress' ? progressView(rerender) : t === 'shop' ? pricesView(rerender) : settingsView(rerender, go));
     hydrateIcons(body);
   };
   const rerender = () => show(tab);
@@ -260,6 +261,38 @@ function settingsView(rerender, go) {
   $('#reset', n).onclick = async () => {
     if (!(await confirmBox('Reset everything?', 'Coins, kitten, lists and progress will all be deleted. Download a backup first if unsure.', 'Reset'))) return;
     S.resetAll(); unlockedUntil = 0; go('welcome');
+  };
+  return n;
+}
+
+// ---------- shop prices ----------
+function pricesView(rerender) {
+  const groups = [['food', '食物 Food & drink'], ['special', '道具 Special'], ['wear', '衣服 Clothes'], ['decor', '花园 Garden']];
+  const n = html`<div class="stack">
+      <p class="help">Set how many coins each item costs. Changes apply straight away. For reference, a perfect day earns about ${S.REWARDS.taskSpell + S.REWARDS.taskPerfect + S.REWARDS.taskCare + S.REWARDS.allBonus} coins from tasks, plus ${S.REWARDS.firstTry} per word written right first time.</p>
+      <div id="groups" class="stack"></div>
+      <button class="btn white" id="reset" style="align-self:flex-start">↺ Reset all to default prices</button>
+    </div>`;
+  const box = $('#groups', n);
+  groups.forEach(([cat, label]) => {
+    const g = html`<div><h3>${label}</h3><div class="price-grid"></div></div>`;
+    const grid = $('.price-grid', g);
+    Object.entries(ITEMS).filter(([, it]) => it.cat === cat).forEach(([id, it]) => {
+      const changed = S.price(id) !== it.price;
+      const row = html`<label class="price-row ${changed ? 'changed' : ''}">
+          <span class="ico"></span>
+          <span class="nm"><span class="zh">${it.name}</span><small>${it.en} · default ${it.price}</small></span>
+          <input type="number" min="0" max="9999" inputmode="numeric" value="${S.price(id)}">
+        </label>`;
+      $('.ico', row).appendChild(spriteCanvas(id, 32));
+      $('input', row).onchange = (e) => { S.setPrice(id, e.target.value); row.classList.toggle('changed', S.price(id) !== it.price); e.target.value = S.price(id); toast('Price saved ✓'); };
+      grid.appendChild(row);
+    });
+    box.appendChild(g);
+  });
+  $('#reset', n).onclick = async () => {
+    if (!(await confirmBox('Reset prices?', 'All items go back to their original prices.', 'Reset'))) return;
+    S.get().prices = {}; S.save(); rerender();
   };
   return n;
 }

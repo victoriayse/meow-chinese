@@ -1,6 +1,6 @@
 // Shop (spend coins) and wardrobe (dress up / garden).
 import * as S from './state.js';
-import { ITEMS, spriteCanvas } from './pixel.js';
+import { ITEMS, spriteCanvas, itemEffect } from './pixel.js';
 import { $, html, esc, coinI, hydrateIcons, KittenView, toast, burst } from './ui.js';
 import { sfx } from './audio.js';
 
@@ -8,6 +8,7 @@ const TABS = [
   { key: 'food', zh: '食物', en: 'Food' },
   { key: 'wear', zh: '衣服', en: 'Clothes' },
   { key: 'decor', zh: '花园', en: 'Garden' },
+  { key: 'special', zh: '道具', en: 'Special' },
 ];
 
 export function shopScreen({ go }) {
@@ -40,17 +41,21 @@ export function shopScreen({ go }) {
     $('#tabs', n).innerHTML = TABS.map((t) => `<button class="tab ${t.key === tab ? 'on' : ''}" data-tab="${t.key}"><span class="zh">${t.zh}</span> ${t.en}</button>`).join('');
     const list = $('#list', n);
     list.innerHTML = '';
-    Object.entries(ITEMS).filter(([, it]) => it.cat === tab).sort((a, b) => a[1].price - b[1].price).forEach(([id, it]) => {
-      const owned = it.cat !== 'food' && s.owned.includes(id);
-      const have = it.cat === 'food' ? s.pantry[id] || 0 : 0;
-      const can = s.coins >= it.price;
-      const eff = it.cat === 'food' ? `+${it.hunger} 饱 · +${it.happy} ❤` : it.toy ? '可以一起玩 Toy' : '';
+    Object.entries(ITEMS).filter(([, it]) => it.cat === tab).sort((a, b) => S.price(a[0]) - S.price(b[0])).forEach(([id, it]) => {
+      const cost = S.price(id);
+      const special = it.cat === 'special';
+      const owned = (it.cat === 'wear' || it.cat === 'decor') && s.owned.includes(id);
+      const have = it.cat === 'food' ? s.pantry[id] || 0 : special ? s.streak.freezes || 0 : 0;
+      const full = special && have >= S.MAX_FREEZES;
+      const can = s.coins >= cost && !full;
+      const eff = it.cat === 'food' ? itemEffect(it) : it.toy ? '可以一起玩 Toy'
+        : special ? `漏了一天也不会断连胜 · Keeps your streak if you miss a day${full ? ` (max ${S.MAX_FREEZES})` : ''}` : '';
       const card = html`<div class="item ${preview === id ? 'sel' : ''}">
           ${owned ? '<span class="owned">已有 Owned</span>' : have ? `<span class="count">×${have}</span>` : ''}
           <div class="art"></div>
           <div class="nm">${it.name}</div><div class="nm-en">${it.en}</div>
           ${eff ? `<div class="eff">${eff}</div>` : ''}
-          ${owned ? '<button class="btn white small" disabled>✓</button>' : `<button class="btn small ${can ? 'green' : ''}" ${can ? '' : 'disabled'} data-buy="${id}"><span class="price">${it.price}${coinI(16)}</span></button>`}
+          ${owned ? '<button class="btn white small" disabled>✓</button>' : `<button class="btn small ${can ? 'green' : ''}" ${can ? '' : 'disabled'} data-buy="${id}"><span class="price">${cost}${coinI(16)}</span></button>`}
         </div>`;
       $('.art', card).appendChild(spriteCanvas(id, 64));
       card.addEventListener('click', (e) => {
@@ -63,13 +68,13 @@ export function shopScreen({ go }) {
   }
   function buy(id) {
     const it = ITEMS[id];
-    if (!S.buy(id)) { toast('金币不够 · Not enough coins'); return; }
+    if (!S.buy(id)) { toast(it.cat === 'special' && (S.get().streak.freezes || 0) >= S.MAX_FREEZES ? `最多${S.MAX_FREEZES}张 · You can hold ${S.MAX_FREEZES} at most` : '金币不够 · Not enough coins'); return; }
     sfx.coin();
     preview = null;
     drawKitten();
     kv.flash('happy', 1500); kv.jump();
     burst($('#fx', n), 'heart', 3, '50%', '20%');
-    toast(it.cat === 'food' ? `<span class="zh">买了${it.name}！</span> Feed it at home` : it.cat === 'wear' ? `<span class="zh">穿上${it.name}！</span>` : `<span class="zh">${it.name}放在花园里了！</span>`);
+    toast(it.cat === 'special' ? `❄️ <span class="zh">有${S.get().streak.freezes}张冰冻卡了！</span> Streak freeze ready` : it.cat === 'food' ? `<span class="zh">买了${it.name}！</span> Feed it at home` : it.cat === 'wear' ? `<span class="zh">穿上${it.name}！</span>` : `<span class="zh">${it.name}放在花园里了！</span>`);
     render();
   }
   $('#tabs', n).onclick = (e) => { const t = e.target.closest('[data-tab]'); if (t) { tab = t.dataset.tab; render(); } };

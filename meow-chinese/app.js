@@ -1,6 +1,6 @@
 // 喵喵中文 Meow Chinese — app shell, router, top bar, welcome and home screen.
 import * as S from './state.js';
-import { drawLandscape, FURS, ITEMS, spriteCanvas } from './pixel.js';
+import { drawLandscape, FURS, ITEMS, spriteCanvas, itemEffect } from './pixel.js';
 import { $, $$, html, esc, hydrateIcons, coinI, KittenView, burst, toast, openModal, closeModal, tapSound } from './ui.js';
 import { sfx } from './audio.js';
 import { spellingScreen } from './spell.js';
@@ -54,7 +54,7 @@ function renderTopbar() {
     </button>
     <span class="spacer"></span>
     ${showGame ? `
-      <span class="pill" title="Streak"><span style="font-size:18px">🔥</span>${s.streak.lastDate && daysSince(s.streak.lastDate) <= 1 ? s.streak.count : 0}<span class="sub">天</span></span>
+      <span class="pill" title="Streak"><span style="font-size:18px">🔥</span>${s.streak.lastDate && daysSince(s.streak.lastDate) <= 1 ? s.streak.count : 0}<span class="sub">天</span>${s.streak.freezes ? `<span class="sub" title="Streak freezes">❄️${s.streak.freezes}</span>` : ''}</span>
       <span class="pill" id="coin-pill" title="Coins">${coinI(22)}<span id="coin-n">${s.coins}</span></span>
       <button class="icon-btn" data-go="parent" aria-label="Parent area" title="家长 Parent">🔒</button>` : ''}
   `;
@@ -172,6 +172,7 @@ function homeScreen() {
     <div class="side">
       <div class="card stack" style="gap:8px">
         <div class="stat"><span><i data-icon="fish" data-size="22"></i></span><span>饱饱 <span class="en">Food</span></span><div class="bar segmented"><i style="width:${k.hunger}%;--c:#f59b2a"></i></div></div>
+        <div class="stat"><span style="font-size:20px;text-align:center">💧</span><span>喝水 <span class="en">Water</span></span><div class="bar segmented"><i style="width:${k.water ?? 75}%;--c:#4fb3ef"></i></div></div>
         <div class="stat"><span>${'<i data-icon="heart" data-size="22"></i>'}</span><span>开心 <span class="en">Happy</span></span><div class="bar segmented"><i style="width:${k.happy}%;--c:#ff6f9c"></i></div></div>
         <div class="stat"><span style="font-family:var(--px);font-weight:700">Lv</span><span>等级 ${S.level()}</span><div class="bar"><i style="width:${S.levelProgress() * 100}%;--c:#6cb6f2"></i></div></div>
       </div>
@@ -179,7 +180,7 @@ function homeScreen() {
         <div class="h-title" style="font-size:22px;margin-bottom:8px"><span class="zh">今日任务</span><span class="en">Daily tasks</span></div>
         <div class="tasks">
           ${task(d.spell, '完成一次听写', 'Finish one spelling round', S.REWARDS.taskSpell)}
-          ${task(d.perfect >= S.PERFECT_TARGET, `一次写对${S.PERFECT_TARGET}个词`, `Get ${S.PERFECT_TARGET} words right first try`, S.REWARDS.taskPerfect, `${Math.min(d.perfect, S.PERFECT_TARGET)}/${S.PERFECT_TARGET}`)}
+          ${task(S.perfectDone(), `今天写对 ${S.RIGHT_TARGET}/${S.WORDS_TARGET}`, `Write ${S.WORDS_TARGET}+ words, get ${S.RIGHT_TARGET} in ${S.WORDS_TARGET} right`, S.REWARDS.taskPerfect, `写了${d.tried} · 对${d.right}`)}
           ${task(d.care, `照顾${esc(k.name)}`, 'Feed or pet your kitten', S.REWARDS.taskCare)}
         </div>
         <div class="bonus-line" style="margin-top:8px">${d.paid.bonus ? '🎉 全部完成！All done today!' : `全部完成再得 +${S.REWARDS.allBonus} 🪙 bonus`}</div>
@@ -187,7 +188,7 @@ function homeScreen() {
       <button class="btn big block col" id="b-spell"><span class="zh">✏️ 开始听写</span><span class="en">Start · ${esc(list ? list.name : '')}</span></button>
       <div class="menu-grid">
         <button class="btn pink" id="b-review" ${reviewN ? '' : 'disabled'}><span class="zh">错词本</span><span class="en">Mistakes (${reviewN})</span></button>
-        <button class="btn white" id="b-feed"><span class="zh">喂食</span><span class="en">Feed</span></button>
+        <button class="btn white" id="b-feed"><span class="zh">喂食喝水</span><span class="en">Food &amp; water</span></button>
         <button class="btn blue" id="b-shop"><span class="zh">商店</span><span class="en">Shop</span></button>
         <button class="btn white" id="b-dress"><span class="zh">打扮</span><span class="en">Dress up</span></button>
         <button class="btn white soon" disabled><span class="zh">好词好句</span><span class="en">Vocab</span></button>
@@ -208,9 +209,16 @@ function homeScreen() {
   kv.canvas.style.position = 'relative'; kv.canvas.style.zIndex = 1;
   kwrap.appendChild(kv.canvas);
   kwrap.appendChild(html`<div class="nametag">${esc(k.name)}<span class="lv">Lv${S.level()}</span></div>`);
-  if (md.bubble === 'hungry') kwrap.appendChild(html`<div class="bubble">🐟 ${esc(md.text)}</div>`);
-  else if (md.bubble === 'sleepy') kwrap.appendChild(html`<div class="zzz">z Z z</div>`);
+  if (md.face === 'cry') kwrap.appendChild(html`<div class="bubble sad">😿 ${esc(md.text)}</div>`);
+  else if (md.face === 'thirsty') kwrap.appendChild(html`<div class="bubble">💧 ${esc(md.text)}</div>`);
+  else if (md.face === 'hungry') kwrap.appendChild(html`<div class="bubble">🐟 ${esc(md.text)}</div>`);
+  else if (md.face === 'sleepy') kwrap.appendChild(html`<div class="zzz">z Z z</div>`);
   else if (s.childName && Math.random() < 0.6) kwrap.appendChild(html`<div class="bubble">${esc(s.childName)}，喵～</div>`);
+  if (md.needs.length) kwrap.appendChild(html`<div class="needs">${md.needs.includes('hungry') ? '<span>🐟 饿了 Hungry</span>' : ''}${md.needs.includes('thirsty') ? '<span>💧 口渴 Thirsty</span>' : ''}</div>`);
+  if (s.freezeUsed) {
+    const n = s.freezeUsed; delete s.freezeUsed; S.save();
+    setTimeout(() => toast(`❄️ <span class="zh">冰冻卡保护了你的连胜！</span> Streak freeze used${n > 1 ? ` ×${n}` : ''}`, { ms: 4000 }), 500);
+  }
 
   const stage = $('#stage', n);
   s.owned.filter((id) => ITEMS[id].cat === 'decor' && id !== 'cushion' && !s.decorHidden.includes(id)).forEach((id) => {
@@ -262,13 +270,13 @@ function openFeed(kv, fx, afterCare) {
   const pantry = $('#pantry', n);
   foods.forEach(([id, count]) => {
     const it = ITEMS[id];
-    const b = html`<button class="item"><span class="count">×${count}</span><div class="art"></div><div class="nm">${it.name}</div><div class="eff">+${it.hunger} 饱 · +${it.happy} ❤</div></button>`;
+    const b = html`<button class="item"><span class="count">×${count}</span><div class="art"></div><div class="nm">${it.name}</div><div class="eff">${itemEffect(it)}</div></button>`;
     $('.art', b).appendChild(spriteCanvas(id, 56));
     b.onclick = () => {
       if (!S.feed(id)) return;
       closeModal(); sfx.yum(); kv.flash('eat', 1600);
       burst(fx, 'heart', 3, '50%', '25%');
-      toast(`<span class="zh">好吃！</span> Yum, ${esc(it.en)}!`);
+      toast(it.water && !it.hunger ? `<span class="zh">好解渴！</span> Ahh, refreshing!` : `<span class="zh">好吃！</span> Yum, ${esc(it.en)}!`);
       afterCare();
       setTimeout(() => go('home'), 1700);
     };

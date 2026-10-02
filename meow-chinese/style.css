@@ -361,3 +361,16 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .pill, .price, .round-coins, .kpi b, .task .reward, .task .prog, .item .count, .nametag .lv, .dots, #coin-n {
   font-family: "Nunito", system-ui, sans-serif; font-weight: 800;
 }
+
+.bubble.sad { background: #eaf4ff; }
+.bubble.sad::after { background: #eaf4ff; }
+.needs { display: flex; gap: 6px; margin-top: 6px; }
+.needs span { font-weight: 800; font-size: 14px; background: #fff3d6; border: 2px solid var(--ink); border-radius: 6px; padding: 1px 8px; animation: float 1.6s ease-in-out infinite; }
+
+.price-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.price-row { display: grid; grid-template-columns: 40px 1fr 90px; gap: 10px; align-items: center; background: #fff; border: 3px solid var(--ink); border-radius: 6px; padding: 6px 10px; }
+.price-row.changed { background: #fff6d2; }
+.price-row .ico { display: grid; place-items: center; }
+.price-row .nm { display: flex; flex-direction: column; font-size: 18px; }
+.price-row small { font-weight: 700; color: var(--ink-2); font-size: 12px; }
+.price-row input { font: inherit; font-family: "Nunito", sans-serif; font-weight: 800; font-size: 20px; width: 100%; padding: 6px 8px; border: 3px solid var(--ink); border-radius: 6px; text-align: right; }

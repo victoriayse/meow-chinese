@@ -8,11 +8,14 @@ export const REWARDS = {
   firstTry: 3,      // word correct on first try
   retry: 1,         // word correct after learning it
   taskSpell: 15,    // finish one spelling round
-  taskPerfect: 10,  // 5 words right first try today
+  taskPerfect: 10,  // at least 8 out of 10 words right today
   taskCare: 5,      // feed or pet the kitten
   allBonus: 20,     // all daily tasks done
 };
-export const PERFECT_TARGET = 5;
+export const WORDS_TARGET = 10;   // write at least 10 words today…
+export const RIGHT_TARGET = 8;    // …with 8 out of 10 (80%) right on the first try
+export const MAX_FREEZES = 3;
+export const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
 
 export const todayStr = (d = new Date()) => {
   const z = (n) => String(n).padStart(2, '0');
@@ -41,17 +44,18 @@ function fresh() {
     version: 1,
     onboarded: false,
     childName: '',
-    kitten: { name: '咪咪', fur: 'ginger', hunger: 75, happy: 75, lastTick: Date.now(), equipped: { head: null, neck: null, face: null }, xp: 0, petsToday: 0 },
+    kitten: { name: '咪咪', fur: 'ginger', hunger: 75, water: 75, happy: 75, lastTick: Date.now(), equipped: { head: null, neck: null, face: null }, xp: 0, petsToday: 0 },
     coins: 30,
-    pantry: { fish: 2, milk: 1 },
+    pantry: { fish: 2, milk: 1, water: 2 },
+    prices: {},      // parent overrides: { itemId: price }
     owned: [],
     decorHidden: [],
     lists: [list],
     activeListId: list.id,
     words: {},       // per-word stats: { attempts, firstTry, wrong, lastSeen, lastResult, review, okStreak }
     sessions: [],    // { at, listName, total, firstTry, coins, mode }
-    daily: { date: todayStr(), spell: false, perfect: 0, care: false, paid: { spell: false, perfect: false, care: false, bonus: false } },
-    streak: { count: 0, lastDate: null },
+    daily: { date: todayStr(), spell: false, tried: 0, right: 0, care: false, paid: { spell: false, perfect: false, care: false, bonus: false } },
+    streak: { count: 0, lastDate: null, freezes: 0 },
     settings: { rate: 0.75, voiceURI: null, pin: null, sound: true },
     updatedAt: Date.now(),
   };
@@ -75,6 +79,10 @@ function migrate(s) {
   out.settings = { ...base.settings, ...(s.settings || {}) };
   out.daily = { ...base.daily, ...(s.daily || {}) };
   out.daily.paid = { ...base.daily.paid, ...((s.daily || {}).paid || {}) };
+  out.streak = { ...base.streak, ...(s.streak || {}) };
+  out.prices = { ...(s.prices || {}) };
+  if (typeof out.kitten.water !== 'number') out.kitten.water = 75;
+  if (typeof out.daily.tried !== 'number') { out.daily.tried = 0; out.daily.right = 0; }
   if (!out.lists || !out.lists.length) { const l = sampleList(); out.lists = [l]; out.activeListId = l.id; }
   return out;
 }
@@ -96,22 +104,36 @@ export function tick() {
   if (hours > 0.05) {
     k.hunger = Math.max(8, k.hunger - hours * 1.5);   // ~36 per day
     k.happy = Math.max(8, k.happy - hours * 1.0);     // ~24 per day
+    k.water = Math.max(8, (k.water ?? 75) - hours * 2.0); // ~48 per day
     k.lastTick = now;
   }
   const d = todayStr();
   if (state.daily.date !== d) {
-    state.daily = { date: d, spell: false, perfect: 0, care: false, paid: { spell: false, perfect: false, care: false, bonus: false } };
+    state.daily = { date: d, spell: false, tried: 0, right: 0, care: false, paid: { spell: false, perfect: false, care: false, bonus: false } };
     k.petsToday = 0;
+    // missed days: use streak freezes if she has enough, otherwise the streak resets
+    const st = state.streak;
+    if (st.lastDate && st.count > 0) {
+      const missed = daysBetween(st.lastDate, d) - 1;
+      if (missed > 0) {
+        if ((st.freezes || 0) >= missed) { st.freezes -= missed; st.lastDate = yesterdayStr(); state.freezeUsed = missed; }
+        else { st.count = 0; }
+      }
+    }
   }
   save();
 }
 
+export const tasksDone = () => !!state.daily.paid.bonus;
 export function mood() {
-  const k = state.kitten;
-  if (k.hunger < 30) return { face: 'normal', bubble: 'hungry', text: '肚子饿了… I\'m hungry!' };
-  if (k.happy < 30) return { face: 'sleepy', bubble: 'sleepy', text: '好无聊… Play with me?' };
-  if (k.hunger > 70 && k.happy > 70) return { face: 'happy', bubble: null, text: '今天好开心！' };
-  return { face: 'normal', bubble: null, text: '' };
+  const k = state.kitten, needs = [];
+  if (k.hunger < 30) needs.push('hungry');
+  if ((k.water ?? 75) < 30) needs.push('thirsty');
+  if (!tasksDone()) return { face: 'cry', needs, text: '呜呜…今天的任务还没做完' };
+  if (needs.includes('thirsty')) return { face: 'thirsty', needs, text: '好渴…想喝水' };
+  if (needs.includes('hungry')) return { face: 'hungry', needs, text: '肚子饿了…' };
+  if (k.happy < 30) return { face: 'sleepy', needs, text: '好无聊… Play with me?' };
+  return { face: 'happy', needs, text: '今天好开心！' };
 }
 export const level = () => 1 + Math.floor((state.kitten.xp || 0) / 20);
 export const levelProgress = () => ((state.kitten.xp || 0) % 20) / 20;
@@ -119,12 +141,16 @@ export const levelProgress = () => ((state.kitten.xp || 0) % 20) / 20;
 // ---------- coins & daily tasks ----------
 export function addCoins(n) { state.coins += n; save(); }
 
+export function perfectDone() {
+  const d = state.daily;
+  return d.tried >= WORDS_TARGET && d.right / d.tried >= RIGHT_TARGET / WORDS_TARGET;
+}
 // returns list of {label, coins} rewards newly granted
 export function checkDaily() {
   const d = state.daily, got = [];
   const pay = (key, coins, label) => { if (!d.paid[key]) { d.paid[key] = true; state.coins += coins; got.push({ label, coins }); } };
   if (d.spell) pay('spell', REWARDS.taskSpell, '完成听写 Spelling done');
-  if (d.perfect >= PERFECT_TARGET) pay('perfect', REWARDS.taskPerfect, `${PERFECT_TARGET}个全对 ${PERFECT_TARGET} perfect words`);
+  if (perfectDone()) pay('perfect', REWARDS.taskPerfect, `${RIGHT_TARGET}/${WORDS_TARGET} 写对 Great accuracy`);
   if (d.care) pay('care', REWARDS.taskCare, '照顾小猫 Kitten care');
   if (d.paid.spell && d.paid.perfect && d.paid.care && !d.paid.bonus) {
     pay('bonus', REWARDS.allBonus, '全部完成！All tasks bonus');
@@ -144,6 +170,7 @@ export function feed(id) {
   if (!state.pantry[id]) delete state.pantry[id];
   state.kitten.hunger = Math.min(100, state.kitten.hunger + (it.hunger || 0));
   state.kitten.happy = Math.min(100, state.kitten.happy + (it.happy || 0));
+  state.kitten.water = Math.min(100, (state.kitten.water ?? 75) + (it.water || 0));
   state.daily.care = true;
   save();
   return true;
@@ -162,11 +189,22 @@ export function play() {
 }
 
 // ---------- shop ----------
+export const price = (id) => (Number.isFinite(state.prices?.[id]) ? state.prices[id] : ITEMS[id].price);
+export function setPrice(id, v) {
+  v = Math.round(Number(v));
+  if (!Number.isFinite(v) || v < 0) return;
+  if (v === ITEMS[id].price) delete state.prices[id]; else state.prices[id] = v;
+  save();
+}
 export function buy(id) {
-  const it = ITEMS[id];
-  if (!it || state.coins < it.price) return false;
+  const it = ITEMS[id], cost = it ? price(id) : Infinity;
+  if (!it || state.coins < cost) return false;
+  if (it.cat === 'special') {
+    if ((state.streak.freezes || 0) >= MAX_FREEZES) return false;
+    state.coins -= cost; state.streak.freezes = (state.streak.freezes || 0) + 1; save(); return true;
+  }
   if (it.cat !== 'food' && state.owned.includes(id)) return false;
-  state.coins -= it.price;
+  state.coins -= cost;
   if (it.cat === 'food') state.pantry[id] = (state.pantry[id] || 0) + 1;
   else state.owned.push(id);
   if (it.cat === 'wear') state.kitten.equipped[it.slot] = id;
@@ -188,14 +226,14 @@ export function toggleDecor(id) {
 // ---------- lists & word stats ----------
 export const activeList = () => state.lists.find((l) => l.id === state.activeListId) || state.lists[0];
 
-export function recordWord(w, result) {
+export function recordWord(w, result, firstAttempt = result === 'first') {
   // result: 'first' | 'retry' | 'wrong'
+  if (firstAttempt) { state.daily.tried += 1; if (result === 'first') state.daily.right += 1; }
   const s = state.words[w] || (state.words[w] = { attempts: 0, firstTry: 0, wrong: 0, okStreak: 0, review: false });
   s.attempts += 1; s.lastSeen = Date.now(); s.lastResult = result;
   if (result === 'first') {
     s.firstTry += 1; s.okStreak += 1;
     if (s.okStreak >= 2) s.review = false;
-    state.daily.perfect += 1;
     state.kitten.xp = (state.kitten.xp || 0) + 1;
   } else {
     s.okStreak = 0; s.review = true;

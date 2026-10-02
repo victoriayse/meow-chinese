@@ -205,7 +205,7 @@ export function spellingScreen({ mode = 'list', go }) {
   }
 
   function onWrong(item, charState, wrongIdx, s) {
-    S.recordWord(item.w, 'wrong');
+    S.recordWord(item.w, 'wrong', item.attempt === 0);
     const willRetry = item.attempt === 0;
     if (!willRetry) { status[item.i] = 'wrong'; drawDots(); }
     sfx.oops();
