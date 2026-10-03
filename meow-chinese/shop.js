@@ -4,7 +4,7 @@ import { ITEMS, spriteCanvas, itemEffect, WEAR_SLOTS } from './pixel.js';
 import { $, html, esc, coinI, hydrateIcons, KittenView, toast, burst } from './ui.js';
 import { sfx } from './audio.js';
 
-const isWear = (slots) => (it) => it.cat === 'wear' && slots.includes(it.slot);
+const isWear = (slots) => (it) => it.cat === 'wear' && !it.special && slots.includes(it.slot);
 export const TABS = [
   { key: 'food', zh: '食物', en: 'Food', icon: '🐟', test: (it) => it.cat === 'food' },
   { key: 'head', lock: 'head', zh: '头饰', en: 'Hair', icon: '🎀', test: isWear(['head']) },

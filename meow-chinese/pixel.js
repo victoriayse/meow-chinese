@@ -1143,6 +1143,14 @@ Object.assign(ITEMS, Object.fromEntries([
     (x, y, p) => ((x === -1 || x === 1) && y <= 3 ? p.c : (y >= 7 && y <= 9 && Math.abs(x) <= 3) ? p.b : p.a)),
   wearBody('qipao', '小旗袍', 'Little qipao', 120, { a: '#e8394f', b: '#ffd23f', c: '#ffd23f' },
     (x, y, p) => (y === 0 ? p.b : (x === y - 1 && y <= 5) ? p.c : ((x * 3 + y * 5) % 9 === 0 ? p.b : p.a)), DRESS),
+  // princess gown: only from the 10-day check-in mystery box (not sold in the shop, wearable at any level)
+  wearBody('princess', '公主裙', 'Princess gown', 300, { a: '#f7a8d8', b: '#ffd23f', c: '#fde3f3', d: '#c86fb0', w: '#ffffff' },
+    (x, y, p) => (y === 0 ? p.b
+      : y <= 3 ? (x === 0 ? p.b : (Math.abs(x) >= 4 ? p.c : p.a))
+      : y === 4 ? p.b
+      : y >= 11 ? ((x + y) % 2 ? p.b : p.d)
+      : ((x + y * 2) % 7 === 0 && y > 5) ? p.w
+      : (y % 3 === 1 ? p.c : p.a)), DRESS),
   wearBody('uniform', '校服', 'School uniform', 75, { a: '#ffffff', b: '#2f4f8f', c: '#2f4f8f' },
     (x, y, p) => (y >= 7 ? p.b : (x === 0 && y >= 1 && y <= 4) ? p.b : p.a)),
   wearFeet('sneakers', '红色球鞋', 'Red sneakers', 40, { a: '#e8576b', b: '#ffffff', l: '#ffb3c0' }),
@@ -1240,3 +1248,4 @@ export function drawRoof(canvas) {
     R(0, H - 1, W, 1, '#7a2a3a');
   });
 }
+ITEMS.princess.special = true;   // reward only

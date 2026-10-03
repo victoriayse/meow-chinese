@@ -2,7 +2,7 @@
 import * as S from './state.js';
 import { ITEMS, spriteCanvas } from './pixel.js';
 import { $, html, esc, toast, openModal, closeModal, confetti, coinI, hydrateIcons } from './ui.js';
-import { sfx } from './audio.js';
+import { sfx, speak } from './audio.js';
 import { acceptedFriends, refreshFriends, sendLetter, errorText, LETTER_MAX, setActivity, isOnline, doingText } from './friends.js';
 
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -26,7 +26,10 @@ const APPS = [
   { key: 'clock', icon: '⏰', zh: '时钟', en: 'Clock' },
   { key: 'notes', icon: '📒', zh: '记事本', en: 'Notes' },
   { key: 'bank', icon: '🏦', zh: '银行', en: 'Bank' },
+  { key: 'ttt', icon: '⭕', zh: '井字棋', en: 'Tic-tac-toe' },
+  { key: 'listen', icon: '👂', zh: '听一听', en: 'Listen & pick' },
 ];
+const pinyinOf = (w) => { try { return window.pinyinPro.pinyin(w); } catch { return ''; } };
 
 // ---------- timer & alarms keep running while the phone is closed ----------
 const timer = { end: 0, left: 0, running: false, iv: null };
@@ -192,6 +195,104 @@ export function openPhone({ start = 'home', after } = {}) {
         try { await sendLetter(fid, text, t.name); sfx.coin(); show('chat', fid); }
         catch (e) { $('#send', bar).disabled = false; toast(errorText(e.message) || '没寄出，请再试。 Could not send — try again.'); }
       };
+    },
+
+    // ----- tic-tac-toe against the kitten -----
+    ttt() {
+      header('⭕ 井字棋 Tic-tac-toe');
+      const board = Array(9).fill(''), LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+      let over = false;
+      const score = (this._ttt = this._ttt || { me: 0, cat: 0, draw: 0 });
+      const ui = html`<div class="ttt"><div class="ttt-score">你 You <b id="sm">${score.me}</b> · 平 Draw <b id="sd">${score.draw}</b> · 🐱 <b id="sc">${score.cat}</b></div>
+          <div class="ttt-msg" id="msg">你先走！你是 ❌ · You go first — you are ❌</div>
+          <div class="ttt-board">${board.map((_, i) => `<button data-c="${i}"></button>`).join('')}</div>
+          <button class="ph-btn green block" id="again">↺ 再来一局 Play again</button></div>`;
+      const cells = [...ui.querySelectorAll('[data-c]')];
+      const winner = (b) => { for (const [a, c, d] of LINES) if (b[a] && b[a] === b[c] && b[a] === b[d]) return { who: b[a], line: [a, c, d] }; return b.every(Boolean) ? { who: 'draw' } : null; };
+      const draw = () => cells.forEach((c, i) => { c.textContent = board[i] === 'X' ? '❌' : board[i] === 'O' ? '🐱' : ''; });
+      // the kitten: win if it can, block you, take the middle, then a corner (and sometimes just plays for fun)
+      const catMove = () => {
+        const free = board.map((v, i) => (v ? -1 : i)).filter((i) => i >= 0);
+        const tryWin = (mark) => free.find((i) => { const b = board.slice(); b[i] = mark; return winner(b) && winner(b).who === mark; });
+        let i = tryWin('O');
+        if (i === undefined) i = tryWin('X');
+        if (i === undefined && Math.random() < 0.25) i = free[Math.floor(Math.random() * free.length)];
+        if (i === undefined && !board[4]) i = 4;
+        if (i === undefined) i = [0, 2, 6, 8].filter((k) => !board[k])[0];
+        if (i === undefined) i = free[0];
+        board[i] = 'O';
+      };
+      const finish = (w) => {
+        over = true;
+        if (w.line) w.line.forEach((k) => cells[k].classList.add('win'));
+        if (w.who === 'X') { score.me++; $('#msg', ui).textContent = '🎉 你赢了！ You win!'; sfx.fanfare(); }
+        else if (w.who === 'O') { score.cat++; $('#msg', ui).textContent = '😼 小猫赢了！ The kitten wins!'; sfx.miss(); }
+        else { score.draw++; $('#msg', ui).textContent = '🤝 平局！ It\'s a draw!'; }
+        $('#sm', ui).textContent = score.me; $('#sc', ui).textContent = score.cat; $('#sd', ui).textContent = score.draw;
+      };
+      cells.forEach((c, i) => {
+        c.onclick = () => {
+          if (over || board[i]) return;
+          board[i] = 'X'; sfx.click(); draw();
+          let w = winner(board); if (w) return finish(w);
+          $('#msg', ui).textContent = '🐱 小猫在想… The kitten is thinking…';
+          over = true;
+          setTimeout(() => { over = false; catMove(); draw(); const w2 = winner(board); if (w2) finish(w2); else $('#msg', ui).textContent = '轮到你了！ Your turn!'; }, 450);
+        };
+      });
+      $('#again', ui).onclick = () => show('ttt');
+      keyFn = (d) => { const k = '123456789'.indexOf(d); if (k >= 0) cells[k].click(); };
+      body.appendChild(ui);
+    },
+
+    // ----- listen and pick the right word -----
+    listen() {
+      header('👂 听一听 Listen & pick');
+      const pool = [...new Set([...S.get().lists.flatMap((l) => l.words.map((x) => x.w)), ...Object.keys(S.get().words)])].filter((w) => /\p{Script=Han}/u.test(w));
+      if (pool.length < 4) { body.appendChild(html`<p class="ph-empty">词语不够，先让妈妈加一些听写词语吧！<br>Not enough words yet — ask Mum to add a spelling list.</p>`); return; }
+      const ROUNDS = 10;
+      let round = 0, right = 0, answer = null, locked = false;
+      const ui = html`<div class="listen">
+          <div class="ttt-score">第 <b id="rn">1</b>/${ROUNDS} 题 · ✅ <b id="ok">0</b></div>
+          <button class="ph-btn big-say" id="say">🔊 听 Listen</button>
+          <div class="choices" id="ch"></div>
+          <div class="ttt-msg" id="msg">听一听，选出你听到的词语。<br>Listen, then tap the word you hear.</div>
+        </div>`;
+      const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+      const next = () => {
+        if (round >= ROUNDS) {
+          const stars = right >= 9 ? 3 : right >= 6 ? 2 : right >= 3 ? 1 : 0;
+          ui.innerHTML = `<div class="listen-end"><div style="font-size:44px">${'⭐'.repeat(stars) || '💪'}</div><div class="zh" style="font-size:22px">答对 ${right}/${ROUNDS}</div><div>${right >= 8 ? '太棒了！ Amazing!' : right >= 5 ? '很好！ Good job!' : '多听几次就会了！ Keep practising!'}</div><button class="ph-btn green block" id="again">↺ 再玩一次 Play again</button></div>`;
+          if (right >= 8) { sfx.fanfare(); confetti(); }
+          $('#again', ui).onclick = () => show('listen');
+          return;
+        }
+        round++; locked = false;
+        $('#rn', ui).textContent = round;
+        answer = pool[Math.floor(Math.random() * pool.length)];
+        // wrong choices: prefer words of the same length so it isn't too easy
+        const others = shuffle(pool.filter((w) => w !== answer)).sort((a, b) => Math.abs(a.length - answer.length) - Math.abs(b.length - answer.length)).slice(0, 3);
+        const opts = shuffle([answer, ...others]);
+        const ch = $('#ch', ui); ch.innerHTML = '';
+        opts.forEach((w) => {
+          const b = html`<button class="choice zh">${esc(w)}<small></small></button>`;
+          b.onclick = () => {
+            if (locked) return; locked = true;
+            const good = w === answer;
+            if (good) { right++; sfx.correct(); b.classList.add('good'); $('#msg', ui).innerHTML = '✅ 对了！ Correct!'; }
+            else { sfx.oops(); b.classList.add('bad'); ch.querySelectorAll('.choice').forEach((x) => { if (x.firstChild.textContent === answer) x.classList.add('good'); }); $('#msg', ui).innerHTML = `❌ 是 <b class="zh">${esc(answer)}</b> 哦 · It was ${esc(answer)}`; }
+            ch.querySelectorAll('.choice').forEach((x) => { x.querySelector('small').textContent = pinyinOf(x.firstChild.textContent); });
+            $('#ok', ui).textContent = right;
+            setTimeout(next, good ? 1100 : 2200);
+          };
+          ch.appendChild(b);
+        });
+        $('#msg', ui).innerHTML = '听一听，选出你听到的词语。<br>Listen, then tap the word you hear.';
+        setTimeout(() => speak(answer), 300);
+      };
+      $('#say', ui).onclick = () => answer && speak(answer);
+      body.appendChild(ui);
+      next();
     },
 
     // ----- bank -----

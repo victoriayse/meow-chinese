@@ -151,9 +151,9 @@ export function tick() {
     k.hunger = Math.max(k.hunger, 60); k.water = Math.max(k.water ?? 75, 60); k.happy = Math.max(k.happy, 60);
   }
   if (hours > 0.05 && !godMode()) {
-    k.hunger = Math.max(8, k.hunger - hours * 1.5);   // ~36 per day
+    k.hunger = Math.max(0, k.hunger - hours * (100 / 24));   // a full tummy lasts 24 hours
     k.happy = Math.max(8, k.happy - hours * 1.0);     // ~24 per day
-    k.water = Math.max(8, (k.water ?? 75) - hours * 2.0); // ~48 per day
+    k.water = Math.max(0, (k.water ?? 75) - hours * (100 / 24)); // a full water bowl lasts 24 hours
     k.lastTick = now;
   }
   const d = todayStr();
@@ -225,17 +225,17 @@ export function restartKitten() {
 export const tasksDone = () => !!state.daily.paid.bonus;
 export function mood() {
   const k = state.kitten, needs = [];
-  if (k.hunger < 30) needs.push('hungry');
-  if ((k.water ?? 75) < 30) needs.push('thirsty');
+  if (k.hunger < 50) needs.push('hungry');
+  if ((k.water ?? 75) < 50) needs.push('thirsty');
   const st = state.health.stage;
   if (st === 'faint') return { face: 'faint', needs, text: '' };
   if (st === 'dizzy') return { face: 'dizzy', needs, text: '头好晕…需要药药' };
   if (st === 'cough') return { face: 'cough', needs, text: '咳咳…咳咳…' };
+  if (needs.includes('thirsty')) return { face: 'thirsty', needs, text: '好渴…想喝水 · I\'m thirsty!' };
+  if (needs.includes('hungry')) return { face: 'hungry', needs, text: '肚子饿了… · I\'m hungry!' };
   if ((state.essays || []).some((e) => e.status === 'assigned')) return { face: 'happy', needs, text: '我们一起写作文！', essay: true };
   if (state.daily.bored && !state.daily.playDone) return { face: 'bored', needs, text: '好无聊…陪我玩嘛！' };
   if (!tasksDone()) return { face: 'cry', needs, text: '呜呜…今天的任务还没做完' };
-  if (needs.includes('thirsty')) return { face: 'thirsty', needs, text: '好渴…想喝水' };
-  if (needs.includes('hungry')) return { face: 'hungry', needs, text: '肚子饿了…' };
   if (k.happy < 30) return { face: 'sleepy', needs, text: '好无聊… Play with me?' };
   return { face: 'happy', needs, text: '今天好开心！' };
 }
@@ -499,6 +499,40 @@ export function receiveFriendEvent(ev, fromName) {
   save();
   return out;
 }
+// ----- first visit of the day: greeting + 10-day check-in reward -----
+export function greeting(d = new Date()) {
+  const m = d.getHours() * 60 + d.getMinutes();
+  if (m < 11 * 60) return { zh: '早上好喵！', en: 'Good Meowning!', icon: '🌅' };
+  if (m <= 16 * 60) return { zh: '下午好喵！', en: 'Good Aftermeow!', icon: '☀️' };
+  return { zh: '你去哪里了！我好想你！', en: 'Where were you! I missed you!', icon: '🥺' };
+}
+// returns the greeting once per day (the first time she opens the app that day)
+export function takeGreeting() {
+  const t = todayStr();
+  if (state.greetedOn === t) return null;
+  state.greetedOn = t; save();
+  return greeting();
+}
+export const CHECKIN_DAYS = 10;
+export const checkinCoins = (day) => day * 5;          // day 1 = 5 … day 9 = 45; day 10 = mystery box
+export function checkinStatus() {
+  const c = state.checkin || {}, t = todayStr();
+  if (c.last === t) return { day: c.day, claimed: true };
+  const cont = c.last === yesterdayStr() && c.day;      // missing a day starts again from day 1
+  return { day: cont ? (c.day % CHECKIN_DAYS) + 1 : 1, claimed: false };
+}
+export function claimCheckin() {
+  const st = checkinStatus();
+  if (st.claimed) return null;
+  state.checkin = { day: st.day, last: todayStr() };
+  let reward;
+  if (st.day < CHECKIN_DAYS) { state.coins += checkinCoins(st.day); reward = { day: st.day, coins: checkinCoins(st.day) }; }
+  else if (!state.owned.includes('princess')) { state.owned.push('princess'); reward = { day: st.day, item: 'princess' }; }
+  else { state.coins += 100; reward = { day: st.day, coins: 100, dup: 'princess' }; }   // already has the gown
+  save();
+  return reward;
+}
+
 // ----- flip phone -----
 export function notify(n) {
   state.notifications = state.notifications || [];

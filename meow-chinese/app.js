@@ -11,6 +11,7 @@ import * as Cloud from './cloud.js';
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
+import { randomJoke } from './jokes.js';
 
 const app = $('#app');
 let current = null;
@@ -267,6 +268,50 @@ const DECOR_POS = {
   'front-right': 'right:2%;bottom:3%',
 };
 
+// ----- first visit of the day: greeting, check-in rewards; jokes now and then -----
+let greet = null, greetUntil = 0, checkinShown = false;
+function greetNow() {
+  const g = S.takeGreeting();
+  if (g) { greet = g; greetUntil = Date.now() + 90000; setTimeout(() => meow('happy'), 500); }
+  return greet && Date.now() < greetUntil ? greet : null;
+}
+function openCheckin(after) {
+  const st = S.checkinStatus();
+  const n = html`<div class="card stack checkin" style="align-items:center;text-align:center">
+      <div class="h-title" style="justify-content:center"><span class="zh">📅 每日签到</span><span class="en">Daily check-in</span></div>
+      <p class="help" style="margin:0">每天来签到领奖励！漏了一天就从第1天重新开始哦。<br>Come every day for a reward. Miss a day and it starts again from Day 1.</p>
+      <div class="ck-grid">${Array.from({ length: S.CHECKIN_DAYS }, (_, i) => {
+        const d = i + 1, done = d < st.day || (st.claimed && d === st.day), today = d === st.day && !st.claimed;
+        const prize = d === S.CHECKIN_DAYS ? '<span class="mystery">🎁<b>?</b></span>' : `<span class="coins">${coinI(22)}<b>${S.checkinCoins(d)}</b></span>`;
+        return `<div class="ck ${done ? 'done' : ''} ${today ? 'today' : ''} ${d === S.CHECKIN_DAYS ? 'big' : ''}"><small>第${d}天 Day ${d}</small>${prize}${done ? '<i class="tick">✓</i>' : ''}${today ? '<em>今天 Today</em>' : ''}</div>`;
+      }).join('')}</div>
+      <div id="ck-result"></div>
+      ${st.claimed ? '<p class="help" style="margin:0">今天已经领过了，明天再来！ Already collected today — come back tomorrow!</p><button class="btn white" id="ck-close">关闭 Close</button>'
+        : `<button class="btn big green" id="ck-go">🎉 <span class="zh">领取第${st.day}天奖励</span> Collect</button>`}
+    </div>`;
+  const go = $('#ck-go', n);
+  if (go) go.onclick = () => {
+    const r = S.claimCheckin(); if (!r) return;
+    const box = $('#ck-result', n);
+    $('.ck.today', n)?.classList.add('done');
+    if (r.item) {
+      box.innerHTML = `<div class="ck-reveal"><div class="giftbox opened">🎁</div><div class="zh" style="font-size:22px">神秘礼物是… ${ITEMS[r.item].name}！</div><div class="en">${ITEMS[r.item].en} — find it in My Items</div></div>`;
+      const kvp = new KittenView({ scale: 4, equipped: { ...S.get().kitten.equipped, body: r.item } }); kvp.canvas.classList.remove('bob');
+      box.firstChild.insertBefore(kvp.canvas, box.firstChild.children[1]);
+      sfx.fanfare(); confetti();
+    } else {
+      box.innerHTML = `<div class="ck-reveal"><div class="price" style="font-size:30px">+${r.coins} ${coinI(28)}</div>${r.dup ? '<div class="help">你已经有公主裙了，换成金币！ You already have the gown, so here are coins!</div>' : ''}</div>`;
+      sfx.coin(); burst(box, 'coin', 4, '50%', '20%');
+    }
+    hydrateIcons(n);
+    go.outerHTML = '<button class="btn green" id="ck-close">好的！ Yay!</button>';
+    $('#ck-close', n).onclick = () => { closeModal(); };
+    renderTopbar();
+  };
+  const c = $('#ck-close', n); if (c) c.onclick = closeModal;
+  openModal(n, { onClose: () => after && after() });
+}
+
 let pickedByHand = false;
 // the spelling list picker: newest first; old lists stay locked until the newest one is finished
 function spellPicker() {
@@ -381,6 +426,7 @@ function homeScreen(params = {}) {
   kwrap.appendChild(kflip);
   kwrap.appendChild(html`<div class="nametag">${esc(k.name)}<span class="lv">Lv${S.level()}</span></div>`);
   if (md.face === 'faint') { kv.canvas.classList.add('fainted'); kwrap.appendChild(html`<div class="zzz" style="left:60%;top:30%">@ @ @</div>`); }
+  else if (greetNow()) { const g = greetNow(); kwrap.appendChild(html`<div class="bubble greet">${g.icon} ${esc(g.zh)}<br><small>${esc(g.en)}</small></div>`); }
   else if (md.face === 'dizzy') kwrap.appendChild(html`<div class="bubble sad">😵‍💫 ${esc(md.text)}</div>`);
   else if (md.face === 'cough') kwrap.appendChild(html`<div class="bubble sad">🤒 ${esc(md.text)}</div>`);
   else if (S.phoneBadge()) kwrap.appendChild(html`<div class="bubble">📱 你有新消息！<br><small>You have a new message!</small></div>`);
@@ -390,6 +436,7 @@ function homeScreen(params = {}) {
   else if (md.face === 'thirsty') kwrap.appendChild(html`<div class="bubble">💧 ${esc(md.text)}</div>`);
   else if (md.face === 'hungry') kwrap.appendChild(html`<div class="bubble">🐟 ${esc(md.text)}</div>`);
   else if (md.face === 'sleepy') kwrap.appendChild(html`<div class="zzz">z Z z</div>`);
+  else if (Math.random() < 0.35) kwrap.appendChild(html`<div class="bubble joke">😹 ${esc(randomJoke())}</div>`);
   else if (s.childName && Math.random() < 0.6) kwrap.appendChild(html`<div class="bubble">${esc(s.childName)}，喵～</div>`);
   if (md.needs.length) kwrap.appendChild(html`<div class="needs">${md.needs.includes('hungry') ? '<span>🐟 饿了 Hungry</span>' : ''}${md.needs.includes('thirsty') ? '<span>💧 口渴 Thirsty</span>' : ''}</div>`);
   const lvNow = S.level();
@@ -413,9 +460,12 @@ function homeScreen(params = {}) {
     const tray = html`<div class="stage-tray">
         <button class="tray-btn phone-btn ${pb ? 'new' : ''}" id="t-phone" title="Phone">${PHONE_ICON}${pb ? `<i class="badge">${pb}</i>` : ''}</button>
         ${gifts.length ? `<button class="tray-btn gift" id="t-gift" title="Gifts">🎁<i class="badge">${gifts.length}</i></button>` : ''}
+        <button class="tray-btn ${S.checkinStatus().claimed ? '' : 'gift'}" id="t-ck" title="Daily check-in">📅${S.checkinStatus().claimed ? '' : '<i class="badge">!</i>'}</button>
       </div>`;
     $('#stage', n).appendChild(tray);
     const tg = $('#t-gift', tray); if (tg) tg.onclick = () => Friends.openGiftBox(S.unopenedGifts()[0], refreshHome);
+    $('#t-ck', tray).onclick = () => openCheckin(refreshHome);
+    if (!S.checkinStatus().claimed && !checkinShown && S.get().onboarded) { checkinShown = true; setTimeout(() => { if (current === 'home' && $('#modal').classList.contains('hidden')) openCheckin(refreshHome); }, 1200); }
     $('#t-phone', tray).onclick = () => openPhone({ start: S.unreadNotifications().length ? 'noti' : S.unreadLetters().length ? 'mail' : 'home', after: refreshHome });
   }
 
@@ -709,6 +759,15 @@ paintSky(true);
 S.tick();
 setInterval(() => S.tick(), 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { S.tick(); if (current === 'home') refreshHome(); } });
+// the kitten tells a joke now and then while she's on the home page
+setInterval(() => {
+  if (current !== 'home' || document.hidden || !$('#modal').classList.contains('hidden') || Math.random() < 0.4) return;
+  const kw = $('#kwrap'); if (!kw || kw.querySelector('.bubble.joke-pop')) return;
+  const old = [...kw.querySelectorAll('.bubble')]; old.forEach((b) => { b.style.visibility = 'hidden'; });
+  const j = html`<div class="bubble joke joke-pop">😹 ${esc(randomJoke())}</div>`;
+  kw.appendChild(j);
+  setTimeout(() => { j.remove(); old.forEach((b) => { b.style.visibility = ''; }); }, 9000);
+}, 45000);
 // friends: show what arrived, and keep the home page badges fresh
 Friends.startFriends((news) => {
   news.forEach((x, i) => setTimeout(() => {
