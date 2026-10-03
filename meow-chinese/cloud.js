@@ -81,3 +81,42 @@ export function init(replacedCallback) {
 }
 export function stop() { ready = false; clearTimeout(timer); setStatus('idle'); }
 export const backupNow = () => push(true);
+
+// ---------- photos for picture compositions (private storage, per account) ----------
+const BUCKET = 'essay-images';
+const imgCache = new Map();
+// shrink a phone photo so it uploads quickly but stays readable
+async function compress(file, max = 1600, quality = 0.82) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return await new Promise((res) => c.toBlob(res, 'image/jpeg', quality));
+  } finally { URL.revokeObjectURL(url); }
+}
+export async function uploadEssayImage(file) {
+  const t = await Auth.token(), me = Auth.user();
+  if (!t || !me) throw new Error('Please log in first');
+  const blob = await compress(file);
+  const path = `${me.id}/${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}.jpg`;
+  const r = await fetch(`${Auth.API}/storage/v1/object/${BUCKET}/${path}`, { method: 'POST', headers: { apikey: Auth.KEY, Authorization: `Bearer ${t}`, 'Content-Type': 'image/jpeg' }, body: blob });
+  if (!r.ok) throw new Error(`Upload failed (${r.status})`);
+  imgCache.set(path, URL.createObjectURL(blob));
+  return path;
+}
+export async function essayImageURL(path) {
+  if (imgCache.has(path)) return imgCache.get(path);
+  const t = await Auth.token();
+  const r = await fetch(`${Auth.API}/storage/v1/object/authenticated/${BUCKET}/${path}`, { headers: { apikey: Auth.KEY, Authorization: `Bearer ${t}` } });
+  if (!r.ok) throw new Error(`Could not load picture (${r.status})`);
+  const u = URL.createObjectURL(await r.blob());
+  imgCache.set(path, u);
+  return u;
+}
+export async function deleteEssayImage(path) {
+  const t = await Auth.token();
+  await fetch(`${Auth.API}/storage/v1/object/${BUCKET}/${path}`, { method: 'DELETE', headers: { apikey: Auth.KEY, Authorization: `Bearer ${t}` } }).catch(() => {});
+  imgCache.delete(path);
+}

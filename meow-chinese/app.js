@@ -6,6 +6,7 @@ import { sfx, meow, startMusic, stopMusic, musicOn } from './audio.js';
 import { spellingScreen } from './spell.js';
 import { shopScreen, wardrobeScreen } from './shop.js';
 import { parentScreen } from './parent.js';
+import { essayScreen, showEssayReward } from './essay.js';
 import * as Cloud from './cloud.js';
 import * as Auth from './auth.js';
 
@@ -34,6 +35,7 @@ const screens = {
   wardrobe: () => wardrobeScreen({ go }),
   parent: (p) => parentScreen({ ...p, go }),
   grave: graveScreen,
+  essay: (p) => essayScreen({ ...p, go }),
 };
 // a simple history so every page can go Back
 const stack = [];
@@ -301,7 +303,9 @@ function homeScreen(params = {}) {
                      : '<button class="btn green" id="b-house"><span class="zh">🏠 我的家</span><span class="en">Go to Home</span></button>')
           : `<button class="btn white" disabled><span class="zh">🔒 我的家</span><span class="en">Home · Lv${S.UNLOCKS.decor}</span></button>`}
         <button class="btn white soon" disabled><span class="zh">好词好句</span><span class="en">Vocab</span></button>
-        <button class="btn white soon" disabled><span class="zh">看图作文</span><span class="en">Writing</span></button>
+        ${S.outstandingEssays().length
+          ? `<button class="btn pink has-badge" id="b-essay"><span class="zh">✍️ 看图作文</span><span class="en">Writing</span><i class="badge">${S.outstandingEssays().length}</i></button>`
+          : `<button class="btn white" disabled title="Parents set up writing in 🔒"><span class="zh">看图作文</span><span class="en">${S.essays().some((e) => e.status === 'submitted') ? '等爸妈批改 Waiting' : 'No writing yet'}</span></button>`}
       </div>
     </div>
   </section>`;
@@ -321,6 +325,7 @@ function homeScreen(params = {}) {
   if (md.face === 'faint') { kv.canvas.classList.add('fainted'); kwrap.appendChild(html`<div class="zzz" style="left:60%;top:30%">@ @ @</div>`); }
   else if (md.face === 'dizzy') kwrap.appendChild(html`<div class="bubble sad">😵‍💫 ${esc(md.text)}</div>`);
   else if (md.face === 'cough') kwrap.appendChild(html`<div class="bubble sad">🤒 ${esc(md.text)}</div>`);
+  else if (md.essay) kwrap.appendChild(html`<div class="bubble">✍️ ${esc(md.text)}</div>`);
   else if (md.face === 'bored') kwrap.appendChild(html`<div class="bubble">🥱 ${esc(md.text)}</div>`);
   else if (md.face === 'cry') kwrap.appendChild(html`<div class="bubble sad">😿 ${esc(md.text)}</div>`);
   else if (md.face === 'thirsty') kwrap.appendChild(html`<div class="bubble">💧 ${esc(md.text)}</div>`);
@@ -393,6 +398,10 @@ function homeScreen(params = {}) {
   $('#b-review', n).onclick = () => { sfx.unlock(); go('spell', { mode: 'review' }); };
   $('#b-shop', n).onclick = () => go('shop');
   $('#b-dress', n).onclick = () => go('wardrobe');
+  const be = $('#b-essay', n); if (be) be.onclick = () => go('essay');
+  // a parent has checked a composition: show the stars, coins and comment once
+  const reviewed = S.essays().find((e) => e.status === 'reviewed' && !e.seen);
+  if (reviewed) setTimeout(() => { if (current === 'home') showEssayReward(reviewed, kv); }, 700);
   const bh = $('#b-house', n); if (bh) bh.onclick = () => (inHouse ? goBack() : go('home', { view: 'house' }));
   $('#b-feed', n).onclick = () => openFeed(kv, fx, afterCare);
   n._mounted = () => { if (inHouse) { drawRoom($('#roombg', n)); drawRoof($('#roof', n)); } };

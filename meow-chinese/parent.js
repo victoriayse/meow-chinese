@@ -1,6 +1,8 @@
 // Parent area: PIN gate, spelling lists, progress and settings.
 import * as S from './state.js';
 import { FURS, ITEMS, spriteCanvas } from './pixel.js';
+import { STORIES, storySVG } from './essayart.js';
+import { pictureNode } from './essay.js';
 import { $, $$, html, esc, coinI, hydrateIcons, KittenView, toast, confirmBox, openModal, closeModal } from './ui.js';
 import { speak, chineseVoices, sfx } from './audio.js';
 import * as Cloud from './cloud.js';
@@ -18,6 +20,7 @@ export function parentScreen({ go, tab = 'lists' }) {
       <div class="tabs" id="tabs">
         <button class="tab" data-tab="lists"><span class="zh">听写词语</span> Lists</button>
         <button class="tab" data-tab="progress"><span class="zh">学习进度</span> Progress</button>
+        <button class="tab" data-tab="essays"><span class="zh">作文</span> Essays${S.essays().some((e) => e.status === 'submitted') ? ' 🔴' : ''}</button>
         <button class="tab" data-tab="shop"><span class="zh">商店价格</span> Prices</button>
         <button class="tab" data-tab="settings"><span class="zh">设置</span> Settings</button>
       </div>
@@ -28,7 +31,7 @@ export function parentScreen({ go, tab = 'lists' }) {
     tab = t;
     $$('.tab', n).forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
     body.innerHTML = '';
-    body.appendChild(t === 'lists' ? listsView(rerender) : t === 'progress' ? progressView(rerender) : t === 'shop' ? pricesView(rerender) : settingsView(rerender, go));
+    body.appendChild(t === 'lists' ? listsView(rerender) : t === 'progress' ? progressView(rerender) : t === 'shop' ? pricesView(rerender) : t === 'essays' ? essaysView(rerender) : settingsView(rerender, go));
     hydrateIcons(body);
   };
   const rerender = () => show(tab);
@@ -335,4 +338,122 @@ function pricesView(rerender) {
     S.get().prices = {}; S.save(); rerender();
   };
   return n;
+}
+
+// ---------- 看图作文: set up, review and reward ----------
+function essaysView(rerender) {
+  const list = S.essays();
+  const n = html`<div class="stack">
+      <p class="help">Set up a picture composition here. The 看图作文 button on her home screen lights up and the kitten says <b>我们一起写作文！</b>
+        She looks at the pictures and helping words in the app, writes on paper, then taps <b>Submit to Parent</b>. Read her paper and give stars, coins and a comment here.</p>
+      <button class="btn green" id="new" style="align-self:flex-start">＋ <span class="zh">新作文</span> New essay</button>
+      <div class="stack" id="rows"></div>
+    </div>`;
+  const rows = $('#rows', n);
+  if (!list.length) rows.innerHTML = '<p class="help">No essays yet.</p>';
+  const chip = { assigned: ['待写', 'To write', 'warn'], submitted: ['已交 · 请批改', 'Submitted — please review', 'hot'], reviewed: ['已批改', 'Reviewed', 'ok'] };
+  list.forEach((e) => {
+    const [zh, en, cls] = chip[e.status];
+    const r = html`<div class="essay-row card">
+        <div class="essay-thumb"></div>
+        <div class="stack" style="gap:6px;min-width:0">
+          <div class="row" style="justify-content:space-between"><div class="nm zh" style="font-size:22px">${esc(e.title)}</div><span class="status-chip ${cls}">${zh} · ${en}</span></div>
+          <div class="help" style="margin:0">Set ${new Date(e.createdAt).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })} · ${e.minChars}+ characters · ${e.words.length} helping words${e.submittedAt ? ` · submitted ${new Date(e.submittedAt).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` : ''}</div>
+          <div class="chips">${e.words.map((w) => `<span class="chip">${esc(w.w)}</span>`).join('')}</div>
+          <div class="review"></div>
+          <div class="row"><button class="btn white small" data-a="del">🗑 Delete</button></div>
+        </div>
+      </div>`;
+    $('.essay-thumb', r).appendChild(pictureNode(e));
+    const rv = $('.review', r);
+    if (e.status === 'submitted') {
+      let stars = 3;
+      rv.innerHTML = `<div class="review-box stack">
+          <b>Review her composition</b>
+          <div class="star-pick">${[1, 2, 3].map((i) => `<button type="button" data-s="${i}" class="on">★</button>`).join('')}</div>
+          <div class="row" style="align-items:flex-end">
+            <label class="field" style="width:150px">Coins to award<input type="number" min="0" max="999" inputmode="numeric" value="30" class="coins"></label>
+            ${[10, 20, 30, 50].map((v) => `<button class="btn small white" data-q="${v}">${v}</button>`).join('')}
+          </div>
+          <label class="field">Comment for her (optional)<textarea class="comment" rows="2" style="min-height:70px;font-size:18px" placeholder="例如：写得很好！下次用多一点好词。"></textarea></label>
+          <button class="btn green" data-a="reward">🎁 Send stars &amp; coins</button>
+        </div>`;
+      rv.addEventListener('click', (ev) => {
+        const st = ev.target.closest('[data-s]'); if (st) { stars = +st.dataset.s; rv.querySelectorAll('[data-s]').forEach((b) => b.classList.toggle('on', +b.dataset.s <= stars)); }
+        const q = ev.target.closest('[data-q]'); if (q) rv.querySelector('.coins').value = q.dataset.q;
+      });
+      rv.querySelector('[data-a=reward]').onclick = () => {
+        S.reviewEssay(e.id, { stars, coins: rv.querySelector('.coins').value, comment: rv.querySelector('.comment').value });
+        toast('Sent ✓ She will see it on her home screen'); rerender();
+      };
+    } else if (e.status === 'reviewed' && e.review) {
+      rv.innerHTML = `<div class="review-box"><span style="color:#e0a524;font-size:22px">${'★'.repeat(e.review.stars)}${'☆'.repeat(3 - e.review.stars)}</span> · +${e.review.coins} coins${e.review.comment ? `<div class="zh" style="margin-top:4px">“${esc(e.review.comment)}”</div>` : ''}${e.seen ? '' : '<div class="help" style="margin:4px 0 0">She hasn’t opened it yet.</div>'}</div>`;
+    }
+    r.querySelector('[data-a=del]').onclick = async () => {
+      if (!(await confirmBox('Delete this essay?', `“${esc(e.title)}” will be removed.`, 'Delete'))) return;
+      if (e.image) Cloud.deleteEssayImage(e.image);
+      S.deleteEssay(e.id); rerender();
+    };
+    rows.appendChild(r);
+  });
+  $('#new', n).onclick = () => newEssay(rerender);
+  return n;
+}
+
+function newEssay(rerender) {
+  let source = 'builtin', storyId = STORIES[0].id, file = null;
+  const box = html`<div class="card stack">
+      <h3>New picture composition</h3>
+      <div class="seg"><button type="button" data-src="builtin" class="on">用内置图 Built-in pictures</button><button type="button" data-src="upload">上传照片 Upload a photo</button></div>
+      <div id="src-builtin" class="story-picks"></div>
+      <div id="src-upload" class="hidden stack">
+        <label class="btn white" style="align-self:flex-start">📷 Choose or take a photo<input type="file" id="file" accept="image/*" hidden></label>
+        <div class="help" style="margin:0">Photograph the pictures from her worksheet or assessment book. They are kept privately in your account.</div>
+        <img id="preview" class="hidden" style="max-width:100%;border:3px solid var(--ink);border-radius:6px" alt="">
+      </div>
+      <label class="field">Title<input id="title" placeholder="例如：下雨天"></label>
+      <label class="field">参考词语 Helping words — one per line (or separated by spaces)
+        <textarea id="words" style="min-height:120px" placeholder="着急&#10;雨伞 | umbrella&#10;关心"></textarea>
+        <small>Optional: add “| English meaning” after a word. Pinyin and sound are added automatically.</small>
+      </label>
+      <label class="field" style="width:200px">At least how many characters?<input type="number" id="min" value="80" min="20" max="600" inputmode="numeric"></label>
+      <div class="row" style="justify-content:flex-end"><button class="btn white" id="c">Cancel</button><button class="btn green" id="ok">Set this essay</button></div>
+    </div>`;
+  const picks = $('#src-builtin', box);
+  const fillFromStory = (st) => { $('#title', box).value = st.title; $('#words', box).value = st.words.join('\n'); };
+  STORIES.forEach((st) => {
+    const b = html`<button type="button" class="story-pick ${st.id === storyId ? 'on' : ''}" data-id="${st.id}">${storySVG(st)}<span class="zh">${st.title}</span><small>${st.en}</small></button>`;
+    b.onclick = () => { storyId = st.id; picks.querySelectorAll('.story-pick').forEach((x) => x.classList.toggle('on', x.dataset.id === st.id)); fillFromStory(st); };
+    picks.appendChild(b);
+  });
+  fillFromStory(STORIES[0]);
+  box.querySelector('.seg').onclick = (ev) => {
+    const b = ev.target.closest('[data-src]'); if (!b) return;
+    source = b.dataset.src;
+    box.querySelectorAll('[data-src]').forEach((x) => x.classList.toggle('on', x === b));
+    $('#src-builtin', box).classList.toggle('hidden', source !== 'builtin');
+    $('#src-upload', box).classList.toggle('hidden', source !== 'upload');
+    if (source === 'upload') { $('#title', box).value = ''; $('#words', box).value = ''; } else fillFromStory(STORIES.find((x) => x.id === storyId));
+  };
+  $('#file', box).onchange = (ev) => {
+    file = ev.target.files[0]; if (!file) return;
+    const img = $('#preview', box); img.src = URL.createObjectURL(file); img.classList.remove('hidden');
+  };
+  $('#c', box).onclick = closeModal;
+  $('#ok', box).onclick = async () => {
+    const title = $('#title', box).value.trim();
+    const words = S.parseWords($('#words', box).value).map((x) => ({ w: x.w, meaning: x.hint }));
+    const minChars = Math.max(20, Math.round(+$('#min', box).value || 80));
+    if (!title) return toast('Give it a title');
+    let image = null;
+    if (source === 'upload') {
+      if (!file) return toast('Choose a photo first');
+      const btn = $('#ok', box); btn.disabled = true; btn.textContent = 'Uploading…';
+      try { image = await Cloud.uploadEssayImage(file); } catch (err) { btn.disabled = false; btn.textContent = 'Set this essay'; return toast(err.message || 'Upload failed'); }
+    }
+    S.addEssay({ title, storyId: source === 'builtin' ? storyId : null, image, words, minChars });
+    closeModal(); toast('Essay set ✓ The kitten will tell her'); rerender();
+  };
+  openModal(box);
+  $('#modal .card').style.width = 'min(860px, 96vw)';
 }

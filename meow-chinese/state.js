@@ -188,6 +188,7 @@ export function mood() {
   if (st === 'faint') return { face: 'faint', needs, text: '' };
   if (st === 'dizzy') return { face: 'dizzy', needs, text: '头好晕…需要药药' };
   if (st === 'cough') return { face: 'cough', needs, text: '咳咳…咳咳…' };
+  if ((state.essays || []).some((e) => e.status === 'assigned')) return { face: 'happy', needs, text: '我们一起写作文！', essay: true };
   if (state.daily.bored && !state.daily.playDone) return { face: 'bored', needs, text: '好无聊…陪我玩嘛！' };
   if (!tasksDone()) return { face: 'cry', needs, text: '呜呜…今天的任务还没做完' };
   if (needs.includes('thirsty')) return { face: 'thirsty', needs, text: '好渴…想喝水' };
@@ -368,3 +369,29 @@ export function nextUnlock() {
   const next = Object.entries(UNLOCKS).sort((a, b) => a[1] - b[1]).find(([, l]) => l > lv);
   return next ? { key: next[0], level: next[1], name: UNLOCK_NAMES[next[0]] } : null;
 }
+
+// ---------- 看图作文 picture compositions ----------
+// An essay is set up by a parent; the child writes on paper and taps "Submit";
+// the parent reviews it and gives stars, coins and a comment.
+export const essays = () => state.essays || (state.essays = []);
+export const outstandingEssays = () => essays().filter((e) => e.status === 'assigned');
+export function addEssay({ title, storyId = null, image = null, words = [], minChars = 80 }) {
+  const e = { id: uid(), title, storyId, image, words, minChars, status: 'assigned', createdAt: Date.now() };
+  essays().unshift(e); save(); return e;
+}
+export function updateEssay(id, patch) { const e = essays().find((x) => x.id === id); if (e) { Object.assign(e, patch); save(); } return e; }
+export function submitEssay(id) {
+  const e = essays().find((x) => x.id === id);
+  if (!e || e.status !== 'assigned') return false;
+  e.status = 'submitted'; e.submittedAt = Date.now();
+  markActive(); save(); return true;
+}
+export function reviewEssay(id, { stars, coins, comment }) {
+  const e = essays().find((x) => x.id === id);
+  if (!e || e.status !== 'submitted') return false;
+  coins = Math.max(0, Math.round(Number(coins) || 0));
+  e.status = 'reviewed'; e.review = { stars, coins, comment: (comment || '').trim(), at: Date.now() }; e.seen = false;
+  state.coins += coins; save(); return true;
+}
+export function markEssaySeen(id) { const e = essays().find((x) => x.id === id); if (e) { e.seen = true; save(); } }
+export function deleteEssay(id) { state.essays = essays().filter((x) => x.id !== id); save(); }

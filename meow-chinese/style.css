@@ -516,3 +516,52 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .pw input { flex: 1; min-width: 0; }
 .pw button { width: 52px; border: 3px solid var(--ink); border-radius: 6px; background: #fff; font-size: 20px; }
 .login-err { background: #ffe3e7; border: 3px solid var(--red-d); color: var(--red-d); border-radius: 6px; padding: 8px 10px; font-weight: 800; }
+
+/* ---------- 看图作文 ---------- */
+.essay { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.essay-pic { background: #fff; border-radius: 4px; cursor: zoom-in; }
+.essay-pic svg, .essay-pic img { display: block; width: 100%; height: auto; }
+.zoom-pic .essay-pic { cursor: default; }
+.pic-loading { padding: 40px 10px; text-align: center; font-weight: 800; color: var(--ink-2); }
+.word-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.word-tile { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px 10px; background: #fff; border: 3px solid var(--ink); border-radius: 8px; box-shadow: 0 4px 0 rgba(43,33,64,.3); }
+.word-tile:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(43,33,64,.3); }
+.word-tile .py { font-weight: 800; font-size: 14px; color: var(--blue-d); }
+.word-tile .w { font-size: 26px; }
+.word-tile .m { font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.wh-py { font-weight: 800; font-size: 24px; color: var(--blue-d); }
+.wh-word { font-size: 64px; line-height: 1; }
+.wh-mean { font-weight: 800; color: var(--ink-2); }
+.tips summary { cursor: pointer; list-style: none; }
+.tips summary::-webkit-details-marker { display: none; }
+.tip-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-top: 10px; }
+.tip { background: #fff; border: 3px solid var(--ink); border-radius: 8px; padding: 10px 12px; }
+.tip ul { margin: 6px 0; padding-left: 18px; font-weight: 700; line-height: 1.6; }
+.starters { display: flex; flex-wrap: wrap; gap: 6px; }
+.starters span { font-family: var(--zh); background: #fff3c4; border: 2px solid var(--ink); border-radius: 6px; padding: 1px 8px; }
+.essay-list { display: grid; gap: 10px; }
+.essay-pick { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: #fff; border: 3px solid var(--ink); border-radius: 8px; font-size: 22px; }
+.essay-pick small { font-weight: 800; color: var(--ink-2); font-size: 14px; }
+.has-badge { position: relative; }
+.badge { position: absolute; top: -10px; right: -8px; background: var(--red); color: #fff; font-style: normal; font-family: "Nunito", sans-serif; font-weight: 800; font-size: 14px; min-width: 24px; height: 24px; border-radius: 12px; border: 2px solid var(--ink); display: grid; place-items: center; }
+.stars { font-size: 52px; letter-spacing: 6px; line-height: 1; }
+.stars span { color: #e2d8c8; -webkit-text-stroke: 2px var(--ink); }
+.stars span.on { color: var(--yellow); }
+.parent-note { background: #fff6d2; border: 3px solid var(--ink); border-radius: 8px; padding: 10px 14px; max-width: 460px; }
+.parent-note small { font-weight: 800; color: var(--ink-2); }
+.parent-note .zh { font-size: 22px; margin-top: 4px; }
+
+.essay-row { display: grid; grid-template-columns: 220px 1fr; gap: 14px; padding: 12px; }
+.essay-thumb .essay-pic { border: 2px solid var(--ink); }
+.status-chip { font-weight: 800; font-size: 13px; padding: 2px 10px; border-radius: 999px; border: 2px solid var(--ink); white-space: nowrap; }
+.status-chip.warn { background: #fff3c4; } .status-chip.hot { background: #ffd0d8; } .status-chip.ok { background: #dff5e1; }
+.review-box { background: #fff; border: 3px solid var(--ink); border-radius: 8px; padding: 10px 12px; }
+.star-pick button { font-size: 40px; background: none; border: 0; padding: 0 4px; color: #e2d8c8; -webkit-text-stroke: 2px var(--ink); }
+.star-pick button.on { color: var(--yellow); }
+.story-picks { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.story-pick { display: flex; flex-direction: column; align-items: center; gap: 2px; background: #fff; border: 3px solid var(--ink); border-radius: 8px; padding: 6px; }
+.story-pick.on { box-shadow: 0 0 0 4px var(--yellow); }
+.story-pick svg { width: 100%; height: auto; }
+.story-pick .zh { font-size: 18px; } .story-pick small { font-weight: 800; color: var(--ink-2); }
+@media (max-width: 600px) { .essay-row { grid-template-columns: 1fr; } }
+.modal .card > * { flex-shrink: 0; }
