@@ -1,5 +1,5 @@
 // 看图作文: she looks at the pictures and helping words in the app, writes on paper,
-// then taps "Submit to Parent". The parent reviews it in the parent area.
+// then taps "Submit to Mum". The parent reviews it in the parent area.
 import * as S from './state.js';
 import * as Cloud from './cloud.js';
 import { storyById, storySVG } from './essayart.js';
@@ -98,8 +98,8 @@ export function essayScreen({ go, id }) {
   const submitted = e.status !== 'assigned';
   root.appendChild(html`<div class="card stack essay-head">
       <div class="teacher"><div class="kv"></div><div class="say">
-        <div class="line1">${submitted ? '已经交给爸爸妈妈了！' : '我们一起写作文！'}</div>
-        <div class="line2">${submitted ? 'Waiting for Mum or Dad to check it.' : `Look at the pictures and write at least ${e.minChars} characters on paper.`}</div>
+        <div class="line1">${submitted ? '已经交给妈妈了！' : '我们一起写作文！'}</div>
+        <div class="line2">${submitted ? 'Waiting for Mum to check it.' : `Look at the pictures and write at least ${e.minChars} characters on paper.`}</div>
       </div></div>
       <div class="h-title" style="justify-content:center;font-size:28px"><span class="zh">${esc(e.title)}</span></div>
       <p class="help" style="text-align:center;margin:0">仔细看每一张图，写一篇 <b>${e.minChars}</b> 字以上的短文。<br>Look carefully at each picture and write at least ${e.minChars} characters. Tap the pictures to make them bigger.</p>
@@ -126,17 +126,17 @@ export function essayScreen({ go, id }) {
   root.appendChild(tips);
 
   if (!submitted) {
-    const act = html`<div class="spell-actions"><button class="btn big green" id="submit">📮 <span class="zh">交给爸妈</span> Submit to Parent</button></div>`;
+    const act = html`<div class="spell-actions"><button class="btn big green" id="submit">📮 <span class="zh">交给妈妈</span> Submit to Mum</button></div>`;
     $('#submit', act).onclick = async () => {
-      if (!(await confirmBox('写好了吗？ Finished?', '你已经在纸上写完作文了吗？写完了就交给爸爸妈妈看吧！<br>Have you finished writing on paper? Then give it to Mum or Dad!', '交了 Submit', '还没 Not yet'))) return;
+      if (!(await confirmBox('写好了吗？ Finished?', '你已经在纸上写完作文了吗？写完了就交给妈妈看吧！<br>Have you finished writing on paper? Then give it to Mum!', '交了 Submit', '还没 Not yet'))) return;
       S.submitEssay(e.id);
       sfx.fanfare(); confetti(); kv.setMood('happy'); kv.jump();
-      toast('📮 <span class="zh">交给爸妈了！</span> Sent to Mum &amp; Dad', { ms: 3500 });
+      toast('📮 <span class="zh">交给妈妈了！</span> Sent to Mum', { ms: 3500 });
       setTimeout(() => go('home'), 1600);
     };
     root.appendChild(act);
   } else {
-    root.appendChild(html`<div class="card" style="text-align:center"><b>📮 已交 ${new Date(e.submittedAt).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</b><p class="help" style="margin:4px 0 0">爸爸妈妈看完以后会给你星星和金币哦！ Mum or Dad will give you stars and coins after reading it.</p></div>`);
+    root.appendChild(html`<div class="card" style="text-align:center"><b>📮 已交 ${new Date(e.submittedAt).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</b><p class="help" style="margin:4px 0 0">妈妈看完以后会给你星星和金币哦！ Mum will give you stars and coins after reading it.</p></div>`);
   }
   hydrateIcons(root);
   return n;
@@ -150,7 +150,7 @@ export function showEssayReward(e, kitten) {
       <div class="zh" style="font-size:22px">${esc(e.title)}</div>
       <div class="stars">${[1, 2, 3].map((i) => `<span class="${i <= (r.stars || 0) ? 'on' : ''}">★</span>`).join('')}</div>
       ${r.coins ? `<div class="price" style="font-size:28px">+${r.coins} ${coinI(26)}</div>` : ''}
-      ${r.comment ? `<div class="parent-note"><small>爸爸妈妈说 · Mum &amp; Dad say:</small><div class="zh">${esc(r.comment)}</div></div>` : ''}
+      ${r.comment ? `<div class="parent-note"><small>妈妈说 · Mum says:</small><div class="zh">${esc(r.comment)}</div></div>` : ''}
       <button class="btn big green" id="ok">好的！ Yay!</button>
     </div>`;
   $('#ok', n).onclick = closeModal;

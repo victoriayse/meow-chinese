@@ -305,7 +305,7 @@ function homeScreen(params = {}) {
         <button class="btn white soon" disabled><span class="zh">好词好句</span><span class="en">Vocab</span></button>
         ${S.outstandingEssays().length
           ? `<button class="btn pink has-badge" id="b-essay"><span class="zh">✍️ 看图作文</span><span class="en">Writing</span><i class="badge">${S.outstandingEssays().length}</i></button>`
-          : `<button class="btn white" disabled title="Parents set up writing in 🔒"><span class="zh">看图作文</span><span class="en">${S.essays().some((e) => e.status === 'submitted') ? '等爸妈批改 Waiting' : 'No writing yet'}</span></button>`}
+          : `<button class="btn white" disabled title="Parents set up writing in 🔒"><span class="zh">看图作文</span><span class="en">${S.essays().some((e) => e.status === 'submitted') ? '等妈妈批改 Waiting' : 'No writing yet'}</span></button>`}
       </div>
     </div>
   </section>`;

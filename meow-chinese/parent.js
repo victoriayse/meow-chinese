@@ -345,7 +345,7 @@ function essaysView(rerender) {
   const list = S.essays();
   const n = html`<div class="stack">
       <p class="help">Set up a picture composition here. The 看图作文 button on her home screen lights up and the kitten says <b>我们一起写作文！</b>
-        She looks at the pictures and helping words in the app, writes on paper, then taps <b>Submit to Parent</b>. Read her paper and give stars, coins and a comment here.</p>
+        She looks at the pictures and helping words in the app, writes on paper, then taps <b>Submit to Mum</b>. Read her paper and give stars, coins and a comment here.</p>
       <button class="btn green" id="new" style="align-self:flex-start">＋ <span class="zh">新作文</span> New essay</button>
       <div class="stack" id="rows"></div>
     </div>`;
