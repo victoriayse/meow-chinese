@@ -10,6 +10,7 @@ import { essayScreen, showEssayReward } from './essay.js';
 import * as Cloud from './cloud.js';
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
+import { openPhone, PHONE_ICON } from './phone.js';
 
 const app = $('#app');
 let current = null;
@@ -271,6 +272,7 @@ function spellPicker() {
 
 function homeScreen(params = {}) {
   S.tick();
+  S.essayNotifications();
   const inHouse = params.view === 'house' && S.unlocked('decor');
   if (S.health() === 'dead') return graveScreen();
   if (S.get().needsSetup) return setupScreen();
@@ -356,6 +358,7 @@ function homeScreen(params = {}) {
   if (md.face === 'faint') { kv.canvas.classList.add('fainted'); kwrap.appendChild(html`<div class="zzz" style="left:60%;top:30%">@ @ @</div>`); }
   else if (md.face === 'dizzy') kwrap.appendChild(html`<div class="bubble sad">😵‍💫 ${esc(md.text)}</div>`);
   else if (md.face === 'cough') kwrap.appendChild(html`<div class="bubble sad">🤒 ${esc(md.text)}</div>`);
+  else if (S.phoneBadge()) kwrap.appendChild(html`<div class="bubble">📱 你有新消息！<br><small>You have a new message!</small></div>`);
   else if (md.essay) kwrap.appendChild(html`<div class="bubble">✍️ ${esc(md.text)}</div>`);
   else if (md.face === 'bored') kwrap.appendChild(html`<div class="bubble">🥱 ${esc(md.text)}</div>`);
   else if (md.face === 'cry') kwrap.appendChild(html`<div class="bubble sad">😿 ${esc(md.text)}</div>`);
@@ -379,15 +382,16 @@ function homeScreen(params = {}) {
   renderAlert($('#alert', n), md, k);
 
   // presents and letters from friends wait on the stage until she opens them
-  const gifts = S.unopenedGifts(), unread = S.unreadLetters().length, hasLetters = (s.letters || []).length;
-  if (gifts.length || hasLetters) {
+  // the flip phone (mail, notifications, tools) is always there; presents wait beside it
+  {
+    const gifts = S.unopenedGifts(), pb = S.phoneBadge();
     const tray = html`<div class="stage-tray">
+        <button class="tray-btn phone-btn ${pb ? 'new' : ''}" id="t-phone" title="Phone">${PHONE_ICON}${pb ? `<i class="badge">${pb}</i>` : ''}</button>
         ${gifts.length ? `<button class="tray-btn gift" id="t-gift" title="Gifts">🎁<i class="badge">${gifts.length}</i></button>` : ''}
-        ${hasLetters ? `<button class="tray-btn ${unread ? 'new' : ''}" id="t-mail" title="Letters">✉️${unread ? `<i class="badge">${unread}</i>` : ''}</button>` : ''}
       </div>`;
     $('#stage', n).appendChild(tray);
     const tg = $('#t-gift', tray); if (tg) tg.onclick = () => Friends.openGiftBox(S.unopenedGifts()[0], refreshHome);
-    const tm = $('#t-mail', tray); if (tm) tm.onclick = () => Friends.openMailbox(refreshHome);
+    $('#t-phone', tray).onclick = () => openPhone({ start: S.unreadNotifications().length ? 'noti' : S.unreadLetters().length ? 'mail' : 'home', after: refreshHome });
   }
 
   const room = $('#room', n);
@@ -558,8 +562,7 @@ function homeScreen(params = {}) {
   $('#b-dress', n).onclick = () => go('wardrobe');
   const be = $('#b-essay', n); if (be) be.onclick = () => go('essay');
   // a parent has checked a composition: show the stars, coins and comment once
-  const reviewed = S.essays().find((e) => e.status === 'reviewed' && !e.seen);
-  if (reviewed) setTimeout(() => { if (current === 'home') showEssayReward(reviewed, kv); }, 700);
+  // (a checked composition now arrives as a phone notification instead of a pop-up)
   const bh = $('#b-house', n); if (bh) bh.onclick = () => (inHouse ? goBack() : go('home', { view: 'house' }));
   $('#b-feed', n).onclick = () => openFeed(kv, fx, afterCare);
   $('#b-friends', n).onclick = () => go('friends');

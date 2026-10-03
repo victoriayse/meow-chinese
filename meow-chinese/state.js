@@ -54,7 +54,10 @@ function fresh() {
     letters: [],       // letters from friends: { id, from, fromName, text, at, read }
     gifts: [],         // gifts from friends: { id, from, fromName, item, message, at, opened }
     friendNews: [],    // e.g. a friend fed her kitten: { id, fromName, item, at, seen }
-    appliedEvents: [], // friend event ids already handled on this account    // where she dragged each home item: { id: { x, y } } in % of the room
+    appliedEvents: [], // friend event ids already handled on this account
+    notifications: [], // the flip phone's notifications: { id, kind, title, body, essayId, at, read }
+    notes: [],         // notepad: { id, text, at }
+    alarms: [],        // clock alarms: { id, time: 'HH:MM', on }    // where she dragged each home item: { id: { x, y } } in % of the room
     catPos: null,    // where the kitten stands in the house: { x, y } in % (x = centre, y = from the floor)
     lists: [list],
     activeListId: list.id,
@@ -455,16 +458,55 @@ export function receiveFriendEvent(ev, fromName) {
     k.water = Math.min(100, (k.water ?? 75) + (it.water || 0));
     out = { id, kind: 'feed', fromName, item: p.item, at, seen: false };
     state.friendNews = [out, ...(state.friendNews || [])].slice(0, 30);
+    state.notifications = [{ id: 'n' + id, kind: 'feed', title: `${fromName}喂了你的小猫`, body: `A friend fed your kitten ${it.en}`, item: p.item, at, read: false }, ...(state.notifications || [])].slice(0, 200);
   } else if (ev.kind === 'letter' && p.text) {
     out = { id, kind: 'letter', from: ev.from_user, fromName, text: String(p.text).slice(0, 300), at, read: false };
     state.letters = [out, ...(state.letters || [])].slice(0, 100);
   } else if (ev.kind === 'gift' && ITEMS[p.item]) {
     out = { id, kind: 'gift', from: ev.from_user, fromName, item: p.item, message: String(p.message || '').slice(0, 300), at, opened: false };
     state.gifts = [out, ...(state.gifts || [])].slice(0, 100);
+    state.notifications = [{ id: 'n' + id, kind: 'gift', title: `${fromName}送你一份礼物`, body: 'You got a gift — open the 🎁 box on the home screen', item: p.item, at, read: false }, ...(state.notifications || [])].slice(0, 200);
   }
   save();
   return out;
 }
+// ----- flip phone -----
+export function notify(n) {
+  state.notifications = state.notifications || [];
+  if (state.notifications.some((x) => x.id === n.id)) return;
+  state.notifications.unshift({ at: Date.now(), read: false, ...n });
+  state.notifications = state.notifications.slice(0, 200);
+  save();
+}
+export const unreadNotifications = () => (state.notifications || []).filter((x) => !x.read);
+export const phoneBadge = () => unreadNotifications().length + unreadLetters().length;
+export function readNotification(id) { const x = (state.notifications || []).find((y) => y.id === id); if (x && !x.read) { x.read = true; if (x.essayId) markEssaySeen(x.essayId); else save(); } }
+export function deleteNotification(id) { state.notifications = (state.notifications || []).filter((x) => x.id !== id); save(); }
+// a checked composition becomes a notification once (deleting it never brings it back)
+export function essayNotifications() {
+  let changed = false;
+  essays().forEach((e) => {
+    if (e.status === 'reviewed' && !e.notified) {
+      e.notified = true; changed = true;
+      state.notifications = state.notifications || [];
+      if (!state.notifications.some((x) => x.id === 'essay-' + e.id)) {
+        state.notifications.unshift({ id: 'essay-' + e.id, kind: 'essay', essayId: e.id, title: `作文批改好了：${e.title}`, body: 'Mum checked your writing', at: (e.review && e.review.at) || Date.now(), read: !!e.seen });
+      }
+    }
+  });
+  if (changed) save();
+}
+export function readLetter(id) { const l = (state.letters || []).find((x) => x.id === id); if (l && !l.read) { l.read = true; save(); } }
+export function deleteLetter(id) { state.letters = (state.letters || []).filter((x) => x.id !== id); save(); }
+export function saveNote(id, text) {
+  state.notes = state.notes || [];
+  const t = String(text).slice(0, 2000);
+  const n = id && state.notes.find((x) => x.id === id);
+  if (n) { n.text = t; n.at = Date.now(); } else state.notes.unshift({ id: uid(), text: t, at: Date.now() });
+  save();
+}
+export function deleteNote(id) { state.notes = (state.notes || []).filter((x) => x.id !== id); save(); }
+export function setAlarms(list) { state.alarms = list; save(); }
 export const unopenedGifts = () => (state.gifts || []).filter((g) => !g.opened);
 export const unreadLetters = () => (state.letters || []).filter((l) => !l.read);
 export function openGift(id) {

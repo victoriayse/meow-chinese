@@ -238,6 +238,8 @@ function writeLetter(f) {
   setTimeout(() => tx.focus(), 50);
 }
 
+export const sendLetter = (to, text) => sendEvent(to, 'letter', { text: String(text).slice(0, LETTER_MAX) });
+export const errorText = (code) => ERR[code];
 const GIFT_TABS = TABS.filter((t) => ['food', 'head', 'body', 'feet', 'acc', 'decor'].includes(t.key));
 function sendGift(f) {
   let tab = 'food', pick = null;
