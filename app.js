@@ -9,6 +9,7 @@ import { parentScreen } from './parent.js';
 import { essayScreen, showEssayReward } from './essay.js';
 import * as Cloud from './cloud.js';
 import * as Auth from './auth.js';
+import * as Friends from './friends.js';
 
 const app = $('#app');
 let current = null;
@@ -36,6 +37,8 @@ const screens = {
   parent: (p) => parentScreen({ ...p, go }),
   grave: graveScreen,
   essay: (p) => essayScreen({ ...p, go }),
+  friends: () => Friends.friendsScreen({ go }),
+  friend: (p) => Friends.friendScreen({ ...p, go }),
 };
 // a simple history so every page can go Back
 const stack = [];
@@ -239,6 +242,33 @@ const DECOR_POS = {
   'front-right': 'right:2%;bottom:3%',
 };
 
+let pickedByHand = false;
+// the spelling list picker: newest first; old lists stay locked until the newest one is finished
+function spellPicker() {
+  const s = S.get(), lists = S.releasedLists(), cur = S.currentList();
+  if (!lists.length) return `<button class="btn big block col" id="b-spell" disabled><span class="zh">✏️ 开始听写</span><span class="en">No spelling yet — ask Mum</span></button>`;
+  let sel = S.activeList();
+  if (!lists.includes(sel)) sel = cur;
+  // unless she just picked one herself, start on the first list she can do now
+  if (!pickedByHand && S.listStatus(sel) !== 'open') sel = lists.find((l) => S.listStatus(l) === 'open') || sel;
+  pickedByHand = false;
+  if (s.activeListId !== sel.id) { s.activeListId = sel.id; S.saveQuiet(); }
+  const date = (l) => new Date(S.listDate(l) + 'T00:00').toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
+  const label = (l) => {
+    const st = S.listStatus(l);
+    const icon = st === 'done-today' ? '✅' : st === 'locked' ? '🔒' : l.id === cur.id ? '⭐' : '📝';
+    const note = st === 'done-today' ? ' · 今天写过了' : st === 'locked' ? ' · 先写新的' : l.id === cur.id ? (l.done ? '' : ' · 新!') : '';
+    return `${icon} ${l.name} (${date(l)})${note}`;
+  };
+  const st = S.listStatus(sel);
+  const ok = st === 'open';
+  return `<div class="spell-pick card">
+      <label class="pick-label"><span class="zh">选听写</span> Choose a list
+        <select id="list-pick">${lists.map((l) => `<option value="${l.id}" ${l.id === sel.id ? 'selected' : ''}>${esc(label(l))}</option>`).join('')}</select></label>
+      <button class="btn big block col ${ok ? '' : 'dim'}" id="b-spell"><span class="zh">${ok ? '✏️ 开始听写' : st === 'done-today' ? '✅ 今天写过了' : '🔒 先写新的听写'}</span><span class="en">${ok ? `Start · ${esc(sel.name)}` : st === 'done-today' ? 'Done today — come back tomorrow' : `Finish “${esc(cur.name)}” first`}</span></button>
+    </div>`;
+}
+
 function homeScreen(params = {}) {
   S.tick();
   const inHouse = params.view === 'house' && S.unlocked('decor');
@@ -284,7 +314,7 @@ function homeScreen(params = {}) {
         <div class="stat"><span><i data-icon="fish" data-size="22"></i></span><span>饱饱 <span class="en">Food</span></span><div class="bar segmented"><i style="width:${k.hunger}%;--c:#f59b2a"></i></div></div>
         <div class="stat"><span style="font-size:20px;text-align:center">💧</span><span>喝水 <span class="en">Water</span></span><div class="bar segmented"><i style="width:${k.water ?? 75}%;--c:#4fb3ef"></i></div></div>
         <div class="stat"><span>${'<i data-icon="heart" data-size="22"></i>'}</span><span>开心 <span class="en">Happy</span></span><div class="bar segmented"><i style="width:${k.happy}%;--c:#ff6f9c"></i></div></div>
-        <div class="stat"><span style="font-family:var(--px);font-weight:700">Lv</span><span>等级 ${S.level()}</span><div class="bar"><i style="width:${S.levelProgress() * 100}%;--c:#6cb6f2"></i></div></div>
+        <div class="stat"><span style="font-family:var(--px);font-weight:700">Lv</span><span>等级 ${S.level()}</span><div class="bar xp-bar"><i style="width:${S.levelProgress() * 100}%;--c:#6cb6f2"></i><b>${S.xpIntoLevel()}/${S.xpPerLevel()} XP</b></div></div>
         ${S.nextUnlock() ? `<div class="next-unlock">🔓 Lv${S.nextUnlock().level} 解锁 ${S.nextUnlock().name}</div>` : ''}
       </div>
       <div class="card">
@@ -296,7 +326,7 @@ function homeScreen(params = {}) {
         </div>
         <div class="bonus-line" style="margin-top:8px">${d.paid.bonus ? '🎉 全部完成！All done today!' : `全部完成再得 +${S.REWARDS.allBonus} 🪙 bonus`}</div>
       </div>
-      <button class="btn big block col" id="b-spell"><span class="zh">✏️ 开始听写</span><span class="en">Start · ${esc(list ? list.name : '')}</span></button>
+      ${spellPicker()}
       <div class="menu-grid">
         <button class="btn pink" id="b-review" ${reviewN ? '' : 'disabled'}><span class="zh">错词本</span><span class="en">Mistakes (${reviewN})</span></button>
         <button class="btn white" id="b-feed"><span class="zh">喂食喝水</span><span class="en">Food &amp; water</span></button>
@@ -306,7 +336,7 @@ function homeScreen(params = {}) {
           ? (inHouse ? '<button class="btn green" id="b-house"><span class="zh">🌳 去草地</span><span class="en">Go outside</span></button>'
                      : '<button class="btn green" id="b-house"><span class="zh">🏠 我的家</span><span class="en">Go to Home</span></button>')
           : `<button class="btn white" disabled><span class="zh">🔒 我的家</span><span class="en">Home · Lv${S.UNLOCKS.decor}</span></button>`}
-        <button class="btn white soon" disabled><span class="zh">好词好句</span><span class="en">Vocab</span></button>
+        <button class="btn blue ${Friends.incomingRequests().length ? 'has-badge' : ''}" id="b-friends"><span class="zh">👫 朋友</span><span class="en">Friends</span>${Friends.incomingRequests().length ? `<i class="badge">${Friends.incomingRequests().length}</i>` : ''}</button>
         ${S.outstandingEssays().length
           ? `<button class="btn pink has-badge" id="b-essay"><span class="zh">✍️ 看图作文</span><span class="en">Writing</span><i class="badge">${S.outstandingEssays().length}</i></button>`
           : `<button class="btn white" disabled title="Parents set up writing in 🔒"><span class="zh">看图作文</span><span class="en">${S.essays().some((e) => e.status === 'submitted') ? '等妈妈批改 Waiting' : 'No writing yet'}</span></button>`}
@@ -347,6 +377,18 @@ function homeScreen(params = {}) {
   }
 
   renderAlert($('#alert', n), md, k);
+
+  // presents and letters from friends wait on the stage until she opens them
+  const gifts = S.unopenedGifts(), unread = S.unreadLetters().length, hasLetters = (s.letters || []).length;
+  if (gifts.length || hasLetters) {
+    const tray = html`<div class="stage-tray">
+        ${gifts.length ? `<button class="tray-btn gift" id="t-gift" title="Gifts">🎁<i class="badge">${gifts.length}</i></button>` : ''}
+        ${hasLetters ? `<button class="tray-btn ${unread ? 'new' : ''}" id="t-mail" title="Letters">✉️${unread ? `<i class="badge">${unread}</i>` : ''}</button>` : ''}
+      </div>`;
+    $('#stage', n).appendChild(tray);
+    const tg = $('#t-gift', tray); if (tg) tg.onclick = () => Friends.openGiftBox(S.unopenedGifts()[0], refreshHome);
+    const tm = $('#t-mail', tray); if (tm) tm.onclick = () => Friends.openMailbox(refreshHome);
+  }
 
   const room = $('#room', n);
   const decorEls = [];
@@ -502,7 +544,15 @@ function homeScreen(params = {}) {
     if (got.length) setTimeout(() => refreshHome(), 1600);
   }
 
-  $('#b-spell', n).onclick = () => { sfx.unlock(); go('spell', { mode: 'list' }); };
+  const pick = $('#list-pick', n);
+  if (pick) pick.onchange = () => { pickedByHand = true; s.activeListId = pick.value; S.saveQuiet(); refreshHome(); };
+  $('#b-spell', n).onclick = () => {
+    sfx.unlock();
+    const st = S.listStatus(S.activeList());
+    if (st === 'done-today') return toast('<span class="zh">这个今天写过了！</span> Done today — pick another list or come back tomorrow', { ms: 3500 });
+    if (st === 'locked') return toast(`<span class="zh">先完成「${esc(S.currentList().name)}」</span> Finish the newest list first`, { ms: 3500 });
+    go('spell', { mode: 'list' });
+  };
   $('#b-review', n).onclick = () => { sfx.unlock(); go('spell', { mode: 'review' }); };
   $('#b-shop', n).onclick = () => go('shop');
   $('#b-dress', n).onclick = () => go('wardrobe');
@@ -512,6 +562,7 @@ function homeScreen(params = {}) {
   if (reviewed) setTimeout(() => { if (current === 'home') showEssayReward(reviewed, kv); }, 700);
   const bh = $('#b-house', n); if (bh) bh.onclick = () => (inHouse ? goBack() : go('home', { view: 'house' }));
   $('#b-feed', n).onclick = () => openFeed(kv, fx, afterCare);
+  $('#b-friends', n).onclick = () => go('friends');
   n._mounted = () => { if (inHouse) { drawRoom($('#roombg', n)); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
   return n;
 }
@@ -630,6 +681,17 @@ paintSky(true);
 S.tick();
 setInterval(() => S.tick(), 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { S.tick(); if (current === 'home') refreshHome(); } });
+// friends: show what arrived, and keep the home page badges fresh
+Friends.startFriends((news) => {
+  news.forEach((x, i) => setTimeout(() => {
+    if (x.kind === 'feed') toast(`🐟 <span class="zh">${esc(x.fromName)}喂了你的小猫！</span> A friend fed your kitten`, { ms: 3500 });
+    if (x.kind === 'letter') toast(`✉️ <span class="zh">${esc(x.fromName)}给你写了信！</span> You got a letter`, { ms: 3500 });
+    if (x.kind === 'gift') toast(`🎁 <span class="zh">${esc(x.fromName)}送你礼物！</span> You got a gift`, { ms: 3500 });
+  }, i * 900));
+  if (current === 'home') setTimeout(refreshHome, 400);
+});
+let lastReq = 0;
+Friends.onFriends(() => { const r = Friends.incomingRequests().length; if (r !== lastReq) { lastReq = r; if (current === 'home') refreshHome(); } });
 // another tab changed the game: show the new state on calm pages
 S.onExternalChange(() => {
   if (['home', 'shop', 'wardrobe'].includes(current) && !document.querySelector('.room.arranging')) go(current, currentParams, { replace: true });

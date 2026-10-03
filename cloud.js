@@ -8,7 +8,7 @@ const listeners = new Set();
 export const onStatus = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 const setStatus = (state, error = null) => { status.state = state; status.error = error; if (state === 'ok') status.at = Date.now(); listeners.forEach((f) => f(status)); };
 
-async function rest(path, opts = {}) {
+export async function rest(path, opts = {}) {
   const t = await Auth.token();
   if (!t) throw new Error('not signed in');
   const r = await fetch(`${Auth.API}/rest/v1/${path}`, { ...opts, headers: { 'Content-Type': 'application/json', apikey: Auth.KEY, Authorization: `Bearer ${t}`, ...(opts.headers || {}) } });

@@ -50,7 +50,11 @@ function fresh() {
     prices: {},      // parent overrides: { itemId: price }
     owned: [],
     decorHidden: [],
-    decorPos: {},    // where she dragged each home item: { id: { x, y } } in % of the room
+    decorPos: {},
+    letters: [],       // letters from friends: { id, from, fromName, text, at, read }
+    gifts: [],         // gifts from friends: { id, from, fromName, item, message, at, opened }
+    friendNews: [],    // e.g. a friend fed her kitten: { id, fromName, item, at, seen }
+    appliedEvents: [], // friend event ids already handled on this account    // where she dragged each home item: { id: { x, y } } in % of the room
     catPos: null,    // where the kitten stands in the house: { x, y } in % (x = centre, y = from the floor)
     lists: [list],
     activeListId: list.id,
@@ -431,11 +435,84 @@ export function nextUnlock() {
 // the parent reviews it and gives stars, coins and a comment.
 export const essays = () => state.essays || (state.essays = []);
 export const outstandingEssays = () => essays().filter((e) => e.status === 'assigned');
-export function addEssay({ title, storyId = null, image = null, words = [], minChars = 80 }) {
-  const e = { id: uid(), title, storyId, image, words, minChars, status: 'assigned', createdAt: Date.now() };
+export function addEssay({ title, storyId = null, image = null, words = [], minChars = 80, timeLimit = 0, allowExtend = true }) {
+  const e = { id: uid(), title, storyId, image, words, minChars, timeLimit, allowExtend, extraMin: 0, extensions: 0, status: 'assigned', createdAt: Date.now() };
   essays().unshift(e); save(); return e;
 }
 export function updateEssay(id, patch) { const e = essays().find((x) => x.id === id); if (e) { Object.assign(e, patch); save(); } return e; }
+// ----- friends -----
+// handle something a friend sent (each event only once, even with two devices)
+export function receiveFriendEvent(ev, fromName) {
+  const key = 'e' + ev.id;
+  if ((state.appliedEvents || []).includes(key)) return null;
+  state.appliedEvents = [...(state.appliedEvents || []), key].slice(-300);
+  const p = ev.payload || {}, at = Date.parse(ev.created_at) || Date.now(), id = key;
+  let out = null;
+  if (ev.kind === 'feed' && ITEMS[p.item] && ITEMS[p.item].cat === 'food') {
+    const it = ITEMS[p.item], k = state.kitten;
+    k.hunger = Math.min(100, k.hunger + (it.hunger || 0));
+    k.happy = Math.min(100, k.happy + (it.happy || 0) + 3);
+    k.water = Math.min(100, (k.water ?? 75) + (it.water || 0));
+    out = { id, kind: 'feed', fromName, item: p.item, at, seen: false };
+    state.friendNews = [out, ...(state.friendNews || [])].slice(0, 30);
+  } else if (ev.kind === 'letter' && p.text) {
+    out = { id, kind: 'letter', from: ev.from_user, fromName, text: String(p.text).slice(0, 300), at, read: false };
+    state.letters = [out, ...(state.letters || [])].slice(0, 100);
+  } else if (ev.kind === 'gift' && ITEMS[p.item]) {
+    out = { id, kind: 'gift', from: ev.from_user, fromName, item: p.item, message: String(p.message || '').slice(0, 300), at, opened: false };
+    state.gifts = [out, ...(state.gifts || [])].slice(0, 100);
+  }
+  save();
+  return out;
+}
+export const unopenedGifts = () => (state.gifts || []).filter((g) => !g.opened);
+export const unreadLetters = () => (state.letters || []).filter((l) => !l.read);
+export function openGift(id) {
+  const g = (state.gifts || []).find((x) => x.id === id);
+  if (!g || g.opened) return null;
+  const it = ITEMS[g.item];
+  g.opened = true; g.openedAt = Date.now();
+  let result = 'added';
+  if (it.cat === 'food') state.pantry[g.item] = (state.pantry[g.item] || 0) + 1;
+  else if (state.owned.includes(g.item)) { state.coins += price(g.item); result = 'coins'; }   // already has it: turn it into coins
+  else state.owned.push(g.item);
+  save();
+  return { gift: g, result, coins: result === 'coins' ? price(g.item) : 0 };
+}
+export function markLettersRead() { (state.letters || []).forEach((l) => { l.read = true; }); save(); }
+export function markNewsSeen() { (state.friendNews || []).forEach((x) => { x.seen = true; }); save(); }
+export function usePantry(id) {
+  if (!(state.pantry[id] > 0)) return false;
+  state.pantry[id] -= 1; if (!state.pantry[id]) delete state.pantry[id];
+  save(); return true;
+}
+export function spend(n) { if (state.coins < n) return false; state.coins -= n; save(); return true; }
+
+// ----- essay timer -----
+export const EXTEND_MIN = 15, EXTEND_WORDS = 5;
+export function startEssay(id) { const e = essays().find((x) => x.id === id); if (e && !e.startedAt) { e.startedAt = Date.now(); save(); } return e; }
+export const essayEndsAt = (e) => (e.timeLimit && e.startedAt ? e.startedAt + (e.timeLimit + (e.extraMin || 0)) * 60000 : null);
+export function extendEssay(id) {
+  const e = essays().find((x) => x.id === id);
+  if (!e) return null;
+  // add 15 minutes from now if the time already ran out, so she really gets 15 more minutes
+  const now = Date.now(), end = essayEndsAt(e);
+  const lateBy = end && end < now ? Math.ceil((now - end) / 60000) : 0;
+  e.extraMin = (e.extraMin || 0) + lateBy + EXTEND_MIN; e.extensions = (e.extensions || 0) + 1;
+  save(); return e;
+}
+// words for the "extend timer" challenge: her mistakes first, then words she has got wrong before, then list words
+export function challengeWords(n = EXTEND_WORDS) {
+  const hints = {};
+  state.lists.forEach((l) => l.words.forEach((x) => { if (x.hint && !hints[x.w]) hints[x.w] = x.hint; }));
+  const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const picked = [];
+  const add = (w) => { if (picked.length < n && w && !picked.includes(w) && [...w].some((ch) => /\p{Script=Han}/u.test(ch))) picked.push(w); };
+  shuffle(Object.entries(state.words).filter(([, s]) => s.review).map(([w]) => w)).forEach(add);
+  Object.entries(state.words).filter(([, s]) => s.wrong > 0).sort((a, b) => b[1].wrong - a[1].wrong).forEach(([w]) => add(w));
+  shuffle(state.lists.flatMap((l) => l.words.map((x) => x.w))).forEach(add);
+  return picked.map((w) => ({ w, hint: hints[w] || '' }));
+}
 export function submitEssay(id) {
   const e = essays().find((x) => x.id === id);
   if (!e || e.status !== 'assigned') return false;
