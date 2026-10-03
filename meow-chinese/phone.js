@@ -250,7 +250,9 @@ export function openPhone({ start = 'home', after } = {}) {
 
     // ----- notifications -----
     noti() {
+      S.purgeOldMessages();
       header('🔔 通知 Notifications');
+      body.appendChild(html`<div class="ph-tip">⏳ 通知会在 ${S.MESSAGE_DAYS} 天后自动删除。<br>Notifications are cleared after ${S.MESSAGE_DAYS} days.</div>`);
       const list = S.get().notifications || [];
       if (!list.length) { body.appendChild(html`<p class="ph-empty">没有通知。<br>No notifications.</p>`); return; }
       const box = html`<div class="ph-list"></div>`;

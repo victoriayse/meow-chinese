@@ -525,13 +525,14 @@ export function essayNotifications() {
   });
   if (changed) save();
 }
-// messages older than 10 days disappear by themselves
+// messages and notifications older than 10 days disappear by themselves
 export const MESSAGE_DAYS = 10;
 export function purgeOldMessages() {
   const cut = Date.now() - MESSAGE_DAYS * 86400000;
   const a = state.letters || [], b = state.sentLetters || [];
-  const a2 = a.filter((x) => x.at >= cut), b2 = b.filter((x) => x.at >= cut);
-  if (a2.length !== a.length || b2.length !== b.length) { state.letters = a2; state.sentLetters = b2; save(); }
+  const n = state.notifications || [];
+  const a2 = a.filter((x) => x.at >= cut), b2 = b.filter((x) => x.at >= cut), n2 = n.filter((x) => (x.at || 0) >= cut);
+  if (a2.length !== a.length || b2.length !== b.length || n2.length !== n.length) { state.letters = a2; state.sentLetters = b2; state.notifications = n2; save(); }
 }
 export function recordSent(to, toName, text) {
   state.sentLetters = [{ id: uid(), to, toName, text: String(text).slice(0, 300), at: Date.now() }, ...(state.sentLetters || [])].slice(0, 300);
@@ -595,6 +596,15 @@ export function withdraw(id) {
   state.coins += d.amount + interest;
   save();
   return { amount: d.amount, interest };
+}
+// parent: send the "essay checked" notification to her phone again (as a new, unread one)
+export function resendEssayNotification(id) {
+  const e = essays().find((x) => x.id === id);
+  if (!e || e.status !== 'reviewed') return false;
+  state.notifications = (state.notifications || []).filter((x) => x.essayId !== id);
+  e.seen = false; e.notified = true;
+  state.notifications.unshift({ id: `essay-${e.id}-${Date.now().toString(36)}`, kind: 'essay', essayId: e.id, title: `作文批改好了：${e.title}`, body: 'Mum checked your writing', at: Date.now(), read: false });
+  save(); return true;
 }
 export function readLetter(id) { const l = (state.letters || []).find((x) => x.id === id); if (l && !l.read) { l.read = true; save(); } }
 export function deleteLetter(id) { state.letters = (state.letters || []).filter((x) => x.id !== id); save(); }

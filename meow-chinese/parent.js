@@ -477,7 +477,8 @@ function essaysView(rerender) {
         toast('Sent ✓ She will see it on her home screen'); rerender();
       };
     } else if (e.status === 'reviewed' && e.review) {
-      rv.innerHTML = `<div class="review-box"><span style="color:#e0a524;font-size:22px">${'★'.repeat(e.review.stars)}${'☆'.repeat(3 - e.review.stars)}</span> · +${e.review.coins} coins${e.review.xp ? ` · +${e.review.xp} XP` : ''}${e.review.comment ? `<div class="zh" style="margin-top:4px">“${esc(e.review.comment)}”</div>` : ''}${e.seen ? '' : '<div class="help" style="margin:4px 0 0">She hasn’t opened it yet.</div>'}</div>`;
+      rv.innerHTML = `<div class="review-box"><span style="color:#e0a524;font-size:22px">${'★'.repeat(e.review.stars)}${'☆'.repeat(3 - e.review.stars)}</span> · +${e.review.coins} coins${e.review.xp ? ` · +${e.review.xp} XP` : ''}${e.review.comment ? `<div class="zh" style="margin-top:4px">“${esc(e.review.comment)}”</div>` : ''}<div class="row" style="margin-top:6px;align-items:center"><button class="btn white small" data-a="resend">🔔 Resend notification</button><span class="help" style="margin:0">${e.seen ? 'She has opened it.' : 'She hasn’t opened it yet.'}</span></div></div>`;
+      rv.querySelector('[data-a=resend]').onclick = () => { if (S.resendEssayNotification(e.id)) { toast('🔔 Sent to her phone again ✓'); rerender(); } };
     }
     r.querySelector('[data-a=del]').onclick = async () => {
       if (!(await confirmBox('Delete this essay?', `“${esc(e.title)}” will be removed.`, 'Delete'))) return;
