@@ -25,6 +25,12 @@ const sync = () => { const s = S.get(); if (!s.sync) s.sync = { lastSynced: 0 };
 let ready = false, timer = null, onReplaced = () => {};
 function adopt(remote) {
   const owner = Auth.user() && Auth.user().id;
+  // never lose things she bought on this device, even if another device saved later
+  const mine = S.get(), unsynced = (mine.updatedAt || 0) > (sync().lastSynced || 0);
+  if (unsynced && remote.data && Array.isArray(remote.data.owned)) {
+    const extra = (mine.owned || []).filter((id) => !remote.data.owned.includes(id));
+    if (extra.length) remote.data.owned = [...remote.data.owned, ...extra];
+  }
   S.replaceAll(remote.data);
   const s = S.get();
   s.ownerId = owner; s.sync = { lastSynced: remote.client_updated };
@@ -52,7 +58,7 @@ export async function pull() {
   setStatus('syncing');
   try {
     const remote = await getRemote();
-    if (remote && remote.data && remote.client_updated > (sync().lastSynced || 0)) { adopt(remote); onReplaced(); }
+    if (remote && remote.data && remote.client_updated > (sync().lastSynced || 0) && remote.client_updated > (S.get().updatedAt || 0)) { adopt(remote); onReplaced(); }
     ready = true;
     await push();
   } catch (e) { setStatus('offline', String(e.message || e)); }

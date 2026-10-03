@@ -630,6 +630,10 @@ paintSky(true);
 S.tick();
 setInterval(() => S.tick(), 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { S.tick(); if (current === 'home') refreshHome(); } });
+// another tab changed the game: show the new state on calm pages
+S.onExternalChange(() => {
+  if (['home', 'shop', 'wardrobe'].includes(current) && !document.querySelector('.room.arranging')) go(current, currentParams, { replace: true });
+});
 // cloud backup & sync: if another device saved newer progress, show it
 Cloud.init(() => {
   if (current === 'spell' || current === 'login') return;   // don't interrupt a spelling round

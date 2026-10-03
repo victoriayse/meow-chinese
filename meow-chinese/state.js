@@ -101,6 +101,18 @@ export function save() {
   listeners.forEach((fn) => fn(state));
 }
 export function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+// another tab of the app saved: take its copy, so this tab never writes old progress back over it
+const externalListeners = new Set();
+export function onExternalChange(fn) { externalListeners.add(fn); }
+if (typeof window !== 'undefined') window.addEventListener('storage', (e) => {
+  if (e.key !== KEY || !e.newValue) return;
+  try {
+    const other = JSON.parse(e.newValue);
+    if ((other.updatedAt || 0) < (state.updatedAt || 0)) return;
+    state = migrate(other);
+    externalListeners.forEach((fn) => fn(state));
+  } catch (x) { console.warn('could not read the other tab\'s save', x); }
+});
 // save bookkeeping (e.g. sync status) without counting it as a change
 export function saveQuiet() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { console.warn('save failed', e); } }
 export function replaceAll(obj) { state = migrate(obj); save(); }
@@ -131,7 +143,7 @@ export function tick() {
     }
   }
   updateHealth();
-  save();
+  saveQuiet();
 }
 
 // ---------- health: skipping tasks for days makes the kitten ill ----------
