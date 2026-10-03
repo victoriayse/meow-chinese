@@ -271,6 +271,10 @@ function homeScreen(params = {}) {
         <div class="room" id="room">
           <canvas class="room-bg" id="roombg"></canvas>
           <div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>
+          <button class="arrange-btn" id="b-arrange"><span class="zh">🪑 摆家具</span> Move furniture</button>
+          <div class="dpad" id="dpad">
+            <button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button>
+          </div>
         </div>
       </div>` : `<div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>`}
     </div>
@@ -297,7 +301,7 @@ function homeScreen(params = {}) {
         <button class="btn pink" id="b-review" ${reviewN ? '' : 'disabled'}><span class="zh">错词本</span><span class="en">Mistakes (${reviewN})</span></button>
         <button class="btn white" id="b-feed"><span class="zh">喂食喝水</span><span class="en">Food &amp; water</span></button>
         <button class="btn blue" id="b-shop"><span class="zh">商店</span><span class="en">Shop</span></button>
-        <button class="btn white" id="b-dress"><span class="zh">打扮</span><span class="en">Dress up</span></button>
+        <button class="btn white" id="b-dress"><span class="zh">我的物品</span><span class="en">My Items</span></button>
         ${S.unlocked('decor')
           ? (inHouse ? '<button class="btn green" id="b-house"><span class="zh">🌳 去草地</span><span class="en">Go outside</span></button>'
                      : '<button class="btn green" id="b-house"><span class="zh">🏠 我的家</span><span class="en">Go to Home</span></button>')
@@ -314,13 +318,10 @@ function homeScreen(params = {}) {
   const kv = new KittenView({ scale, interactive: true, onTap: () => petKitten() });
   kv.setMood(md.face);
   const kwrap = $('#kwrap', n), fx = $('#fx', n);
-  if (inHouse && s.owned.includes('cushion') && !s.decorHidden.includes('cushion')) {
-    const c = spriteCanvas('cushion', 26 * Math.round(scale * 0.9));
-    c.style.cssText = `position:absolute;left:50%;bottom:${Math.round(scale * 4)}px;transform:translateX(-50%);z-index:0`;
-    kwrap.appendChild(c);
-  }
   kv.canvas.style.position = 'relative'; kv.canvas.style.zIndex = 1;
-  kwrap.appendChild(kv.canvas);
+  const kflip = document.createElement('div'); kflip.className = 'kflip';
+  kflip.appendChild(kv.canvas);
+  kwrap.appendChild(kflip);
   kwrap.appendChild(html`<div class="nametag">${esc(k.name)}<span class="lv">Lv${S.level()}</span></div>`);
   if (md.face === 'faint') { kv.canvas.classList.add('fainted'); kwrap.appendChild(html`<div class="zzz" style="left:60%;top:30%">@ @ @</div>`); }
   else if (md.face === 'dizzy') kwrap.appendChild(html`<div class="bubble sad">😵‍💫 ${esc(md.text)}</div>`);
@@ -348,27 +349,134 @@ function homeScreen(params = {}) {
   renderAlert($('#alert', n), md, k);
 
   const room = $('#room', n);
+  const decorEls = [];
   if (room) {
   const dscale = Math.max(2, Math.round(scale * 0.72));
-  s.owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && id !== 'cushion' && !s.decorHidden.includes(id)).forEach((id) => {
+  s.decorPos = s.decorPos || {};
+  s.owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && !s.decorHidden.includes(id)).forEach((id) => {
     const it = ITEMS[id];
-    const w = Math.max(...it.art.map((r) => r.length)), h = it.art.length;
     const c = document.createElement('canvas');
     drawGrid(c, artGrid(it.art, it.pal), dscale);
     const wrap = document.createElement('div');
     wrap.className = 'decor';
+    wrap.dataset.id = id;
     const pos = DECOR_POS[it.spot] || 'left:10%;bottom:10%';
+    const saved = s.decorPos[id];
     if (pos === 'curtain') {
-      wrap.style.cssText = `left:${(ROOM_WINDOW.x0 + ROOM_WINDOW.x1) * 50}%;top:${ROOM_WINDOW.y0 * 100 - 3}%;transform:translateX(-50%);z-index:1`;
-    } else if (it.spot === 'rug') {
-      wrap.style.cssText = 'left:50%;bottom:2%;transform:translateX(-50%);z-index:1';
+      // the curtains hang on the window and are sized to it
+      wrap.classList.add('curtain');
+      wrap.style.cssText = `left:${(ROOM_WINDOW.x0 + ROOM_WINDOW.x1) * 50}%;top:${ROOM_WINDOW.y0 * 100 - 4}%;width:${(ROOM_WINDOW.x1 - ROOM_WINDOW.x0) * 100 + 12}%;transform:translateX(-50%);z-index:1`;
     } else {
-      wrap.style.cssText = pos + `;z-index:${pos.includes('bottom:3%') || pos.includes('bottom:2%') ? 6 : 2}`;
+      wrap.classList.add('movable');
+      if (saved) wrap.style.cssText = `left:${saved.x}%;top:${saved.y}%`;
+      else if (it.spot === 'rug' || it.spot === 'under') wrap.style.cssText = `left:50%;bottom:${it.spot === 'rug' ? 2 : 3}%;transform:translateX(-50%)`;
+      else wrap.style.cssText = pos;
+      if (it.spot === 'rug' || it.spot === 'under') wrap.classList.add('flat');
+      decorEls.push(wrap);
     }
     wrap.appendChild(c);
     room.appendChild(wrap);
   });
-  if (s.owned.includes('rug') && !s.decorHidden.includes('rug')) $('#ground', n).style.bottom = '4%';
+  }
+
+  // things lower down the room stand in front of things further back
+  const depth = (el) => {
+    if (el.classList.contains('flat')) return 1;
+    return 2 + Math.round(((el.offsetTop + el.offsetHeight) / room.clientHeight) * 100);
+  };
+  // turn the starting spot into left/top percentages, kept inside the room
+  const pin = (el) => {
+    const W = room.clientWidth, H = room.clientHeight;
+    const x = Math.max(0, Math.min(W - el.offsetWidth, el.offsetLeft));
+    const y = Math.max(0, Math.min(H - el.offsetHeight, el.offsetTop));
+    el.style.cssText = `left:${(x / W) * 100}%;top:${(y / H) * 100}%`;
+    el.style.zIndex = depth(el);
+    return { x: +((x / W) * 100).toFixed(2), y: +((y / H) * 100).toFixed(2) };
+  };
+
+  // ----- the kitten walks around the house (arrow keys or the on-screen arrows) -----
+  const ground = $('#ground', n);
+  let cat = { x: 50, y: (s.owned.includes('rug') && !s.decorHidden.includes('rug')) ? 4 : 3, ...(s.catPos || {}) };
+  const placeCat = () => {
+    if (!room) return;
+    const halfW = room.clientWidth ? (kflip.offsetWidth / 2 / room.clientWidth) * 100 : 10;
+    cat.x = Math.max(halfW, Math.min(100 - halfW, cat.x));
+    cat.y = Math.max(1, Math.min(30, cat.y));
+    ground.style.left = cat.x + '%';
+    ground.style.bottom = cat.y + '%';
+    ground.style.zIndex = 2 + Math.round(100 - cat.y);
+  };
+  const held = new Set();
+  let raf = 0, lastT = 0;
+  const walk = (t) => {
+    if (!ground.isConnected) { held.clear(); raf = 0; return; }
+    const dt = Math.min(0.05, (t - (lastT || t)) / 1000); lastT = t;
+    let dx = 0, dy = 0;
+    if (held.has('left')) dx -= 1; if (held.has('right')) dx += 1;
+    if (held.has('up')) dy += 1; if (held.has('down')) dy -= 1;
+    cat.x += dx * 32 * dt; cat.y += dy * 22 * dt;
+    if (dx) kflip.classList.toggle('left', dx < 0);
+    placeCat();
+    if (held.size) raf = requestAnimationFrame(walk);
+    else { raf = 0; lastT = 0; kv.canvas.classList.remove('walking'); s.catPos = { x: +cat.x.toFixed(1), y: +cat.y.toFixed(1) }; S.save(); }
+  };
+  const press = (d) => {
+    if (md.face === 'faint') return;          // a fainted kitten can't walk
+    held.add(d); kv.canvas.classList.add('walking');
+    if (!raf) raf = requestAnimationFrame(walk);
+  };
+  const release = (d) => held.delete(d);
+  const KEYS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
+  if (room) {
+    const kd = (e) => {
+      if (!ground.isConnected) { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); return; }
+      const d = KEYS[e.key]; if (!d || !document.querySelector('#modal').classList.contains('hidden')) return;
+      e.preventDefault(); press(d);
+    };
+    const ku = (e) => { const d = KEYS[e.key]; if (d) release(d); };
+    window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
+    window.addEventListener('blur', () => held.clear(), { once: true });
+    $('#dpad', n).querySelectorAll('button').forEach((b) => {
+      const d = b.dataset.d;
+      b.addEventListener('pointerdown', (e) => { e.preventDefault(); b.setPointerCapture(e.pointerId); b.classList.add('down'); press(d); });
+      const up = () => { b.classList.remove('down'); release(d); };
+      b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+      b.addEventListener('contextmenu', (e) => e.preventDefault());
+    });
+
+    // ----- move furniture: tap the button, then drag things around -----
+    let arranging = false;
+    const ab = $('#b-arrange', n);
+    if (!decorEls.length) ab.style.display = 'none';
+    ab.onclick = () => {
+      arranging = !arranging;
+      room.classList.toggle('arranging', arranging);
+      ab.innerHTML = arranging ? '<span class="zh">✅ 摆好了</span> Done' : '<span class="zh">🪑 摆家具</span> Move furniture';
+      if (arranging) { sfx.click(); toast('<span class="zh">按住家具拖一拖！</span> Drag the furniture to move it'); }
+      else { S.save(); sfx.coin(); }
+    };
+    decorEls.forEach((el) => {
+      el.addEventListener('pointerdown', (e) => {
+        if (!arranging) return;
+        e.preventDefault(); el.setPointerCapture(e.pointerId);
+        pin(el);
+        const W = room.clientWidth, H = room.clientHeight;
+        const sx = e.clientX, sy = e.clientY, ox = el.offsetLeft, oy = el.offsetTop;
+        el.classList.add('dragging'); el.style.zIndex = 200;
+        const mv = (ev) => {
+          const x = Math.max(0, Math.min(W - el.offsetWidth, ox + ev.clientX - sx));
+          const y = Math.max(0, Math.min(H - el.offsetHeight, oy + ev.clientY - sy));
+          el.style.left = (x / W) * 100 + '%'; el.style.top = (y / H) * 100 + '%';
+        };
+        const end = () => {
+          el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', end); el.removeEventListener('pointercancel', end);
+          el.classList.remove('dragging');
+          s.decorPos[el.dataset.id] = pin(el);
+          S.saveQuiet();
+        };
+        el.addEventListener('pointermove', mv); el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+      });
+    });
   }
 
   function petKitten() {
@@ -404,7 +512,7 @@ function homeScreen(params = {}) {
   if (reviewed) setTimeout(() => { if (current === 'home') showEssayReward(reviewed, kv); }, 700);
   const bh = $('#b-house', n); if (bh) bh.onclick = () => (inHouse ? goBack() : go('home', { view: 'house' }));
   $('#b-feed', n).onclick = () => openFeed(kv, fx, afterCare);
-  n._mounted = () => { if (inHouse) { drawRoom($('#roombg', n)); drawRoof($('#roof', n)); } };
+  n._mounted = () => { if (inHouse) { drawRoom($('#roombg', n)); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
   return n;
 }
 

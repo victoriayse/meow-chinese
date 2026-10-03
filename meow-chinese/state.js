@@ -50,6 +50,8 @@ function fresh() {
     prices: {},      // parent overrides: { itemId: price }
     owned: [],
     decorHidden: [],
+    decorPos: {},    // where she dragged each home item: { id: { x, y } } in % of the room
+    catPos: null,    // where the kitten stands in the house: { x, y } in % (x = centre, y = from the floor)
     lists: [list],
     activeListId: list.id,
     words: {},       // per-word stats: { attempts, firstTry, wrong, lastSeen, lastResult, review, okStreak }

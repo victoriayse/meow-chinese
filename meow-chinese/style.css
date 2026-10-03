@@ -565,3 +565,35 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .story-pick .zh { font-size: 18px; } .story-pick small { font-weight: 800; color: var(--ink-2); }
 @media (max-width: 600px) { .essay-row { grid-template-columns: 1fr; } }
 .modal .card > * { flex-shrink: 0; }
+
+/* ---------- update 19: music button, moving furniture, walking kitten ---------- */
+.icon-btn.music { background: #ffd23f; border-color: #fff3c4; color: var(--ink); box-shadow: 0 3px 0 #b8860b; }
+.icon-btn.music.off { opacity: 1; background: #ff8fb1; border-color: #ffe1ec; box-shadow: 0 3px 0 #c2456e; }
+.house .decor canvas { image-rendering: pixelated; }
+.house .decor.curtain canvas { width: 100% !important; height: auto !important; }
+.house .room .ground { transition: none; }
+.kflip { display: block; }
+.kflip.left { transform: scaleX(-1); }
+.kitten-canvas.walking { animation: bob .3s steps(2) infinite; }
+.arrange-btn { position: absolute; top: 6px; left: 6px; z-index: 300; font: inherit; font-weight: 800; font-size: 14px; padding: 5px 10px;
+  background: #fff; color: var(--ink); border: 3px solid var(--ink); border-radius: 6px; box-shadow: 0 3px 0 rgba(43,33,64,.4); }
+.arrange-btn .zh { font-family: var(--zh); }
+.room.arranging .arrange-btn { background: #9be27a; }
+.room.arranging .decor.movable { pointer-events: auto; cursor: grab; touch-action: none; outline: 3px dashed rgba(43,33,64,.55); outline-offset: 2px; border-radius: 4px; }
+.room.arranging .decor.movable:hover { outline-color: #ff6f9c; }
+.room.arranging .decor.dragging { cursor: grabbing; outline-color: #ff6f9c; filter: drop-shadow(0 10px 0 rgba(60,30,20,.3)); }
+.room.arranging .ground { pointer-events: none; opacity: .75; }
+.dpad { position: absolute; right: 8px; bottom: 8px; z-index: 300; display: none; grid-template: repeat(2, 44px) / repeat(3, 44px); gap: 4px; }
+.dpad button { width: 44px; height: 44px; font-size: 18px; color: #fff; background: rgba(29,31,69,.78); border: 3px solid #fff; border-radius: 8px;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.dpad button.down { background: #ff6f9c; transform: translateY(2px); }
+.dpad [data-d="up"] { grid-column: 2; grid-row: 1; }
+.dpad [data-d="left"] { grid-column: 1; grid-row: 2; }
+.dpad [data-d="down"] { grid-column: 2; grid-row: 2; }
+.dpad [data-d="right"] { grid-column: 3; grid-row: 2; }
+@media (hover: none), (pointer: coarse), (max-width: 900px) { .dpad { display: grid; } }
+@media (max-width: 600px) {
+  .dpad { grid-template: repeat(2, 36px) / repeat(3, 36px); right: 4px; bottom: 4px; }
+  .dpad button { width: 36px; height: 36px; font-size: 15px; }
+  .arrange-btn { font-size: 12px; padding: 3px 7px; }
+}

@@ -137,7 +137,7 @@ export function shopScreen({ go, tab = 'food' }) {
 export function wardrobeScreen({ go }) {
   const n = html`<section class="screen"><div class="shop">
       <div class="preview card">
-        <div class="h-title" style="font-size:24px"><span class="zh">打扮</span><span class="en">Dress up</span></div>
+        <div class="h-title" style="font-size:24px"><span class="zh">我的物品</span><span class="en">My Items</span></div>
         <div class="stage-mini" id="mini"></div>
         <p class="help" style="text-align:center;margin:0">每类可以穿一件：头饰、衣服、鞋子…<br>One of each: hair, clothes, shoes…</p>
         <button class="btn white block" id="home">← <span class="zh">回家</span> Home</button>
