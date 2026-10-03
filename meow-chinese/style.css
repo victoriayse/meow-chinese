@@ -597,3 +597,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .dpad button { width: 36px; height: 36px; font-size: 15px; }
   .arrange-btn { font-size: 12px; padding: 3px 7px; }
 }
+/* XP */
+.xp-bar > b { position: absolute; inset: 0; display: grid; place-items: center; font: 800 11px/1 var(--px); color: var(--ink); text-shadow: 0 0 2px #fff, 0 0 2px #fff; z-index: 1; }
+.xp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: end; }
+.xp-gain { font: 800 24px/1 var(--px); color: #3b7fd0; }

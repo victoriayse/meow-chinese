@@ -231,7 +231,20 @@ function settingsView(rerender, go) {
         <button class="btn white" id="coin-sub">－ <span class="zh">扣除</span> Remove</button>
       </div>
       <div class="row"><span class="help" style="margin:0">Quick:</span>${[5, 10, 20, 50, 100].map((v) => `<button class="btn small white" data-q="${v}">${v}</button>`).join('')}</div>
-      <h3>Levels</h3>
+      <h3>Levels &amp; XP</h3>
+      <p class="help">She is <b>Lv<span id="lv-now">${S.level()}</span></b> with <b id="xp-have">${S.xp()}</b> XP. She gets XP for every word written correctly and for each composition you check.</p>
+      <div class="xp-grid">
+        <label class="field">XP per correct word<input type="number" id="xp-word" min="0" max="999" inputmode="numeric" value="${S.xpPerWord()}"></label>
+        <label class="field">XP per composition<small class="help" style="margin:0">(you can change it when checking each one)</small><input type="number" id="xp-essay" min="0" max="999" inputmode="numeric" value="${S.xpPerEssay()}"></label>
+        <label class="field">XP needed for each level<input type="number" id="xp-level" min="1" max="9999" inputmode="numeric" value="${S.xpPerLevel()}"></label>
+      </div>
+      <p class="help" id="xp-plan"></p>
+      <div class="row coin-box">
+        <label class="field" style="flex:1;min-width:140px">Give or take away XP<input type="number" id="xp-amt" min="1" max="9999" inputmode="numeric" placeholder="e.g. 10"></label>
+        <button class="btn green" id="xp-add">＋ <span class="zh">加</span> Add XP</button>
+        <button class="btn white" id="xp-sub">－ <span class="zh">减</span> Remove XP</button>
+      </div>
+      <div class="row"><span class="help" style="margin:0">Quick:</span>${[5, 10, 20, 50, 100].map((v) => `<button class="btn small white" data-xq="${v}">${v}</button>`).join('')}</div>
       <div class="toggle"><span>Unlock all levels (for you to preview everything)<br><small class="help">Hair, shoes, extras, clothes and Home normally unlock at Lv5 / 10 / 15 / 20 / 25.</small></span><button class="switch ${set.unlockAll ? 'on' : ''}" id="ul"></button></div>
       <h3>☁️ Account &amp; cloud backup</h3>
       <div class="sync-box">
@@ -268,6 +281,29 @@ function settingsView(rerender, go) {
     const v = amt(); if (!v) return toast('Type how many coins first');
     s.coins = Math.max(0, s.coins - v); S.save(); $('#have', n).textContent = s.coins; $('#coin-amt', n).value = '';
     toast(`Removed ${v} coins`);
+  };
+  // XP settings
+  const xpPlan = () => {
+    const per = S.xpPerLevel(), w = S.xpPerWord();
+    const words = (lv) => (w ? Math.ceil(((lv - 1) * per) / w) : '—');
+    $('#xp-plan', n).innerHTML = w
+      ? `With these numbers, unlocks need about: Lv5 hair <b>${words(5)}</b> words · Lv10 shoes <b>${words(10)}</b> · Lv15 extras <b>${words(15)}</b> · Lv20 clothes <b>${words(20)}</b> · Lv25 Home <b>${words(25)}</b> correct words (compositions make it quicker).`
+      : 'Words give no XP right now, so she will only level up from compositions and XP you add.';
+    $('#lv-now', n).textContent = S.level(); $('#xp-have', n).textContent = S.xp();
+  };
+  xpPlan();
+  [['#xp-word', 'word'], ['#xp-essay', 'essay'], ['#xp-level', 'level']].forEach(([sel, k]) => {
+    $(sel, n).onchange = (e) => { S.setXpSetting(k, e.target.value); e.target.value = k === 'word' ? S.xpPerWord() : k === 'essay' ? S.xpPerEssay() : S.xpPerLevel(); xpPlan(); toast('Saved ✓'); };
+  });
+  const xamt = () => Math.round(Math.abs(Number($('#xp-amt', n).value)));
+  n.addEventListener('click', (e) => { const q = e.target.closest('[data-xq]'); if (q) $('#xp-amt', n).value = q.dataset.xq; });
+  $('#xp-add', n).onclick = () => {
+    const v = xamt(); if (!v) return toast('Type how much XP first');
+    S.addXp(v); S.save(); $('#xp-amt', n).value = ''; xpPlan(); toast(`Added +${v} XP ✓`);
+  };
+  $('#xp-sub', n).onclick = () => {
+    const v = xamt(); if (!v) return toast('Type how much XP first');
+    S.addXp(-v); S.save(); $('#xp-amt', n).value = ''; xpPlan(); toast(`Removed ${v} XP`);
   };
   $('#ul', n).onclick = () => { set.unlockAll = !set.unlockAll; S.save(); rerender(); };
   const showStatus = () => {
@@ -345,7 +381,7 @@ function essaysView(rerender) {
   const list = S.essays();
   const n = html`<div class="stack">
       <p class="help">Set up a picture composition here. The 看图作文 button on her home screen lights up and the kitten says <b>我们一起写作文！</b>
-        She looks at the pictures and helping words in the app, writes on paper, then taps <b>Submit to Mum</b>. Read her paper and give stars, coins and a comment here.</p>
+        She looks at the pictures and helping words in the app, writes on paper, then taps <b>Submit to Mum</b>. Read her paper and give stars, coins, XP and a comment here.</p>
       <button class="btn green" id="new" style="align-self:flex-start">＋ <span class="zh">新作文</span> New essay</button>
       <div class="stack" id="rows"></div>
     </div>`;
@@ -375,19 +411,20 @@ function essaysView(rerender) {
             <label class="field" style="width:150px">Coins to award<input type="number" min="0" max="999" inputmode="numeric" value="30" class="coins"></label>
             ${[10, 20, 30, 50].map((v) => `<button class="btn small white" data-q="${v}">${v}</button>`).join('')}
           </div>
+          <label class="field" style="width:150px">XP to award<input type="number" min="0" max="999" inputmode="numeric" value="${S.xpPerEssay()}" class="xp"></label>
           <label class="field">Comment for her (optional)<textarea class="comment" rows="2" style="min-height:70px;font-size:18px" placeholder="例如：写得很好！下次用多一点好词。"></textarea></label>
-          <button class="btn green" data-a="reward">🎁 Send stars &amp; coins</button>
+          <button class="btn green" data-a="reward">🎁 Send stars, coins &amp; XP</button>
         </div>`;
       rv.addEventListener('click', (ev) => {
         const st = ev.target.closest('[data-s]'); if (st) { stars = +st.dataset.s; rv.querySelectorAll('[data-s]').forEach((b) => b.classList.toggle('on', +b.dataset.s <= stars)); }
         const q = ev.target.closest('[data-q]'); if (q) rv.querySelector('.coins').value = q.dataset.q;
       });
       rv.querySelector('[data-a=reward]').onclick = () => {
-        S.reviewEssay(e.id, { stars, coins: rv.querySelector('.coins').value, comment: rv.querySelector('.comment').value });
+        S.reviewEssay(e.id, { stars, coins: rv.querySelector('.coins').value, xp: rv.querySelector('.xp').value, comment: rv.querySelector('.comment').value });
         toast('Sent ✓ She will see it on her home screen'); rerender();
       };
     } else if (e.status === 'reviewed' && e.review) {
-      rv.innerHTML = `<div class="review-box"><span style="color:#e0a524;font-size:22px">${'★'.repeat(e.review.stars)}${'☆'.repeat(3 - e.review.stars)}</span> · +${e.review.coins} coins${e.review.comment ? `<div class="zh" style="margin-top:4px">“${esc(e.review.comment)}”</div>` : ''}${e.seen ? '' : '<div class="help" style="margin:4px 0 0">She hasn’t opened it yet.</div>'}</div>`;
+      rv.innerHTML = `<div class="review-box"><span style="color:#e0a524;font-size:22px">${'★'.repeat(e.review.stars)}${'☆'.repeat(3 - e.review.stars)}</span> · +${e.review.coins} coins${e.review.xp ? ` · +${e.review.xp} XP` : ''}${e.review.comment ? `<div class="zh" style="margin-top:4px">“${esc(e.review.comment)}”</div>` : ''}${e.seen ? '' : '<div class="help" style="margin:4px 0 0">She hasn’t opened it yet.</div>'}</div>`;
     }
     r.querySelector('[data-a=del]').onclick = async () => {
       if (!(await confirmBox('Delete this essay?', `“${esc(e.title)}” will be removed.`, 'Delete'))) return;

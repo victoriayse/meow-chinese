@@ -210,8 +210,26 @@ export function mood() {
   if (k.happy < 30) return { face: 'sleepy', needs, text: '好无聊… Play with me?' };
   return { face: 'happy', needs, text: '今天好开心！' };
 }
-export const level = () => 1 + Math.floor((state.kitten.xp || 0) / 20);
-export const levelProgress = () => ((state.kitten.xp || 0) % 20) / 20;
+// XP: parents can change how much each thing gives and how much one level needs
+export const XP_DEFAULTS = { word: 1, essay: 10, level: 20 };
+const xpSetting = (k) => { const v = Number((state.settings.xp || {})[k]); return Number.isFinite(v) && v >= 0 ? v : XP_DEFAULTS[k]; };
+export const xpPerWord = () => xpSetting('word');
+export const xpPerEssay = () => xpSetting('essay');
+export const xpPerLevel = () => Math.max(1, xpSetting('level'));
+export function setXpSetting(k, v) {
+  v = Math.max(k === 'level' ? 1 : 0, Math.round(Number(v) || 0));
+  state.settings.xp = { ...(state.settings.xp || {}), [k]: v };
+  if (state.lastLevel && state.lastLevel > level()) state.lastLevel = level();
+  save();
+}
+export const xp = () => state.kitten.xp || 0;
+export function addXp(n) {
+  state.kitten.xp = Math.max(0, xp() + Math.round(Number(n) || 0));
+  if (state.lastLevel && state.lastLevel > level()) state.lastLevel = level();
+}
+export const level = () => 1 + Math.floor(xp() / xpPerLevel());
+export const levelProgress = () => (xp() % xpPerLevel()) / xpPerLevel();
+export const xpIntoLevel = () => xp() % xpPerLevel();
 
 // ---------- coins & daily tasks ----------
 export function addCoins(n) { state.coins += n; save(); }
@@ -313,10 +331,10 @@ export function recordWord(w, result, firstAttempt = result === 'first') {
   if (result === 'first') {
     s.firstTry += 1; s.okStreak += 1;
     if (s.okStreak >= 2) s.review = false;
-    state.kitten.xp = (state.kitten.xp || 0) + 1;
+    addXp(xpPerWord());
   } else {
     s.okStreak = 0; s.review = true;
-    if (result === 'wrong') s.wrong += 1; else state.kitten.xp = (state.kitten.xp || 0) + 1;
+    if (result === 'wrong') s.wrong += 1; else addXp(xpPerWord());
   }
   save();
 }
@@ -400,12 +418,13 @@ export function submitEssay(id) {
   e.status = 'submitted'; e.submittedAt = Date.now();
   markActive(); save(); return true;
 }
-export function reviewEssay(id, { stars, coins, comment }) {
+export function reviewEssay(id, { stars, coins, xp: x, comment }) {
   const e = essays().find((x) => x.id === id);
   if (!e || e.status !== 'submitted') return false;
   coins = Math.max(0, Math.round(Number(coins) || 0));
-  e.status = 'reviewed'; e.review = { stars, coins, comment: (comment || '').trim(), at: Date.now() }; e.seen = false;
-  state.coins += coins; save(); return true;
+  x = x === undefined ? xpPerEssay() : Math.max(0, Math.round(Number(x) || 0));
+  e.status = 'reviewed'; e.review = { stars, coins, xp: x, comment: (comment || '').trim(), at: Date.now() }; e.seen = false;
+  state.coins += coins; addXp(x); save(); return true;
 }
 export function markEssaySeen(id) { const e = essays().find((x) => x.id === id); if (e) { e.seen = true; save(); } }
 export function deleteEssay(id) { state.essays = essays().filter((x) => x.id !== id); save(); }

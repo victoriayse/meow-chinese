@@ -136,7 +136,7 @@ export function essayScreen({ go, id }) {
     };
     root.appendChild(act);
   } else {
-    root.appendChild(html`<div class="card" style="text-align:center"><b>📮 已交 ${new Date(e.submittedAt).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</b><p class="help" style="margin:4px 0 0">妈妈看完以后会给你星星和金币哦！ Mum will give you stars and coins after reading it.</p></div>`);
+    root.appendChild(html`<div class="card" style="text-align:center"><b>📮 已交 ${new Date(e.submittedAt).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</b><p class="help" style="margin:4px 0 0">妈妈看完以后会给你星星、金币和经验哦！ Mum will give you stars, coins and XP after reading it.</p></div>`);
   }
   hydrateIcons(root);
   return n;
@@ -150,6 +150,7 @@ export function showEssayReward(e, kitten) {
       <div class="zh" style="font-size:22px">${esc(e.title)}</div>
       <div class="stars">${[1, 2, 3].map((i) => `<span class="${i <= (r.stars || 0) ? 'on' : ''}">★</span>`).join('')}</div>
       ${r.coins ? `<div class="price" style="font-size:28px">+${r.coins} ${coinI(26)}</div>` : ''}
+      ${r.xp ? `<div class="xp-gain">+${r.xp} XP ⭐</div>` : ''}
       ${r.comment ? `<div class="parent-note"><small>妈妈说 · Mum says:</small><div class="zh">${esc(r.comment)}</div></div>` : ''}
       <button class="btn big green" id="ok">好的！ Yay!</button>
     </div>`;
