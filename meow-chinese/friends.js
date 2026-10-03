@@ -34,16 +34,32 @@ const myName = () => { const s = S.get(); return s.childName ? `${s.childName}�
 function myCard() {
   const s = S.get(), k = s.kitten, md = S.mood();
   return { v: 1, name: k.name, childName: s.childName || '', fur: k.fur, equipped: k.equipped,
-    hunger: Math.round(k.hunger), water: Math.round(k.water ?? 75), happy: Math.round(k.happy), level: S.level(), stage: S.health(), face: md.face };
+    hunger: Math.round(k.hunger), water: Math.round(k.water ?? 75), happy: Math.round(k.happy), level: S.level(), stage: S.health(), face: md.face,
+    doing: document.hidden ? 'away' : activity };
 }
-let lastCard = '', cardTimer = null;
+// what she is doing right now, shown to friends ('essay', 'spelling', 'phone', ...)
+let activity = 'online';
+export function setActivity(a) { if (a === activity) return; activity = a; publishCard(true); }
+let lastCard = '', lastSent = 0, cardTimer = null;
 export function publishCard(now = false) {
   if (!Auth.session()) return;
   const c = myCard(), j = JSON.stringify(c);
-  if (j === lastCard) return;
+  if (j === lastCard && Date.now() - lastSent < 40000) return;   // unchanged: still re-send every 40 s so friends see she's online
   clearTimeout(cardTimer);
-  cardTimer = setTimeout(async () => { try { await rpc('put_my_card', { p_card: c }); lastCard = j; } catch (e) { /* try again next change */ } }, now ? 0 : 2500);
+  cardTimer = setTimeout(async () => { try { await rpc('put_my_card', { p_card: c }); lastCard = j; lastSent = Date.now(); } catch (e) { /* try again next change */ } }, now ? 0 : 2500);
 }
+// a friend counts as online if their app checked in during the last 100 seconds
+export const isOnline = (f) => !!(f && f.card && f.card.doing !== 'away' && f.card_updated && Date.now() - Date.parse(f.card_updated) < 100000);
+const DOING = {
+  essay: ['在写作文', 'is doing an essay', '✍️'], spelling: ['在听写', 'is doing spelling', '✏️'], phone: ['在玩手机', 'is using the phone', '📱'],
+  shop: ['在逛商店', 'is shopping', '🛍️'], wardrobe: ['在换衣服', 'is dressing up', '👗'], house: ['在家里', 'is at home', '🏠'],
+  friends: ['在看朋友', 'is visiting friends', '👫'], online: ['在线', 'is online', '🟢'],
+};
+export function doingText(f) {
+  const c = f.card || {}, d = DOING[c.doing] || DOING.online;
+  return `${d[2]} ${c.name || ''}${d[0]} · ${c.name || ''} ${d[1]}`;
+}
+const doingHTML = (f) => { const c = f.card || {}, d = DOING[c.doing] || DOING.online; return `${d[2]} ${esc(c.name || '')}${d[0]}<small>${esc(c.name || '')} ${d[1]}</small>`; };
 
 // ---------- things friends send me ----------
 let polling = false, onNews = () => {};
@@ -79,7 +95,8 @@ export function startFriends(newsCallback) {
   S.onChange(() => publishCard());
   setInterval(() => { if (!document.hidden) pollInbox(); }, 8000);
   setInterval(() => { if (!document.hidden) refreshFriends(); }, 30000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) { pollInbox(); refreshFriends(); } });
+  setInterval(() => { if (!document.hidden) publishCard(true); }, 40000);      // heartbeat
+  document.addEventListener('visibilitychange', () => { publishCard(true); if (!document.hidden) { pollInbox(); refreshFriends(); } });
   setTimeout(() => { refreshFriends(); pollInbox(); publishCard(true); }, 1500);
 }
 
@@ -120,7 +137,8 @@ export function friendsScreen({ go }) {
     grid.classList.toggle('empty', !list.length);
     list.forEach((f) => {
       const c = f.card || {};
-      const t = html`<button class="friend-tile"><div class="kv"></div><div class="nm zh">${esc(friendName(f))}</div><div class="lv">Lv${c.level || 1}${c.stage && c.stage !== 'ok' ? ' · ' + (STAGE_TEXT[c.stage] || '').split(' ')[0] : ''}</div></button>`;
+      const on = isOnline(f);
+      const t = html`<button class="friend-tile ${on ? 'online' : ''}">${on ? `<i class="online-dot" title="Online"></i><div class="doing zh">${doingHTML(f)}</div>` : ''}<div class="kv"></div><div class="nm zh">${esc(friendName(f))}</div><div class="lv">Lv${c.level || 1}${c.stage && c.stage !== 'ok' ? ' · ' + (STAGE_TEXT[c.stage] || '').split(' ')[0] : ''}</div></button>`;
       if (f.card) $('.kv', t).replaceWith(friendKitten(c, 3).canvas); else $('.kv', t).innerHTML = '🐱';
       t.onclick = () => go('friend', { id: f.other });
       grid.appendChild(t);
@@ -145,6 +163,7 @@ export function friendsScreen({ go }) {
   const off = onFriends(() => { if (!n.isConnected) return off(); render(); });
   render();
   refreshFriends();
+  const iv = setInterval(() => { if (!n.isConnected) return clearInterval(iv); if (!document.hidden) refreshFriends(); }, 12000);
   return n;
 }
 
@@ -161,6 +180,7 @@ export function friendScreen({ go, id }) {
         <div class="card visit-stage"><div class="visit-kv"></div><div class="nametag">${esc(c.name || '🐱')}<span class="lv">Lv${c.level || 1}</span></div><div class="fx-layer" id="fx"></div></div>
         <div class="card stack visit-info">
           <div class="h-title"><span class="zh">${esc(friendName(f))}</span></div>
+          <div class="presence ${isOnline(f) ? 'on' : ''}">${isOnline(f) ? esc(doingText(f)) : '⚪ 不在线 · Offline'}</div>
           ${f.card ? `${bar('饱饱 Food', c.hunger, '#f59b2a')}${bar('喝水 Water', c.water, '#4fb3ef')}${bar('开心 Happy', c.happy, '#ff6f9c')}
           ${STAGE_TEXT[c.stage] ? `<div class="sick-note">${STAGE_TEXT[c.stage]}</div>` : ''}
           <p class="help" style="margin:0">更新 Updated ${ago(f.card_updated)}</p>` : '<p class="help">这只小猫还没上线。 This kitten hasn\'t been online yet.</p>'}

@@ -3,7 +3,7 @@ import * as S from './state.js';
 import { ITEMS, spriteCanvas } from './pixel.js';
 import { $, html, esc, toast, openModal, closeModal, confetti, coinI, hydrateIcons } from './ui.js';
 import { sfx } from './audio.js';
-import { acceptedFriends, refreshFriends, sendLetter, errorText, LETTER_MAX } from './friends.js';
+import { acceptedFriends, refreshFriends, sendLetter, errorText, LETTER_MAX, setActivity, isOnline, doingText } from './friends.js';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const when = (t) => new Date(t).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
@@ -138,16 +138,20 @@ export function openPhone({ start = 'home', after } = {}) {
       const list = html`<div class="ph-list"></div>`;
       ts.forEach((t) => {
         const last = t.msgs[t.msgs.length - 1];
-        const r = html`<button class="ph-item chat-row ${t.unread ? 'unread' : ''}"><span class="avatar">🐱</span><span class="txt"><b class="zh">${esc(t.name || '朋友')}</b><span class="prev zh">${last.mine ? '你: ' : ''}${esc(last.text)}</span></span><span class="meta"><small>${when(t.last)}</small>${t.unread ? `<i class="ph-badge static">${t.unread}</i>` : ''}</span></button>`;
+        const fr = acceptedFriends().find((x) => x.other === t.id), on = isOnline(fr);
+        const r = html`<button class="ph-item chat-row ${t.unread ? 'unread' : ''}"><span class="avatar">🐱${on ? '<i class="ph-online" title="Online"></i>' : ''}</span><span class="txt"><b class="zh">${esc(t.name || '朋友')}</b><span class="prev zh">${last.mine ? '你: ' : ''}${esc(last.text)}</span></span><span class="meta"><small>${when(t.last)}</small>${t.unread ? `<i class="ph-badge static">${t.unread}</i>` : ''}</span></button>`;
         r.onclick = () => go('chat', t.id);
         list.appendChild(r);
       });
       body.appendChild(list);
+      // fetch who is online, then redraw once
+      if (!this._fetched) { this._fetched = true; refreshFriends().then(() => { if (body.isConnected && history[history.length - 1] && history[history.length - 1][0] === 'mail') show('mail'); }); }
     },
     chat(fid) {
       S.purgeOldMessages();
       const t = S.threads().find((x) => x.id === fid);
-      const h = html`<div class="ph-head"><button class="ph-back">◀</button><b class="zh">${esc((t && t.name) || '朋友')}</b><button class="ph-x" id="del-chat" aria-label="Delete chat">🗑</button></div>`;
+      const fr = acceptedFriends().find((x) => x.other === fid), on = isOnline(fr);
+      const h = html`<div class="ph-head"><button class="ph-back">◀</button><span class="chat-who"><b class="zh">${esc((t && t.name) || '朋友')}</b><small class="${on ? 'on' : ''}">${on ? `<i class="ph-online"></i> ${esc(doingText(fr))}` : '不在线 · Offline'}</small></span><button class="ph-x" id="del-chat" aria-label="Delete chat">🗑</button></div>`;
       $('.ph-back', h).onclick = back;
       body.appendChild(h);
       body.classList.add('chat-mode');
@@ -430,7 +434,8 @@ export function openPhone({ start = 'home', after } = {}) {
   $('#k-off', n).onclick = () => closeModal();
   n.querySelectorAll('[data-d]').forEach((b) => { b.onclick = () => { sfx.click(); keyFn && keyFn(b.dataset.d); }; });
 
-  const m = openModal(n, { onClose: () => after && after() });
+  setActivity('phone');
+  const m = openModal(n, { onClose: () => { setActivity('online'); after && after(); } });
   m.classList.add('phone-modal');
   const clear = new MutationObserver(() => { if (!n.isConnected) { m.classList.remove('phone-modal'); clear.disconnect(); } });
   clear.observe(m, { childList: true });

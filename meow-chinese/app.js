@@ -54,6 +54,7 @@ export function go(name, params = {}, opts = {}) {
   }
   if (NO_HISTORY.includes(name)) stack.length = 0;
   current = name; currentParams = params;
+  Friends.setActivity({ spell: 'spelling', essay: 'essay', shop: 'shop', wardrobe: 'wardrobe', friends: 'friends', friend: 'friends' }[name] || (name === 'home' && params.view === 'house' ? 'house' : 'online'));
   app.innerHTML = '';
   const node = screens[name](params);
   app.appendChild(node);

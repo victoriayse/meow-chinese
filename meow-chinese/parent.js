@@ -303,6 +303,8 @@ function settingsView(rerender, go) {
       </div>
       <div class="row"><span class="help" style="margin:0">Quick:</span>${[5, 10, 20, 50, 100].map((v) => `<button class="btn small white" data-xq="${v}">${v}</button>`).join('')}</div>
       <div class="toggle"><span>Unlock all levels (for you to preview everything)<br><small class="help">Hair, shoes, extras, clothes and Home normally unlock at Lv5 / 10 / 15 / 20 / 25.</small></span><button class="switch ${set.unlockAll ? 'on' : ''}" id="ul"></button></div>
+      <h3>🛡️ God mode</h3>
+      <div class="toggle"><span>God mode — the kitten never gets hungry, thirsty, sick or dies<br><small class="help">Use it for holidays, exam weeks or sick days. Food, Water and Happy stay topped up, and missed days don't count. Turning it on also cures and brings back the kitten. Daily tasks and coins still work as usual.</small></span><button class="switch ${S.godMode() ? 'on' : ''}" id="god"></button></div>
       <h3>☁️ Account &amp; cloud backup</h3>
       <div class="sync-box">
         <div><small>Logged in as</small><div class="sync-code" style="font-size:20px;letter-spacing:0">${esc((Auth.user() || {}).email || '—')}</div></div>
@@ -362,6 +364,7 @@ function settingsView(rerender, go) {
     const v = xamt(); if (!v) return toast('Type how much XP first');
     S.addXp(-v); S.save(); $('#xp-amt', n).value = ''; xpPlan(); toast(`Removed ${v} XP`);
   };
+  $('#god', n).onclick = () => { S.setGodMode(!S.godMode()); toast(S.godMode() ? '🛡️ God mode on' : 'God mode off'); rerender(); };
   $('#ul', n).onclick = () => { set.unlockAll = !set.unlockAll; S.save(); rerender(); };
   const showStatus = () => {
     const st = Cloud.status, el = $('#sync-status', n); if (!el) return;

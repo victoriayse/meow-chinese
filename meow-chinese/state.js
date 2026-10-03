@@ -129,10 +129,28 @@ export function replaceQuiet(obj) { state = migrate(obj); saveQuiet(); }
 export function resetAll() { state = fresh(); save(); }
 
 // ---------- time passing ----------
+// God mode (parent setting): the kitten never gets hungry, thirsty, sick or dies
+export const godMode = () => !!state.settings.godMode;
+export function setGodMode(on) {
+  state.settings.godMode = !!on;
+  if (on) {
+    const k = state.kitten;
+    k.hunger = Math.max(k.hunger, 80); k.water = Math.max(k.water ?? 75, 80); k.happy = Math.max(k.happy, 80);
+    state.health.stage = 'ok'; state.health.treated = todayStr();
+  } else {
+    state.health.treated = todayStr();        // switching it off starts the sickness count fresh from today
+  }
+  state.kitten.lastTick = Date.now();
+  save();
+}
 export function tick() {
   const k = state.kitten, now = Date.now();
   const hours = Math.max(0, (now - (k.lastTick || now)) / 3600000);
-  if (hours > 0.05) {
+  if (godMode()) {
+    k.lastTick = now;
+    k.hunger = Math.max(k.hunger, 60); k.water = Math.max(k.water ?? 75, 60); k.happy = Math.max(k.happy, 60);
+  }
+  if (hours > 0.05 && !godMode()) {
     k.hunger = Math.max(8, k.hunger - hours * 1.5);   // ~36 per day
     k.happy = Math.max(8, k.happy - hours * 1.0);     // ~24 per day
     k.water = Math.max(8, (k.water ?? 75) - hours * 2.0); // ~48 per day
@@ -174,6 +192,7 @@ function stageFor(missed) {
 }
 export function updateHealth() {
   const h = state.health;
+  if (godMode()) { h.stage = 'ok'; h.treated = todayStr(); return; }
   const next = stageFor(missedDays());
   // illness only gets worse by itself; medicine or the hospital makes it better
   if (STAGES.indexOf(next) > STAGES.indexOf(h.stage)) h.stage = next;
@@ -614,6 +633,12 @@ export function spend(n) { if (state.coins < n) return false; state.coins -= n; 
 // ----- essay timer -----
 export const EXTEND_MIN = 15, EXTEND_WORDS = 5;
 export function startEssay(id) { const e = essays().find((x) => x.id === id); if (e && !e.startedAt) { e.startedAt = Date.now(); save(); } return e; }
+export const RESTART_WINDOW = 10000;   // she can restart the timer within 10 seconds of pressing Start
+export function restartEssay(id) {
+  const e = essays().find((x) => x.id === id);
+  if (!e || !e.startedAt || e.status !== 'assigned' || Date.now() - e.startedAt >= RESTART_WINDOW || e.extensions) return false;
+  e.startedAt = null; e.extraMin = 0; save(); return true;
+}
 export const essayEndsAt = (e) => (e.timeLimit && e.startedAt ? e.startedAt + (e.timeLimit + (e.extraMin || 0)) * 60000 : null);
 export function extendEssay(id) {
   const e = essays().find((x) => x.id === id);
