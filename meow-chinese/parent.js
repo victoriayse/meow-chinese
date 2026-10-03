@@ -13,9 +13,9 @@ let unlockedUntil = 0;
 export function parentScreen({ go, tab = 'lists' }) {
   if (Date.now() > unlockedUntil) return pinGate(go, tab);
   const n = html`<section class="screen"><div class="parent stack">
-      <div class="row">
-        <div class="h-title grow"><span class="zh">家长专区</span><span class="en">Parent area</span></div>
-        <button class="btn white small" id="home">← 回家 Home</button>
+      <div class="parent-head">
+        <div class="h-title"><span class="zh">家长专区</span><span class="en">Parent area</span></div>
+        <div class="row" style="gap:8px"><button class="btn white small" id="p-logout">🚪 Log out</button><button class="btn white small" id="home">← 回家 Home</button></div>
       </div>
       <div class="tabs" id="tabs">
         <button class="tab" data-tab="lists"><span class="zh">听写词语</span> Lists</button>
@@ -37,8 +37,17 @@ export function parentScreen({ go, tab = 'lists' }) {
   const rerender = () => show(tab);
   $('#tabs', n).onclick = (e) => { const b = e.target.closest('[data-tab]'); if (b) show(b.dataset.tab); };
   $('#home', n).onclick = () => { unlockedUntil = 0; go('home'); };
+  $('#p-logout', n).onclick = () => logOut(go);
   n._mounted = () => show(tab);
   return n;
+}
+
+async function logOut(go) {
+  if (!(await confirmBox('Log out?', 'Progress is saved in the account. Log back in any time with the same email and password.', 'Log out'))) return;
+  await Cloud.backupNow();
+  Cloud.stop(); await Auth.signOut();
+  S.resetAll();
+  unlockedUntil = 0; go('login');
 }
 
 // ---------- PIN ----------
@@ -94,27 +103,37 @@ function pinGate(go, tab) {
 // ---------- lists ----------
 function listsView(rerender) {
   const s = S.get();
+  const today = S.todayStr();
+  const cur = S.currentList();
   const n = html`<div class="stack">
-      <p class="help">The <b>selected</b> list is what your child practises when she taps 开始听写. Add each week's 听写 list here.</p>
+      <p class="help">Each list has a <b>spelling date</b>. A list appears for her on that date, and the newest one becomes the current spelling.
+        She must finish the current list before she can redo older ones. Each list can be done <b>once a day</b>.</p>
       <div class="stack" id="rows"></div>
       <button class="btn green" id="add" style="align-self:flex-start">＋ <span class="zh">新的听写</span> New list</button>
     </div>`;
   const rows = $('#rows', n);
-  s.lists.forEach((l) => {
-    const on = l.id === s.activeListId;
-    const r = html`<div class="list-row ${on ? 'on' : ''}">
-        <button class="radio ${on ? 'on' : ''}" aria-label="Use this list"></button>
-        <div style="min-width:0"><div class="nm">${esc(l.name)} <span class="en">· ${l.words.length} words</span></div>
+  const sorted = s.lists.slice().sort((a, b) => S.listDate(b).localeCompare(S.listDate(a)) || (b.createdAt || 0) - (a.createdAt || 0));
+  sorted.forEach((l) => {
+    const st = S.listStatus(l), isCur = cur && cur.id === l.id;
+    const badges = [
+      st === 'future' ? `<span class="list-badge sched">📅 Shows on ${new Date(S.listDate(l) + 'T00:00').toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}</span>` : '',
+      isCur ? `<span class="list-badge cur">⭐ Current${l.done ? ' · done' : ' · not done yet'}</span>` : '',
+      st === 'locked' ? '<span class="list-badge lock">🔒 after current</span>' : '',
+      st === 'done-today' ? '<span class="list-badge done">✅ done today</span>' : '',
+    ].join('');
+    const r = html`<div class="list-row dated ${isCur ? 'on' : ''}">
+        <label class="field" style="margin:0;font-size:12px">Date<input type="date" class="date-in" value="${S.listDate(l)}"></label>
+        <div style="min-width:0"><div class="nm">${esc(l.name)} <span class="en">· ${l.words.length} words</span>${badges}</div>
           <div class="words">${esc(l.words.map((w) => w.w).join('、'))}</div></div>
         <div class="row" style="gap:6px"><button class="btn white small" data-a="edit">Edit</button><button class="btn white small" data-a="del">🗑</button></div>
       </div>`;
-    $('.radio', r).onclick = () => { s.activeListId = l.id; S.save(); rerender(); toast(`<span class="zh">${esc(l.name)}</span> selected`); };
+    $('.date-in', r).onchange = (e) => { if (!e.target.value) return; l.date = e.target.value; S.save(); rerender(); toast('Date saved ✓'); };
     r.querySelector('[data-a=edit]').onclick = () => editList(l, rerender);
     r.querySelector('[data-a=del]').onclick = async () => {
       if (s.lists.length === 1) return toast('Keep at least one list');
       if (!(await confirmBox('Delete list?', `“${esc(l.name)}” will be removed. Progress on its words is kept.`, 'Delete'))) return;
       s.lists = s.lists.filter((x) => x.id !== l.id);
-      if (s.activeListId === l.id) s.activeListId = s.lists[0].id;
+      if (s.activeListId === l.id) s.activeListId = (S.currentList() || s.lists[0]).id;
       S.save(); rerender();
     };
     rows.appendChild(r);
@@ -129,7 +148,11 @@ function editList(list, rerender) {
   const text = list ? list.words.map((w) => (w.hint ? `${w.w} | ${w.hint}` : w.w)).join('\n') : '';
   const box = html`<div class="card stack">
       <h3>${isNew ? 'New spelling list' : 'Edit list'}</h3>
-      <label class="field">List name<input id="nm" value="${esc(list ? list.name : `听写 ${new Date().toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}`)}"></label>
+      <div class="name-date">
+        <label class="field">List name<input id="nm" value="${esc(list ? list.name : `听写 ${new Date().toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}`)}"></label>
+        <label class="field">Spelling date<input type="date" id="dt" value="${list ? S.listDate(list) : S.todayStr()}"></label>
+      </div>
+      <p class="help" style="margin:0">She sees the list from this date. Set a future date to schedule it.</p>
       <label class="field">Words — one per line (or separated by spaces / commas)
         <textarea id="tx" placeholder="公园 | 我们去公园玩&#10;朋友&#10;高兴 | 我今天很高兴">${esc(text)}</textarea>
         <small>Optional: after a <b>|</b> add a short sentence. The kitten reads it when she taps 💬 Sentence, which helps with words that sound alike (e.g. 公园 vs 公元).</small>
@@ -155,12 +178,14 @@ function editList(list, rerender) {
     const words = S.parseWords($('#tx', box).value);
     if (!words.length) return toast('Add at least one word');
     const name = $('#nm', box).value.trim() || 'Spelling list';
+    const date = $('#dt', box).value || S.todayStr();
     if (isNew) {
-      const l = { id: S.uid(), name, words, createdAt: Date.now() };
-      s.lists.unshift(l); s.activeListId = l.id;
-    } else { list.name = name; list.words = words; }
+      const l = { id: S.uid(), name, words, date, createdAt: Date.now() };
+      s.lists.unshift(l);
+      if (date <= S.todayStr()) s.activeListId = l.id;
+    } else { list.name = name; list.words = words; list.date = date; }
     S.save(); closeModal(); rerender();
-    toast(isNew ? 'List added and selected ✓' : 'Saved ✓');
+    toast(isNew ? (date > S.todayStr() ? 'List scheduled ✓' : 'List added ✓') : 'Saved ✓');
   };
   openModal(box);
   setTimeout(() => $('#tx', box).focus(), 50);
@@ -314,13 +339,7 @@ function settingsView(rerender, go) {
   };
   showStatus(); const off = Cloud.onStatus(() => { if (!n.isConnected) return off(); showStatus(); });
   $('#sync-now', n).onclick = () => Cloud.backupNow();
-  $('#logout', n).onclick = async () => {
-    if (!(await confirmBox('Log out?', 'Progress is saved in the account. Log back in any time with the same email and password.', 'Log out'))) return;
-    await Cloud.backupNow();
-    Cloud.stop(); await Auth.signOut();
-    S.resetAll();
-    unlockedUntil = 0; go('login');
-  };
+  $('#logout', n).onclick = () => logOut(go);
   $('#exp', n).onclick = () => {
     const blob = new Blob([JSON.stringify(S.get(), null, 1)], { type: 'application/json' });
     const a = document.createElement('a');
@@ -407,10 +426,8 @@ function essaysView(rerender) {
       rv.innerHTML = `<div class="review-box stack">
           <b>Review her composition</b>
           <div class="star-pick">${[1, 2, 3].map((i) => `<button type="button" data-s="${i}" class="on">★</button>`).join('')}</div>
-          <div class="row" style="align-items:flex-end">
-            <label class="field" style="width:150px">Coins to award<input type="number" min="0" max="999" inputmode="numeric" value="30" class="coins"></label>
-            ${[10, 20, 30, 50].map((v) => `<button class="btn small white" data-q="${v}">${v}</button>`).join('')}
-          </div>
+          <label class="field" style="width:150px">Coins to award<input type="number" min="0" max="999" inputmode="numeric" value="30" class="coins"></label>
+          <div class="row" style="gap:6px"><span class="help" style="margin:0">Quick:</span>${[10, 20, 30, 50].map((v) => `<button class="btn small white" data-q="${v}">${v}</button>`).join('')}</div>
           <label class="field" style="width:150px">XP to award<input type="number" min="0" max="999" inputmode="numeric" value="${S.xpPerEssay()}" class="xp"></label>
           <label class="field">Comment for her (optional)<textarea class="comment" rows="2" style="min-height:70px;font-size:18px" placeholder="例如：写得很好！下次用多一点好词。"></textarea></label>
           <button class="btn green" data-a="reward">🎁 Send stars, coins &amp; XP</button>

@@ -27,6 +27,7 @@ const WRITER_STYLE = {
 export function spellingScreen({ mode = 'list', go }) {
   const st = S.get();
   const list = S.activeList();
+  const listBlocked = mode === 'list' && list && S.listStatus(list) !== 'open';
   let source = mode === 'review' ? S.reviewWords() : mode === 'play' ? S.playWords(10) : (list ? list.words.map((x) => ({ ...x })) : []);
   if (st.settings.shuffle !== false) source = shuffle(source.slice());
   const items = source.map((x, i) => ({ ...x, i, attempt: 0 }));
@@ -44,6 +45,15 @@ export function spellingScreen({ mode = 'list', go }) {
     </div></section>`;
   const main = $('#main', root);
 
+  if (listBlocked) {
+    const why = S.listStatus(list);
+    main.innerHTML = `<div class="feedback"><div class="big-msg">${why === 'done-today' ? '今天已经写过了！' : why === 'locked' ? '先完成新的听写' : '还不能写'}</div>
+      <div class="sub">${why === 'done-today' ? 'You already did this list today — come back tomorrow, or pick another list.' : why === 'locked' ? 'Finish the newest spelling first, then the old lists open again.' : 'This list is not ready yet.'}</div>
+      <button class="btn" id="home">回家 Home</button></div>`;
+    $('#home', main).onclick = () => go('home');
+    $('#back', root).onclick = () => go('home');
+    return root;
+  }
   if (!items.length) {
     main.innerHTML = `<div class="feedback"><div class="big-msg">${mode === 'review' ? '错词本是空的！' : '还没有词语'}</div>
       <div class="sub">${mode === 'review' ? 'No mistakes to practise — great job!' : 'Ask a parent to add this week\'s 听写 words (🔒 button).'}</div>
@@ -310,7 +320,7 @@ export function spellingScreen({ mode = 'list', go }) {
     const wrong = status.filter((x) => x === 'wrong').length;
     const skipped = status.filter((x) => x === 'skip').length;
     const d = S.get().daily;
-    if (skipped < total) { d.spell = true; S.save(); } // skipping every word doesn't count as a round
+    if (skipped < total) { d.spell = true; S.save(); if (mode === 'list' && list) S.finishList(list.id); } // skipping every word doesn't count as a round
     S.logSession({ mode, listName: mode === 'review' ? '错词本 Mistakes' : mode === 'play' ? '陪我玩 Play with me' : (list ? list.name : ''), total, firstTry: first, retry, wrong, skipped, coins: roundCoins });
     const rewards = S.checkDaily();
     if (mode === 'play') {

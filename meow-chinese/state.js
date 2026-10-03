@@ -321,7 +321,30 @@ export function toggleDecor(id) {
 }
 
 // ---------- lists & word stats ----------
-export const activeList = () => state.lists.find((l) => l.id === state.activeListId) || state.lists[0];
+export const activeList = () => state.lists.find((l) => l.id === state.activeListId) || currentList() || state.lists[0];
+
+// ---------- spelling dates ----------
+// Each list has a date set by the parent. A list appears for her on its date. The newest one is the
+// "current" spelling: she must finish it once before older lists open again. Each list can be done once a day.
+export const listDate = (l) => l.date || todayStr(new Date(l.createdAt || Date.now()));
+const byNewest = (a, b) => (listDate(b).localeCompare(listDate(a))) || ((b.createdAt || 0) - (a.createdAt || 0));
+export const releasedLists = () => state.lists.filter((l) => listDate(l) <= todayStr()).sort(byNewest);
+export const currentList = () => releasedLists()[0] || null;
+// 'open' | 'done-today' | 'locked' (finish the current list first) | 'future'
+export function listStatus(l) {
+  if (!l) return 'future';
+  if (listDate(l) > todayStr()) return 'future';
+  if (l.lastDone === todayStr()) return 'done-today';
+  const cur = currentList();
+  if (cur && cur.id !== l.id && !cur.done) return 'locked';
+  return 'open';
+}
+export function finishList(id) {
+  const l = state.lists.find((x) => x.id === id);
+  if (!l) return;
+  l.done = true; l.lastDone = todayStr();
+  save();
+}
 
 export function recordWord(w, result, firstAttempt = result === 'first') {
   // result: 'first' | 'retry' | 'wrong'

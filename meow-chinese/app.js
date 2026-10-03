@@ -239,6 +239,33 @@ const DECOR_POS = {
   'front-right': 'right:2%;bottom:3%',
 };
 
+let pickedByHand = false;
+// the spelling list picker: newest first; old lists stay locked until the newest one is finished
+function spellPicker() {
+  const s = S.get(), lists = S.releasedLists(), cur = S.currentList();
+  if (!lists.length) return `<button class="btn big block col" id="b-spell" disabled><span class="zh">✏️ 开始听写</span><span class="en">No spelling yet — ask Mum</span></button>`;
+  let sel = S.activeList();
+  if (!lists.includes(sel)) sel = cur;
+  // unless she just picked one herself, start on the first list she can do now
+  if (!pickedByHand && S.listStatus(sel) !== 'open') sel = lists.find((l) => S.listStatus(l) === 'open') || sel;
+  pickedByHand = false;
+  if (s.activeListId !== sel.id) { s.activeListId = sel.id; S.saveQuiet(); }
+  const date = (l) => new Date(S.listDate(l) + 'T00:00').toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
+  const label = (l) => {
+    const st = S.listStatus(l);
+    const icon = st === 'done-today' ? '✅' : st === 'locked' ? '🔒' : l.id === cur.id ? '⭐' : '📝';
+    const note = st === 'done-today' ? ' · 今天写过了' : st === 'locked' ? ' · 先写新的' : l.id === cur.id ? (l.done ? '' : ' · 新!') : '';
+    return `${icon} ${l.name} (${date(l)})${note}`;
+  };
+  const st = S.listStatus(sel);
+  const ok = st === 'open';
+  return `<div class="spell-pick card">
+      <label class="pick-label"><span class="zh">选听写</span> Choose a list
+        <select id="list-pick">${lists.map((l) => `<option value="${l.id}" ${l.id === sel.id ? 'selected' : ''}>${esc(label(l))}</option>`).join('')}</select></label>
+      <button class="btn big block col ${ok ? '' : 'dim'}" id="b-spell"><span class="zh">${ok ? '✏️ 开始听写' : st === 'done-today' ? '✅ 今天写过了' : '🔒 先写新的听写'}</span><span class="en">${ok ? `Start · ${esc(sel.name)}` : st === 'done-today' ? 'Done today — come back tomorrow' : `Finish “${esc(cur.name)}” first`}</span></button>
+    </div>`;
+}
+
 function homeScreen(params = {}) {
   S.tick();
   const inHouse = params.view === 'house' && S.unlocked('decor');
@@ -296,7 +323,7 @@ function homeScreen(params = {}) {
         </div>
         <div class="bonus-line" style="margin-top:8px">${d.paid.bonus ? '🎉 全部完成！All done today!' : `全部完成再得 +${S.REWARDS.allBonus} 🪙 bonus`}</div>
       </div>
-      <button class="btn big block col" id="b-spell"><span class="zh">✏️ 开始听写</span><span class="en">Start · ${esc(list ? list.name : '')}</span></button>
+      ${spellPicker()}
       <div class="menu-grid">
         <button class="btn pink" id="b-review" ${reviewN ? '' : 'disabled'}><span class="zh">错词本</span><span class="en">Mistakes (${reviewN})</span></button>
         <button class="btn white" id="b-feed"><span class="zh">喂食喝水</span><span class="en">Food &amp; water</span></button>
@@ -502,7 +529,15 @@ function homeScreen(params = {}) {
     if (got.length) setTimeout(() => refreshHome(), 1600);
   }
 
-  $('#b-spell', n).onclick = () => { sfx.unlock(); go('spell', { mode: 'list' }); };
+  const pick = $('#list-pick', n);
+  if (pick) pick.onchange = () => { pickedByHand = true; s.activeListId = pick.value; S.saveQuiet(); refreshHome(); };
+  $('#b-spell', n).onclick = () => {
+    sfx.unlock();
+    const st = S.listStatus(S.activeList());
+    if (st === 'done-today') return toast('<span class="zh">这个今天写过了！</span> Done today — pick another list or come back tomorrow', { ms: 3500 });
+    if (st === 'locked') return toast(`<span class="zh">先完成「${esc(S.currentList().name)}」</span> Finish the newest list first`, { ms: 3500 });
+    go('spell', { mode: 'list' });
+  };
   $('#b-review', n).onclick = () => { sfx.unlock(); go('spell', { mode: 'review' }); };
   $('#b-shop', n).onclick = () => go('shop');
   $('#b-dress', n).onclick = () => go('wardrobe');
