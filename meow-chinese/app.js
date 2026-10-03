@@ -2,7 +2,7 @@
 import * as S from './state.js';
 import { drawLandscape, FURS, ITEMS, spriteCanvas, itemEffect, drawGrid, artGrid, TOMB, drawRoom, drawRoof, ROOM_WINDOW } from './pixel.js';
 import { $, $$, html, esc, hydrateIcons, coinI, KittenView, burst, toast, openModal, closeModal, tapSound, confirmBox, confetti } from './ui.js';
-import { sfx } from './audio.js';
+import { sfx, meow, startMusic, stopMusic, musicOn } from './audio.js';
 import { spellingScreen } from './spell.js';
 import { shopScreen, wardrobeScreen } from './shop.js';
 import { parentScreen } from './parent.js';
@@ -19,29 +19,47 @@ function paintSky(force) {
   skyKey = key;
   drawLandscape($('#sky'), { horizon: portrait ? 0.4 : 0.5, seed: 7 });
 }
-window.addEventListener('resize', () => { clearTimeout(paintSky.t); paintSky.t = setTimeout(() => { paintSky(); if (current === 'home') go('home'); }, 200); });
+window.addEventListener('resize', () => { clearTimeout(paintSky.t); paintSky.t = setTimeout(() => { paintSky(); if (current === 'home') refreshHome(); }, 200); });
 
 // ---------- router ----------
 const screens = {
   welcome: welcomeScreen,
   setup: setupScreen,
-  home: homeScreen,
+  home: (p) => homeScreen(p),
   spell: (p) => spellingScreen({ ...p, go }),
   shop: (p) => shopScreen({ go, ...p }),
   wardrobe: () => wardrobeScreen({ go }),
   parent: (p) => parentScreen({ ...p, go }),
   grave: graveScreen,
 };
-export function go(name, params = {}) {
+// a simple history so every page can go Back
+const stack = [];
+let currentParams = {};
+const NO_HISTORY = ['welcome', 'setup', 'grave'];
+export function go(name, params = {}, opts = {}) {
   if (window.speechSynthesis) speechSynthesis.cancel();
-  current = name;
+  if (!opts.back && !opts.replace && current && !NO_HISTORY.includes(current)) {
+    const same = current === name && JSON.stringify(params) === JSON.stringify(currentParams);
+    if (name === 'home' && !params.view) stack.length = 0;          // the main page is the bottom of the stack
+    else if (!same) { stack.push({ name: current, params: currentParams }); if (stack.length > 20) stack.shift(); }
+  }
+  if (NO_HISTORY.includes(name)) stack.length = 0;
+  current = name; currentParams = params;
   app.innerHTML = '';
   const node = screens[name](params);
   app.appendChild(node);
   hydrateIcons(app);
   renderTopbar();
   if (node._mounted) node._mounted();
+  // soothing music on the calm pages; quiet during spelling so she can hear the words
+  if (['home', 'shop', 'wardrobe', 'grave'].includes(name)) startMusic(); else stopMusic();
 }
+function refreshHome() { go('home', current === 'home' ? currentParams : {}, { replace: true }); }
+export function goBack() {
+  const prev = stack.pop() || { name: 'home', params: {} };
+  go(prev.name, prev.params, { back: true });
+}
+const canGoBack = () => current && !['welcome', 'setup', 'grave'].includes(current) && !(current === 'home' && !currentParams.view);
 
 // ---------- top bar ----------
 let lastCoins = null;
@@ -49,6 +67,8 @@ function renderTopbar() {
   const s = S.get(), bar = $('#topbar');
   const showGame = s.onboarded && current !== 'welcome' && current !== 'setup';
   bar.innerHTML = `
+    <button class="icon-btn music ${musicOn() ? '' : 'off'}" id="music-btn" aria-label="Music" title="音乐 Music">${musicOn() ? '🎵' : '🔇'}</button>
+    ${showGame && canGoBack() ? '<button class="icon-btn back" id="back-btn" aria-label="Back" title="返回 Back">←</button>' : ''}
     <button class="brand" data-go="home" aria-label="Home">
       <span id="logo-kit"></span>
       <span class="brand-text"><span class="logo-zh">喵喵中文</span><span class="logo-en">Meow Chinese</span></span>
@@ -64,6 +84,15 @@ function renderTopbar() {
   kv.canvas.classList.remove('bob');
   $('#logo-kit', bar).replaceWith(kv.canvas);
   bar.onclick = (e) => {
+    if (e.target.closest('#music-btn')) {
+      S.get().settings.music = !musicOn(); S.save();
+      if (musicOn() && ['home', 'shop', 'wardrobe', 'grave'].includes(current)) startMusic(); else stopMusic();
+      renderTopbar(); return;
+    }
+    if (e.target.closest('#back-btn')) {
+      if (current === 'spell' && app.firstElementChild?._leave) { app.firstElementChild._leave(() => goBack()); return; }
+      goBack(); return;
+    }
     const b = e.target.closest('[data-go]'); if (!b) return;
     if (b.dataset.go === 'home' && !s.onboarded) return;
     if (current === 'spell' && b.dataset.go !== 'spell' && app.firstElementChild?._leave) { app.firstElementChild._leave(() => go(b.dataset.go)); return; }
@@ -157,8 +186,9 @@ const DECOR_POS = {
   'front-right': 'right:2%;bottom:3%',
 };
 
-function homeScreen() {
+function homeScreen(params = {}) {
   S.tick();
+  const inHouse = params.view === 'house' && S.unlocked('decor');
   if (S.health() === 'dead') return graveScreen();
   if (S.get().needsSetup) return setupScreen();
   S.maybeBored();
@@ -170,7 +200,9 @@ function homeScreen() {
   // size the kitten to the room: the room is most of the stage under the roof
   const stageH = (window.innerHeight - 70) * (portrait ? 0.54 : 1);
   const roomH = stageH * 0.92 * 0.84;
-  const scale = Math.max(3, Math.min(9, Math.floor((roomH * 0.5) / 38)));
+  const scale = inHouse
+    ? Math.max(3, Math.min(9, Math.floor((roomH * 0.5) / 38)))
+    : (portrait ? Math.max(4, Math.min(7, Math.floor((window.innerHeight * 0.36) / 38))) : Math.max(5, Math.min(9, Math.floor((window.innerHeight * 0.5) / 38))));
 
   const task = (done, zh, en, coins, prog = '') => `
     <div class="task ${done ? 'done' : ''}">
@@ -180,18 +212,14 @@ function homeScreen() {
     </div>`;
 
   const n = html`<section class="home">
-    <div class="stage" id="stage">
-      <div class="house">
+    <div class="stage ${inHouse ? 'in-house' : ''}" id="stage">
+      ${inHouse ? `<div class="house">
         <canvas class="roof" id="roof"></canvas>
         <div class="room" id="room">
           <canvas class="room-bg" id="roombg"></canvas>
-          <div class="ground" id="ground">
-            <div class="kitten-wrap" id="kwrap">
-              <div class="fx-layer" id="fx"></div>
-            </div>
-          </div>
+          <div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>
         </div>
-      </div>
+      </div>` : `<div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>`}
     </div>
     <div class="side">
       <div id="alert"></div>
@@ -200,6 +228,7 @@ function homeScreen() {
         <div class="stat"><span style="font-size:20px;text-align:center">💧</span><span>喝水 <span class="en">Water</span></span><div class="bar segmented"><i style="width:${k.water ?? 75}%;--c:#4fb3ef"></i></div></div>
         <div class="stat"><span>${'<i data-icon="heart" data-size="22"></i>'}</span><span>开心 <span class="en">Happy</span></span><div class="bar segmented"><i style="width:${k.happy}%;--c:#ff6f9c"></i></div></div>
         <div class="stat"><span style="font-family:var(--px);font-weight:700">Lv</span><span>等级 ${S.level()}</span><div class="bar"><i style="width:${S.levelProgress() * 100}%;--c:#6cb6f2"></i></div></div>
+        ${S.nextUnlock() ? `<div class="next-unlock">🔓 Lv${S.nextUnlock().level} 解锁 ${S.nextUnlock().name}</div>` : ''}
       </div>
       <div class="card">
         <div class="h-title" style="font-size:22px;margin-bottom:8px"><span class="zh">今日任务</span><span class="en">Daily tasks</span></div>
@@ -216,6 +245,10 @@ function homeScreen() {
         <button class="btn white" id="b-feed"><span class="zh">喂食喝水</span><span class="en">Food &amp; water</span></button>
         <button class="btn blue" id="b-shop"><span class="zh">商店</span><span class="en">Shop</span></button>
         <button class="btn white" id="b-dress"><span class="zh">打扮</span><span class="en">Dress up</span></button>
+        ${S.unlocked('decor')
+          ? (inHouse ? '<button class="btn green" id="b-house"><span class="zh">🌳 去草地</span><span class="en">Go outside</span></button>'
+                     : '<button class="btn green" id="b-house"><span class="zh">🏠 我的家</span><span class="en">Go to Home</span></button>')
+          : `<button class="btn white" disabled><span class="zh">🔒 我的家</span><span class="en">Home · Lv${S.UNLOCKS.decor}</span></button>`}
         <button class="btn white soon" disabled><span class="zh">好词好句</span><span class="en">Vocab</span></button>
         <button class="btn white soon" disabled><span class="zh">看图作文</span><span class="en">Writing</span></button>
       </div>
@@ -226,7 +259,7 @@ function homeScreen() {
   const kv = new KittenView({ scale, interactive: true, onTap: () => petKitten() });
   kv.setMood(md.face);
   const kwrap = $('#kwrap', n), fx = $('#fx', n);
-  if (s.owned.includes('cushion') && !s.decorHidden.includes('cushion')) {
+  if (inHouse && s.owned.includes('cushion') && !s.decorHidden.includes('cushion')) {
     const c = spriteCanvas('cushion', 26 * Math.round(scale * 0.9));
     c.style.cssText = `position:absolute;left:50%;bottom:${Math.round(scale * 4)}px;transform:translateX(-50%);z-index:0`;
     kwrap.appendChild(c);
@@ -244,6 +277,13 @@ function homeScreen() {
   else if (md.face === 'sleepy') kwrap.appendChild(html`<div class="zzz">z Z z</div>`);
   else if (s.childName && Math.random() < 0.6) kwrap.appendChild(html`<div class="bubble">${esc(s.childName)}，喵～</div>`);
   if (md.needs.length) kwrap.appendChild(html`<div class="needs">${md.needs.includes('hungry') ? '<span>🐟 饿了 Hungry</span>' : ''}${md.needs.includes('thirsty') ? '<span>💧 口渴 Thirsty</span>' : ''}</div>`);
+  const lvNow = S.level();
+  if ((s.lastLevel || 1) < lvNow) {
+    const from = s.lastLevel || 1; s.lastLevel = lvNow; S.save();
+    const opened = Object.entries(S.UNLOCKS).filter(([, l]) => l > from && l <= lvNow);
+    setTimeout(() => { sfx.fanfare(); toast(`⭐ <span class="zh">升级了！</span> Level ${lvNow}!`, { ms: 3500 }); }, 400);
+    opened.forEach(([k], i) => setTimeout(() => toast(`🔓 <span class="zh">解锁：</span>${S.UNLOCK_NAMES[k]}`, { ms: 4500 }), 1300 + i * 900));
+  } else if (!s.lastLevel) { s.lastLevel = lvNow; S.save(); }
   if (s.freezeUsed) {
     const n = s.freezeUsed; delete s.freezeUsed; S.save();
     setTimeout(() => toast(`❄️ <span class="zh">冰冻卡保护了你的连胜！</span> Streak freeze used${n > 1 ? ` ×${n}` : ''}`, { ms: 4000 }), 500);
@@ -252,6 +292,7 @@ function homeScreen() {
   renderAlert($('#alert', n), md, k);
 
   const room = $('#room', n);
+  if (room) {
   const dscale = Math.max(2, Math.round(scale * 0.72));
   s.owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && id !== 'cushion' && !s.decorHidden.includes(id)).forEach((id) => {
     const it = ITEMS[id];
@@ -272,28 +313,38 @@ function homeScreen() {
     room.appendChild(wrap);
   });
   if (s.owned.includes('rug') && !s.decorHidden.includes('rug')) $('#ground', n).style.bottom = '4%';
+  }
 
   function petKitten() {
-    const sick = ['faint', 'dizzy', 'cough'].includes(md.face);
-    sfx.purr();
-    if (!sick) { kv.flash('happy', 1400); kv.jump(); }
-    burst(fx, 'heart', 3, '50%', '25%');
-    const before = S.get().daily.paid.care;
+    const face = md.face;
+    meow(face);
+    const sad = ['faint', 'dizzy', 'cough', 'cry', 'hungry', 'thirsty', 'bored', 'sleepy'].includes(face);
+    if (!sad) { kv.flash('happy', 1400); kv.jump(); }
+    const EMO = { happy: ['😊', '喵～最喜欢你了！'], normal: ['😺', '喵～'], cry: ['😿', '喵呜…快做任务吧'], hungry: ['😿', '喵…好饿'], thirsty: ['🥵', '喵…想喝水'],
+      cough: ['🤒', '喵…咳咳'], dizzy: ['😵‍💫', '喵…头好晕'], faint: ['😵', '……'], bored: ['🥱', '喵～陪我玩'], sleepy: ['😴', '喵…困了'] };
+    const [emoji, words] = EMO[face] || EMO.normal;
+    const pop = document.createElement('div');
+    pop.className = 'emo-pop'; pop.innerHTML = `<span class="e">${emoji}</span><span class="w">${esc(words)}</span>`;
+    fx.appendChild(pop);
+    const bubbles = [...kwrap.querySelectorAll('.bubble')]; bubbles.forEach((b) => { b.style.visibility = 'hidden'; });
+    setTimeout(() => { pop.remove(); bubbles.forEach((b) => { b.style.visibility = ''; }); }, 1800);
+    burst(fx, 'heart', sad ? 2 : 4, '50%', '30%');
     S.pet();
-    afterCare(before);
+    afterCare();
   }
   function afterCare() {
     const got = S.checkDaily();
     got.forEach((g, i) => setTimeout(() => toast(g.label, { coins: g.coins }), i * 700));
-    if (got.length) setTimeout(() => go('home'), 1600);
+    if (got.length) setTimeout(() => refreshHome(), 1600);
   }
 
   $('#b-spell', n).onclick = () => { sfx.unlock(); go('spell', { mode: 'list' }); };
   $('#b-review', n).onclick = () => { sfx.unlock(); go('spell', { mode: 'review' }); };
   $('#b-shop', n).onclick = () => go('shop');
   $('#b-dress', n).onclick = () => go('wardrobe');
+  const bh = $('#b-house', n); if (bh) bh.onclick = () => (inHouse ? goBack() : go('home', { view: 'house' }));
   $('#b-feed', n).onclick = () => openFeed(kv, fx, afterCare);
-  n._mounted = () => { drawRoom($('#roombg', n)); drawRoof($('#roof', n)); };
+  n._mounted = () => { if (inHouse) { drawRoom($('#roombg', n)); drawRoof($('#roof', n)); } };
   return n;
 }
 
@@ -313,7 +364,7 @@ function renderAlert(box, md, k) {
     const b = $('#hosp', box);
     if (b) b.onclick = async () => {
       if (!(await confirmBox(`送${name}去医院？`, `Spend ${cost} coins to make ${name} better?`, '送医院 Go', '取消 Cancel'))) return;
-      if (S.treat('hospital')) { sfx.fanfare(); confetti(); toast(`<span class="zh">${name}康复了！</span> Back to health!`, { ms: 3500 }); go('home'); }
+      if (S.treat('hospital')) { sfx.fanfare(); confetti(); toast(`<span class="zh">${name}康复了！</span> Back to health!`, { ms: 3500 }); refreshHome(); }
     };
   } else if (md.face === 'dizzy' || md.face === 'cough') {
     const med = md.face === 'dizzy' ? 'panadol' : 'syrup', it = ITEMS[med];
@@ -378,7 +429,7 @@ function openFeed(kv, fx, afterCare) {
       burst(fx, 'heart', 3, '50%', '25%');
       toast(it.water && !it.hunger ? `<span class="zh">好解渴！</span> Ahh, refreshing!` : `<span class="zh">好吃！</span> Yum, ${esc(it.en)}!`);
       afterCare();
-      setTimeout(() => go('home'), 1700);
+      setTimeout(() => refreshHome(), 1700);
     };
     pantry.appendChild(b);
   });
@@ -405,10 +456,12 @@ window.addEventListener('speech-stuck', () => {
   toast(`<span><span class="zh">听不到声音？</span> No sound? ${ios ? 'Turn up the volume and check silent mode is off, then tap 再听 again.' : 'Fully quit the browser (⌘Q), reopen it and check the volume.'}</span>`, { ms: 7000 });
 });
 tapSound(document.body);
+// browsers only allow sound after the first touch
+document.addEventListener('pointerdown', () => sfx.unlock(), { once: true, capture: true });
 paintSky(true);
 S.tick();
 setInterval(() => S.tick(), 60000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { S.tick(); if (current === 'home') go('home'); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { S.tick(); if (current === 'home') refreshHome(); } });
 go(S.get().onboarded ? 'home' : 'welcome');
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {

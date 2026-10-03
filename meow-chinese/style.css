@@ -327,6 +327,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 /* ---------- responsive ---------- */
 @media (orientation: portrait), (max-width: 900px) {
   .home { grid-template-columns: 1fr; grid-template-rows: 54% 46%; }
+  .stage > .ground { bottom: 4%; }
 
   .side { padding: 4px 16px calc(20px + var(--safe-b)); }
   .side > .card:first-child { margin-top: 2px; }
@@ -446,11 +447,12 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .product.is-owned { background: #eef7ea; }
 .product .owned { position: absolute; top: 6px; right: 6px; background: var(--green-d); color: #fff; font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 4px; }
 .product .count { position: absolute; top: 6px; right: 6px; background: var(--ink); color: #fff; font-family: "Nunito", sans-serif; font-weight: 800; font-size: 13px; padding: 1px 7px; border-radius: 4px; }
-.tag { position: relative; margin-top: 4px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px 4px 20px; font-size: 18px; border: 3px solid var(--ink); background: var(--yellow); color: var(--ink);
-  clip-path: polygon(12px 0, 100% 0, 100% 100%, 12px 100%, 0 50%); border-radius: 0 6px 6px 0; box-shadow: inset 0 -4px 0 var(--yellow-d); }
-.tag::before { content: ""; position: absolute; left: 9px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: #fff8ec; border: 2px solid var(--ink); }
+.tag { position: relative; margin-top: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-width: 76px; max-width: 100%; padding: 4px 12px 4px 22px;
+  font-size: 18px; border: 3px solid var(--ink); border-radius: 8px 999px 999px 8px; background: var(--yellow); color: var(--ink); box-shadow: inset 0 -4px 0 var(--yellow-d); white-space: nowrap; }
+.tag::before { content: ""; position: absolute; left: 7px; top: 50%; width: 7px; height: 7px; margin-top: -4px; border-radius: 50%; background: #fff8ec; border: 2px solid var(--ink); }
 .tag.off { background: #e2d8c8; box-shadow: none; opacity: .75; }
 .tag.done { background: var(--green); color: #fff; font-weight: 800; font-size: 15px; box-shadow: none; }
+.tag.done::before { background: #eaf9e6; }
 .tag:not(.off):not(.done):active { transform: translateY(2px); }
 @media (max-width: 600px) {
   .front-row { grid-template-columns: 140px 1fr; gap: 10px; }
@@ -470,4 +472,22 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .front-row { grid-template-columns: 130px minmax(0, 1fr); }
   .counter { min-width: 0; }
   .bubble { white-space: normal; width: max-content; max-width: 46vw; left: 55%; font-size: 15px; }
+}
+
+.aisle.locked { background: #b9a888; color: #5a4d4d; }
+.aisle.locked .zh { opacity: .7; }
+.locked-shelf { grid-column: 1 / -1; background: #fff8ec; border: 3px solid var(--ink); border-radius: 8px; padding: 22px 16px; text-align: center; margin: 6px; }
+.locked-shelf .big { font-size: 46px; }
+.shopwindow .reset-try { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 3; min-height: 32px; font-size: 14px; }
+
+.next-unlock { font-size: 13px; font-weight: 800; color: var(--ink-2); text-align: right; margin-top: -2px; }
+.emo-pop { position: absolute; left: 50%; top: 0; transform: translate(-50%, -30%); display: flex; align-items: center; gap: 6px; white-space: nowrap;
+  background: #fff; border: 3px solid var(--ink); border-radius: 999px; padding: 4px 12px 4px 8px; box-shadow: 0 4px 0 rgba(43,33,64,.35); z-index: 10; animation: emo 1.8s ease-out forwards; }
+.emo-pop .e { font-size: 28px; line-height: 1; }
+.emo-pop .w { font-family: var(--zh); font-size: 18px; }
+@keyframes emo { 0% { opacity: 0; transform: translate(-50%, 0) scale(.6); } 12% { opacity: 1; transform: translate(-50%, -40%) scale(1.05); } 20% { transform: translate(-50%, -40%) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -80%); } }
+.icon-btn.music.off { opacity: .6; }
+.icon-btn.back { font-weight: 800; font-size: 22px; }
+@media (max-width: 600px) {
+  .topbar .brand-text { display: none; }
 }

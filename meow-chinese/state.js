@@ -356,3 +356,13 @@ export function finishPlay(first, total) {
   save();
   return won;
 }
+
+// ---------- level unlocks ----------
+export const UNLOCKS = { head: 5, feet: 10, acc: 15, body: 20, decor: 25 };
+export const UNLOCK_NAMES = { head: '头饰 Hair accessories', feet: '鞋子 Shoes', acc: '配饰 Extras', body: '衣服 Clothes', decor: '我的家 Home & furniture' };
+export const unlocked = (key) => !(key in UNLOCKS) || !!state.settings.unlockAll || level() >= UNLOCKS[key];
+export function nextUnlock() {
+  const lv = level();
+  const next = Object.entries(UNLOCKS).sort((a, b) => a[1] - b[1]).find(([, l]) => l > lv);
+  return next ? { key: next[0], level: next[1], name: UNLOCK_NAMES[next[0]] } : null;
+}

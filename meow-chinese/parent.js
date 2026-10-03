@@ -67,7 +67,7 @@ function pinGate(go, tab) {
         S.get().settings.pin = entry; S.save();
       } else if (entry !== s.settings.pin) { entry = ''; dots(); msg('Wrong PIN, try again.'); sfx.oops(); return; }
       unlockedUntil = Date.now() + 15 * 60000;
-      go('parent', { tab });
+      go('parent', { tab }, { replace: true });
     }, 150);
   };
   const f = $('#forgot', n);
@@ -219,8 +219,15 @@ function settingsView(rerender, go) {
       <div class="toggle">Shuffle word order<button class="switch ${set.shuffle !== false ? 'on' : ''}" id="sh"></button></div>
       <div class="toggle">Sound effects<button class="switch ${set.sound !== false ? 'on' : ''}" id="sd"></button></div>
       <h3>Coins</h3>
-      <p class="help">Reward extra effort (e.g. a good score at school). She has <b>${s.coins}</b> coins.</p>
-      <div class="row"><button class="btn small" data-c="10">+10 ${coinI(16)}</button><button class="btn small" data-c="50">+50 ${coinI(16)}</button><button class="btn small white" data-c="-10">−10</button></div>
+      <p class="help">Reward extra effort (e.g. a good score at school). She has <b id="have">${s.coins}</b> coins.</p>
+      <div class="row coin-box">
+        <label class="field" style="flex:1;min-width:140px">How many coins?<input type="number" id="coin-amt" min="1" max="9999" inputmode="numeric" placeholder="e.g. 20"></label>
+        <button class="btn green" id="coin-add">＋ <span class="zh">奖励</span> Award</button>
+        <button class="btn white" id="coin-sub">－ <span class="zh">扣除</span> Remove</button>
+      </div>
+      <div class="row"><span class="help" style="margin:0">Quick:</span>${[5, 10, 20, 50, 100].map((v) => `<button class="btn small white" data-q="${v}">${v}</button>`).join('')}</div>
+      <h3>Levels</h3>
+      <div class="toggle"><span>Unlock all levels (for you to preview everything)<br><small class="help">Hair, shoes, extras, clothes and Home normally unlock at Lv5 / 10 / 15 / 20 / 25.</small></span><button class="switch ${set.unlockAll ? 'on' : ''}" id="ul"></button></div>
       <h3>Backup</h3>
       <p class="help">Everything is saved on this iPad. Download a backup file now and then, so nothing is lost if Safari data is cleared.</p>
       <div class="row"><button class="btn blue" id="exp">⬇ Download backup</button><label class="btn white">⬆ Restore backup<input type="file" id="imp" accept="application/json,.json" hidden></label></div>
@@ -238,10 +245,19 @@ function settingsView(rerender, go) {
   $('#tv', n).onclick = () => speak('我们去公园玩');
   $('#sh', n).onclick = () => { set.shuffle = set.shuffle === false; S.save(); rerender(); };
   $('#sd', n).onclick = () => { set.sound = set.sound === false; S.save(); rerender(); };
-  n.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-c]'); if (!b) return;
-    s.coins = Math.max(0, s.coins + +b.dataset.c); S.save(); rerender();
-  });
+  const amt = () => Math.round(Math.abs(Number($('#coin-amt', n).value)));
+  n.addEventListener('click', (e) => { const q = e.target.closest('[data-q]'); if (q) $('#coin-amt', n).value = q.dataset.q; });
+  $('#coin-add', n).onclick = () => {
+    const v = amt(); if (!v) return toast('Type how many coins first');
+    s.coins += v; S.save(); $('#have', n).textContent = s.coins; $('#coin-amt', n).value = '';
+    toast(`Awarded +${v} coins ✓`, { coins: 0 });
+  };
+  $('#coin-sub', n).onclick = () => {
+    const v = amt(); if (!v) return toast('Type how many coins first');
+    s.coins = Math.max(0, s.coins - v); S.save(); $('#have', n).textContent = s.coins; $('#coin-amt', n).value = '';
+    toast(`Removed ${v} coins`);
+  };
+  $('#ul', n).onclick = () => { set.unlockAll = !set.unlockAll; S.save(); rerender(); };
   $('#exp', n).onclick = () => {
     const blob = new Blob([JSON.stringify(S.get(), null, 1)], { type: 'application/json' });
     const a = document.createElement('a');

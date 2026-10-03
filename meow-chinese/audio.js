@@ -100,3 +100,96 @@ export const sfx = {
     if (canSpeak() && isIOS && !window.__speechWarm) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); window.__speechWarm = true; }
   },
 };
+
+// ---------- meow ----------
+// a synthesised "mi-aow": a buzzy voice through two moving vocal formants
+export function meow(mood = 'normal') {
+  if (!on()) return;
+  const a = ac(); if (!a) return;
+  const sad = ['cry', 'cough', 'dizzy', 'faint', 'hungry', 'thirsty', 'sleepy', 'bored'].includes(mood);
+  const t = a.currentTime + 0.01, dur = sad ? 0.75 : 0.5;
+  const base = sad ? 520 : 680 + Math.random() * 120;
+  const o = a.createOscillator(); o.type = 'sawtooth';
+  o.frequency.setValueAtTime(base * 0.85, t);
+  o.frequency.linearRampToValueAtTime(base * 1.25, t + dur * 0.35);
+  o.frequency.linearRampToValueAtTime(base * (sad ? 0.7 : 0.9), t + dur);
+  const vib = a.createOscillator(), vg = a.createGain(); vib.frequency.value = 7; vg.gain.value = sad ? 14 : 8;
+  vib.connect(vg).connect(o.frequency);
+  const f1 = a.createBiquadFilter(), f2 = a.createBiquadFilter();
+  f1.type = f2.type = 'bandpass'; f1.Q.value = 6; f2.Q.value = 8;
+  f1.frequency.setValueAtTime(700, t); f1.frequency.linearRampToValueAtTime(1100, t + dur * 0.4); f1.frequency.linearRampToValueAtTime(650, t + dur);
+  f2.frequency.setValueAtTime(1800, t); f2.frequency.linearRampToValueAtTime(2600, t + dur * 0.4); f2.frequency.linearRampToValueAtTime(1500, t + dur);
+  const g = a.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(sad ? 0.16 : 0.22, t + 0.06);
+  g.gain.setValueAtTime(sad ? 0.14 : 0.2, t + dur * 0.6);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(f1); o.connect(f2); f1.connect(g); f2.connect(g); g.connect(a.destination);
+  o.start(t); vib.start(t); o.stop(t + dur + 0.05); vib.stop(t + dur + 0.05);
+}
+
+// ---------- soothing background music (a gentle music-box lullaby, generated live) ----------
+const music = { playing: false, timer: null, next: 0, step: 0, gain: null };
+const CHORDS = [ // C  Am  F  G  (two bars each)
+  [261.63, 329.63, 392.0], [220.0, 261.63, 329.63], [174.61, 220.0, 261.63], [196.0, 246.94, 293.66],
+];
+const MELODY = [ // scale degrees in C pentatonic, 8 notes per chord, 0 = rest
+  [5, 0, 3, 0, 2, 3, 0, 0], [1, 0, 2, 0, 3, 0, 0, 0], [6, 0, 5, 3, 0, 2, 0, 0], [2, 0, 3, 0, 5, 0, 0, 0],
+  [5, 0, 6, 5, 0, 3, 0, 0], [3, 0, 2, 0, 1, 0, 0, 0], [2, 0, 3, 0, 5, 3, 0, 0], [2, 0, 1, 0, 0, 0, 0, 0],
+];
+const PENTA = [0, 523.25, 587.33, 659.25, 783.99, 880.0, 1046.5]; // C5 D5 E5 G5 A5 C6
+function bell(freq, t, vol, dur = 1.6) {
+  const a = ctx;
+  const o = a.createOscillator(), o2 = a.createOscillator(), g = a.createGain();
+  o.type = 'sine'; o2.type = 'sine'; o.frequency.value = freq; o2.frequency.value = freq * 2.01;
+  const g2 = a.createGain(); g2.gain.value = 0.25;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); o2.connect(g2).connect(g); g.connect(music.gain);
+  o.start(t); o2.start(t); o.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
+}
+function pad(freqs, t, dur) {
+  const a = ctx;
+  freqs.forEach((f) => {
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = 'triangle'; o.frequency.value = f / 2;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.018, t + 0.8); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(music.gain); o.start(t); o.stop(t + dur + 0.1);
+  });
+}
+function schedule() {
+  const beat = 60 / 66 / 2; // eighth notes at a calm 66 bpm
+  while (music.next < ctx.currentTime + 0.6) {
+    const bar = Math.floor(music.step / 8) % 8, i = music.step % 8;
+    const chord = CHORDS[Math.floor(bar / 2) % 4];
+    if (i === 0 && bar % 2 === 0) pad(chord, music.next, beat * 16);
+    if (i === 0 || i === 4) bell(chord[0] * 2, music.next, 0.035, 1.2);
+    const deg = MELODY[bar][i];
+    if (deg) bell(PENTA[deg], music.next, 0.06, 1.8);
+    music.next += beat; music.step++;
+  }
+}
+export function musicOn() { return get().settings.music !== false; }
+let gestured = false, pendingMusic = false;
+window.addEventListener('pointerdown', () => { gestured = true; if (pendingMusic) { pendingMusic = false; startMusic(); } }, { capture: true });
+export function startMusic() {
+  if (!musicOn() || music.playing) return;
+  if (!gestured) { pendingMusic = true; return; }   // browsers block sound until the first tap
+  const a = ac(); if (!a) return;
+  if (!music.gain) {
+    music.gain = a.createGain();
+    // a little echo makes it dreamy
+    const delay = a.createDelay(), fb = a.createGain(), wet = a.createGain();
+    delay.delayTime.value = 0.38; fb.gain.value = 0.28; wet.gain.value = 0.3;
+    music.gain.connect(a.destination); music.gain.connect(delay); delay.connect(fb).connect(delay); delay.connect(wet).connect(a.destination);
+  }
+  music.gain.gain.cancelScheduledValues(a.currentTime);
+  music.gain.gain.setValueAtTime(0.0001, a.currentTime); music.gain.gain.exponentialRampToValueAtTime(0.9, a.currentTime + 1.5);
+  music.playing = true; music.next = a.currentTime + 0.1;
+  schedule(); music.timer = setInterval(schedule, 200);
+}
+export function stopMusic() {
+  pendingMusic = false;
+  if (!music.playing) return;
+  music.playing = false; clearInterval(music.timer);
+  if (music.gain && ctx) { music.gain.gain.cancelScheduledValues(ctx.currentTime); music.gain.gain.setValueAtTime(music.gain.gain.value, ctx.currentTime); music.gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.6); }
+}
