@@ -14,7 +14,7 @@ export function parentScreen({ go, tab = 'lists' }) {
   if (Date.now() > unlockedUntil) return pinGate(go, tab);
   const n = html`<section class="screen"><div class="parent stack">
       <div class="parent-head">
-        <div class="h-title"><span class="zh">家长专区</span><span class="en">Parent area</span></div>
+        <div class="h-title"><span class="zh">家长专区</span><span class="en">Parent area</span><small class="acct">👤 ${esc((Auth.user() || {}).email || '')}</small></div>
         <div class="row" style="gap:8px"><button class="btn white small" id="p-logout">🚪 Log out</button><button class="btn white small" id="home">← 回家 Home</button></div>
       </div>
       <div class="tabs" id="tabs">

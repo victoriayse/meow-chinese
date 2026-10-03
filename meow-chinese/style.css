@@ -625,3 +625,5 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .name-date { grid-template-columns: 1fr; }
   .parent-head .h-title { flex: 1 1 100%; }
 }
+.parent-head .acct { display: block; width: 100%; font: 700 13px/1.2 var(--px); color: var(--ink-2); margin-top: 2px; }
+.parent-head .h-title { flex-wrap: wrap; }

@@ -81,7 +81,7 @@ export function init(replacedCallback) {
   onReplaced = replacedCallback || onReplaced;
   if (started) return; started = true;
   S.onChange(schedule);
-  setInterval(() => { if (status.state === 'offline' || !ready) pull(); }, 60000);
+  setInterval(() => { if (!document.hidden || status.state === 'offline' || !ready) pull(); }, 30000);   // check for changes from her other devices
   document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); });
   window.addEventListener('online', () => pull());
 }
