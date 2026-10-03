@@ -1151,12 +1151,20 @@ Object.assign(ITEMS, Object.fromEntries([
       : y >= 11 ? ((x + y) % 2 ? p.b : p.d)
       : ((x + y * 2) % 7 === 0 && y > 5) ? p.w
       : (y % 3 === 1 ? p.c : p.a)), DRESS),
+  // purple "spooky-cute" set
+  wearBody('lacedress', '紫色蕾丝裙', 'Purple lace dress', 110, { a: '#9b6bd6', b: '#2f2440', c: '#ffffff', d: '#6a3fb0' },
+    (x, y, p) => (y === 0 ? p.c
+      : y <= 3 ? (x === 0 ? p.a : p.b)
+      : y === 4 ? p.d
+      : y >= 11 ? ((x + y) % 2 ? p.c : p.b)
+      : ((x + y) % 5 === 0 ? p.d : p.a)), DRESS),
   wearBody('uniform', '校服', 'School uniform', 75, { a: '#ffffff', b: '#2f4f8f', c: '#2f4f8f' },
     (x, y, p) => (y >= 7 ? p.b : (x === 0 && y >= 1 && y <= 4) ? p.b : p.a)),
   wearFeet('sneakers', '红色球鞋', 'Red sneakers', 40, { a: '#e8576b', b: '#ffffff', l: '#ffb3c0' }),
   wearFeet('boots', '黄色雨靴', 'Rain boots', 45, { a: '#ffd23f', b: '#a8781a', l: '#fff3a8' }),
   wearFeet('flats', '芭蕾鞋', 'Ballet flats', 50, { a: '#ff9ec4', b: '#d65f89', l: '#ffd6e6' }),
   wearFeet('schoolshoes', '白色校鞋', 'School shoes', 35, { a: '#ffffff', b: '#8a93a3', l: '#dfe6ee' }),
+  wearFeet('purpleboots', '紫色小靴', 'Purple boots', 50, { a: '#9b6bd6', b: '#2f2440', l: '#d9c4ff' }),
   wearFeet('slippers', '毛绒拖鞋', 'Fluffy slippers', 30, { a: '#c9a7f0', b: '#9a78c8', l: '#efe2ff' }),
 ]));
 ITEMS.clip = { cat: 'wear', slot: 'head', name: '星星发夹', en: 'Star hair clip', price: 30,
@@ -1178,6 +1186,38 @@ ITEMS.headband = { cat: 'wear', slot: 'head', name: '草莓发箍', en: 'Strawbe
     'opppppppppppppppppppo',
     'ooooooooooooooooooooo',
   ], wear: { x: 5, y: 7 } };
+
+ITEMS.devilhorns = { cat: 'wear', slot: 'head', name: '小恶魔角', en: 'Little devil horns', price: 45,
+  pal: { o: O, p: '#9b6bd6', d: '#6a3fb0', k: '#3a2a5a' },
+  art: [
+    '......o.......o......',
+    '.....opo.....opo.....',
+    '.....oppo...oppo.....',
+    '....opdpo...opdpo....',
+    'ooooooooooooooooooooo',
+    'okkkkkkkkkkkkkkkkkkko',
+    'ooooooooooooooooooooo',
+  ], wear: { x: 5, y: 5 } };
+ITEMS.batbow = { cat: 'wear', slot: 'head', name: '蝙蝠蝴蝶结', en: 'Bat-wing bow', price: 60,
+  pal: { o: O, p: '#a77be6', d: '#7a4fc0', w: '#e6d6ff', k: '#2b2140' },
+  art: [
+    '.koo.....ook.',
+    'kkopoo.oopokk',
+    '.kopwpodppok.',
+    'kkoppodopdokk',
+    '.kopoo.oopok.',
+    '.koo.....ook.',
+  ], wear: { x: 2, y: 3 } };
+ITEMS.starchoker = { cat: 'wear', slot: 'neck', name: '紫星项圈', en: 'Purple star choker', price: 40,
+  pal: { o: O, k: '#3a2a5a', p: '#b48cf0' },
+  art: [
+    '.oooooooooooooo.',
+    'okkkkkkkkkkkkkko',
+    '.ooooooppoooooo.',
+    '......opppo.....',
+    '.......opo......',
+    '........o.......',
+  ], wear: { x: 8, y: 23 } };
 
 export const WEAR_SLOTS = [
   ['head', '头饰', 'Hair'],

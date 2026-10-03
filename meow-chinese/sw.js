@@ -1,5 +1,5 @@
 // Offline support: app files are network-first (so updates arrive), character stroke data is cache-first.
-const VERSION = 'meow-v37';
+const VERSION = 'meow-v38';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'state.js', 'pixel.js', 'ui.js', 'audio.js', 'spell.js', 'shop.js', 'parent.js', 'handwriting.js', 'cloud.js', 'merge.js', 'friends.js', 'challenge.js', 'phone.js', 'jokes.js', 'auth.js', 'essay.js', 'essayart.js', 'hanzi-writer.min.js', 'pinyin-pro.min.js', 'manifest.webmanifest', 'icon-192.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSION && k !== 'meow-data').map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
