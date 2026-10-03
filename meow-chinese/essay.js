@@ -6,6 +6,7 @@ import { storyById, storySVG } from './essayart.js';
 import { $, html, esc, KittenView, toast, confirmBox, openModal, closeModal, confetti, coinI, hydrateIcons } from './ui.js';
 import { speak, sfx } from './audio.js';
 import { SnapBox, loadChar } from './handwriting.js';
+import { wordChallenge } from './challenge.js';
 
 const pinyinOf = (w) => { try { return window.pinyinPro.pinyin(w); } catch { return ''; } };
 const isHan = (ch) => /\p{Script=Han}/u.test(ch);
@@ -106,6 +107,69 @@ export function essayScreen({ go, id }) {
     </div>`);
   $('.kv', root).replaceWith(kv.canvas);
   kv.setMood(submitted ? 'happy' : 'normal');
+
+  // ----- timed essay: nothing is shown until she presses Start, then the clock runs -----
+  const timed = !submitted && e.timeLimit > 0;
+  if (timed && !e.startedAt) {
+    const st = html`<div class="card stack" style="align-items:center;text-align:center">
+        <div class="big-clock">⏱ ${e.timeLimit}:00</div>
+        <p class="help" style="margin:0">你有 <b>${e.timeLimit}</b> 分钟写这篇作文。准备好纸和笔，然后按开始！<br>You have <b>${e.timeLimit} minute${e.timeLimit === 1 ? "" : "s"}</b>. Get your paper and pencil ready, then press Start. The pictures appear when the timer starts.</p>
+        <button class="btn big green" id="go-essay">▶ <span class="zh">开始写作文</span> Start essay</button>
+      </div>`;
+    $('#go-essay', st).onclick = () => { S.startEssay(e.id); sfx.fanfare(); go('essay', { id: e.id }, { replace: true }); };
+    root.appendChild(st);
+    hydrateIcons(root);
+    return n;
+  }
+  if (timed) {
+    const bar = html`<div class="essay-timer"><span class="t-icon">⏱</span><span class="t-left" id="tleft">--:--</span><span class="t-note" id="tnote"></span><button class="btn small white hidden" id="tup">⏰ <span class="zh">时间到</span></button></div>`;
+    root.prepend(bar);
+    let shownFor = null;
+    const fmt = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
+    const tick = () => {
+      if (!bar.isConnected) return clearInterval(timer);
+      const cur = S.essays().find((x) => x.id === e.id) || e;
+      if (cur.status !== 'assigned') return clearInterval(timer);
+      const left = S.essayEndsAt(cur) - Date.now();
+      $('#tleft', bar).textContent = fmt(left);
+      bar.classList.toggle('low', left > 0 && left < 3 * 60000);
+      bar.classList.toggle('over', left <= 0);
+      $('#tnote', bar).textContent = cur.extensions ? `+${cur.extensions * S.EXTEND_MIN} min` : '';
+      $('#tup', bar).classList.toggle('hidden', left > 0);
+      const end = S.essayEndsAt(cur);
+      if (left <= 0 && shownFor !== end && document.querySelector('#modal').classList.contains('hidden')) { shownFor = end; timesUp(cur); }
+    };
+    const timer = setInterval(tick, 500);
+    $('#tup', bar).onclick = () => timesUp(S.essays().find((x) => x.id === e.id) || e);
+    setTimeout(tick, 0);
+  }
+  function timesUp(cur) {
+    sfx.oops();
+    const canExtend = cur.allowExtend !== false;
+    const words = canExtend ? S.challengeWords() : [];
+    const box = html`<div class="card stack" style="align-items:center;text-align:center">
+        <div class="big-clock over">⏰ 0:00</div>
+        <div class="h-title" style="justify-content:center"><span class="zh">时间到！</span><span class="en">Time's up!</span></div>
+        <p class="help" style="margin:0">${canExtend ? (words.length ? `需要多一点时间吗？写对 ${words.length} 个词就可以加 ${S.EXTEND_MIN} 分钟。<br>Need more time? Write ${words.length} spelling words to get ${S.EXTEND_MIN} more minutes.` : 'There are no spelling words to practise yet, so the timer can\'t be extended.') : '写完了就交给妈妈吧！ Finish your last sentence and give it to Mum.'}</p>
+        <div class="row" style="justify-content:center">
+          ${canExtend && words.length ? `<button class="btn blue" id="ext">⏳ <span class="zh">延长时间</span> Extend Timer</button>` : ''}
+          <button class="btn green" id="sub">📮 <span class="zh">交给妈妈</span> Submit</button>
+        </div>
+        <button class="btn white small" id="later">关闭 Close</button>
+      </div>`;
+    const ext = $('#ext', box);
+    if (ext) ext.onclick = () => {
+      closeModal();
+      wordChallenge(words, {
+        title: `写对${words.length}个词，加${S.EXTEND_MIN}分钟！`, sub: `Listen and write each word. When all ${words.length} are done, you get ${S.EXTEND_MIN} more minutes.`,
+        onDone: () => { S.extendEssay(cur.id); confetti(); toast(`⏳ <span class="zh">加了${S.EXTEND_MIN}分钟！</span> +${S.EXTEND_MIN} minutes`, { ms: 3500 }); },
+      });
+    };
+    $('#sub', box).onclick = () => { closeModal(); doSubmit(true); };
+    $('#later', box).onclick = closeModal;
+    openModal(box).onclick = null;
+  }
+
   const picCard = html`<div class="card"></div>`;
   picCard.appendChild(pictureNode(e));
   root.appendChild(picCard);
@@ -127,15 +191,19 @@ export function essayScreen({ go, id }) {
 
   if (!submitted) {
     const act = html`<div class="spell-actions"><button class="btn big green" id="submit">📮 <span class="zh">交给妈妈</span> Submit to Mum</button></div>`;
-    $('#submit', act).onclick = async () => {
-      if (!(await confirmBox('写好了吗？ Finished?', '你已经在纸上写完作文了吗？写完了就交给妈妈看吧！<br>Have you finished writing on paper? Then give it to Mum!', '交了 Submit', '还没 Not yet'))) return;
+    $('#submit', act).onclick = () => doSubmit(false);
+    root.appendChild(act);
+  }
+  async function doSubmit(skipAsk) {
+    {
+      if (!skipAsk && !(await confirmBox('写好了吗？ Finished?', '你已经在纸上写完作文了吗？写完了就交给妈妈看吧！<br>Have you finished writing on paper? Then give it to Mum!', '交了 Submit', '还没 Not yet'))) return;
       S.submitEssay(e.id);
       sfx.fanfare(); confetti(); kv.setMood('happy'); kv.jump();
       toast('📮 <span class="zh">交给妈妈了！</span> Sent to Mum', { ms: 3500 });
       setTimeout(() => go('home'), 1600);
-    };
-    root.appendChild(act);
-  } else {
+    }
+  }
+  if (submitted) {
     root.appendChild(html`<div class="card" style="text-align:center"><b>📮 已交 ${new Date(e.submittedAt).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}</b><p class="help" style="margin:4px 0 0">妈妈看完以后会给你星星、金币和经验哦！ Mum will give you stars, coins and XP after reading it.</p></div>`);
   }
   hydrateIcons(root);

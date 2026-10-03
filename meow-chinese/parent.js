@@ -7,6 +7,7 @@ import { $, $$, html, esc, coinI, hydrateIcons, KittenView, toast, confirmBox, o
 import { speak, chineseVoices, sfx } from './audio.js';
 import * as Cloud from './cloud.js';
 import * as Auth from './auth.js';
+import { parentFriendsView, incomingRequests } from './friends.js';
 
 let unlockedUntil = 0;
 
@@ -21,6 +22,7 @@ export function parentScreen({ go, tab = 'lists' }) {
         <button class="tab" data-tab="lists"><span class="zh">听写词语</span> Lists</button>
         <button class="tab" data-tab="progress"><span class="zh">学习进度</span> Progress</button>
         <button class="tab" data-tab="essays"><span class="zh">作文</span> Essays${S.essays().some((e) => e.status === 'submitted') ? ' 🔴' : ''}</button>
+        <button class="tab" data-tab="friends"><span class="zh">朋友</span> Friends${incomingRequests().length ? ' 🔴' : ''}</button>
         <button class="tab" data-tab="shop"><span class="zh">商店价格</span> Prices</button>
         <button class="tab" data-tab="settings"><span class="zh">设置</span> Settings</button>
       </div>
@@ -31,7 +33,7 @@ export function parentScreen({ go, tab = 'lists' }) {
     tab = t;
     $$('.tab', n).forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
     body.innerHTML = '';
-    body.appendChild(t === 'lists' ? listsView(rerender) : t === 'progress' ? progressView(rerender) : t === 'shop' ? pricesView(rerender) : t === 'essays' ? essaysView(rerender) : settingsView(rerender, go));
+    body.appendChild(t === 'lists' ? listsView(rerender) : t === 'progress' ? progressView(rerender) : t === 'shop' ? pricesView(rerender) : t === 'essays' ? essaysView(rerender) : t === 'friends' ? parentFriendsView(rerender) : settingsView(rerender, go));
     hydrateIcons(body);
   };
   const rerender = () => show(tab);
@@ -413,7 +415,7 @@ function essaysView(rerender) {
         <div class="essay-thumb"></div>
         <div class="stack" style="gap:6px;min-width:0">
           <div class="row" style="justify-content:space-between"><div class="nm zh" style="font-size:22px">${esc(e.title)}</div><span class="status-chip ${cls}">${zh} · ${en}</span></div>
-          <div class="help" style="margin:0">Set ${new Date(e.createdAt).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })} · ${e.minChars}+ characters · ${e.words.length} helping words${e.submittedAt ? ` · submitted ${new Date(e.submittedAt).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` : ''}</div>
+          <div class="help" style="margin:0">Set ${new Date(e.createdAt).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })} · ${e.minChars}+ characters · ${e.words.length} helping words${e.timeLimit ? ` · ⏱ ${e.timeLimit} min${e.allowExtend === false ? '' : ' (extend allowed)'}` : ''}${e.startedAt && e.timeLimit ? ` · started ${new Date(e.startedAt).toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' })}` : ''}${e.extensions ? ` · extended ${e.extensions}× (+${e.extensions * S.EXTEND_MIN} min)` : ''}${e.submittedAt && e.startedAt ? ` · took ${Math.max(1, Math.round((e.submittedAt - e.startedAt) / 60000))} min` : ''}${e.submittedAt ? ` · submitted ${new Date(e.submittedAt).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` : ''}</div>
           <div class="chips">${e.words.map((w) => `<span class="chip">${esc(w.w)}</span>`).join('')}</div>
           <div class="review"></div>
           <div class="row"><button class="btn white small" data-a="del">🗑 Delete</button></div>
@@ -470,7 +472,11 @@ function newEssay(rerender) {
         <textarea id="words" style="min-height:120px" placeholder="着急&#10;雨伞 | umbrella&#10;关心"></textarea>
         <small>Optional: add “| English meaning” after a word. Pinyin and sound are added automatically.</small>
       </label>
-      <label class="field" style="width:200px">At least how many characters?<input type="number" id="min" value="80" min="20" max="600" inputmode="numeric"></label>
+      <div class="row" style="align-items:flex-end;gap:14px">
+        <label class="field" style="width:200px">At least how many characters?<input type="number" id="min" value="80" min="20" max="600" inputmode="numeric"></label>
+        <label class="field" style="width:200px">Time limit (minutes)<input type="number" id="tlim" value="40" min="0" max="240" inputmode="numeric"><small class="help" style="margin:0">0 = no timer</small></label>
+      </div>
+      <div class="toggle"><span>Allow “Extend Timer”<br><small class="help">When time is up she can write ${S.EXTEND_WORDS} words from her mistakes to get ${S.EXTEND_MIN} more minutes.</small></span><button type="button" class="switch on" id="ext"></button></div>
       <div class="row" style="justify-content:flex-end"><button class="btn white" id="c">Cancel</button><button class="btn green" id="ok">Set this essay</button></div>
     </div>`;
   const picks = $('#src-builtin', box);
@@ -493,9 +499,12 @@ function newEssay(rerender) {
     file = ev.target.files[0]; if (!file) return;
     const img = $('#preview', box); img.src = URL.createObjectURL(file); img.classList.remove('hidden');
   };
+  $('#ext', box).onclick = (ev) => ev.currentTarget.classList.toggle('on');
   $('#c', box).onclick = closeModal;
   $('#ok', box).onclick = async () => {
     const title = $('#title', box).value.trim();
+    const timeLimit = Math.max(0, Math.min(240, Math.round(+$('#tlim', box).value || 0)));
+    const allowExtend = $('#ext', box).classList.contains('on');
     const words = S.parseWords($('#words', box).value).map((x) => ({ w: x.w, meaning: x.hint }));
     const minChars = Math.max(20, Math.round(+$('#min', box).value || 80));
     if (!title) return toast('Give it a title');
@@ -505,7 +514,7 @@ function newEssay(rerender) {
       const btn = $('#ok', box); btn.disabled = true; btn.textContent = 'Uploading…';
       try { image = await Cloud.uploadEssayImage(file); } catch (err) { btn.disabled = false; btn.textContent = 'Set this essay'; return toast(err.message || 'Upload failed'); }
     }
-    S.addEssay({ title, storyId: source === 'builtin' ? storyId : null, image, words, minChars });
+    S.addEssay({ title, storyId: source === 'builtin' ? storyId : null, image, words, minChars, timeLimit, allowExtend });
     closeModal(); toast('Essay set ✓ The kitten will tell her'); rerender();
   };
   openModal(box);

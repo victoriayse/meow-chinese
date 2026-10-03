@@ -5,7 +5,7 @@ import { $, html, esc, coinI, hydrateIcons, KittenView, toast, burst } from './u
 import { sfx } from './audio.js';
 
 const isWear = (slots) => (it) => it.cat === 'wear' && slots.includes(it.slot);
-const TABS = [
+export const TABS = [
   { key: 'food', zh: '食物', en: 'Food', icon: '🐟', test: (it) => it.cat === 'food' },
   { key: 'head', lock: 'head', zh: '头饰', en: 'Hair', icon: '🎀', test: isWear(['head']) },
   { key: 'body', lock: 'body', zh: '衣服', en: 'Clothes', icon: '👕', test: isWear(['body']) },

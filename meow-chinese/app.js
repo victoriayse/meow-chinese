@@ -9,6 +9,7 @@ import { parentScreen } from './parent.js';
 import { essayScreen, showEssayReward } from './essay.js';
 import * as Cloud from './cloud.js';
 import * as Auth from './auth.js';
+import * as Friends from './friends.js';
 
 const app = $('#app');
 let current = null;
@@ -36,6 +37,8 @@ const screens = {
   parent: (p) => parentScreen({ ...p, go }),
   grave: graveScreen,
   essay: (p) => essayScreen({ ...p, go }),
+  friends: () => Friends.friendsScreen({ go }),
+  friend: (p) => Friends.friendScreen({ ...p, go }),
 };
 // a simple history so every page can go Back
 const stack = [];
@@ -333,7 +336,7 @@ function homeScreen(params = {}) {
           ? (inHouse ? '<button class="btn green" id="b-house"><span class="zh">🌳 去草地</span><span class="en">Go outside</span></button>'
                      : '<button class="btn green" id="b-house"><span class="zh">🏠 我的家</span><span class="en">Go to Home</span></button>')
           : `<button class="btn white" disabled><span class="zh">🔒 我的家</span><span class="en">Home · Lv${S.UNLOCKS.decor}</span></button>`}
-        <button class="btn white soon" disabled><span class="zh">好词好句</span><span class="en">Vocab</span></button>
+        <button class="btn blue ${Friends.incomingRequests().length ? 'has-badge' : ''}" id="b-friends"><span class="zh">👫 朋友</span><span class="en">Friends</span>${Friends.incomingRequests().length ? `<i class="badge">${Friends.incomingRequests().length}</i>` : ''}</button>
         ${S.outstandingEssays().length
           ? `<button class="btn pink has-badge" id="b-essay"><span class="zh">✍️ 看图作文</span><span class="en">Writing</span><i class="badge">${S.outstandingEssays().length}</i></button>`
           : `<button class="btn white" disabled title="Parents set up writing in 🔒"><span class="zh">看图作文</span><span class="en">${S.essays().some((e) => e.status === 'submitted') ? '等妈妈批改 Waiting' : 'No writing yet'}</span></button>`}
@@ -374,6 +377,18 @@ function homeScreen(params = {}) {
   }
 
   renderAlert($('#alert', n), md, k);
+
+  // presents and letters from friends wait on the stage until she opens them
+  const gifts = S.unopenedGifts(), unread = S.unreadLetters().length, hasLetters = (s.letters || []).length;
+  if (gifts.length || hasLetters) {
+    const tray = html`<div class="stage-tray">
+        ${gifts.length ? `<button class="tray-btn gift" id="t-gift" title="Gifts">🎁<i class="badge">${gifts.length}</i></button>` : ''}
+        ${hasLetters ? `<button class="tray-btn ${unread ? 'new' : ''}" id="t-mail" title="Letters">✉️${unread ? `<i class="badge">${unread}</i>` : ''}</button>` : ''}
+      </div>`;
+    $('#stage', n).appendChild(tray);
+    const tg = $('#t-gift', tray); if (tg) tg.onclick = () => Friends.openGiftBox(S.unopenedGifts()[0], refreshHome);
+    const tm = $('#t-mail', tray); if (tm) tm.onclick = () => Friends.openMailbox(refreshHome);
+  }
 
   const room = $('#room', n);
   const decorEls = [];
@@ -547,6 +562,7 @@ function homeScreen(params = {}) {
   if (reviewed) setTimeout(() => { if (current === 'home') showEssayReward(reviewed, kv); }, 700);
   const bh = $('#b-house', n); if (bh) bh.onclick = () => (inHouse ? goBack() : go('home', { view: 'house' }));
   $('#b-feed', n).onclick = () => openFeed(kv, fx, afterCare);
+  $('#b-friends', n).onclick = () => go('friends');
   n._mounted = () => { if (inHouse) { drawRoom($('#roombg', n)); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
   return n;
 }
@@ -665,6 +681,17 @@ paintSky(true);
 S.tick();
 setInterval(() => S.tick(), 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { S.tick(); if (current === 'home') refreshHome(); } });
+// friends: show what arrived, and keep the home page badges fresh
+Friends.startFriends((news) => {
+  news.forEach((x, i) => setTimeout(() => {
+    if (x.kind === 'feed') toast(`🐟 <span class="zh">${esc(x.fromName)}喂了你的小猫！</span> A friend fed your kitten`, { ms: 3500 });
+    if (x.kind === 'letter') toast(`✉️ <span class="zh">${esc(x.fromName)}给你写了信！</span> You got a letter`, { ms: 3500 });
+    if (x.kind === 'gift') toast(`🎁 <span class="zh">${esc(x.fromName)}送你礼物！</span> You got a gift`, { ms: 3500 });
+  }, i * 900));
+  if (current === 'home') setTimeout(refreshHome, 400);
+});
+let lastReq = 0;
+Friends.onFriends(() => { const r = Friends.incomingRequests().length; if (r !== lastReq) { lastReq = r; if (current === 'home') refreshHome(); } });
 // another tab changed the game: show the new state on calm pages
 S.onExternalChange(() => {
   if (['home', 'shop', 'wardrobe'].includes(current) && !document.querySelector('.room.arranging')) go(current, currentParams, { replace: true });
