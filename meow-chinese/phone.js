@@ -3,7 +3,7 @@ import * as S from './state.js';
 import { ITEMS, spriteCanvas } from './pixel.js';
 import { $, html, esc, toast, openModal, closeModal, confetti, coinI, hydrateIcons } from './ui.js';
 import { sfx, speak } from './audio.js';
-import { acceptedFriends, refreshFriends, sendLetter, errorText, LETTER_MAX, setActivity, isOnline, doingText } from './friends.js';
+import { acceptedFriends, refreshFriends, sendLetter, errorText, LETTER_MAX, setActivity, isOnline, doingText, lastSeen } from './friends.js';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const when = (t) => new Date(t).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
@@ -154,7 +154,7 @@ export function openPhone({ start = 'home', after } = {}) {
       S.purgeOldMessages();
       const t = S.threads().find((x) => x.id === fid);
       const fr = acceptedFriends().find((x) => x.other === fid), on = isOnline(fr);
-      const h = html`<div class="ph-head"><button class="ph-back">◀</button><span class="chat-who"><b class="zh">${esc((t && t.name) || '朋友')}</b><small class="${on ? 'on' : ''}">${on ? `<i class="ph-online"></i> ${esc(doingText(fr))}` : '不在线 · Offline'}</small></span><button class="ph-x" id="del-chat" aria-label="Delete chat">🗑</button></div>`;
+      const h = html`<div class="ph-head"><button class="ph-back">◀</button><span class="chat-who"><b class="zh">${esc((t && t.name) || '朋友')}</b><small class="${on ? 'on' : ''}">${on ? `<i class="ph-online"></i> ${esc(doingText(fr))}` : (fr && fr.card_updated ? `最后上线 Last seen: ${esc(lastSeen(fr))}` : '不在线 · Offline')}</small></span><button class="ph-x" id="del-chat" aria-label="Delete chat">🗑</button></div>`;
       $('.ph-back', h).onclick = back;
       body.appendChild(h);
       body.classList.add('chat-mode');

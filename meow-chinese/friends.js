@@ -49,6 +49,15 @@ export function publishCard(now = false) {
   cardTimer = setTimeout(async () => { try { await rpc('put_my_card', { p_card: c }); lastCard = j; lastSent = Date.now(); } catch (e) { /* try again next change */ } }, now ? 0 : 2500);
 }
 // a friend counts as online if their app checked in during the last 100 seconds
+// "Last seen: 3 Oct, 11:45 pm" from the friend's last check-in
+export function lastSeen(f) {
+  if (!f || !f.card_updated) return '';
+  const d = new Date(f.card_updated), today = new Date();
+  const time = d.toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' });
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  const day = d.toDateString() === today.toDateString() ? '今天 Today' : d.toDateString() === y.toDateString() ? '昨天 Yesterday' : d.toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
+  return `${day}, ${time}`;
+}
 export const isOnline = (f) => !!(f && f.card && f.card.doing !== 'away' && f.card_updated && Date.now() - Date.parse(f.card_updated) < 100000);
 const DOING = {
   essay: ['在写作文', 'is doing an essay', '✍️'], spelling: ['在听写', 'is doing spelling', '✏️'], phone: ['在玩手机', 'is using the phone', '📱'],
@@ -138,7 +147,7 @@ export function friendsScreen({ go }) {
     list.forEach((f) => {
       const c = f.card || {};
       const on = isOnline(f);
-      const t = html`<button class="friend-tile ${on ? 'online' : ''}">${on ? `<i class="online-dot" title="Online"></i><div class="doing zh">${doingHTML(f)}</div>` : ''}<div class="kv"></div><div class="nm zh">${esc(friendName(f))}</div><div class="lv">Lv${c.level || 1}${c.stage && c.stage !== 'ok' ? ' · ' + (STAGE_TEXT[c.stage] || '').split(' ')[0] : ''}</div></button>`;
+      const t = html`<button class="friend-tile ${on ? 'online' : ''}">${on ? `<i class="online-dot" title="Online"></i><div class="doing zh">${doingHTML(f)}</div>` : ''}<div class="kv"></div><div class="nm zh">${esc(friendName(f))}</div><div class="lv">Lv${c.level || 1}${c.stage && c.stage !== 'ok' ? ' · ' + (STAGE_TEXT[c.stage] || '').split(' ')[0] : ''}</div>${!on && f.card_updated ? `<div class="last-seen">最后上线 Last seen<br>${esc(lastSeen(f))}</div>` : ''}</button>`;
       if (f.card) $('.kv', t).replaceWith(friendKitten(c, 3).canvas); else $('.kv', t).innerHTML = '🐱';
       t.onclick = () => go('friend', { id: f.other });
       grid.appendChild(t);
@@ -180,7 +189,7 @@ export function friendScreen({ go, id }) {
         <div class="card visit-stage"><div class="visit-kv"></div><div class="nametag">${esc(c.name || '🐱')}<span class="lv">Lv${c.level || 1}</span></div><div class="fx-layer" id="fx"></div></div>
         <div class="card stack visit-info">
           <div class="h-title"><span class="zh">${esc(friendName(f))}</span></div>
-          <div class="presence ${isOnline(f) ? 'on' : ''}">${isOnline(f) ? esc(doingText(f)) : '⚪ 不在线 · Offline'}</div>
+          <div class="presence ${isOnline(f) ? 'on' : ''}">${isOnline(f) ? esc(doingText(f)) : `⚪ 不在线 · Offline${f.card_updated ? `<small class="last-seen">最后上线 Last seen: ${esc(lastSeen(f))}</small>` : ''}`}</div>
           ${f.card ? `${bar('饱饱 Food', c.hunger, '#f59b2a')}${bar('喝水 Water', c.water, '#4fb3ef')}${bar('开心 Happy', c.happy, '#ff6f9c')}
           ${STAGE_TEXT[c.stage] ? `<div class="sick-note">${STAGE_TEXT[c.stage]}</div>` : ''}
           <p class="help" style="margin:0">更新 Updated ${ago(f.card_updated)}</p>` : '<p class="help">这只小猫还没上线。 This kitten hasn\'t been online yet.</p>'}
