@@ -1,3 +1,11 @@
+/* every number in the app uses a clear, rounded system font (the pixel and handwriting fonts make 2/3/5 look like 8) */
+@font-face {
+  font-family: "Digits";
+  src: local("Avenir Next Demi Bold"), local("AvenirNext-DemiBold"), local("Helvetica Neue Bold"), local("HelveticaNeue-Bold"),
+       local("Arial Rounded MT Bold"), local("Arial Bold"), local("Arial-BoldMT"), local("Roboto Bold"), local("Roboto-Bold"), local("Segoe UI Bold");
+  unicode-range: U+0030-0039, U+0025, U+002B, U+00D7;
+  font-display: swap;
+}
 :root {
   --ink: #2b2140;
   --ink-2: #5a4d6e;
@@ -15,8 +23,8 @@
   --blue-d: #3b7fc4;
   --red: #ef5d73;
   --red-d: #b83a4e;
-  --px: "Pixelify Sans", "ZCOOL KuaiLe", "PingFang SC", system-ui, sans-serif;
-  --zh: "ZCOOL KuaiLe", "PingFang SC", "Pixelify Sans", system-ui, sans-serif;
+  --px: "Digits", "Pixelify Sans", "ZCOOL KuaiLe", "PingFang SC", system-ui, sans-serif;
+  --zh: "Digits", "ZCOOL KuaiLe", "PingFang SC", "Pixelify Sans", system-ui, sans-serif;
   --body: "Nunito", "PingFang SC", system-ui, sans-serif;
   --top-h: 64px;
   --safe-t: env(safe-area-inset-top, 0px);
@@ -491,3 +499,20 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 @media (max-width: 600px) {
   .topbar .brand-text { display: none; }
 }
+
+.sync-box { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; background: #eef6ff; border: 3px solid var(--ink); border-radius: 8px; padding: 10px 14px; }
+.sync-box small { font-weight: 800; color: var(--ink-2); }
+.sync-code { font-family: "Nunito", monospace; font-weight: 800; font-size: 24px; letter-spacing: 2px; user-select: all; -webkit-user-select: all; }
+.sync-status { font-weight: 800; font-size: 14px; padding: 2px 10px; border-radius: 999px; background: #e2d8c8; }
+.sync-status.ok { background: #dff5e1; color: var(--green-d); }
+.sync-status.offline { background: #ffe3e7; color: var(--red-d); }
+
+.login { gap: 10px; padding-bottom: 4vh; }
+.login-card { width: min(420px, 100%); text-align: left; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 3px solid var(--ink); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; padding: 10px 6px; font-weight: 800; background: #efe4d0; }
+.seg button.on { background: var(--yellow); }
+.pw { display: flex; gap: 6px; }
+.pw input { flex: 1; min-width: 0; }
+.pw button { width: 52px; border: 3px solid var(--ink); border-radius: 6px; background: #fff; font-size: 20px; }
+.login-err { background: #ffe3e7; border: 3px solid var(--red-d); color: var(--red-d); border-radius: 6px; padding: 8px 10px; font-weight: 800; }

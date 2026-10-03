@@ -3,6 +3,8 @@ import * as S from './state.js';
 import { FURS, ITEMS, spriteCanvas } from './pixel.js';
 import { $, $$, html, esc, coinI, hydrateIcons, KittenView, toast, confirmBox, openModal, closeModal } from './ui.js';
 import { speak, chineseVoices, sfx } from './audio.js';
+import * as Cloud from './cloud.js';
+import * as Auth from './auth.js';
 
 let unlockedUntil = 0;
 
@@ -228,7 +230,14 @@ function settingsView(rerender, go) {
       <div class="row"><span class="help" style="margin:0">Quick:</span>${[5, 10, 20, 50, 100].map((v) => `<button class="btn small white" data-q="${v}">${v}</button>`).join('')}</div>
       <h3>Levels</h3>
       <div class="toggle"><span>Unlock all levels (for you to preview everything)<br><small class="help">Hair, shoes, extras, clothes and Home normally unlock at Lv5 / 10 / 15 / 20 / 25.</small></span><button class="switch ${set.unlockAll ? 'on' : ''}" id="ul"></button></div>
-      <h3>Backup</h3>
+      <h3>☁️ Account &amp; cloud backup</h3>
+      <div class="sync-box">
+        <div><small>Logged in as</small><div class="sync-code" style="font-size:20px;letter-spacing:0">${esc((Auth.user() || {}).email || '—')}</div></div>
+        <div class="sync-status" id="sync-status"></div>
+      </div>
+      <p class="help">Progress is saved to this account automatically. Log in with the same email and password on any device (iPad, phone, laptop) to carry on there.</p>
+      <div class="row"><button class="btn white small" id="sync-now">↻ Back up now</button><button class="btn white small" id="logout">Log out</button></div>
+      <h3>Backup file</h3>
       <p class="help">Everything is saved on this iPad. Download a backup file now and then, so nothing is lost if Safari data is cleared.</p>
       <div class="row"><button class="btn blue" id="exp">⬇ Download backup</button><label class="btn white">⬆ Restore backup<input type="file" id="imp" accept="application/json,.json" hidden></label></div>
       <h3>Security</h3>
@@ -258,6 +267,21 @@ function settingsView(rerender, go) {
     toast(`Removed ${v} coins`);
   };
   $('#ul', n).onclick = () => { set.unlockAll = !set.unlockAll; S.save(); rerender(); };
+  const showStatus = () => {
+    const st = Cloud.status, el = $('#sync-status', n); if (!el) return;
+    el.className = 'sync-status ' + st.state;
+    el.textContent = st.state === 'ok' ? `✓ Backed up ${st.at ? new Date(st.at).toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' }) : ''}`
+      : st.state === 'syncing' ? 'Syncing…' : st.state === 'offline' ? 'Offline — will retry' : 'Waiting…';
+  };
+  showStatus(); const off = Cloud.onStatus(() => { if (!n.isConnected) return off(); showStatus(); });
+  $('#sync-now', n).onclick = () => Cloud.backupNow();
+  $('#logout', n).onclick = async () => {
+    if (!(await confirmBox('Log out?', 'Progress is saved in the account. Log back in any time with the same email and password.', 'Log out'))) return;
+    await Cloud.backupNow();
+    Cloud.stop(); await Auth.signOut();
+    S.resetAll();
+    unlockedUntil = 0; go('login');
+  };
   $('#exp', n).onclick = () => {
     const blob = new Blob([JSON.stringify(S.get(), null, 1)], { type: 'application/json' });
     const a = document.createElement('a');

@@ -6,6 +6,8 @@ import { sfx, meow, startMusic, stopMusic, musicOn } from './audio.js';
 import { spellingScreen } from './spell.js';
 import { shopScreen, wardrobeScreen } from './shop.js';
 import { parentScreen } from './parent.js';
+import * as Cloud from './cloud.js';
+import * as Auth from './auth.js';
 
 const app = $('#app');
 let current = null;
@@ -24,6 +26,7 @@ window.addEventListener('resize', () => { clearTimeout(paintSky.t); paintSky.t =
 // ---------- router ----------
 const screens = {
   welcome: welcomeScreen,
+  login: loginScreen,
   setup: setupScreen,
   home: (p) => homeScreen(p),
   spell: (p) => spellingScreen({ ...p, go }),
@@ -35,7 +38,7 @@ const screens = {
 // a simple history so every page can go Back
 const stack = [];
 let currentParams = {};
-const NO_HISTORY = ['welcome', 'setup', 'grave'];
+const NO_HISTORY = ['welcome', 'setup', 'grave', 'login'];
 export function go(name, params = {}, opts = {}) {
   if (window.speechSynthesis) speechSynthesis.cancel();
   if (!opts.back && !opts.replace && current && !NO_HISTORY.includes(current)) {
@@ -59,13 +62,13 @@ export function goBack() {
   const prev = stack.pop() || { name: 'home', params: {} };
   go(prev.name, prev.params, { back: true });
 }
-const canGoBack = () => current && !['welcome', 'setup', 'grave'].includes(current) && !(current === 'home' && !currentParams.view);
+const canGoBack = () => current && !['welcome', 'setup', 'grave', 'login'].includes(current) && !(current === 'home' && !currentParams.view);
 
 // ---------- top bar ----------
 let lastCoins = null;
 function renderTopbar() {
   const s = S.get(), bar = $('#topbar');
-  const showGame = s.onboarded && current !== 'welcome' && current !== 'setup';
+  const showGame = s.onboarded && !['welcome', 'setup', 'login'].includes(current);
   bar.innerHTML = `
     <button class="icon-btn music ${musicOn() ? '' : 'off'}" id="music-btn" aria-label="Music" title="音乐 Music">${musicOn() ? '🎵' : '🔇'}</button>
     ${showGame && canGoBack() ? '<button class="icon-btn back" id="back-btn" aria-label="Back" title="返回 Back">←</button>' : ''}
@@ -109,6 +112,54 @@ S.onChange(() => {
     const p = $('#coin-pill'); p.classList.remove('coin-bump'); void p.offsetWidth; p.classList.add('coin-bump');
   }
 });
+
+// ---------- login ----------
+function loginScreen() {
+  let mode = 'login';
+  const kv = new KittenView({ scale: 5 });
+  kv.setMood('happy');
+  const n = html`<section class="screen"><div class="welcome login">
+      <h1 class="mega" style="font-size:clamp(52px,9vw,104px)">喵喵中文</h1>
+      <p class="mega-en" style="font-size:clamp(22px,3.4vw,40px)">Meow Chinese</p>
+      <div id="lk"></div>
+      <form class="card stack login-card" id="form" autocomplete="on">
+        <div class="seg"><button type="button" data-m="login" class="on">登录 Log in</button><button type="button" data-m="signup">注册 New account</button></div>
+        <label class="field">邮箱 Email<input type="email" id="em" autocomplete="username" inputmode="email" autocapitalize="off" required></label>
+        <label class="field">密码 Password
+          <span class="pw"><input type="password" id="pw" autocomplete="current-password" minlength="6" required><button type="button" id="eye" aria-label="Show password">👁</button></span>
+          <small id="pw-hint" class="hidden">至少6个字 · At least 6 characters. Parents and kids use the same account.</small>
+        </label>
+        <div class="login-err hidden" id="err"></div>
+        <button class="btn big green block" id="submit" type="submit"><span class="zh">登录</span> Log in</button>
+      </form>
+    </div></section>`;
+  $('#lk', n).replaceWith(kv.canvas);
+  const setMode = (m) => {
+    mode = m;
+    $$('.seg button', n).forEach((b) => b.classList.toggle('on', b.dataset.m === m));
+    $('#submit', n).innerHTML = m === 'login' ? '<span class="zh">登录</span> Log in' : '<span class="zh">注册</span> Create account';
+    $('#pw', n).autocomplete = m === 'login' ? 'current-password' : 'new-password';
+    $('#pw-hint', n).classList.toggle('hidden', m === 'login');
+    $('#err', n).classList.add('hidden');
+  };
+  $('.seg', n).onclick = (e) => { const b = e.target.closest('[data-m]'); if (b) setMode(b.dataset.m); };
+  $('#eye', n).onclick = () => { const i = $('#pw', n); i.type = i.type === 'password' ? 'text' : 'password'; };
+  $('#form', n).onsubmit = async (e) => {
+    e.preventDefault(); sfx.unlock();
+    const email = $('#em', n).value, pw = $('#pw', n).value, err = $('#err', n), btn = $('#submit', n);
+    err.classList.add('hidden'); btn.disabled = true;
+    try {
+      if (mode === 'login') await Auth.signIn(email, pw); else await Auth.signUp(email, pw);
+      try { await Cloud.afterLogin(); } catch (x) { console.warn('first sync failed', x); }
+      sfx.fanfare();
+      go(S.get().onboarded ? 'home' : 'setup');
+      if (mode === 'signup') setTimeout(() => toast('<span class="zh">账号建好了！</span> Account created'), 400);
+    } catch (x) {
+      err.textContent = x.message; err.classList.remove('hidden'); sfx.oops();
+    } finally { btn.disabled = false; }
+  };
+  return n;
+}
 
 // ---------- welcome ----------
 function welcomeScreen() {
@@ -462,7 +513,13 @@ paintSky(true);
 S.tick();
 setInterval(() => S.tick(), 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { S.tick(); if (current === 'home') refreshHome(); } });
-go(S.get().onboarded ? 'home' : 'welcome');
+// cloud backup & sync: if another device saved newer progress, show it
+Cloud.init(() => {
+  if (current === 'spell' || current === 'login') return;   // don't interrupt a spelling round
+  go(S.get().onboarded ? (current === 'welcome' || current === 'setup' ? 'home' : current) : 'welcome', currentParams, { replace: true });
+});
+if (!Auth.session()) go('login');
+else { go(S.get().onboarded ? 'home' : 'welcome'); Cloud.pull(); }
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});

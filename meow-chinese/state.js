@@ -99,6 +99,8 @@ export function save() {
   listeners.forEach((fn) => fn(state));
 }
 export function onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+// save bookkeeping (e.g. sync status) without counting it as a change
+export function saveQuiet() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { console.warn('save failed', e); } }
 export function replaceAll(obj) { state = migrate(obj); save(); }
 export function resetAll() { state = fresh(); save(); }
 
