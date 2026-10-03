@@ -415,7 +415,7 @@ function homeScreen(params = {}) {
     if (held.has('left')) dx -= 1; if (held.has('right')) dx += 1;
     if (held.has('up')) dy += 1; if (held.has('down')) dy -= 1;
     cat.x += dx * 32 * dt; cat.y += dy * 22 * dt;
-    if (dx) kflip.classList.toggle('left', dx < 0);
+    if (dx) kv.setFacing(dx < 0);
     placeCat();
     if (held.size) raf = requestAnimationFrame(walk);
     else { raf = 0; lastT = 0; kv.canvas.classList.remove('walking'); s.catPos = { x: +cat.x.toFixed(1), y: +cat.y.toFixed(1) }; S.save(); }

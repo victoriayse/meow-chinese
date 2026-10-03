@@ -28,7 +28,7 @@ function inTri(px, py, a, b, c) {
 
 // ---------- kitten ----------
 // mood: 'normal' | 'happy' | 'sleepy' | 'blink' | 'eat'
-export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame = 0) {
+export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame = 0, mirrorPatch = false) {
   const P = FURS[fur] || FURS.ginger;
   const g = grid(KW, KH), region = grid(KW, KH);
   const set = (x, y, c, r) => { if (x >= 0 && y >= 0 && x < KW && y < KH) { g[y][x] = c; if (r) region[y][x] = r; } };
@@ -58,8 +58,10 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
   // head
   fillShape((x, y) => inEllipse(x, y, 16, Y(11.5), 11.2, 8.4), P.f, 'head');
   if (P.patch) {
-    fillShape((x, y) => region[y][x] === 'head' && inEllipse(x, y, 9, Y(6), 5, 4), P.patch);
-    fillShape((x, y) => region[y][x] === 'head' && inEllipse(x, y, 24, Y(7), 3.5, 3), P.s);
+    // when the kitten turns round, the patches are drawn on the other side so they stay put after the flip
+    const px = (x) => (mirrorPatch ? KW - x : x);
+    fillShape((x, y) => region[y][x] === 'head' && inEllipse(x, y, px(9), Y(6), 5, 4), P.patch);
+    fillShape((x, y) => region[y][x] === 'head' && inEllipse(x, y, px(24), Y(7), 3.5, 3), P.s);
     fillShape((x, y) => region[y][x] === 'tail', P.s);
   }
   // forehead stripes

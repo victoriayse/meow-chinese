@@ -47,6 +47,8 @@ export class KittenView {
   get fur() { return this.furOverride || get().kitten.fur; }
   get equipped() { return this.equippedOverride || get().kitten.equipped; }
   setMood(m) { this.mood = m; this.draw(); }
+  // face left or right (the picture is mirrored, but fur patches stay where they are)
+  setFacing(left) { if (this.left !== !!left) { this.left = !!left; this.draw(); } }
   flash(m, ms = 1200) { this.temp = m; this.draw(); clearTimeout(this.tt); this.tt = setTimeout(() => { this.temp = null; this.draw(); }, ms); }
   step() {
     if (!this.canvas.isConnected) { clearInterval(this.timer); return; }
@@ -56,7 +58,9 @@ export class KittenView {
   }
   draw() {
     const m = this.temp || (this.blinkT ? 'blink' : this.mood);
-    drawGrid(this.canvas, kittenGrid(this.fur, m, this.equipped, Math.floor(this.frame / 3)), this.scale);
+    let g = kittenGrid(this.fur, m, this.equipped, Math.floor(this.frame / 3), !!this.left);
+    if (this.left) g = g.map((row) => [...row].reverse());
+    drawGrid(this.canvas, g, this.scale);
   }
   jump() { this.canvas.classList.remove('jump'); void this.canvas.offsetWidth; this.canvas.classList.add('jump'); }
 }
