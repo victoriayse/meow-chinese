@@ -129,24 +129,79 @@ export function meow(mood = 'normal') {
 }
 
 // ---------- soothing background music (a gentle music-box lullaby, generated live) ----------
-const music = { playing: false, timer: null, next: 0, step: 0, gain: null };
-const CHORDS = [ // C  Am  F  G  (two bars each)
-  [261.63, 329.63, 392.0], [220.0, 261.63, 329.63], [174.61, 220.0, 261.63], [196.0, 246.94, 293.66],
+const music = { playing: false, timer: null, next: 0, step: 0, gain: null, track: 0 };
+// five cosy tunes; each is a chord loop, an 8-bar melody (scale steps, 0 = rest) and a voice
+const C = [261.63, 329.63, 392.0], Am = [220.0, 261.63, 329.63], F = [174.61, 220.0, 261.63], G = [196.0, 246.94, 293.66];
+export const TRACKS = [
+  { zh: '音乐盒摇篮曲', en: 'Music-box lullaby', icon: '🎠', bpm: 66, voice: 'bell', bass: 'bell',
+    chords: [C, Am, F, G],
+    scale: [0, 523.25, 587.33, 659.25, 783.99, 880.0, 1046.5],
+    melody: [[5, 0, 3, 0, 2, 3, 0, 0], [1, 0, 2, 0, 3, 0, 0, 0], [6, 0, 5, 3, 0, 2, 0, 0], [2, 0, 3, 0, 5, 0, 0, 0],
+      [5, 0, 6, 5, 0, 3, 0, 0], [3, 0, 2, 0, 1, 0, 0, 0], [2, 0, 3, 0, 5, 3, 0, 0], [2, 0, 1, 0, 0, 0, 0, 0]] },
+  { zh: '雨天咖啡馆', en: 'Rainy café', icon: '☕', bpm: 70, voice: 'epiano', bass: 'epiano', rain: true,
+    chords: [[174.61, 220.0, 261.63, 329.63], [164.81, 196.0, 246.94, 293.66], [146.83, 174.61, 220.0, 261.63], [130.81, 164.81, 196.0, 246.94]],
+    scale: [0, 523.25, 587.33, 659.25, 698.46, 783.99, 880.0, 1046.5],
+    melody: [[6, 0, 5, 0, 3, 0, 0, 0], [2, 0, 3, 5, 0, 0, 3, 0], [4, 0, 3, 0, 2, 0, 0, 0], [1, 0, 2, 0, 3, 0, 0, 0],
+      [6, 0, 7, 6, 0, 5, 0, 0], [3, 0, 5, 0, 2, 0, 0, 0], [2, 0, 3, 0, 4, 3, 0, 0], [1, 0, 0, 0, 0, 0, 0, 0]] },
+  { zh: '星星夜', en: 'Starry night', icon: '🌙', bpm: 56, voice: 'flute', bass: 'bell',
+    chords: [Am, F, [196.0, 261.63, 329.63], G],
+    scale: [0, 440.0, 523.25, 587.33, 659.25, 783.99, 880.0],
+    melody: [[4, 0, 0, 0, 3, 0, 0, 0], [2, 0, 0, 0, 1, 0, 0, 0], [2, 0, 3, 0, 4, 0, 0, 0], [5, 0, 0, 0, 4, 0, 0, 0],
+      [6, 0, 0, 0, 5, 0, 4, 0], [3, 0, 0, 0, 2, 0, 0, 0], [1, 0, 2, 0, 3, 0, 0, 0], [1, 0, 0, 0, 0, 0, 0, 0]] },
+  { zh: '樱花小风', en: 'Blossom breeze', icon: '🌸', bpm: 78, voice: 'pluck', bass: 'pluck',
+    chords: [G, [164.81, 196.0, 246.94], [130.81, 164.81, 196.0], [146.83, 185.0, 220.0]],
+    scale: [0, 392.0, 440.0, 493.88, 587.33, 659.25, 783.99],
+    melody: [[4, 5, 4, 0, 3, 0, 2, 0], [1, 0, 2, 0, 3, 0, 0, 0], [5, 0, 6, 5, 4, 0, 3, 0], [2, 0, 0, 0, 0, 0, 0, 0],
+      [4, 0, 5, 0, 6, 5, 4, 0], [3, 0, 4, 3, 2, 0, 0, 0], [1, 2, 3, 0, 5, 0, 3, 0], [1, 0, 0, 0, 0, 0, 0, 0]] },
+  { zh: '小猫去散步', en: 'Kitten stroll', icon: '🐾', bpm: 92, voice: 'marimba', bass: 'marimba',
+    chords: [C, G, Am, F],
+    scale: [0, 523.25, 587.33, 659.25, 783.99, 880.0, 1046.5],
+    melody: [[1, 3, 5, 3, 6, 5, 3, 0], [2, 0, 2, 3, 5, 0, 0, 0], [3, 5, 6, 5, 3, 2, 1, 0], [2, 0, 3, 0, 1, 0, 0, 0],
+      [5, 5, 6, 5, 3, 0, 2, 0], [3, 0, 2, 0, 1, 0, 0, 0], [6, 5, 3, 5, 6, 0, 5, 0], [1, 0, 0, 0, 0, 0, 0, 0]] },
 ];
-const MELODY = [ // scale degrees in C pentatonic, 8 notes per chord, 0 = rest
-  [5, 0, 3, 0, 2, 3, 0, 0], [1, 0, 2, 0, 3, 0, 0, 0], [6, 0, 5, 3, 0, 2, 0, 0], [2, 0, 3, 0, 5, 0, 0, 0],
-  [5, 0, 6, 5, 0, 3, 0, 0], [3, 0, 2, 0, 1, 0, 0, 0], [2, 0, 3, 0, 5, 3, 0, 0], [2, 0, 1, 0, 0, 0, 0, 0],
-];
-const PENTA = [0, 523.25, 587.33, 659.25, 783.99, 880.0, 1046.5]; // C5 D5 E5 G5 A5 C6
+export const trackIndex = () => { const i = get().settings.musicTrack; return Number.isInteger(i) && TRACKS[i] ? i : 0; };
+function env(g, t, vol, attack, dur) {
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + attack); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+}
 function bell(freq, t, vol, dur = 1.6) {
   const a = ctx;
   const o = a.createOscillator(), o2 = a.createOscillator(), g = a.createGain();
   o.type = 'sine'; o2.type = 'sine'; o.frequency.value = freq; o2.frequency.value = freq * 2.01;
   const g2 = a.createGain(); g2.gain.value = 0.25;
-  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  env(g, t, vol, 0.015, dur);
   o.connect(g); o2.connect(g2).connect(g); g.connect(music.gain);
   o.start(t); o2.start(t); o.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
 }
+function epiano(freq, t, vol, dur = 1.6) {
+  const a = ctx, g = a.createGain();
+  [1, 1.004].forEach((k) => { const o = a.createOscillator(); o.type = 'sine'; o.frequency.value = freq * k; o.connect(g); o.start(t); o.stop(t + dur + 0.05); });
+  const o3 = a.createOscillator(), g3 = a.createGain(); o3.type = 'sine'; o3.frequency.value = freq * 3; g3.gain.value = 0.08; o3.connect(g3).connect(g); o3.start(t); o3.stop(t + 0.3);
+  env(g, t, vol * 0.8, 0.01, dur * 1.1);
+  g.connect(music.gain);
+}
+function flute(freq, t, vol, dur = 1.6) {
+  const a = ctx, o = a.createOscillator(), g = a.createGain(), lfo = a.createOscillator(), lg = a.createGain();
+  o.type = 'triangle'; o.frequency.value = freq / 2 * 2;
+  lfo.frequency.value = 5; lg.gain.value = freq * 0.006; lfo.connect(lg).connect(o.frequency);
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol * 0.9, t + 0.12); g.gain.linearRampToValueAtTime(vol * 0.6, t + dur * 0.6); g.gain.linearRampToValueAtTime(0.0001, t + dur * 1.2);
+  o.connect(g).connect(music.gain);
+  o.start(t); lfo.start(t); o.stop(t + dur * 1.2 + 0.05); lfo.stop(t + dur * 1.2 + 0.05);
+}
+function pluck(freq, t, vol, dur = 1.0) {
+  const a = ctx, o = a.createOscillator(), f = a.createBiquadFilter(), g = a.createGain();
+  o.type = 'sawtooth'; o.frequency.value = freq;
+  f.type = 'lowpass'; f.frequency.setValueAtTime(2600, t); f.frequency.exponentialRampToValueAtTime(500, t + 0.5);
+  env(g, t, vol * 0.7, 0.005, Math.min(dur, 1.1));
+  o.connect(f).connect(g).connect(music.gain); o.start(t); o.stop(t + 1.2);
+}
+function marimba(freq, t, vol, dur = 0.6) {
+  const a = ctx, g = a.createGain();
+  const o = a.createOscillator(); o.type = 'sine'; o.frequency.value = freq; o.connect(g);
+  const o2 = a.createOscillator(), g2 = a.createGain(); o2.type = 'sine'; o2.frequency.value = freq * 4; g2.gain.value = 0.15; o2.connect(g2).connect(g);
+  env(g, t, vol, 0.005, Math.min(dur, 0.7));
+  g.connect(music.gain); o.start(t); o2.start(t); o.stop(t + 0.8); o2.stop(t + 0.15);
+}
+const VOICES = { bell, epiano, flute, pluck, marimba };
 function pad(freqs, t, dur) {
   const a = ctx;
   freqs.forEach((f) => {
@@ -156,17 +211,35 @@ function pad(freqs, t, dur) {
     o.connect(g).connect(music.gain); o.start(t); o.stop(t + dur + 0.1);
   });
 }
+// soft rain for the café tune: filtered noise taps
+let noiseBuf = null;
+function rainTap(t) {
+  const a = ctx;
+  if (!noiseBuf) { noiseBuf = a.createBuffer(1, a.sampleRate * 0.05, a.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length); }
+  const src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  src.buffer = noiseBuf; f.type = 'bandpass'; f.frequency.value = 3000 + Math.random() * 3000; g.gain.value = 0.012;
+  src.connect(f).connect(g).connect(music.gain); src.start(t);
+}
 function schedule() {
-  const beat = 60 / 66 / 2; // eighth notes at a calm 66 bpm
+  const tr = TRACKS[music.track] || TRACKS[0];
+  const beat = 60 / tr.bpm / 2;                     // eighth notes
+  const voice = VOICES[tr.voice], bass = VOICES[tr.bass];
   while (music.next < ctx.currentTime + 0.6) {
     const bar = Math.floor(music.step / 8) % 8, i = music.step % 8;
-    const chord = CHORDS[Math.floor(bar / 2) % 4];
+    const chord = tr.chords[Math.floor(bar / 2) % 4];
     if (i === 0 && bar % 2 === 0) pad(chord, music.next, beat * 16);
-    if (i === 0 || i === 4) bell(chord[0] * 2, music.next, 0.035, 1.2);
-    const deg = MELODY[bar][i];
-    if (deg) bell(PENTA[deg], music.next, 0.06, 1.8);
+    if (i === 0 || i === 4) bass(chord[0] * (tr.bass === 'pluck' || tr.bass === 'marimba' ? 1 : 2), music.next, 0.035, 1.2);
+    if (tr.voice === 'marimba' && (i === 2 || i === 6)) marimba(chord[1] * 2, music.next, 0.02, 0.4);
+    const deg = tr.melody[bar][i];
+    if (deg) voice(tr.scale[deg], music.next, 0.06, tr.voice === 'flute' ? beat * 3.5 : 1.8);
+    if (tr.rain) for (let k = 0; k < 3; k++) if (Math.random() < 0.6) rainTap(music.next + Math.random() * beat);
     music.next += beat; music.step++;
   }
+}
+// switch tune (keeps playing if music is on)
+export function setTrack(i) {
+  get().settings.musicTrack = i;
+  if (music.playing) { stopMusic(true); setTimeout(() => startMusic(), 650); }
 }
 export function musicOn() { return get().settings.music !== false; }
 let gestured = false, pendingMusic = false;
@@ -184,11 +257,11 @@ export function startMusic() {
   }
   music.gain.gain.cancelScheduledValues(a.currentTime);
   music.gain.gain.setValueAtTime(0.0001, a.currentTime); music.gain.gain.exponentialRampToValueAtTime(0.9, a.currentTime + 1.5);
-  music.playing = true; music.next = a.currentTime + 0.1;
+  music.playing = true; music.next = a.currentTime + 0.1; music.step = 0; music.track = trackIndex();
   schedule(); music.timer = setInterval(schedule, 200);
 }
-export function stopMusic() {
-  pendingMusic = false;
+export function stopMusic(keepPending = false) {
+  if (!keepPending) pendingMusic = false;
   if (!music.playing) return;
   music.playing = false; clearInterval(music.timer);
   if (music.gain && ctx) { music.gain.gain.cancelScheduledValues(ctx.currentTime); music.gain.gain.setValueAtTime(music.gain.gain.value, ctx.currentTime); music.gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.6); }

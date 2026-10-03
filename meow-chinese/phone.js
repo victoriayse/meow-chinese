@@ -20,11 +20,12 @@ export const PHONE_ICON = `<svg viewBox="0 0 32 40" width="34" height="42" aria-
 </svg>`;
 
 const APPS = [
-  { key: 'mail', icon: '✉️', zh: '信箱', en: 'Mail' },
+  { key: 'mail', icon: '💬', zh: '信息', en: 'Messages' },
   { key: 'noti', icon: '🔔', zh: '通知', en: 'Alerts' },
   { key: 'calc', icon: '🧮', zh: '计算器', en: 'Calc' },
   { key: 'clock', icon: '⏰', zh: '时钟', en: 'Clock' },
   { key: 'notes', icon: '📒', zh: '记事本', en: 'Notes' },
+  { key: 'bank', icon: '🏦', zh: '银行', en: 'Bank' },
 ];
 
 // ---------- timer & alarms keep running while the phone is closed ----------
@@ -82,6 +83,7 @@ export function openPhone({ start = 'home', after } = {}) {
   function show(view, ...args) {
     closePop();
     backFn = null; keyFn = null;
+    body.classList.remove('chat-mode');
     body.innerHTML = '';
     body.scrollTop = 0;
     VIEWS[view](...args);
@@ -126,56 +128,120 @@ export function openPhone({ start = 'home', after } = {}) {
       body.querySelectorAll('[data-app]').forEach((b) => { b.onclick = () => go(b.dataset.app); });
     },
 
-    // ----- mail -----
+    // ----- messages: one chat per friend -----
     mail() {
-      header('✉️ 信箱 Mail');
-      const letters = S.get().letters || [];
-      if (!letters.length) { body.appendChild(html`<p class="ph-empty">还没有信。<br>No letters yet.</p>`); return; }
+      S.purgeOldMessages();
+      header('💬 信息 Messages');
+      body.appendChild(html`<div class="ph-tip">⏳ 信息会在 ${S.MESSAGE_DAYS} 天后自动删除。<br>Messages disappear after ${S.MESSAGE_DAYS} days.</div>`);
+      const ts = S.threads();
+      if (!ts.length) { body.appendChild(html`<p class="ph-empty">还没有信息。<br>No messages yet.</p>`); return; }
       const list = html`<div class="ph-list"></div>`;
-      letters.forEach((l) => {
-        const r = html`<button class="ph-item ${l.read ? '' : 'unread'}"><span class="dot"></span><span class="txt"><b class="zh">${esc(l.fromName || '朋友')}</b><span class="prev zh">${esc(l.text)}</span></span><small>${when(l.at)}</small></button>`;
-        r.onclick = () => go('letter', l.id);
+      ts.forEach((t) => {
+        const last = t.msgs[t.msgs.length - 1];
+        const r = html`<button class="ph-item chat-row ${t.unread ? 'unread' : ''}"><span class="avatar">🐱</span><span class="txt"><b class="zh">${esc(t.name || '朋友')}</b><span class="prev zh">${last.mine ? '你: ' : ''}${esc(last.text)}</span></span><span class="meta"><small>${when(t.last)}</small>${t.unread ? `<i class="ph-badge static">${t.unread}</i>` : ''}</span></button>`;
+        r.onclick = () => go('chat', t.id);
         list.appendChild(r);
       });
       body.appendChild(list);
     },
-    letter(id) {
-      const l = (S.get().letters || []).find((x) => x.id === id);
-      header('✉️ 信 Letter');
-      if (!l) { body.appendChild(html`<p class="ph-empty">这封信已经删除了。 Deleted.</p>`); return; }
-      S.readLetter(id);
-      body.appendChild(html`<div class="ph-letter"><div class="lh"><b class="zh">${esc(l.fromName || '朋友')}</b><small>${when(l.at)}</small></div><div class="lt zh">${esc(l.text)}</div></div>`);
-      const act = html`<div class="ph-row"><button class="ph-btn green" id="rep">↩️ 回信 Reply</button><button class="ph-btn red" id="del">🗑 删除 Delete</button></div>`;
-      $('#rep', act).onclick = () => go('reply', id);
-      $('#del', act).onclick = async () => {
-        if (!(await ask('要删除这封信吗？<br>Delete this letter?'))) return;
+    chat(fid) {
+      S.purgeOldMessages();
+      const t = S.threads().find((x) => x.id === fid);
+      const h = html`<div class="ph-head"><button class="ph-back">◀</button><b class="zh">${esc((t && t.name) || '朋友')}</b><button class="ph-x" id="del-chat" aria-label="Delete chat">🗑</button></div>`;
+      $('.ph-back', h).onclick = back;
+      body.appendChild(h);
+      body.classList.add('chat-mode');
+      if (!t) { body.appendChild(html`<p class="ph-empty">没有信息。 No messages.</p>`); $('#del-chat', h).remove(); return; }
+      S.readThread(fid);
+      const log = html`<div class="chat-log"><div class="ph-tip small">⏳ 信息会在 ${S.MESSAGE_DAYS} 天后自动删除 · Messages disappear after ${S.MESSAGE_DAYS} days</div></div>`;
+      let lastDay = '';
+      t.msgs.forEach((m) => {
+        const day = new Date(m.at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
+        if (day !== lastDay) { lastDay = day; log.appendChild(html`<div class="chat-day">${day}</div>`); }
+        const b = html`<button class="bubble-msg ${m.mine ? 'mine' : 'theirs'}"><span class="zh">${esc(m.text)}</span><small>${new Date(m.at).toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' })}</small></button>`;
+        b.onclick = async () => {
+          if (!(await ask('要删除这条信息吗？<br>Delete this message?'))) return;
+          if (!(await ask('真的要删除吗？删除了就找不回来了。<br>Are you sure? It can\'t be brought back.', '确定删除 Yes, delete'))) return;
+          if (m.mine) S.deleteSent(m.id); else S.deleteLetter(m.id);
+          toast('🗑 已删除 Deleted'); show('chat', fid);
+        };
+        log.appendChild(b);
+      });
+      body.appendChild(log);
+      const canReply = fid !== 'unknown';
+      const bar = html`<div class="chat-input">${canReply ? `<textarea id="tx" rows="1" maxlength="${LETTER_MAX}" placeholder="写信息… Message"></textarea><button class="ph-btn green" id="send">➤</button>` : '<small>不能回复 Can\'t reply</small>'}</div>`;
+      body.appendChild(bar);
+      $('#del-chat', h).onclick = async () => {
+        if (!(await ask('要删除和这个朋友的全部信息吗？<br>Delete this whole chat?'))) return;
         if (!(await ask('真的要删除吗？删除了就找不回来了。<br>Are you sure? It can\'t be brought back.', '确定删除 Yes, delete'))) return;
-        S.deleteLetter(id); toast('🗑 已删除 Deleted'); back();
+        S.deleteThread(fid); toast('🗑 已删除 Deleted'); back();
       };
-      body.appendChild(act);
-    },
-    reply(id) {
-      const l = (S.get().letters || []).find((x) => x.id === id);
-      header('↩️ 回信 Reply');
-      if (!l) return;
-      const f = html`<div class="ph-compose">
-          <div class="help">给 To: <b class="zh">${esc(l.fromName || '朋友')}</b></div>
-          <textarea id="tx" maxlength="${LETTER_MAX}" rows="5" placeholder="谢谢你的信！……"></textarea>
-          <div class="ph-row"><small id="cnt">0/${LETTER_MAX}</small><button class="ph-btn green" id="send">📮 寄出 Send</button></div>
-        </div>`;
-      const tx = $('#tx', f);
-      tx.oninput = () => { $('#cnt', f).textContent = `${tx.value.length}/${LETTER_MAX}`; };
-      $('#send', f).onclick = async () => {
+      setTimeout(() => { log.scrollTop = log.scrollHeight; }, 0);
+      if (!canReply) return;
+      const tx = $('#tx', bar);
+      $('#send', bar).onclick = async () => {
         const text = tx.value.trim();
-        if (!text) return toast('写点什么吧！ Write something first');
-        if (!acceptedFriends().some((x) => x.other === l.from)) await refreshFriends();
-        if (!acceptedFriends().some((x) => x.other === l.from)) return toast('你们现在不是朋友了，不能回信。 You are no longer friends.');
-        $('#send', f).disabled = true;
-        try { await sendLetter(l.from, text); sfx.coin(); toast('📮 <span class="zh">回信寄出去了！</span> Reply sent!'); back(); }
-        catch (e) { $('#send', f).disabled = false; toast(errorText(e.message) || '没寄出，请再试。 Could not send — try again.'); }
+        if (!text) return;
+        if (!acceptedFriends().some((x) => x.other === fid)) await refreshFriends();
+        if (!acceptedFriends().some((x) => x.other === fid)) return toast('你们现在不是朋友了，不能回信。 You are no longer friends.');
+        $('#send', bar).disabled = true;
+        try { await sendLetter(fid, text, t.name); sfx.coin(); show('chat', fid); }
+        catch (e) { $('#send', bar).disabled = false; toast(errorText(e.message) || '没寄出，请再试。 Could not send — try again.'); }
       };
-      body.appendChild(f);
-      setTimeout(() => tx.focus(), 50);
+    },
+
+    // ----- bank -----
+    bank() {
+      header('🏦 喵喵银行 Bank');
+      const s = S.get(), deps = S.bank().deposits;
+      const saved = deps.reduce((a, d) => a + d.amount, 0);
+      body.appendChild(html`<div class="bank-card"><div><small>钱包 Wallet</small><b>${s.coins} ${coinI(18)}</b></div><div><small>存款 Saved</small><b>${saved} ${coinI(18)}</b></div></div>`);
+      const form = html`<div class="bank-form">
+          <b>存钱 Save coins</b>
+          <input type="number" id="amt" min="1" max="${s.coins}" inputmode="numeric" placeholder="多少金币？ How many coins?">
+          <div class="plans">${S.bankPlans().map((p, i) => `<button class="plan ${i === 0 ? 'on' : ''}" data-p="${i}"><b>${Math.round(p.rate * 100)}%</b><small>${p.days} 天 days</small></button>`).join('')}</div>
+          <div class="help" id="calc"></div>
+          <button class="ph-btn green block" id="dep">🐷 存进去 Deposit</button>
+          <div class="ph-note">要存够天数才有利息。提早拿出来就没有利息哦！<br>Leave it for the full days to earn interest. Take it out early and you get no interest.</div>
+        </div>`;
+      let plan = 0;
+      const amtIn = $('#amt', form);
+      const calc = () => {
+        const a = Math.floor(+amtIn.value || 0), p = S.bankPlans()[plan];
+        $('#calc', form).innerHTML = a > 0 ? `${p.days} 天后拿回 Get back after ${p.days} days: <b>${a + Math.round(a * p.rate)}</b> ${coinI(14)} (+${Math.round(a * p.rate)})` : '';
+        hydrateIcons(form);
+      };
+      form.querySelector('.plans').onclick = (e) => { const b = e.target.closest('[data-p]'); if (!b) return; plan = +b.dataset.p; form.querySelectorAll('.plan').forEach((x) => x.classList.toggle('on', x === b)); calc(); };
+      amtIn.oninput = calc;
+      $('#dep', form).onclick = () => {
+        const a = Math.floor(+amtIn.value || 0);
+        if (a <= 0) return toast('输入金币数量 Type how many coins');
+        if (a > S.get().coins) return toast('金币不够 Not enough coins');
+        S.deposit(a, plan); sfx.coin(); toast(`🐷 <span class="zh">存了 ${a} 金币！</span> Saved ${a} coins`); show('bank');
+      };
+      body.appendChild(form);
+      if (deps.length) {
+        body.appendChild(html`<b class="bank-h">我的存款 My savings</b>`);
+        deps.slice().sort((a, b) => S.depositMatures(a) - S.depositMatures(b)).forEach((d) => {
+          const p = S.depositTerms(d), ripe = Date.now() >= S.depositMatures(d);
+          const leftMs = S.depositMatures(d) - Date.now(), daysLeft = Math.ceil(leftMs / 86400000), hrsLeft = Math.ceil(leftMs / 3600000);
+          const r = html`<div class="dep ${ripe ? 'ripe' : ''}">
+              <div class="top"><b>${d.amount} ${coinI(16)}</b><span>${Math.round(p.rate * 100)}% · ${p.days} 天</span></div>
+              <div class="bar"><i style="width:${Math.min(100, ((Date.now() - d.at) / (p.days * 86400000)) * 100)}%"></i></div>
+              <div class="row-s">${ripe ? `✅ 可以拿了！ Ready: <b>${d.amount + S.depositInterest(d)}</b> ${coinI(14)}` : `⏳ 还有 ${daysLeft > 1 ? `${daysLeft} 天 days` : `${hrsLeft} 小时 hours`} · then +${S.depositInterest(d)}`}</div>
+              <button class="ph-btn ${ripe ? 'green' : ''} block" data-w>${ripe ? '💰 取出 Withdraw' : '取出 Withdraw early (no interest)'}</button>
+            </div>`;
+          $('[data-w]', r).onclick = async () => {
+            if (!ripe && !(await ask(`现在拿出来就<b>没有利息</b>，只拿回 ${d.amount} 金币。还要拿吗？<br>Taking it out now gives <b>no interest</b> — just your ${d.amount} coins back. Still withdraw?`, '拿出来 Withdraw'))) return;
+            const res = S.withdraw(d.id);
+            if (!res) return;
+            if (res.interest) { sfx.fanfare(); confetti(); toast(`💰 <span class="zh">拿回 ${res.amount + res.interest} 金币！</span> +${res.interest} interest!`, { ms: 3500 }); }
+            else { sfx.coin(); toast(`拿回 ${res.amount} 金币 · Got ${res.amount} coins back`); }
+            show('bank');
+          };
+          body.appendChild(r);
+        });
+      }
     },
 
     // ----- notifications -----

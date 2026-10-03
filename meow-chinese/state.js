@@ -57,7 +57,9 @@ function fresh() {
     appliedEvents: [], // friend event ids already handled on this account
     notifications: [], // the flip phone's notifications: { id, kind, title, body, essayId, at, read }
     notes: [],         // notepad: { id, text, at }
-    alarms: [],        // clock alarms: { id, time: 'HH:MM', on }    // where she dragged each home item: { id: { x, y } } in % of the room
+    alarms: [],        // clock alarms: { id, time: 'HH:MM', on }
+    sentLetters: [],   // messages she sent: { id, to, toName, text, at }
+    bank: { deposits: [] },  // fixed deposits: { id, amount, plan, at }    // where she dragged each home item: { id: { x, y } } in % of the room
     catPos: null,    // where the kitten stands in the house: { x, y } in % (x = centre, y = from the floor)
     lists: [list],
     activeListId: list.id,
@@ -396,6 +398,14 @@ export function parseWords(text) {
   return out;
 }
 
+// essay helping words: exactly one word or phrase per line (spaces are kept), optional "| meaning"
+export function parseLines(text) {
+  return String(text).split(/\r?\n/).map((line) => line.trim()).filter(Boolean).map((line) => {
+    const [left, ...rest] = line.split(/[|｜\t]/);
+    return { w: left.trim().replace(/\s+/g, ' '), hint: rest.join(' ').trim() };
+  }).filter((x) => x.w);
+}
+
 // ---------- "Play with me": a surprise revision round of past words ----------
 export const PLAY_REWARD = 15;
 export function maybeBored() {
@@ -495,6 +505,77 @@ export function essayNotifications() {
     }
   });
   if (changed) save();
+}
+// messages older than 10 days disappear by themselves
+export const MESSAGE_DAYS = 10;
+export function purgeOldMessages() {
+  const cut = Date.now() - MESSAGE_DAYS * 86400000;
+  const a = state.letters || [], b = state.sentLetters || [];
+  const a2 = a.filter((x) => x.at >= cut), b2 = b.filter((x) => x.at >= cut);
+  if (a2.length !== a.length || b2.length !== b.length) { state.letters = a2; state.sentLetters = b2; save(); }
+}
+export function recordSent(to, toName, text) {
+  state.sentLetters = [{ id: uid(), to, toName, text: String(text).slice(0, 300), at: Date.now() }, ...(state.sentLetters || [])].slice(0, 300);
+  save();
+}
+export function deleteSent(id) { state.sentLetters = (state.sentLetters || []).filter((x) => x.id !== id); save(); }
+export function deleteThread(friendId) {
+  state.letters = (state.letters || []).filter((x) => x.from !== friendId);
+  state.sentLetters = (state.sentLetters || []).filter((x) => x.to !== friendId);
+  save();
+}
+// conversations grouped by friend, newest first
+export function threads() {
+  const map = new Map();
+  const add = (fid, name, m) => {
+    if (!map.has(fid)) map.set(fid, { id: fid, name, msgs: [], unread: 0, last: 0 });
+    const t = map.get(fid);
+    t.msgs.push(m);
+    if (m.at > t.last) { t.last = m.at; if (name) t.name = name; }
+    if (m.mine === false && !m.read) t.unread++;
+  };
+  (state.letters || []).forEach((l) => add(l.from || 'unknown', l.fromName, { ...l, mine: false }));
+  (state.sentLetters || []).forEach((l) => add(l.to, l.toName, { ...l, mine: true, read: true }));
+  const out = [...map.values()];
+  out.forEach((t) => t.msgs.sort((x, y) => x.at - y.at));
+  return out.sort((x, y) => y.last - x.last);
+}
+export function readThread(friendId) {
+  let ch = false;
+  (state.letters || []).forEach((l) => { if (l.from === friendId && !l.read) { l.read = true; ch = true; } });
+  if (ch) save();
+}
+
+// ----- bank: fixed deposits that earn interest if left long enough -----
+export const BANK_DEFAULTS = [{ rate: 0.10, days: 5 }, { rate: 0.15, days: 7 }, { rate: 0.20, days: 14 }];
+// parents can change the three plans; each deposit keeps the terms it was made with
+export const bankPlans = () => {
+  const p = state.settings.bankPlans;
+  return Array.isArray(p) && p.length === 3 ? p.map((x, i) => ({ rate: Number.isFinite(+x.rate) ? +x.rate : BANK_DEFAULTS[i].rate, days: Math.max(1, Math.round(+x.days || BANK_DEFAULTS[i].days)) })) : BANK_DEFAULTS;
+};
+export function setBankPlans(list) { state.settings.bankPlans = list.map((x) => ({ rate: Math.max(0, Math.min(5, +x.rate || 0)), days: Math.max(1, Math.min(365, Math.round(+x.days || 1))) })); save(); }
+const terms = (d) => (Number.isFinite(d.rate) && d.days ? { rate: d.rate, days: d.days } : (bankPlans()[d.plan] || BANK_DEFAULTS[0]));
+export const depositTerms = terms;
+export const bank = () => { if (!state.bank) state.bank = { deposits: [] }; return state.bank; };
+export const depositMatures = (d) => d.at + terms(d).days * 86400000;
+export const depositInterest = (d) => Math.round(d.amount * terms(d).rate);
+export function deposit(amount, plan) {
+  amount = Math.floor(Number(amount) || 0);
+  const p = bankPlans()[plan];
+  if (amount <= 0 || amount > state.coins || !p) return null;
+  state.coins -= amount;
+  const d = { id: uid(), amount, plan, rate: p.rate, days: p.days, at: Date.now() };
+  bank().deposits.push(d); save(); return d;
+}
+export function withdraw(id) {
+  const b = bank(), d = b.deposits.find((x) => x.id === id);
+  if (!d) return null;
+  const ripe = Date.now() >= depositMatures(d);
+  const interest = ripe ? depositInterest(d) : 0;
+  b.deposits = b.deposits.filter((x) => x.id !== id);
+  state.coins += d.amount + interest;
+  save();
+  return { amount: d.amount, interest };
 }
 export function readLetter(id) { const l = (state.letters || []).find((x) => x.id === id); if (l && !l.read) { l.read = true; save(); } }
 export function deleteLetter(id) { state.letters = (state.letters || []).filter((x) => x.id !== id); save(); }

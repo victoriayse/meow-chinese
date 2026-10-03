@@ -2,7 +2,7 @@
 import * as S from './state.js';
 import { drawLandscape, FURS, ITEMS, spriteCanvas, itemEffect, drawGrid, artGrid, TOMB, drawRoom, drawRoof, ROOM_WINDOW } from './pixel.js';
 import { $, $$, html, esc, hydrateIcons, coinI, KittenView, burst, toast, openModal, closeModal, tapSound, confirmBox, confetti } from './ui.js';
-import { sfx, meow, startMusic, stopMusic, musicOn } from './audio.js';
+import { sfx, meow, startMusic, stopMusic, musicOn, TRACKS, trackIndex, setTrack } from './audio.js';
 import { spellingScreen } from './spell.js';
 import { shopScreen, wardrobeScreen } from './shop.js';
 import { parentScreen } from './parent.js';
@@ -61,7 +61,7 @@ export function go(name, params = {}, opts = {}) {
   renderTopbar();
   if (node._mounted) node._mounted();
   // soothing music on the calm pages; quiet during spelling so she can hear the words
-  if (['home', 'shop', 'wardrobe', 'grave'].includes(name)) startMusic(); else stopMusic();
+  if (MUSIC_PAGES.includes(name)) startMusic(); else stopMusic();
 }
 function refreshHome() { go('home', current === 'home' ? currentParams : {}, { replace: true }); }
 export function goBack() {
@@ -69,6 +69,33 @@ export function goBack() {
   go(prev.name, prev.params, { back: true });
 }
 const canGoBack = () => current && !['welcome', 'setup', 'grave', 'login'].includes(current) && !(current === 'home' && !currentParams.view);
+
+// ---------- music picker: five cosy tunes, or off ----------
+const MUSIC_PAGES = ['home', 'shop', 'wardrobe', 'grave', 'friends', 'friend'];
+function openMusicPicker() {
+  const draw = () => {
+    const on = musicOn(), cur = trackIndex();
+    n.innerHTML = `<div class="h-title"><span class="zh">🎵 选音乐</span><span class="en">Choose music</span></div>
+      <div class="tracks">${TRACKS.map((t, i) => `<button class="track ${on && i === cur ? 'on' : ''}" data-i="${i}"><span class="ic">${t.icon}</span><span><span class="zh">${t.zh}</span><small>${t.en}</small></span><span class="mark">${on && i === cur ? '▶' : ''}</span></button>`).join('')}
+        <button class="track off ${on ? '' : 'on'}" data-i="off"><span class="ic">🔇</span><span><span class="zh">关掉音乐</span><small>Music off</small></span><span class="mark">${on ? '' : '✓'}</span></button></div>
+      <button class="btn white" id="close">关闭 Close</button>`;
+    $('#close', n).onclick = closeModal;
+  };
+  const n = html`<div class="card stack music-pick"></div>`;
+  n.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-i]'); if (!b) return;
+    const set = S.get().settings;
+    if (b.dataset.i === 'off') { set.music = false; S.save(); stopMusic(); }
+    else {
+      const i = +b.dataset.i, was = musicOn();
+      set.music = true; set.musicTrack = i; S.save();
+      if (was) setTrack(i); else startMusic();
+    }
+    draw(); renderTopbar();
+  });
+  draw();
+  openModal(n);
+}
 
 // ---------- top bar ----------
 let lastCoins = null;
@@ -93,11 +120,7 @@ function renderTopbar() {
   kv.canvas.classList.remove('bob');
   $('#logo-kit', bar).replaceWith(kv.canvas);
   bar.onclick = (e) => {
-    if (e.target.closest('#music-btn')) {
-      S.get().settings.music = !musicOn(); S.save();
-      if (musicOn() && ['home', 'shop', 'wardrobe', 'grave'].includes(current)) startMusic(); else stopMusic();
-      renderTopbar(); return;
-    }
+    if (e.target.closest('#music-btn')) { openMusicPicker(); return; }
     if (e.target.closest('#back-btn')) {
       if (current === 'spell' && app.firstElementChild?._leave) { app.firstElementChild._leave(() => goBack()); return; }
       goBack(); return;
@@ -273,6 +296,7 @@ function spellPicker() {
 function homeScreen(params = {}) {
   S.tick();
   S.essayNotifications();
+  S.purgeOldMessages();
   const inHouse = params.view === 'house' && S.unlocked('decor');
   if (S.health() === 'dead') return graveScreen();
   if (S.get().needsSetup) return setupScreen();

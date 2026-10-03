@@ -23,6 +23,7 @@ export function parentScreen({ go, tab = 'lists' }) {
         <button class="tab" data-tab="progress"><span class="zh">学习进度</span> Progress</button>
         <button class="tab" data-tab="essays"><span class="zh">作文</span> Essays${S.essays().some((e) => e.status === 'submitted') ? ' 🔴' : ''}</button>
         <button class="tab" data-tab="friends"><span class="zh">朋友</span> Friends${incomingRequests().length ? ' 🔴' : ''}</button>
+        <button class="tab" data-tab="bank"><span class="zh">银行</span> Bank</button>
         <button class="tab" data-tab="shop"><span class="zh">商店价格</span> Prices</button>
         <button class="tab" data-tab="settings"><span class="zh">设置</span> Settings</button>
       </div>
@@ -33,7 +34,7 @@ export function parentScreen({ go, tab = 'lists' }) {
     tab = t;
     $$('.tab', n).forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
     body.innerHTML = '';
-    body.appendChild(t === 'lists' ? listsView(rerender) : t === 'progress' ? progressView(rerender) : t === 'shop' ? pricesView(rerender) : t === 'essays' ? essaysView(rerender) : t === 'friends' ? parentFriendsView(rerender) : settingsView(rerender, go));
+    body.appendChild(t === 'lists' ? listsView(rerender) : t === 'progress' ? progressView(rerender) : t === 'shop' ? pricesView(rerender) : t === 'essays' ? essaysView(rerender) : t === 'friends' ? parentFriendsView(rerender) : t === 'bank' ? bankView(rerender) : settingsView(rerender, go));
     hydrateIcons(body);
   };
   const rerender = () => show(tab);
@@ -50,6 +51,35 @@ async function logOut(go) {
   Cloud.stop(); await Auth.signOut();
   S.resetAll();
   unlockedUntil = 0; go('login');
+}
+
+// ---------- bank: interest plans ----------
+function bankView(rerender) {
+  const plans = S.bankPlans();
+  const deps = S.bank().deposits;
+  const n = html`<div class="stack">
+      <p class="help">The 🏦 Bank app on her phone lets her save coins for a set number of days. If she leaves them for the full time she gets interest; taking them out early gives back only what she put in. Set the three plans here. Changes apply to <b>new</b> deposits — money already saved keeps the terms it was saved with.</p>
+      <div class="bank-plans">${plans.map((p, i) => `<div class="bank-plan card">
+          <b>Plan ${i + 1}</b>
+          <label class="field">Interest %<input type="number" min="0" max="500" step="1" inputmode="numeric" data-r="${i}" value="${Math.round(p.rate * 1000) / 10}"></label>
+          <label class="field">Days to wait<input type="number" min="1" max="365" inputmode="numeric" data-d="${i}" value="${p.days}"></label>
+        </div>`).join('')}</div>
+      <div class="row"><button class="btn green" id="save">Save plans</button><button class="btn white" id="reset">Reset to 10% / 15% / 20%</button></div>
+      <h3>Her savings</h3>
+      <div id="deps" class="stack"></div>
+    </div>`;
+  $('#save', n).onclick = () => {
+    const list = plans.map((_, i) => ({ rate: (+$(`[data-r="${i}"]`, n).value || 0) / 100, days: +$(`[data-d="${i}"]`, n).value || 1 }));
+    S.setBankPlans(list); toast('Bank plans saved ✓'); rerender();
+  };
+  $('#reset', n).onclick = () => { S.setBankPlans(S.BANK_DEFAULTS); toast('Reset ✓'); rerender(); };
+  const box = $('#deps', n);
+  if (!deps.length) box.innerHTML = '<p class="help" style="margin:0">Nothing saved yet.</p>';
+  deps.forEach((d) => {
+    const t = S.depositTerms(d), due = S.depositMatures(d), ripe = Date.now() >= due;
+    box.appendChild(html`<div class="list-row" style="grid-template-columns:1fr auto"><div><b>${d.amount} coins</b> · ${Math.round(t.rate * 1000) / 10}% for ${t.days} days<div class="help" style="margin:0">Saved ${new Date(d.at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })} · ${ripe ? 'ready now' : 'ready ' + new Date(due).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })} · +${S.depositInterest(d)} interest</div></div><span>${ripe ? '✅' : '⏳'}</span></div>`);
+  });
+  return n;
 }
 
 // ---------- PIN ----------
@@ -418,10 +448,11 @@ function essaysView(rerender) {
           <div class="help" style="margin:0">Set ${new Date(e.createdAt).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })} · ${e.minChars}+ characters · ${e.words.length} helping words${e.timeLimit ? ` · ⏱ ${e.timeLimit} min${e.allowExtend === false ? '' : ' (extend allowed)'}` : ''}${e.startedAt && e.timeLimit ? ` · started ${new Date(e.startedAt).toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' })}` : ''}${e.extensions ? ` · extended ${e.extensions}× (+${e.extensions * S.EXTEND_MIN} min)` : ''}${e.submittedAt && e.startedAt ? ` · took ${Math.max(1, Math.round((e.submittedAt - e.startedAt) / 60000))} min` : ''}${e.submittedAt ? ` · submitted ${new Date(e.submittedAt).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })}` : ''}</div>
           <div class="chips">${e.words.map((w) => `<span class="chip">${esc(w.w)}</span>`).join('')}</div>
           <div class="review"></div>
-          <div class="row"><button class="btn white small" data-a="del">🗑 Delete</button></div>
+          <div class="row"><button class="btn white small" data-a="edit">✏️ Edit / change picture</button><button class="btn white small" data-a="del">🗑 Delete</button></div>
         </div>
       </div>`;
     $('.essay-thumb', r).appendChild(pictureNode(e));
+    r.querySelector('[data-a=edit]').onclick = () => newEssay(rerender, e);
     const rv = $('.review', r);
     if (e.status === 'submitted') {
       let stars = 3;
@@ -456,66 +487,113 @@ function essaysView(rerender) {
   return n;
 }
 
-function newEssay(rerender) {
-  let source = 'builtin', storyId = STORIES[0].id, file = null;
+function newEssay(rerender, edit = null) {
+  // edit: an existing essay to change (title, words, timer, and the picture: keep / replace / remove / switch)
+  let source = edit ? (edit.image ? 'upload' : edit.storyId ? 'builtin' : 'none') : 'builtin';
+  let storyId = (edit && edit.storyId) || STORIES[0].id, file = null, removePhoto = false;
   const box = html`<div class="card stack">
-      <h3>New picture composition</h3>
-      <div class="seg"><button type="button" data-src="builtin" class="on">用内置图 Built-in pictures</button><button type="button" data-src="upload">上传照片 Upload a photo</button></div>
+      <h3>${edit ? 'Edit picture composition' : 'New picture composition'}</h3>
+      <div class="seg"><button type="button" data-src="builtin">用内置图 Built-in pictures</button><button type="button" data-src="upload">上传照片 Upload a photo</button></div>
       <div id="src-builtin" class="story-picks"></div>
       <div id="src-upload" class="hidden stack">
-        <label class="btn white" style="align-self:flex-start">📷 Choose or take a photo<input type="file" id="file" accept="image/*" hidden></label>
+        <div id="cur-photo" class="cur-photo hidden"></div>
+        <div class="row">
+          <label class="btn white" style="align-self:flex-start"><span id="pick-lbl">📷 Choose or take a photo</span><input type="file" id="file" accept="image/*" hidden></label>
+          <button type="button" class="btn white hidden" id="rm-photo">🗑 Remove photo</button>
+        </div>
         <div class="help" style="margin:0">Photograph the pictures from her worksheet or assessment book. They are kept privately in your account.</div>
         <img id="preview" class="hidden" style="max-width:100%;border:3px solid var(--ink);border-radius:6px" alt="">
       </div>
       <label class="field">Title<input id="title" placeholder="例如：下雨天"></label>
-      <label class="field">参考词语 Helping words — one per line (or separated by spaces)
-        <textarea id="words" style="min-height:120px" placeholder="着急&#10;雨伞 | umbrella&#10;关心"></textarea>
-        <small>Optional: add “| English meaning” after a word. Pinyin and sound are added automatically.</small>
+      <label class="field"><span>参考词语 Helping words — <b>one word or phrase per line</b></span>
+        <textarea id="words" style="min-height:120px" placeholder="着急&#10;雨伞 | umbrella&#10;一边……一边……&#10;Locked In"></textarea>
+        <small>Each line is one helping word, even with spaces in it. Optional: add “| English meaning” after it. Pinyin and sound are added automatically.</small>
       </label>
+      <div class="chips" id="wprev"></div>
       <div class="row" style="align-items:flex-end;gap:14px">
         <label class="field" style="width:200px">At least how many characters?<input type="number" id="min" value="80" min="20" max="600" inputmode="numeric"></label>
         <label class="field" style="width:200px">Time limit (minutes)<input type="number" id="tlim" value="40" min="0" max="240" inputmode="numeric"><small class="help" style="margin:0">0 = no timer</small></label>
       </div>
       <div class="toggle"><span>Allow “Extend Timer”<br><small class="help">When time is up she can write ${S.EXTEND_WORDS} words from her mistakes to get ${S.EXTEND_MIN} more minutes.</small></span><button type="button" class="switch on" id="ext"></button></div>
-      <div class="row" style="justify-content:flex-end"><button class="btn white" id="c">Cancel</button><button class="btn green" id="ok">Set this essay</button></div>
+      <div class="row" style="justify-content:flex-end"><button class="btn white" id="c">Cancel</button><button class="btn green" id="ok">${edit ? 'Save changes' : 'Set this essay'}</button></div>
     </div>`;
   const picks = $('#src-builtin', box);
   const fillFromStory = (st) => { $('#title', box).value = st.title; $('#words', box).value = st.words.join('\n'); };
   STORIES.forEach((st) => {
     const b = html`<button type="button" class="story-pick ${st.id === storyId ? 'on' : ''}" data-id="${st.id}">${storySVG(st)}<span class="zh">${st.title}</span><small>${st.en}</small></button>`;
-    b.onclick = () => { storyId = st.id; picks.querySelectorAll('.story-pick').forEach((x) => x.classList.toggle('on', x.dataset.id === st.id)); fillFromStory(st); };
+    b.onclick = () => { storyId = st.id; picks.querySelectorAll('.story-pick').forEach((x) => x.classList.toggle('on', x.dataset.id === st.id)); if (!edit) fillFromStory(st); };
     picks.appendChild(b);
   });
-  fillFromStory(STORIES[0]);
+  const showSource = () => {
+    box.querySelectorAll('[data-src]').forEach((x) => x.classList.toggle('on', x.dataset.src === source));
+    $('#src-builtin', box).classList.toggle('hidden', source !== 'builtin');
+    $('#src-upload', box).classList.toggle('hidden', source === 'builtin');
+    // the photo already saved with this essay
+    const hasOld = edit && edit.image && !removePhoto && !file;
+    const cur = $('#cur-photo', box);
+    cur.classList.toggle('hidden', !hasOld);
+    if (hasOld && !cur.firstChild) { cur.appendChild(html`<small class="help" style="margin:0">Current photo:</small>`); cur.appendChild(pictureNode({ ...edit, storyId: null }, { zoom: false })); }
+    $('#rm-photo', box).classList.toggle('hidden', !(hasOld || file));
+    $('#pick-lbl', box).textContent = hasOld || file ? '🔄 Replace photo' : '📷 Choose or take a photo';
+  };
+  if (edit) {
+    $('#title', box).value = edit.title; $('#words', box).value = edit.words.map((w) => (w.meaning ? `${w.w} | ${w.meaning}` : w.w)).join('\n');
+    $('#min', box).value = edit.minChars; $('#tlim', box).value = edit.timeLimit || 0;
+    $('#ext', box).classList.toggle('on', edit.allowExtend !== false);
+    if (source === 'none') source = 'upload';
+  } else fillFromStory(STORIES[0]);
+  showSource();
   box.querySelector('.seg').onclick = (ev) => {
     const b = ev.target.closest('[data-src]'); if (!b) return;
     source = b.dataset.src;
-    box.querySelectorAll('[data-src]').forEach((x) => x.classList.toggle('on', x === b));
-    $('#src-builtin', box).classList.toggle('hidden', source !== 'builtin');
-    $('#src-upload', box).classList.toggle('hidden', source !== 'upload');
-    if (source === 'upload') { $('#title', box).value = ''; $('#words', box).value = ''; } else fillFromStory(STORIES.find((x) => x.id === storyId));
+    if (!edit) { if (source === 'upload') { $('#title', box).value = ''; $('#words', box).value = ''; } else fillFromStory(STORIES.find((x) => x.id === storyId)); }
+    showSource();
   };
   $('#file', box).onchange = (ev) => {
     file = ev.target.files[0]; if (!file) return;
+    removePhoto = false;
     const img = $('#preview', box); img.src = URL.createObjectURL(file); img.classList.remove('hidden');
+    showSource();
   };
+  $('#rm-photo', box).onclick = () => {
+    if (file) { file = null; $('#file', box).value = ''; $('#preview', box).classList.add('hidden'); }
+    else removePhoto = true;
+    showSource();
+  };
+  // live preview: one chip per line, so she sees exactly what the helping words will be
+  const wprev = () => {
+    const ws = S.parseLines($('#words', box).value);
+    $('#wprev', box).innerHTML = ws.length ? `<small class="help" style="margin:0;width:100%">${ws.length} helping word${ws.length === 1 ? '' : 's'}:</small>` + ws.map((x) => `<span class="chip">${esc(x.w)}${x.hint ? ` <small>· ${esc(x.hint)}</small>` : ''}</span>`).join('') : '';
+  };
+  $('#words', box).addEventListener('input', wprev);
+  wprev();
+  box.addEventListener('click', (ev) => { if (ev.target.closest('.story-pick, [data-src]')) setTimeout(wprev, 0); });
   $('#ext', box).onclick = (ev) => ev.currentTarget.classList.toggle('on');
   $('#c', box).onclick = closeModal;
   $('#ok', box).onclick = async () => {
     const title = $('#title', box).value.trim();
     const timeLimit = Math.max(0, Math.min(240, Math.round(+$('#tlim', box).value || 0)));
     const allowExtend = $('#ext', box).classList.contains('on');
-    const words = S.parseWords($('#words', box).value).map((x) => ({ w: x.w, meaning: x.hint }));
+    const words = S.parseLines($('#words', box).value).map((x) => ({ w: x.w, meaning: x.hint }));
     const minChars = Math.max(20, Math.round(+$('#min', box).value || 80));
     if (!title) return toast('Give it a title');
-    let image = null;
+    const btn = $('#ok', box);
+    let image = edit ? edit.image || null : null;
     if (source === 'upload') {
-      if (!file) return toast('Choose a photo first');
-      const btn = $('#ok', box); btn.disabled = true; btn.textContent = 'Uploading…';
-      try { image = await Cloud.uploadEssayImage(file); } catch (err) { btn.disabled = false; btn.textContent = 'Set this essay'; return toast(err.message || 'Upload failed'); }
+      if (file) {
+        btn.disabled = true; btn.textContent = 'Uploading…';
+        try { image = await Cloud.uploadEssayImage(file); } catch (err) { btn.disabled = false; btn.textContent = edit ? 'Save changes' : 'Set this essay'; return toast(err.message || 'Upload failed'); }
+      } else if (removePhoto) image = null;
+      else if (!image && !edit) return toast('Choose a photo first');
+    } else image = null;
+    if (edit) {
+      if (edit.image && edit.image !== image) Cloud.deleteEssayImage(edit.image);       // replaced or removed: tidy up the old photo
+      S.updateEssay(edit.id, { title, storyId: source === 'builtin' ? storyId : null, image, words, minChars, timeLimit, allowExtend });
+      closeModal(); toast('Saved ✓'); rerender();
+    } else {
+      S.addEssay({ title, storyId: source === 'builtin' ? storyId : null, image, words, minChars, timeLimit, allowExtend });
+      closeModal(); toast('Essay set ✓ The kitten will tell her'); rerender();
     }
-    S.addEssay({ title, storyId: source === 'builtin' ? storyId : null, image, words, minChars, timeLimit, allowExtend });
-    closeModal(); toast('Essay set ✓ The kitten will tell her'); rerender();
   };
   openModal(box);
   $('#modal .card').style.width = 'min(860px, 96vw)';

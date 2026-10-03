@@ -231,14 +231,20 @@ function writeLetter(f) {
     const text = tx.value.trim();
     if (!text) return toast('写点什么吧！ Write something first');
     $('#ok', box).disabled = true;
-    try { await sendEvent(f.other, 'letter', { text: text.slice(0, LETTER_MAX) }); closeModal(); sfx.coin(); toast('📮 <span class="zh">信寄出去了！</span> Letter sent!'); }
+    try { await sendLetter(f.other, text, friendName(f)); closeModal(); sfx.coin(); toast('📮 <span class="zh">信寄出去了！</span> Letter sent!'); }
     catch (e) { $('#ok', box).disabled = false; toast(ERR[e.message] || '没寄出，请再试。 Could not send — try again.'); }
   };
   openModal(box);
   setTimeout(() => tx.focus(), 50);
 }
 
-export const sendLetter = (to, text) => sendEvent(to, 'letter', { text: String(text).slice(0, LETTER_MAX) });
+export async function sendLetter(to, text, toName) {
+  const t = String(text).slice(0, LETTER_MAX);
+  const r = await sendEvent(to, 'letter', { text: t });
+  const row = friends.find((f) => f.other === to);
+  S.recordSent(to, toName || (row ? friendName(row) : '朋友'), t);
+  return r;
+}
 export const errorText = (code) => ERR[code];
 const GIFT_TABS = TABS.filter((t) => ['food', 'head', 'body', 'feet', 'acc', 'decor'].includes(t.key));
 function sendGift(f) {
