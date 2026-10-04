@@ -122,7 +122,7 @@ export function essayScreen({ go, id }) {
     return n;
   }
   if (timed) {
-    const bar = html`<div class="essay-timer"><span class="t-icon">⏱</span><span class="t-left" id="tleft">--:--</span><span class="t-note" id="tnote"></span><button class="btn small white hidden" id="tup">⏰ <span class="zh">时间到</span></button></div>`;
+    const bar = html`<div class="essay-timer"><span class="t-icon">⏱</span><span class="t-left" id="tleft">--:--</span><span class="t-note" id="tnote"></span><button class="btn small white hidden" id="tup">⏰ <span class="zh">时间到</span></button><button class="btn small white hidden" id="restart">↺ <span class="zh">重新开始</span> Restart <b id="rs-left"></b></button></div>`;
     root.prepend(bar);
     let shownFor = null;
     const fmt = (ms) => { const t = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; };
@@ -136,11 +136,20 @@ export function essayScreen({ go, id }) {
       bar.classList.toggle('over', left <= 0);
       $('#tnote', bar).textContent = cur.extensions ? `+${cur.extensions * S.EXTEND_MIN} min` : '';
       $('#tup', bar).classList.toggle('hidden', left > 0);
+      // a 10-second window to restart (e.g. she pressed Start by mistake)
+      const sinceStart = Date.now() - cur.startedAt, canRestart = sinceStart < S.RESTART_WINDOW && !cur.extensions;
+      $('#restart', bar).classList.toggle('hidden', !canRestart);
+      if (canRestart) $('#rs-left', bar).textContent = `${Math.ceil((S.RESTART_WINDOW - sinceStart) / 1000)}s`;
       const end = S.essayEndsAt(cur);
       if (left <= 0 && shownFor !== end && document.querySelector('#modal').classList.contains('hidden')) { shownFor = end; timesUp(cur); }
     };
     const timer = setInterval(tick, 500);
     $('#tup', bar).onclick = () => timesUp(S.essays().find((x) => x.id === e.id) || e);
+    $('#restart', bar).onclick = () => {
+      if (!S.restartEssay(e.id)) return toast('太晚了，不能重新开始。 Too late to restart.');
+      clearInterval(timer); toast('↺ <span class="zh">重新开始</span> Timer reset');
+      go('essay', { id: e.id }, { replace: true });
+    };
     setTimeout(tick, 0);
   }
   function timesUp(cur) {

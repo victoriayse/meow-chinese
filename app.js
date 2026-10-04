@@ -2,7 +2,7 @@
 import * as S from './state.js';
 import { drawLandscape, FURS, ITEMS, spriteCanvas, itemEffect, drawGrid, artGrid, TOMB, drawRoom, drawRoof, ROOM_WINDOW } from './pixel.js';
 import { $, $$, html, esc, hydrateIcons, coinI, KittenView, burst, toast, openModal, closeModal, tapSound, confirmBox, confetti } from './ui.js';
-import { sfx, meow, startMusic, stopMusic, musicOn } from './audio.js';
+import { sfx, meow, startMusic, stopMusic, musicOn, TRACKS, trackIndex, setTrack } from './audio.js';
 import { spellingScreen } from './spell.js';
 import { shopScreen, wardrobeScreen } from './shop.js';
 import { parentScreen } from './parent.js';
@@ -10,6 +10,9 @@ import { essayScreen, showEssayReward } from './essay.js';
 import * as Cloud from './cloud.js';
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
+import { openPhone, PHONE_ICON } from './phone.js';
+import { randomJoke } from './jokes.js';
+import { practiceListScreen, practiceScreen, KINDS } from './practice.js';
 
 const app = $('#app');
 let current = null;
@@ -34,10 +37,13 @@ const screens = {
   spell: (p) => spellingScreen({ ...p, go }),
   shop: (p) => shopScreen({ go, ...p }),
   wardrobe: () => wardrobeScreen({ go }),
-  parent: (p) => parentScreen({ ...p, go }),
+  parent: (p) => { p.go = go; return parentScreen(p); },
   grave: graveScreen,
   essay: (p) => essayScreen({ ...p, go }),
   friends: () => Friends.friendsScreen({ go }),
+  tasks: () => tasksScreen(),
+  practiceList: (p) => practiceListScreen({ ...p, go }),
+  practice: (p) => practiceScreen({ ...p, go }),
   friend: (p) => Friends.friendScreen({ ...p, go }),
 };
 // a simple history so every page can go Back
@@ -53,6 +59,7 @@ export function go(name, params = {}, opts = {}) {
   }
   if (NO_HISTORY.includes(name)) stack.length = 0;
   current = name; currentParams = params;
+  Friends.setActivity({ spell: 'spelling', essay: 'essay', tasks: 'practice', practice: 'practice', practiceList: 'practice', shop: 'shop', wardrobe: 'wardrobe', friends: 'friends', friend: 'friends' }[name] || (name === 'home' && params.view === 'house' ? 'house' : 'online'));
   app.innerHTML = '';
   const node = screens[name](params);
   app.appendChild(node);
@@ -60,7 +67,7 @@ export function go(name, params = {}, opts = {}) {
   renderTopbar();
   if (node._mounted) node._mounted();
   // soothing music on the calm pages; quiet during spelling so she can hear the words
-  if (['home', 'shop', 'wardrobe', 'grave'].includes(name)) startMusic(); else stopMusic();
+  if (MUSIC_PAGES.includes(name)) startMusic(); else stopMusic();
 }
 function refreshHome() { go('home', current === 'home' ? currentParams : {}, { replace: true }); }
 export function goBack() {
@@ -68,6 +75,33 @@ export function goBack() {
   go(prev.name, prev.params, { back: true });
 }
 const canGoBack = () => current && !['welcome', 'setup', 'grave', 'login'].includes(current) && !(current === 'home' && !currentParams.view);
+
+// ---------- music picker: five cosy tunes, or off ----------
+const MUSIC_PAGES = ['home', 'shop', 'wardrobe', 'grave', 'friends', 'friend'];
+function openMusicPicker() {
+  const draw = () => {
+    const on = musicOn(), cur = trackIndex();
+    n.innerHTML = `<div class="h-title"><span class="zh">🎵 选音乐</span><span class="en">Choose music</span></div>
+      <div class="tracks">${TRACKS.map((t, i) => `<button class="track ${on && i === cur ? 'on' : ''}" data-i="${i}"><span class="ic">${t.icon}</span><span><span class="zh">${t.zh}</span><small>${t.en}</small></span><span class="mark">${on && i === cur ? '▶' : ''}</span></button>`).join('')}
+        <button class="track off ${on ? '' : 'on'}" data-i="off"><span class="ic">🔇</span><span><span class="zh">关掉音乐</span><small>Music off</small></span><span class="mark">${on ? '' : '✓'}</span></button></div>
+      <button class="btn white" id="close">关闭 Close</button>`;
+    $('#close', n).onclick = closeModal;
+  };
+  const n = html`<div class="card stack music-pick"></div>`;
+  n.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-i]'); if (!b) return;
+    const set = S.get().settings;
+    if (b.dataset.i === 'off') { set.music = false; S.save(); stopMusic(); }
+    else {
+      const i = +b.dataset.i, was = musicOn();
+      set.music = true; set.musicTrack = i; S.save();
+      if (was) setTrack(i); else startMusic();
+    }
+    draw(); renderTopbar();
+  });
+  draw();
+  openModal(n);
+}
 
 // ---------- top bar ----------
 let lastCoins = null;
@@ -92,11 +126,7 @@ function renderTopbar() {
   kv.canvas.classList.remove('bob');
   $('#logo-kit', bar).replaceWith(kv.canvas);
   bar.onclick = (e) => {
-    if (e.target.closest('#music-btn')) {
-      S.get().settings.music = !musicOn(); S.save();
-      if (musicOn() && ['home', 'shop', 'wardrobe', 'grave'].includes(current)) startMusic(); else stopMusic();
-      renderTopbar(); return;
-    }
+    if (e.target.closest('#music-btn')) { openMusicPicker(); return; }
     if (e.target.closest('#back-btn')) {
       if (current === 'spell' && app.firstElementChild?._leave) { app.firstElementChild._leave(() => goBack()); return; }
       goBack(); return;
@@ -242,6 +272,50 @@ const DECOR_POS = {
   'front-right': 'right:2%;bottom:3%',
 };
 
+// ----- first visit of the day: greeting, check-in rewards; jokes now and then -----
+let greet = null, greetUntil = 0, checkinShown = false;
+function greetNow() {
+  const g = S.takeGreeting();
+  if (g) { greet = g; greetUntil = Date.now() + 90000; setTimeout(() => meow('happy'), 500); }
+  return greet && Date.now() < greetUntil ? greet : null;
+}
+function openCheckin(after) {
+  const st = S.checkinStatus();
+  const n = html`<div class="card stack checkin" style="align-items:center;text-align:center">
+      <div class="h-title" style="justify-content:center"><span class="zh">📅 每日签到</span><span class="en">Daily check-in</span></div>
+      <p class="help" style="margin:0">每天来签到领奖励！漏了一天就从第1天重新开始哦。<br>Come every day for a reward. Miss a day and it starts again from Day 1.</p>
+      <div class="ck-grid">${Array.from({ length: S.CHECKIN_DAYS }, (_, i) => {
+        const d = i + 1, done = d < st.day || (st.claimed && d === st.day), today = d === st.day && !st.claimed;
+        const prize = d === S.CHECKIN_DAYS ? '<span class="mystery">🎁<b>?</b></span>' : `<span class="coins">${coinI(22)}<b>${S.checkinCoins(d)}</b></span>`;
+        return `<div class="ck ${done ? 'done' : ''} ${today ? 'today' : ''} ${d === S.CHECKIN_DAYS ? 'big' : ''}"><small>第${d}天 Day ${d}</small>${prize}${done ? '<i class="tick">✓</i>' : ''}${today ? '<em>今天 Today</em>' : ''}</div>`;
+      }).join('')}</div>
+      <div id="ck-result"></div>
+      ${st.claimed ? '<p class="help" style="margin:0">今天已经领过了，明天再来！ Already collected today — come back tomorrow!</p><button class="btn white" id="ck-close">关闭 Close</button>'
+        : `<button class="btn big green" id="ck-go">🎉 <span class="zh">领取第${st.day}天奖励</span> Collect</button>`}
+    </div>`;
+  const go = $('#ck-go', n);
+  if (go) go.onclick = () => {
+    const r = S.claimCheckin(); if (!r) return;
+    const box = $('#ck-result', n);
+    $('.ck.today', n)?.classList.add('done');
+    if (r.item) {
+      box.innerHTML = `<div class="ck-reveal"><div class="giftbox opened">🎁</div><div class="zh" style="font-size:22px">神秘礼物是… ${ITEMS[r.item].name}！</div><div class="en">${ITEMS[r.item].en} — find it in My Items</div></div>`;
+      const kvp = new KittenView({ scale: 4, equipped: { ...S.get().kitten.equipped, body: r.item } }); kvp.canvas.classList.remove('bob');
+      box.firstChild.insertBefore(kvp.canvas, box.firstChild.children[1]);
+      sfx.fanfare(); confetti();
+    } else {
+      box.innerHTML = `<div class="ck-reveal"><div class="price" style="font-size:30px">+${r.coins} ${coinI(28)}</div>${r.dup ? '<div class="help">你已经有公主裙了，换成金币！ You already have the gown, so here are coins!</div>' : ''}</div>`;
+      sfx.coin(); burst(box, 'coin', 4, '50%', '20%');
+    }
+    hydrateIcons(n);
+    go.outerHTML = '<button class="btn green" id="ck-close">好的！ Yay!</button>';
+    $('#ck-close', n).onclick = () => { closeModal(); };
+    renderTopbar();
+  };
+  const c = $('#ck-close', n); if (c) c.onclick = closeModal;
+  openModal(n, { onClose: () => after && after() });
+}
+
 let pickedByHand = false;
 // the spelling list picker: newest first; old lists stay locked until the newest one is finished
 function spellPicker() {
@@ -256,8 +330,8 @@ function spellPicker() {
   const date = (l) => new Date(S.listDate(l) + 'T00:00').toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
   const label = (l) => {
     const st = S.listStatus(l);
-    const icon = st === 'done-today' ? '✅' : st === 'locked' ? '🔒' : l.id === cur.id ? '⭐' : '📝';
-    const note = st === 'done-today' ? ' · 今天写过了' : st === 'locked' ? ' · 先写新的' : l.id === cur.id ? (l.done ? '' : ' · 新!') : '';
+    const icon = st === 'done-today' || st === 'day-limit' ? '✅' : st === 'locked' ? '🔒' : l.id === cur.id ? '⭐' : '📝';
+    const note = st === 'done-today' ? ' · 今天写过了' : st === 'day-limit' ? ' · 明天再写' : st === 'locked' ? ' · 先写新的' : l.id === cur.id ? (l.done ? '' : ' · 新!') : '';
     return `${icon} ${l.name} (${date(l)})${note}`;
   };
   const st = S.listStatus(sel);
@@ -265,12 +339,70 @@ function spellPicker() {
   return `<div class="spell-pick card">
       <label class="pick-label"><span class="zh">选听写</span> Choose a list
         <select id="list-pick">${lists.map((l) => `<option value="${l.id}" ${l.id === sel.id ? 'selected' : ''}>${esc(label(l))}</option>`).join('')}</select></label>
-      <button class="btn big block col ${ok ? '' : 'dim'}" id="b-spell"><span class="zh">${ok ? '✏️ 开始听写' : st === 'done-today' ? '✅ 今天写过了' : '🔒 先写新的听写'}</span><span class="en">${ok ? `Start · ${esc(sel.name)}` : st === 'done-today' ? 'Done today — come back tomorrow' : `Finish “${esc(cur.name)}” first`}</span></button>
+      <button class="btn big block col ${ok ? '' : 'dim'}" id="b-spell"><span class="zh">${ok ? '✏️ 开始听写' : st === 'done-today' ? '✅ 今天写过了' : st === 'day-limit' ? '✅ 今天的听写做完了' : '🔒 先写新的听写'}</span><span class="en">${ok ? `Start · ${esc(sel.name)}` : st === 'done-today' ? 'Done today — come back tomorrow' : st === 'day-limit' ? 'All done for today — come back tomorrow' : `Finish “${esc(cur.name)}” first`}</span></button>
     </div>`;
 }
 
+// ----- learning activities: shortcuts on the home page (parents choose) and all of them under Tasks -----
+const ACT_INFO = { essay: { zh: '看图作文', en: 'Picture writing', icon: '✍️' }, ...KINDS };
+function activityButton(k) {
+  if (k === 'essay') {
+    const out = S.outstandingEssays().length, waiting = S.essays().some((e) => e.status === 'submitted');
+    return out ? `<button class="btn big block col pink has-badge act-btn" data-act="essay"><span class="zh">✍️ 看图作文</span><span class="en">Picture writing — tap to start</span><i class="badge">${out}</i></button>`
+      : `<button class="btn big block col white act-btn" disabled><span class="zh">✍️ 看图作文</span><span class="en">${waiting ? '等妈妈批改 Waiting for Mum' : '还没有作文 No writing yet'}</span></button>`;
+  }
+  const K = ACT_INFO[k], sets = S.visibleSets(k), left = sets.filter((x) => x.lastDone !== S.todayStr()).length;
+  return `<button class="btn big block col blue act-btn ${sets.length ? '' : 'dim'}" data-act="${k}" ${sets.length ? '' : 'disabled'}><span class="zh">${K.icon} ${K.zh}</span><span class="en">${K.en} · ${sets.length ? `${left} of ${sets.length} sets to do today` : 'no sets yet'}</span></button>`;
+}
+function wireActivities(root, refresh) {
+  const s = S.get();
+  const pick = $('#list-pick', root);
+  if (pick) pick.onchange = () => { pickedByHand = true; s.activeListId = pick.value; S.saveQuiet(); refresh(); };
+  const bs = $('#b-spell', root);
+  if (bs) bs.onclick = () => {
+    sfx.unlock();
+    const st = S.listStatus(S.activeList());
+    if (st === 'done-today') return toast('<span class="zh">这个今天写过了！</span> Done today — pick another list or come back tomorrow', { ms: 3500 });
+    if (st === 'day-limit') return toast('<span class="zh">今天的听写做完了！</span> That\'s all the spelling for today — come back tomorrow', { ms: 3500 });
+    if (st === 'locked') return toast(`<span class="zh">先完成「${esc(S.currentList().name)}」</span> Finish the newest list first`, { ms: 3500 });
+    go('spell', { mode: 'list' });
+  };
+  root.querySelectorAll('[data-act]').forEach((b) => { b.onclick = () => { sfx.unlock(); b.dataset.act === 'essay' ? go('essay') : go('practiceList', { kind: b.dataset.act }); }; });
+}
+function tasksScreen() {
+  const n = html`<section class="screen"><div class="tasks-hub stack">
+      <div class="card stack">
+        <div class="h-title"><span class="zh">📋 我的功课</span><span class="en">My tasks</span></div>
+        <p class="help" style="margin:0">选一个来练习吧！ Pick something to practise.</p>
+        <div class="h-title" style="font-size:20px;margin-top:6px"><span class="zh">✏️ 听写</span><span class="en">Spelling</span></div>
+        ${spellPicker()}
+        ${['essay', 'choice', 'match', 'order'].map(activityButton).join('')}
+      </div></div></section>`;
+  wireActivities(n, () => go('tasks', {}, { replace: true }));
+  return n;
+}
+
+// home page buttons (parents choose the order)
+function menuButton(b, { reviewN, inHouse }) {
+  const out = S.outstandingEssays().length, req = Friends.incomingRequests().length;
+  switch (b) {
+    case 'tasks': return `<button class="btn ${out ? 'pink has-badge' : 'green'}" id="b-tasks"><span class="zh">📋 功课</span><span class="en">Tasks</span>${out ? `<i class="badge">${out}</i>` : ''}</button>`;
+    case 'review': return `<button class="btn pink" id="b-review" ${reviewN ? '' : 'disabled'}><span class="zh">错词本</span><span class="en">Mistakes (${reviewN})</span></button>`;
+    case 'feed': return '<button class="btn white" id="b-feed"><span class="zh">喂食喝水</span><span class="en">Food &amp; water</span></button>';
+    case 'shop': return '<button class="btn blue" id="b-shop"><span class="zh">商店</span><span class="en">Shop</span></button>';
+    case 'dress': return '<button class="btn white" id="b-dress"><span class="zh">我的物品</span><span class="en">My Items</span></button>';
+    case 'house': return S.unlocked('decor')
+      ? (inHouse ? '<button class="btn green" id="b-house"><span class="zh">🌳 去草地</span><span class="en">Go outside</span></button>'
+                 : '<button class="btn green" id="b-house"><span class="zh">🏠 我的家</span><span class="en">Go to Home</span></button>')
+      : `<button class="btn white" disabled><span class="zh">🔒 我的家</span><span class="en">Home · Lv${S.UNLOCKS.decor}</span></button>`;
+    case 'friends': return `<button class="btn blue ${req ? 'has-badge' : ''}" id="b-friends"><span class="zh">👫 朋友</span><span class="en">Friends</span>${req ? `<i class="badge">${req}</i>` : ''}</button>`;
+    default: return '';
+  }
+}
 function homeScreen(params = {}) {
   S.tick();
+  S.essayNotifications();
+  S.purgeOldMessages();
   const inHouse = params.view === 'house' && S.unlocked('decor');
   if (S.health() === 'dead') return graveScreen();
   if (S.get().needsSetup) return setupScreen();
@@ -320,26 +452,13 @@ function homeScreen(params = {}) {
       <div class="card">
         <div class="h-title" style="font-size:22px;margin-bottom:8px"><span class="zh">今日任务</span><span class="en">Daily tasks</span></div>
         <div class="tasks">
-          ${task(d.spell, '完成一次听写', 'Finish one spelling round', S.REWARDS.taskSpell)}
-          ${task(S.perfectDone(), `今天写对 ${S.RIGHT_TARGET}/${S.WORDS_TARGET}`, `Write ${S.WORDS_TARGET}+ words, get ${S.RIGHT_TARGET} in ${S.WORDS_TARGET} right`, S.REWARDS.taskPerfect, `写了${d.tried} · 对${d.right}`)}
-          ${task(d.care, `照顾${esc(k.name)}`, 'Feed or pet your kitten', S.REWARDS.taskCare)}
+          ${S.dailyTasks().map((t) => task(t.done, esc(t.zh), esc(t.en), t.coins, t.key === 'perfect' ? `写了${d.tried} · 对${d.right}` : '')).join('') || '<p class="help" style="margin:0">今天没有任务，好好玩吧！ No tasks today.</p>'}
         </div>
-        <div class="bonus-line" style="margin-top:8px">${d.paid.bonus ? '🎉 全部完成！All done today!' : `全部完成再得 +${S.REWARDS.allBonus} 🪙 bonus`}</div>
+        ${S.dailyTasks().length ? `<div class="bonus-line" style="margin-top:8px">${d.paid.bonus ? '🎉 全部完成！All done today!' : S.dailyBonus() ? `全部完成再得 +${S.dailyBonus()} 🪙 bonus` : '全部完成吧！ Finish them all!'}</div>` : ''}
       </div>
-      ${spellPicker()}
+      ${S.homeActs().length ? `<div class="home-acts">${S.homeActs().map((k) => (k === 'spelling' ? spellPicker() : activityButton(k))).join('')}</div>` : ''}
       <div class="menu-grid">
-        <button class="btn pink" id="b-review" ${reviewN ? '' : 'disabled'}><span class="zh">错词本</span><span class="en">Mistakes (${reviewN})</span></button>
-        <button class="btn white" id="b-feed"><span class="zh">喂食喝水</span><span class="en">Food &amp; water</span></button>
-        <button class="btn blue" id="b-shop"><span class="zh">商店</span><span class="en">Shop</span></button>
-        <button class="btn white" id="b-dress"><span class="zh">我的物品</span><span class="en">My Items</span></button>
-        ${S.unlocked('decor')
-          ? (inHouse ? '<button class="btn green" id="b-house"><span class="zh">🌳 去草地</span><span class="en">Go outside</span></button>'
-                     : '<button class="btn green" id="b-house"><span class="zh">🏠 我的家</span><span class="en">Go to Home</span></button>')
-          : `<button class="btn white" disabled><span class="zh">🔒 我的家</span><span class="en">Home · Lv${S.UNLOCKS.decor}</span></button>`}
-        <button class="btn blue ${Friends.incomingRequests().length ? 'has-badge' : ''}" id="b-friends"><span class="zh">👫 朋友</span><span class="en">Friends</span>${Friends.incomingRequests().length ? `<i class="badge">${Friends.incomingRequests().length}</i>` : ''}</button>
-        ${S.outstandingEssays().length
-          ? `<button class="btn pink has-badge" id="b-essay"><span class="zh">✍️ 看图作文</span><span class="en">Writing</span><i class="badge">${S.outstandingEssays().length}</i></button>`
-          : `<button class="btn white" disabled title="Parents set up writing in 🔒"><span class="zh">看图作文</span><span class="en">${S.essays().some((e) => e.status === 'submitted') ? '等妈妈批改 Waiting' : 'No writing yet'}</span></button>`}
+        ${S.menuOrder().map((b) => menuButton(b, { reviewN, inHouse })).join('')}
       </div>
     </div>
   </section>`;
@@ -354,14 +473,17 @@ function homeScreen(params = {}) {
   kwrap.appendChild(kflip);
   kwrap.appendChild(html`<div class="nametag">${esc(k.name)}<span class="lv">Lv${S.level()}</span></div>`);
   if (md.face === 'faint') { kv.canvas.classList.add('fainted'); kwrap.appendChild(html`<div class="zzz" style="left:60%;top:30%">@ @ @</div>`); }
+  else if (greetNow()) { const g = greetNow(); kwrap.appendChild(html`<div class="bubble greet">${g.icon} ${esc(g.zh)}<br><small>${esc(g.en)}</small></div>`); }
   else if (md.face === 'dizzy') kwrap.appendChild(html`<div class="bubble sad">😵‍💫 ${esc(md.text)}</div>`);
   else if (md.face === 'cough') kwrap.appendChild(html`<div class="bubble sad">🤒 ${esc(md.text)}</div>`);
+  else if (S.phoneBadge()) kwrap.appendChild(html`<div class="bubble">📱 你有新消息！<br><small>You have a new message!</small></div>`);
   else if (md.essay) kwrap.appendChild(html`<div class="bubble">✍️ ${esc(md.text)}</div>`);
   else if (md.face === 'bored') kwrap.appendChild(html`<div class="bubble">🥱 ${esc(md.text)}</div>`);
   else if (md.face === 'cry') kwrap.appendChild(html`<div class="bubble sad">😿 ${esc(md.text)}</div>`);
   else if (md.face === 'thirsty') kwrap.appendChild(html`<div class="bubble">💧 ${esc(md.text)}</div>`);
   else if (md.face === 'hungry') kwrap.appendChild(html`<div class="bubble">🐟 ${esc(md.text)}</div>`);
   else if (md.face === 'sleepy') kwrap.appendChild(html`<div class="zzz">z Z z</div>`);
+  else if (Math.random() < 0.35) kwrap.appendChild(html`<div class="bubble joke">😹 ${esc(randomJoke())}</div>`);
   else if (s.childName && Math.random() < 0.6) kwrap.appendChild(html`<div class="bubble">${esc(s.childName)}，喵～</div>`);
   if (md.needs.length) kwrap.appendChild(html`<div class="needs">${md.needs.includes('hungry') ? '<span>🐟 饿了 Hungry</span>' : ''}${md.needs.includes('thirsty') ? '<span>💧 口渴 Thirsty</span>' : ''}</div>`);
   const lvNow = S.level();
@@ -379,15 +501,19 @@ function homeScreen(params = {}) {
   renderAlert($('#alert', n), md, k);
 
   // presents and letters from friends wait on the stage until she opens them
-  const gifts = S.unopenedGifts(), unread = S.unreadLetters().length, hasLetters = (s.letters || []).length;
-  if (gifts.length || hasLetters) {
+  // the flip phone (mail, notifications, tools) is always there; presents wait beside it
+  {
+    const gifts = S.unopenedGifts(), pb = S.phoneBadge();
     const tray = html`<div class="stage-tray">
+        <button class="tray-btn phone-btn ${pb ? 'new' : ''}" id="t-phone" title="Phone">${PHONE_ICON}${pb ? `<i class="badge">${pb}</i>` : ''}</button>
         ${gifts.length ? `<button class="tray-btn gift" id="t-gift" title="Gifts">🎁<i class="badge">${gifts.length}</i></button>` : ''}
-        ${hasLetters ? `<button class="tray-btn ${unread ? 'new' : ''}" id="t-mail" title="Letters">✉️${unread ? `<i class="badge">${unread}</i>` : ''}</button>` : ''}
+        <button class="tray-btn ${S.checkinStatus().claimed ? '' : 'gift'}" id="t-ck" title="Daily check-in">📅${S.checkinStatus().claimed ? '' : '<i class="badge">!</i>'}</button>
       </div>`;
     $('#stage', n).appendChild(tray);
     const tg = $('#t-gift', tray); if (tg) tg.onclick = () => Friends.openGiftBox(S.unopenedGifts()[0], refreshHome);
-    const tm = $('#t-mail', tray); if (tm) tm.onclick = () => Friends.openMailbox(refreshHome);
+    $('#t-ck', tray).onclick = () => openCheckin(refreshHome);
+    if (!S.checkinStatus().claimed && !checkinShown && S.get().onboarded) { checkinShown = true; setTimeout(() => { if (current === 'home' && $('#modal').classList.contains('hidden')) openCheckin(refreshHome); }, 1200); }
+    $('#t-phone', tray).onclick = () => openPhone({ start: S.unreadNotifications().length ? 'noti' : S.unreadLetters().length ? 'mail' : 'home', after: refreshHome });
   }
 
   const room = $('#room', n);
@@ -544,22 +670,14 @@ function homeScreen(params = {}) {
     if (got.length) setTimeout(() => refreshHome(), 1600);
   }
 
-  const pick = $('#list-pick', n);
-  if (pick) pick.onchange = () => { pickedByHand = true; s.activeListId = pick.value; S.saveQuiet(); refreshHome(); };
-  $('#b-spell', n).onclick = () => {
-    sfx.unlock();
-    const st = S.listStatus(S.activeList());
-    if (st === 'done-today') return toast('<span class="zh">这个今天写过了！</span> Done today — pick another list or come back tomorrow', { ms: 3500 });
-    if (st === 'locked') return toast(`<span class="zh">先完成「${esc(S.currentList().name)}」</span> Finish the newest list first`, { ms: 3500 });
-    go('spell', { mode: 'list' });
-  };
+  wireActivities(n, refreshHome);
+  $('#b-tasks', n).onclick = () => go('tasks');
   $('#b-review', n).onclick = () => { sfx.unlock(); go('spell', { mode: 'review' }); };
   $('#b-shop', n).onclick = () => go('shop');
   $('#b-dress', n).onclick = () => go('wardrobe');
-  const be = $('#b-essay', n); if (be) be.onclick = () => go('essay');
+
   // a parent has checked a composition: show the stars, coins and comment once
-  const reviewed = S.essays().find((e) => e.status === 'reviewed' && !e.seen);
-  if (reviewed) setTimeout(() => { if (current === 'home') showEssayReward(reviewed, kv); }, 700);
+  // (a checked composition now arrives as a phone notification instead of a pop-up)
   const bh = $('#b-house', n); if (bh) bh.onclick = () => (inHouse ? goBack() : go('home', { view: 'house' }));
   $('#b-feed', n).onclick = () => openFeed(kv, fx, afterCare);
   $('#b-friends', n).onclick = () => go('friends');
@@ -593,7 +711,7 @@ function renderAlert(box, md, k) {
     $('#med', box).onclick = () => go('shop', { tab: 'pharmacy' });
   } else if (md.face === 'bored') {
     card('play', `🎮 ${name}好无聊！<span class="en">Bored</span>`,
-      `复习10个以前的词语，写对8个得${S.PLAY_REWARD}金币！<br>Revise 10 old words — get 8 right to win ${S.PLAY_REWARD} coins!`,
+      S.rewardText(S.playReward()) ? `复习10个以前的词语，写对8个得${S.rewardText(S.playReward(), false)}！<br>Revise 10 old words — get 8 right to win ${S.rewardText(S.playReward())}!` : `复习10个以前的词语，陪${name}玩一玩！<br>Revise 10 old words to cheer ${name} up!`,
       `<button class="btn big green block" id="play">🎮 Play with Me!</button>`);
     $('#play', box).onclick = () => { sfx.unlock(); go('spell', { mode: 'play' }); };
   } else if (missed >= 1) {
@@ -627,7 +745,7 @@ function graveScreen() {
 function openFeed(kv, fx, afterCare) {
   const s = S.get();
   const foods = Object.entries(s.pantry).filter(([id, c]) => c > 0 && ITEMS[id]);
-  const toys = s.owned.filter((id) => ITEMS[id].toy);
+  const toys = s.owned.filter((id) => ITEMS[id] && ITEMS[id].toy);
   const n = html`<div class="card stack">
       <div class="h-title"><span class="zh">喂${esc(s.kitten.name)}吃东西</span><span class="en">Feed your kitten</span></div>
       ${foods.length ? '<div class="pantry" id="pantry"></div>' : `<p class="help">冰箱空空的！Your pantry is empty — buy food in the shop.</p>`}
@@ -681,6 +799,15 @@ paintSky(true);
 S.tick();
 setInterval(() => S.tick(), 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { S.tick(); if (current === 'home') refreshHome(); } });
+// the kitten tells a joke now and then while she's on the home page
+setInterval(() => {
+  if (current !== 'home' || document.hidden || !$('#modal').classList.contains('hidden') || Math.random() < 0.4) return;
+  const kw = $('#kwrap'); if (!kw || kw.querySelector('.bubble.joke-pop')) return;
+  const old = [...kw.querySelectorAll('.bubble')]; old.forEach((b) => { b.style.visibility = 'hidden'; });
+  const j = html`<div class="bubble joke joke-pop">😹 ${esc(randomJoke())}</div>`;
+  kw.appendChild(j);
+  setTimeout(() => { j.remove(); old.forEach((b) => { b.style.visibility = ''; }); }, 9000);
+}, 45000);
 // friends: show what arrived, and keep the home page badges fresh
 Friends.startFriends((news) => {
   news.forEach((x, i) => setTimeout(() => {
@@ -697,9 +824,15 @@ S.onExternalChange(() => {
   if (['home', 'shop', 'wardrobe'].includes(current) && !document.querySelector('.room.arranging')) go(current, currentParams, { replace: true });
 });
 // cloud backup & sync: if another device saved newer progress, show it
+const REDRAW_PAGES = ['home', 'shop', 'wardrobe', 'tasks', 'practiceList', 'friends', 'grave'];
 Cloud.init(() => {
-  if (current === 'spell' || current === 'login') return;   // don't interrupt a spelling round
-  go(S.get().onboarded ? (current === 'welcome' || current === 'setup' ? 'home' : current) : 'welcome', currentParams, { replace: true });
+  if (current === 'parent') { const el = app.firstElementChild; if (el && el._refresh) el._refresh(); return; }   // stay on the same tab
+  if (!S.get().onboarded) { if (current !== 'login') go('welcome', {}, { replace: true }); return; }
+  if (current === 'welcome' || current === 'setup') { go('home', {}, { replace: true }); return; }
+  // only redraw "resting" pages — never restart an activity she is doing (spelling, practice, essay, a friend's page)
+  const m = document.querySelector('#modal');
+  if (!REDRAW_PAGES.includes(current) || (m && !m.classList.contains('hidden')) || document.querySelector('.room.arranging')) return;
+  go(current, currentParams, { replace: true });
 });
 if (!Auth.session()) go('login');
 else { go(S.get().onboarded ? 'home' : 'welcome'); Cloud.pull(); }
