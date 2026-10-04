@@ -223,6 +223,9 @@ canvas.sprite, .kitten-canvas { display: block; }
 .speaking .kitten-canvas { animation: bob .4s steps(2) infinite; }
 
 .boxes { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin: 6px 0; }
+/* 3-character words: two boxes on top, the third centred underneath */
+.boxes.three { display: grid; grid-template-columns: repeat(2, auto); justify-content: center; row-gap: 22px; }
+.boxes.three > :nth-child(3) { grid-column: 1 / -1; justify-self: center; }
 .box {
   --s: 200px;
   width: var(--s); height: var(--s); position: relative; background: #fffdf8;

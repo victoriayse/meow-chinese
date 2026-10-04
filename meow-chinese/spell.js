@@ -83,8 +83,9 @@ export function spellingScreen({ mode = 'list', go }) {
   }
   function boxSize(n) {
     const avail = Math.min(main.clientWidth || 900, 940) - 40;
-    const perRow = Math.min(n, 4);
-    const maxS = Math.min(280, Math.floor((window.innerHeight - 360) * 0.9));
+    const perRow = n === 3 ? 2 : Math.min(n, 4);   // 3 characters: 2 on top, 1 in the middle below
+    const rows = Math.ceil(n / perRow);
+    const maxS = Math.min(280, Math.floor(((window.innerHeight - 360) * 0.9 - 14 * (rows - 1)) / rows));
     return Math.max(120, Math.min(maxS, Math.floor((avail - 14 * (perRow - 1)) / perRow)));
   }
 
@@ -130,7 +131,7 @@ export function spellingScreen({ mode = 'list', go }) {
     main.appendChild(teacher);
 
     const s = boxSize(chars.length);
-    const boxes = html`<div class="boxes" style="margin-top:22px"></div>`;
+    const boxes = html`<div class="boxes ${chars.length === 3 ? 'three' : ''}" style="margin-top:22px"></div>`;
     const charState = chars.map((ch) => ({ ch, han: isHan(ch), wrong: false, done: !isHan(ch) }));
     chars.forEach((ch, i) => {
       const c = charState[i];
@@ -245,7 +246,7 @@ export function spellingScreen({ mode = 'list', go }) {
     const hintHtml = item.hint ? esc(item.hint).split(esc(item.w)).join(`<b>${esc(item.w)}</b>`) : '';
     const lesson = html`<div class="stack" style="align-items:center">
         <div class="steps"><span class="on" id="st1">① 看 Watch</span><span id="st2">② 描 Trace</span><span id="st3">③ 记 Remember</span></div>
-        <div class="boxes" id="tboxes" style="margin-top:34px"></div>
+        <div class="boxes ${chars.length === 3 ? 'three' : ''}" id="tboxes" style="margin-top:34px"></div>
         <div class="answer">${hintHtml ? `<div class="hint">${hintHtml}</div>` : ''}</div>
         <div class="spell-actions" id="tact"></div>
       </div>`;
