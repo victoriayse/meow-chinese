@@ -1011,7 +1011,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .acct-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 12px; margin-bottom: 10px; border: 3px solid var(--ink); border-radius: 12px; background: #fffaf0; }
 .acct-bar.child { background: #fff0c2; }
 .acct-bar .lbl { font-weight: 800; }
-.acct-bar .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.acct-bar .seg { display: flex; flex-wrap: wrap; gap: 6px; border: 0; border-radius: 0; overflow: visible; }
 .acct-bar .seg button { padding: 6px 12px; border: 3px solid var(--ink); border-radius: 10px; background: #fff; font: inherit; font-weight: 800; cursor: pointer; }
 .acct-bar .seg button.on { background: var(--green); color: #fff; }
 .acct-bar .note { flex-basis: 100%; margin: 0; font-size: 14px; font-weight: 600; }
