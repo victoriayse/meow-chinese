@@ -12,6 +12,7 @@ import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
 import { randomJoke } from './jokes.js';
+import { practiceListScreen, practiceScreen, KINDS } from './practice.js';
 
 const app = $('#app');
 let current = null;
@@ -40,6 +41,9 @@ const screens = {
   grave: graveScreen,
   essay: (p) => essayScreen({ ...p, go }),
   friends: () => Friends.friendsScreen({ go }),
+  tasks: () => tasksScreen(),
+  practiceList: (p) => practiceListScreen({ ...p, go }),
+  practice: (p) => practiceScreen({ ...p, go }),
   friend: (p) => Friends.friendScreen({ ...p, go }),
 };
 // a simple history so every page can go Back
@@ -55,7 +59,7 @@ export function go(name, params = {}, opts = {}) {
   }
   if (NO_HISTORY.includes(name)) stack.length = 0;
   current = name; currentParams = params;
-  Friends.setActivity({ spell: 'spelling', essay: 'essay', shop: 'shop', wardrobe: 'wardrobe', friends: 'friends', friend: 'friends' }[name] || (name === 'home' && params.view === 'house' ? 'house' : 'online'));
+  Friends.setActivity({ spell: 'spelling', essay: 'essay', tasks: 'practice', practice: 'practice', practiceList: 'practice', shop: 'shop', wardrobe: 'wardrobe', friends: 'friends', friend: 'friends' }[name] || (name === 'home' && params.view === 'house' ? 'house' : 'online'));
   app.innerHTML = '';
   const node = screens[name](params);
   app.appendChild(node);
@@ -339,6 +343,44 @@ function spellPicker() {
     </div>`;
 }
 
+// ----- learning activities: shortcuts on the home page (parents choose) and all of them under Tasks -----
+const ACT_INFO = { essay: { zh: '看图作文', en: 'Picture writing', icon: '✍️' }, ...KINDS };
+function activityButton(k) {
+  if (k === 'essay') {
+    const out = S.outstandingEssays().length, waiting = S.essays().some((e) => e.status === 'submitted');
+    return out ? `<button class="btn big block col pink has-badge act-btn" data-act="essay"><span class="zh">✍️ 看图作文</span><span class="en">Picture writing — tap to start</span><i class="badge">${out}</i></button>`
+      : `<button class="btn big block col white act-btn" disabled><span class="zh">✍️ 看图作文</span><span class="en">${waiting ? '等妈妈批改 Waiting for Mum' : '还没有作文 No writing yet'}</span></button>`;
+  }
+  const K = ACT_INFO[k], sets = S.visibleSets(k), left = sets.filter((x) => x.lastDone !== S.todayStr()).length;
+  return `<button class="btn big block col blue act-btn ${sets.length ? '' : 'dim'}" data-act="${k}" ${sets.length ? '' : 'disabled'}><span class="zh">${K.icon} ${K.zh}</span><span class="en">${K.en} · ${sets.length ? `${left} of ${sets.length} sets to do today` : 'no sets yet'}</span></button>`;
+}
+function wireActivities(root, refresh) {
+  const s = S.get();
+  const pick = $('#list-pick', root);
+  if (pick) pick.onchange = () => { pickedByHand = true; s.activeListId = pick.value; S.saveQuiet(); refresh(); };
+  const bs = $('#b-spell', root);
+  if (bs) bs.onclick = () => {
+    sfx.unlock();
+    const st = S.listStatus(S.activeList());
+    if (st === 'done-today') return toast('<span class="zh">这个今天写过了！</span> Done today — pick another list or come back tomorrow', { ms: 3500 });
+    if (st === 'locked') return toast(`<span class="zh">先完成「${esc(S.currentList().name)}」</span> Finish the newest list first`, { ms: 3500 });
+    go('spell', { mode: 'list' });
+  };
+  root.querySelectorAll('[data-act]').forEach((b) => { b.onclick = () => { sfx.unlock(); b.dataset.act === 'essay' ? go('essay') : go('practiceList', { kind: b.dataset.act }); }; });
+}
+function tasksScreen() {
+  const n = html`<section class="screen"><div class="tasks-hub stack">
+      <div class="card stack">
+        <div class="h-title"><span class="zh">📋 我的功课</span><span class="en">My tasks</span></div>
+        <p class="help" style="margin:0">选一个来练习吧！ Pick something to practise.</p>
+        <div class="h-title" style="font-size:20px;margin-top:6px"><span class="zh">✏️ 听写</span><span class="en">Spelling</span></div>
+        ${spellPicker()}
+        ${['essay', 'choice', 'match', 'order'].map(activityButton).join('')}
+      </div></div></section>`;
+  wireActivities(n, () => go('tasks', {}, { replace: true }));
+  return n;
+}
+
 function homeScreen(params = {}) {
   S.tick();
   S.essayNotifications();
@@ -398,7 +440,7 @@ function homeScreen(params = {}) {
         </div>
         <div class="bonus-line" style="margin-top:8px">${d.paid.bonus ? '🎉 全部完成！All done today!' : `全部完成再得 +${S.REWARDS.allBonus} 🪙 bonus`}</div>
       </div>
-      ${spellPicker()}
+      ${S.homeActs().length ? `<div class="home-acts">${S.homeActs().map((k) => (k === 'spelling' ? spellPicker() : activityButton(k))).join('')}</div>` : ''}
       <div class="menu-grid">
         <button class="btn pink" id="b-review" ${reviewN ? '' : 'disabled'}><span class="zh">错词本</span><span class="en">Mistakes (${reviewN})</span></button>
         <button class="btn white" id="b-feed"><span class="zh">喂食喝水</span><span class="en">Food &amp; water</span></button>
@@ -409,9 +451,7 @@ function homeScreen(params = {}) {
                      : '<button class="btn green" id="b-house"><span class="zh">🏠 我的家</span><span class="en">Go to Home</span></button>')
           : `<button class="btn white" disabled><span class="zh">🔒 我的家</span><span class="en">Home · Lv${S.UNLOCKS.decor}</span></button>`}
         <button class="btn blue ${Friends.incomingRequests().length ? 'has-badge' : ''}" id="b-friends"><span class="zh">👫 朋友</span><span class="en">Friends</span>${Friends.incomingRequests().length ? `<i class="badge">${Friends.incomingRequests().length}</i>` : ''}</button>
-        ${S.outstandingEssays().length
-          ? `<button class="btn pink has-badge" id="b-essay"><span class="zh">✍️ 看图作文</span><span class="en">Writing</span><i class="badge">${S.outstandingEssays().length}</i></button>`
-          : `<button class="btn white" disabled title="Parents set up writing in 🔒"><span class="zh">看图作文</span><span class="en">${S.essays().some((e) => e.status === 'submitted') ? '等妈妈批改 Waiting' : 'No writing yet'}</span></button>`}
+        <button class="btn ${S.outstandingEssays().length ? 'pink has-badge' : ''}" id="b-tasks"><span class="zh">📋 功课</span><span class="en">Tasks</span>${S.outstandingEssays().length ? `<i class="badge">${S.outstandingEssays().length}</i>` : ''}</button>
       </div>
     </div>
   </section>`;
@@ -623,19 +663,12 @@ function homeScreen(params = {}) {
     if (got.length) setTimeout(() => refreshHome(), 1600);
   }
 
-  const pick = $('#list-pick', n);
-  if (pick) pick.onchange = () => { pickedByHand = true; s.activeListId = pick.value; S.saveQuiet(); refreshHome(); };
-  $('#b-spell', n).onclick = () => {
-    sfx.unlock();
-    const st = S.listStatus(S.activeList());
-    if (st === 'done-today') return toast('<span class="zh">这个今天写过了！</span> Done today — pick another list or come back tomorrow', { ms: 3500 });
-    if (st === 'locked') return toast(`<span class="zh">先完成「${esc(S.currentList().name)}」</span> Finish the newest list first`, { ms: 3500 });
-    go('spell', { mode: 'list' });
-  };
+  wireActivities(n, refreshHome);
+  $('#b-tasks', n).onclick = () => go('tasks');
   $('#b-review', n).onclick = () => { sfx.unlock(); go('spell', { mode: 'review' }); };
   $('#b-shop', n).onclick = () => go('shop');
   $('#b-dress', n).onclick = () => go('wardrobe');
-  const be = $('#b-essay', n); if (be) be.onclick = () => go('essay');
+
   // a parent has checked a composition: show the stars, coins and comment once
   // (a checked composition now arrives as a phone notification instead of a pop-up)
   const bh = $('#b-house', n); if (bh) bh.onclick = () => (inHouse ? goBack() : go('home', { view: 'house' }));
@@ -705,7 +738,7 @@ function graveScreen() {
 function openFeed(kv, fx, afterCare) {
   const s = S.get();
   const foods = Object.entries(s.pantry).filter(([id, c]) => c > 0 && ITEMS[id]);
-  const toys = s.owned.filter((id) => ITEMS[id].toy);
+  const toys = s.owned.filter((id) => ITEMS[id] && ITEMS[id].toy);
   const n = html`<div class="card stack">
       <div class="h-title"><span class="zh">喂${esc(s.kitten.name)}吃东西</span><span class="en">Feed your kitten</span></div>
       ${foods.length ? '<div class="pantry" id="pantry"></div>' : `<p class="help">冰箱空空的！Your pantry is empty — buy food in the shop.</p>`}

@@ -8,6 +8,7 @@ import { speak, chineseVoices, sfx } from './audio.js';
 import * as Cloud from './cloud.js';
 import * as Auth from './auth.js';
 import { parentFriendsView, incomingRequests } from './friends.js';
+import { KINDS, parseSet } from './practice.js';
 
 let unlockedUntil = 0;
 
@@ -22,6 +23,7 @@ export function parentScreen({ go, tab = 'lists' }) {
         <button class="tab" data-tab="lists"><span class="zh">听写词语</span> Lists</button>
         <button class="tab" data-tab="progress"><span class="zh">学习进度</span> Progress</button>
         <button class="tab" data-tab="essays"><span class="zh">作文</span> Essays${S.essays().some((e) => e.status === 'submitted') ? ' 🔴' : ''}</button>
+        <button class="tab" data-tab="practice"><span class="zh">练习</span> Practice</button>
         <button class="tab" data-tab="friends"><span class="zh">朋友</span> Friends${incomingRequests().length ? ' 🔴' : ''}</button>
         <button class="tab" data-tab="bank"><span class="zh">银行</span> Bank</button>
         <button class="tab" data-tab="shop"><span class="zh">商店价格</span> Prices</button>
@@ -34,7 +36,7 @@ export function parentScreen({ go, tab = 'lists' }) {
     tab = t;
     $$('.tab', n).forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
     body.innerHTML = '';
-    body.appendChild(t === 'lists' ? listsView(rerender) : t === 'progress' ? progressView(rerender) : t === 'shop' ? pricesView(rerender) : t === 'essays' ? essaysView(rerender) : t === 'friends' ? parentFriendsView(rerender) : t === 'bank' ? bankView(rerender) : settingsView(rerender, go));
+    body.appendChild(t === 'lists' ? listsView(rerender) : t === 'progress' ? progressView(rerender) : t === 'shop' ? pricesView(rerender) : t === 'essays' ? essaysView(rerender) : t === 'friends' ? parentFriendsView(rerender) : t === 'practice' ? practiceView(rerender) : t === 'bank' ? bankView(rerender) : settingsView(rerender, go));
     hydrateIcons(body);
   };
   const rerender = () => show(tab);
@@ -80,6 +82,74 @@ function bankView(rerender) {
     box.appendChild(html`<div class="list-row" style="grid-template-columns:1fr auto"><div><b>${d.amount} coins</b> · ${Math.round(t.rate * 1000) / 10}% for ${t.days} days<div class="help" style="margin:0">Saved ${new Date(d.at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })} · ${ripe ? 'ready now' : 'ready ' + new Date(due).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })} · +${S.depositInterest(d)} interest</div></div><span>${ripe ? '✅' : '⏳'}</span></div>`);
   });
   return n;
+}
+
+// ---------- practice sets: 词语选择 / 词语搭配 / 排句子 ----------
+let practiceKind = 'choice';
+const FORMAT_HELP = {
+  choice: `One question per line: the sentence with ____ for the blank, then | and the choices separated by /. Put * before the right answer.<br><code>____今天不下雨，我们就去踢足球。 | 结果 / *如果 / 果然</code>`,
+  match: `Line 1: the words in the box, separated by spaces. Then one line per question: the phrase with （ ） for the blank, then | and the answer (it must be one of the box words). Add an extra box word that isn't used, to make it harder.<br><code>急忙 小猫 发抖 时间 废物 生病<br>全身（ ） | 发抖<br>（ ）离开 | 急忙</code>`,
+  order: `One question per line: the helping words separated by spaces, then = and the correct sentence. The app mixes up the words for her. If another sentence is also correct, add it after ||.<br><code>肚子 小明 很痛 带他 医生 看 所以 去 妈妈 = 小明肚子很痛所以妈妈带他去看医生</code>`,
+};
+function practiceView(rerender) {
+  const kind = practiceKind, K = KINDS[kind];
+  const sets = S.practiceSets(kind).slice().sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.createdAt || 0) - (a.createdAt || 0));
+  const n = html`<div class="stack">
+      <div class="seg">${Object.entries(KINDS).map(([k, v]) => `<button type="button" data-k="${k}" class="${k === kind ? 'on' : ''}">${v.icon} ${v.zh} ${v.en}</button>`).join('')}</div>
+      <p class="help" style="margin:0">${K.how} Sets work like spelling lists: each has a date (she sees it from that day), and you can hide, edit or delete it. Ready-made sets are included; you can edit them, hide them, or write your own. She earns 1 coin and XP for each question right first time (once a day per set).</p>
+      <div class="row"><button class="btn green" id="new">＋ New set</button><button class="btn white" id="restore">↺ Restore ready-made sets</button></div>
+      <div class="stack" id="rows"></div>
+    </div>`;
+  n.querySelector('.seg').onclick = (e) => { const b = e.target.closest('[data-k]'); if (b) { practiceKind = b.dataset.k; rerender(); } };
+  const rows = $('#rows', n);
+  if (!sets.length) rows.innerHTML = '<p class="help">No sets yet.</p>';
+  sets.forEach((x) => {
+    const p = parseSet(kind, x.text), future = (x.date || '') > S.todayStr();
+    const r = html`<div class="list-row dated">
+        <label class="field" style="margin:0;font-size:12px">Date<input type="date" class="date-in" value="${x.date || S.todayStr()}"></label>
+        <div style="min-width:0"><div class="nm">${esc(x.name)} <span class="en">· ${p.items.length} questions</span>${x.builtin ? '<span class="list-badge sched">ready-made</span>' : ''}${x.hidden ? '<span class="list-badge lock">🙈 hidden</span>' : ''}${future ? '<span class="list-badge sched">📅 later</span>' : ''}${x.best != null ? `<span class="list-badge done">best ${x.best}%</span>` : ''}${p.errors.length ? '<span class="list-badge" style="background:#ffc9cf">⚠ check</span>' : ''}</div>
+          <div class="words">${esc(kind === 'match' ? p.items.map((it) => it.p.replace(/（\s*）|\(\s*\)/, `（${it.ans}）`)).join('、') : kind === 'choice' ? p.items.map((it) => it.opts[it.ans]).join('、') : p.items.map((it) => it.answers[0]).join(' '))}</div></div>
+        <div class="row" style="gap:6px"><button class="btn white small" data-a="hide">${x.hidden ? '🙈 Hidden' : '👁 Shown'}</button><button class="btn white small" data-a="edit">Edit</button><button class="btn white small" data-a="del">🗑</button></div>
+      </div>`;
+    $('.date-in', r).onchange = (e) => { if (e.target.value) { S.savePracticeSet(kind, x.id, { date: e.target.value }); rerender(); } };
+    r.querySelector('[data-a=hide]').onclick = () => { S.savePracticeSet(kind, x.id, { hidden: !x.hidden }); rerender(); };
+    r.querySelector('[data-a=edit]').onclick = () => editPracticeSet(kind, x, rerender);
+    r.querySelector('[data-a=del]').onclick = async () => {
+      if (!(await confirmBox('Delete this set?', `“${esc(x.name)}” will be removed.${x.builtin ? ' (You can bring ready-made sets back with “Restore ready-made sets”.)' : ''}`, 'Delete'))) return;
+      S.deletePracticeSet(kind, x.id); rerender();
+    };
+    rows.appendChild(r);
+  });
+  $('#new', n).onclick = () => editPracticeSet(kind, null, rerender);
+  $('#restore', n).onclick = () => { const c = S.restoreBuiltins(kind); toast(c ? `Restored ${c} set${c > 1 ? 's' : ''} ✓` : 'All ready-made sets are already there'); rerender(); };
+  return n;
+}
+function editPracticeSet(kind, x, rerender) {
+  const K = KINDS[kind];
+  const box = html`<div class="card stack">
+      <h3>${x ? 'Edit' : 'New'} ${K.zh} ${K.en} set</h3>
+      <div class="name-date"><label class="field">Name<input id="nm" value="${esc(x ? x.name : `${K.zh} ${new Date().toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}`)}"></label>
+        <label class="field">Date<input type="date" id="dt" value="${x ? x.date || S.todayStr() : S.todayStr()}"></label></div>
+      <div class="help" style="margin:0">${FORMAT_HELP[kind]}</div>
+      <textarea id="tx" style="min-height:200px;font-size:18px">${esc(x ? x.text : '')}</textarea>
+      <div id="pv" class="help" style="margin:0"></div>
+      <div class="row" style="justify-content:flex-end"><button class="btn white" id="c">Cancel</button><button class="btn green" id="ok">Save</button></div>
+    </div>`;
+  const pv = () => {
+    const p = parseSet(kind, $('#tx', box).value);
+    $('#pv', box).innerHTML = (p.items.length ? `✅ ${p.items.length} question${p.items.length > 1 ? 's' : ''} ready.` : '') + (p.errors.length ? `<div style="color:#c0392b">${p.errors.map(esc).join('<br>')}</div>` : '');
+  };
+  $('#tx', box).oninput = pv; pv();
+  $('#c', box).onclick = closeModal;
+  $('#ok', box).onclick = () => {
+    const text = $('#tx', box).value.trim(), p = parseSet(kind, text);
+    if (!p.items.length) return toast('Add at least one question');
+    if (p.errors.length) return toast('Please fix the lines marked in red');
+    S.savePracticeSet(kind, x ? x.id : null, { name: $('#nm', box).value.trim() || K.zh, date: $('#dt', box).value || S.todayStr(), text });
+    closeModal(); toast('Saved ✓'); rerender();
+  };
+  openModal(box);
+  $('#modal .card').style.width = 'min(820px, 96vw)';
 }
 
 // ---------- PIN ----------
@@ -148,6 +218,7 @@ function listsView(rerender) {
   sorted.forEach((l) => {
     const st = S.listStatus(l), isCur = cur && cur.id === l.id;
     const badges = [
+      l.hidden ? '<span class="list-badge lock">🙈 hidden from her</span>' : '',
       st === 'future' ? `<span class="list-badge sched">📅 Shows on ${new Date(S.listDate(l) + 'T00:00').toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}</span>` : '',
       isCur ? `<span class="list-badge cur">⭐ Current${l.done ? ' · done' : ' · not done yet'}</span>` : '',
       st === 'locked' ? '<span class="list-badge lock">🔒 after current</span>' : '',
@@ -157,10 +228,11 @@ function listsView(rerender) {
         <label class="field" style="margin:0;font-size:12px">Date<input type="date" class="date-in" value="${S.listDate(l)}"></label>
         <div style="min-width:0"><div class="nm">${esc(l.name)} <span class="en">· ${l.words.length} words</span>${badges}</div>
           <div class="words">${esc(l.words.map((w) => w.w).join('、'))}</div></div>
-        <div class="row" style="gap:6px"><button class="btn white small" data-a="edit">Edit</button><button class="btn white small" data-a="del">🗑</button></div>
+        <div class="row" style="gap:6px"><button class="btn white small" data-a="hide" title="Show / hide for her">${l.hidden ? '🙈 Hidden' : '👁 Shown'}</button><button class="btn white small" data-a="edit">Edit</button><button class="btn white small" data-a="del">🗑</button></div>
       </div>`;
     $('.date-in', r).onchange = (e) => { if (!e.target.value) return; l.date = e.target.value; S.save(); rerender(); toast('Date saved ✓'); };
     r.querySelector('[data-a=edit]').onclick = () => editList(l, rerender);
+    r.querySelector('[data-a=hide]').onclick = () => { l.hidden = !l.hidden; S.save(); rerender(); toast(l.hidden ? 'Hidden from her' : 'Shown to her ✓'); };
     r.querySelector('[data-a=del]').onclick = async () => {
       if (s.lists.length === 1) return toast('Keep at least one list');
       if (!(await confirmBox('Delete list?', `“${esc(l.name)}” will be removed. Progress on its words is kept.`, 'Delete'))) return;
@@ -303,6 +375,9 @@ function settingsView(rerender, go) {
       </div>
       <div class="row"><span class="help" style="margin:0">Quick:</span>${[5, 10, 20, 50, 100].map((v) => `<button class="btn small white" data-xq="${v}">${v}</button>`).join('')}</div>
       <div class="toggle"><span>Unlock all levels (for you to preview everything)<br><small class="help">Hair, shoes, extras, clothes and Home normally unlock at Lv5 / 10 / 15 / 20 / 25.</small></span><button class="switch ${set.unlockAll ? 'on' : ''}" id="ul"></button></div>
+      <h3>🏠 Home page shortcuts</h3>
+      <p class="help" style="margin:0">Choose what shows on her home page (where 开始听写 is). Everything is always in the 📋 Tasks button too.</p>
+      <div class="home-acts-pick">${S.HOME_ACTS.map((k) => `<label class="chk"><input type="checkbox" data-ha="${k}" ${S.homeActs().includes(k) ? 'checked' : ''}> ${{ spelling: '✏️ 听写 Spelling', essay: '✍️ 看图作文 Picture writing', choice: '🔤 词语选择 Word choice', match: '🧩 词语搭配 Word match', order: '🧱 排句子 Sentence builder' }[k]}</label>`).join('')}</div>
       <h3>🛡️ God mode</h3>
       <div class="toggle"><span>God mode — the kitten never gets hungry, thirsty, sick or dies<br><small class="help">Use it for holidays, exam weeks or sick days. Food, Water and Happy stay topped up, and missed days don't count. Turning it on also cures and brings back the kitten. Daily tasks and coins still work as usual.</small></span><button class="switch ${S.godMode() ? 'on' : ''}" id="god"></button></div>
       <h3>☁️ Account &amp; cloud backup</h3>
@@ -364,6 +439,7 @@ function settingsView(rerender, go) {
     const v = xamt(); if (!v) return toast('Type how much XP first');
     S.addXp(-v); S.save(); $('#xp-amt', n).value = ''; xpPlan(); toast(`Removed ${v} XP`);
   };
+  n.querySelectorAll('[data-ha]').forEach((c) => { c.onchange = () => { S.setHomeActs([...n.querySelectorAll('[data-ha]:checked')].map((x) => x.dataset.ha)); toast('Home page updated ✓'); }; });
   $('#god', n).onclick = () => { S.setGodMode(!S.godMode()); toast(S.godMode() ? '🛡️ God mode on' : 'God mode off'); rerender(); };
   $('#ul', n).onclick = () => { set.unlockAll = !set.unlockAll; S.save(); rerender(); };
   const showStatus = () => {

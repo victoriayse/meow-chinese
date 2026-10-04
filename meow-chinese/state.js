@@ -1,6 +1,7 @@
 // Game state: saved on this iPad (localStorage). Shaped as one JSON blob so it can
 // later be backed up to Supabase as a single row.
 import { ITEMS } from './pixel.js';
+import { BANKS } from './banks.js';
 
 const KEY = 'meow-chinese-v1';
 
@@ -96,7 +97,10 @@ function migrate(s) {
   out.prices = { ...(s.prices || {}) };
   // the garden fence was retired when the garden became a home: refund it
   if ((out.owned || []).includes('fence')) { out.owned = out.owned.filter((x) => x !== 'fence'); out.coins += 40; }
-  out.owned = (out.owned || []).filter((x) => ITEMS[x]);
+  // keep items this version doesn't know yet (a newer device may have added them); never lose them
+  out.owned = [...new Set(out.owned || [])];
+  // anything she is wearing is hers (repairs saves where an older app version dropped new items)
+  Object.values(out.kitten.equipped || {}).forEach((id) => { if (id && !out.owned.includes(id)) out.owned.push(id); });
   if (typeof out.kitten.water !== 'number') out.kitten.water = 75;
   if (typeof out.daily.tried !== 'number') { out.daily.tried = 0; out.daily.right = 0; }
   if (!out.lists || !out.lists.length) { const l = sampleList(); out.lists = [l]; out.activeListId = l.id; }
@@ -234,7 +238,7 @@ export function mood() {
   if (needs.includes('thirsty')) return { face: 'thirsty', needs, text: '好渴…想喝水 · I\'m thirsty!' };
   if (needs.includes('hungry')) return { face: 'hungry', needs, text: '肚子饿了… · I\'m hungry!' };
   if ((state.essays || []).some((e) => e.status === 'assigned')) return { face: 'happy', needs, text: '我们一起写作文！', essay: true };
-  if (state.daily.bored && !state.daily.playDone) return { face: 'bored', needs, text: '好无聊…陪我玩嘛！' };
+  if (state.boredSince) return { face: 'bored', needs, text: '好无聊…陪我玩嘛！' };
   if (!tasksDone()) return { face: 'cry', needs, text: '呜呜…今天的任务还没做完' };
   if (k.happy < 30) return { face: 'sleepy', needs, text: '好无聊… Play with me?' };
   return { face: 'happy', needs, text: '今天好开心！' };
@@ -357,7 +361,7 @@ export const activeList = () => state.lists.find((l) => l.id === state.activeLis
 // "current" spelling: she must finish it once before older lists open again. Each list can be done once a day.
 export const listDate = (l) => l.date || todayStr(new Date(l.createdAt || Date.now()));
 const byNewest = (a, b) => (listDate(b).localeCompare(listDate(a))) || ((b.createdAt || 0) - (a.createdAt || 0));
-export const releasedLists = () => state.lists.filter((l) => listDate(l) <= todayStr()).sort(byNewest);
+export const releasedLists = () => state.lists.filter((l) => !l.hidden && listDate(l) <= todayStr()).sort(byNewest);
 export const currentList = () => releasedLists()[0] || null;
 // 'open' | 'done-today' | 'locked' (finish the current list first) | 'future'
 export function listStatus(l) {
@@ -427,12 +431,15 @@ export function parseLines(text) {
 
 // ---------- "Play with me": a surprise revision round of past words ----------
 export const PLAY_REWARD = 15;
+// the kitten gets bored at most once every 3 hours; after she plays, the next one is 3 hours later
+export const BORED_EVERY = 3 * 3600000;
+export const isBored = () => !!state.boredSince;
 export function maybeBored() {
-  const d = state.daily;
-  if (d.bored || d.playDone || state.health.stage !== 'ok') return false;
+  if (state.boredSince) return true;
+  if (state.health.stage !== 'ok') return false;
   if (Object.keys(state.words).length < 5) return false;     // needs some past words to revise
-  if (Math.random() < 0.2) { d.bored = true; save(); return true; }
-  return false;
+  if (Date.now() - (state.lastPlayAt || 0) < BORED_EVERY) return false;
+  state.boredSince = Date.now(); save(); return true;
 }
 export function playWords(n = 10) {
   const hints = {};
@@ -445,8 +452,9 @@ export function playWords(n = 10) {
 export function finishPlay(first, total) {
   const d = state.daily;
   d.playDone = true; d.bored = false;
+  state.boredSince = null; state.lastPlayAt = Date.now();
   let won = 0;
-  if (total > 0 && first / total >= RIGHT_TARGET / WORDS_TARGET && !d.playPaid) { d.playPaid = true; state.coins += PLAY_REWARD; won = PLAY_REWARD; }
+  if (total > 0 && first / total >= RIGHT_TARGET / WORDS_TARGET) { state.coins += PLAY_REWARD; won = PLAY_REWARD; }
   state.kitten.happy = Math.min(100, state.kitten.happy + 15);
   save();
   return won;
@@ -532,6 +540,51 @@ export function claimCheckin() {
   save();
   return reward;
 }
+
+// ----- practice activities (词语选择 / 词语搭配 / 排句子): sets like spelling lists -----
+export const PRACTICE_KINDS = ['choice', 'match', 'order'];
+function seedPractice() {
+  const out = {};
+  PRACTICE_KINDS.forEach((k) => { out[k] = (BANKS[k] || []).map(([name, text], i) => ({ id: `${k}-b${i + 1}`, name, text, builtin: i + 1, date: '2026-01-01', createdAt: -(i + 1) })); });
+  return out;
+}
+export const practice = () => { if (!state.practice) { state.practice = seedPractice(); } return state.practice; };
+export const practiceSets = (kind) => (practice()[kind] = practice()[kind] || []);
+const setDate = (x) => x.date || todayStr(new Date(x.createdAt || Date.now()));
+export const visibleSets = (kind) => practiceSets(kind).filter((x) => !x.hidden && setDate(x) <= todayStr())
+  .sort((a, b) => setDate(b).localeCompare(setDate(a)) || (b.createdAt || 0) - (a.createdAt || 0));
+export function savePracticeSet(kind, id, fields) {
+  const list = practiceSets(kind);
+  const x = id && list.find((y) => y.id === id);
+  if (x) Object.assign(x, fields); else list.unshift({ id: uid(), createdAt: Date.now(), date: todayStr(), ...fields });
+  save();
+}
+export function deletePracticeSet(kind, id) { practice()[kind] = practiceSets(kind).filter((x) => x.id !== id); save(); }
+export function restoreBuiltins(kind) {
+  const seed = seedPractice()[kind] || [], list = practiceSets(kind);
+  let n = 0;
+  seed.forEach((b) => { if (!list.some((x) => x.builtin === b.builtin)) { list.push(b); n++; } });
+  save(); return n;
+}
+// finishing a set: 1 coin + XP for each question right first time — paid once a day per set
+export function finishPracticeSet(kind, id, right, total) {
+  const x = practiceSets(kind).find((y) => y.id === id);
+  if (!x) return { coins: 0, xp: 0 };
+  const t = todayStr();
+  x.best = Math.max(x.best || 0, total ? Math.round((right / total) * 100) : 0);
+  x.lastDone = t;
+  let coins = 0, gotXp = 0;
+  if (x.lastPaid !== t) { x.lastPaid = t; coins = right; gotXp = right * xpPerWord(); state.coins += coins; addXp(gotXp); }
+  markActive(); save();
+  return { coins, xp: gotXp };
+}
+// what shows on the home page (parents choose); the rest are under Tasks
+export const HOME_ACTS = ['spelling', 'essay', 'choice', 'match', 'order'];
+export const homeActs = () => (Array.isArray(state.settings.homeActs) ? state.settings.homeActs : ['spelling']);
+export function setHomeActs(list) { state.settings.homeActs = HOME_ACTS.filter((k) => list.includes(k)); save(); }
+// phone game reward
+export const LISTEN_REWARD = 3;
+export function listenReward(right) { if (right >= 8) { state.coins += LISTEN_REWARD; save(); return LISTEN_REWARD; } return 0; }
 
 // ----- flip phone -----
 export function notify(n) {

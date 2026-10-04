@@ -62,7 +62,7 @@ export const isOnline = (f) => !!(f && f.card && f.card.doing !== 'away' && f.ca
 const DOING = {
   essay: ['在写作文', 'is doing an essay', '✍️'], spelling: ['在听写', 'is doing spelling', '✏️'], phone: ['在玩手机', 'is using the phone', '📱'],
   shop: ['在逛商店', 'is shopping', '🛍️'], wardrobe: ['在换衣服', 'is dressing up', '👗'], house: ['在家里', 'is at home', '🏠'],
-  friends: ['在看朋友', 'is visiting friends', '👫'], online: ['在线', 'is online', '🟢'],
+  friends: ['在看朋友', 'is visiting friends', '👫'], practice: ['在做练习', 'is practising Chinese', '📝'], online: ['在线', 'is online', '🟢'],
 };
 export function doingText(f) {
   const c = f.card || {}, d = DOING[c.doing] || DOING.online;
