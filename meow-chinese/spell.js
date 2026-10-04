@@ -89,7 +89,14 @@ export function spellingScreen({ mode = 'list', go }) {
     return Math.max(120, Math.min(maxS, Math.floor((avail - 14 * (perRow - 1)) / perRow)));
   }
 
-  async function sayWord(item, { slow = false, sentence = false } = {}) {
+  // what is being read out right now (the Next button waits for it to finish)
+  let reading = null;
+  function sayWord(item, opts = {}) {
+    const p = sayWordNow(item, opts);
+    reading = p; p.finally(() => { if (reading === p) reading = null; });
+    return p;
+  }
+  async function sayWordNow(item, { slow = false, sentence = false } = {}) {
     if (!canSpeak()) { toast('这个设备不能朗读 · No speech on this device'); return; }
     root.querySelector('.teacher')?.classList.add('speaking');
     if (sentence && item.hint) { await speak(item.hint, { slow }); await new Promise((r) => setTimeout(r, 350)); }
@@ -224,7 +231,12 @@ export function spellingScreen({ mode = 'list', go }) {
       </div>`);
     hydrateIcons(main);
     if (coins) burst($('.boxes', main), 'coin', 3, '50%', '40%');
-    $('#nx', main).onclick = next;
+    const nx = $('#nx', main);
+    nx.onclick = next;
+    if (reading) {   // still reading the sentence out: wait for it before moving on
+      nx.disabled = true; const label = nx.innerHTML; nx.innerHTML = '🔊 …';
+      reading.catch(() => {}).finally(() => { nx.disabled = false; nx.innerHTML = label; });
+    }
   }
 
   function onWrong(item, charState, wrongIdx, s) {

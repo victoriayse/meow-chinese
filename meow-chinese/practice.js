@@ -132,7 +132,13 @@ export function practiceScreen({ go, kind, id }) {
   const kv = new KittenView({ scale: 3 }); kv.canvas.classList.remove('bob');
 
   const head = () => `<div class="pr-head"><span class="zh">${K.icon} ${esc(set.name)}</span><div class="dots">${parsed.items.map((_, k) => `<i class="${k < i ? 'done' : k === i ? 'cur' : ''}"></i>`).join('')}</div></div>`;
-  const good = (after) => { sfx.correct(); if (tries === 0) right++; kv.flash('happy', 900); setTimeout(after, 1000); };
+  // right answer: move on only after the sentence has been read out in full (and at least 1 second)
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const good = (after, reading) => {
+    sfx.correct(); if (tries === 0) right++; kv.flash('happy', 900);
+    const here = i;
+    Promise.all([Promise.resolve(reading).catch(() => {}), wait(1000)]).then(() => wait(reading ? 400 : 0)).then(() => { if (i === here && n.isConnected) after(); });
+  };
   const bad = (el) => { sfx.oops(); tries++; if (el) { el.classList.add('shake', 'wrong'); setTimeout(() => el.classList.remove('shake'), 500); } };
   const next = () => { i++; tries = 0; if (i >= total) finish(); else render(); };
 
@@ -152,8 +158,7 @@ export function practiceScreen({ go, kind, id }) {
       if (+b.dataset.k === it.ans) {
         $('#blank', q).textContent = it.opts[it.ans]; $('#blank', q).classList.add('filled');
         b.classList.add('right'); opts.querySelectorAll('button').forEach((x) => { x.disabled = true; });
-        speak(it.q.replace(BLANK, it.opts[it.ans]));
-        good(next);
+        good(next, speak(it.q.replace(BLANK, it.opts[it.ans])));
       } else { bad(b); b.disabled = true; }
     };
     main.appendChild(q); main.appendChild(opts);
@@ -172,8 +177,7 @@ export function practiceScreen({ go, kind, id }) {
         $('#blank', q).textContent = `（${it.ans}）`; $('#blank', q).classList.add('filled');
         b.classList.add('right'); usedWords.add(it.ans);
         box.querySelectorAll('button').forEach((x) => { x.disabled = true; });
-        speak((before || '') + it.ans + (after || ''));
-        good(next);
+        good(next, speak((before || '') + it.ans + (after || '')));
       } else { bad(b); b.disabled = true; }
     };
     main.appendChild(html`<p class="help" style="margin:0">从表中选出能和这一题搭配的词语。 Pick the word that goes with it.</p>`);
@@ -204,14 +208,16 @@ export function practiceScreen({ go, kind, id }) {
       if (it.answers.includes(current())) {
         line.classList.add('right'); msg.innerHTML = `✅ 对了！ <span class="zh">${esc(current())}</span>`;
         chips().forEach((c) => { c.classList.add('locked'); });
-        speak(current()); good(next);
+        $('#check', ui).disabled = true; $('#reset', ui).disabled = true;
+        good(next, speak(current()));
       } else {
         bad(line); msg.innerHTML = tries >= 2 ? `再试试！ Try again. <button class="btn small white" id="show">👀 看答案 Show answer</button>` : '再试试！ Not quite — try again.';
         const sh = $('#show', ui); if (sh) sh.onclick = () => {
           // put the words in the right order (no point for this one)
           it.chunks.forEach((w, k) => { const c = chips().find((x) => +x.dataset.k === k); line.appendChild(c); });
-          ph(); line.classList.add('right'); msg.innerHTML = `<span class="zh">${esc(it.answers[0])}</span>`; speak(it.answers[0]);
-          tries = 9; setTimeout(next, 2600);
+          ph(); line.classList.add('right'); msg.innerHTML = `<span class="zh">${esc(it.answers[0])}</span>`;
+          tries = 9; sh.disabled = true; $('#check', ui).disabled = true;
+          Promise.all([speak(it.answers[0]).catch(() => {}), wait(2000)]).then(() => wait(400)).then(() => { if (n.isConnected) next(); });
         };
       }
     };

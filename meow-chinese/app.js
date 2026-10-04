@@ -667,7 +667,7 @@ function homeScreen(params = {}) {
   function afterCare() {
     const got = S.checkDaily();
     got.forEach((g, i) => setTimeout(() => toast(g.label, { coins: g.coins }), i * 700));
-    if (got.length) setTimeout(() => refreshHome(), 1600);
+    if (got.length) setTimeout(() => refreshHome(), 3000);
   }
 
   wireActivities(n, refreshHome);
@@ -760,6 +760,32 @@ function graveScreen() {
   return n;
 }
 
+// the kitten eats (or drinks) for about 2.5 seconds: a dish appears at her feet, she nibbles, the food gets smaller
+function eatAnimation(kv, fx, id) {
+  const it = ITEMS[id], drink = !!it.water && !it.hunger;
+  const c = kv.canvas, fr = fx.getBoundingClientRect(), cr = c.getBoundingClientRect();
+  if (!cr.width) return;
+  const size = Math.max(34, Math.round(cr.width * 0.3));
+  const side = kv.left ? -1 : 1;   // the dish goes on the side she is facing
+  const bowl = document.createElement('div');
+  bowl.className = `eat-bowl${drink ? ' drink' : ''}`;
+  bowl.style.cssText = `left:${cr.left - fr.left + cr.width / 2 + side * cr.width * 0.3 - size / 2}px;top:${cr.bottom - fr.top - size * 0.95}px;width:${size}px;height:${size}px`;
+  const food = spriteCanvas(id, size); food.classList.add('eat-food'); bowl.appendChild(food);
+  bowl.appendChild(Object.assign(document.createElement('i'), { className: 'eat-dish' }));
+  if (drink) for (let k = 0; k < 3; k++) { const r = document.createElement('i'); r.className = 'eat-ripple'; r.style.animationDelay = `${k * 0.3}s`; bowl.appendChild(r); }
+  else for (let k = 0; k < 4; k++) { const r = document.createElement('i'); r.className = 'eat-crumb'; r.style.left = `${20 + k * 20}%`; r.style.animationDelay = `${0.2 + k * 0.45}s`; bowl.appendChild(r); }
+  const say = document.createElement('div');
+  say.className = 'eat-say zh'; say.textContent = drink ? '咕噜咕噜～' : '啊呜啊呜～';
+  say.style.cssText = `left:${cr.left - fr.left + cr.width / 2}px;top:${Math.max(0, cr.top - fr.top - 8)}px`;
+  fx.append(bowl, say);
+  const bubbles = [...(fx.parentElement || fx).querySelectorAll('.bubble')]; bubbles.forEach((b) => { b.style.visibility = 'hidden'; });
+  setTimeout(() => bubbles.forEach((b) => { b.style.visibility = ''; }), 2600);
+  kv.flash('eat', 2600);
+  c.classList.add('eating');
+  const munch = setInterval(() => sfx.stroke(), drink ? 300 : 420);
+  setTimeout(() => { clearInterval(munch); sfx.yum(); }, 2300);
+  setTimeout(() => { c.classList.remove('eating'); bowl.classList.add('gone'); say.remove(); setTimeout(() => bowl.remove(), 300); }, 2600);
+}
 function openFeed(kv, fx, afterCare) {
   const s = S.get();
   const foods = Object.entries(s.pantry).filter(([id, c]) => c > 0 && ITEMS[id]);
@@ -780,11 +806,14 @@ function openFeed(kv, fx, afterCare) {
     $('.art', b).appendChild(spriteCanvas(id, 56));
     b.onclick = () => {
       if (!S.feed(id)) return;
-      closeModal(); sfx.yum(); kv.flash('eat', 1600);
-      burst(fx, 'heart', 3, '50%', '25%');
-      toast(it.water && !it.hunger ? `<span class="zh">好解渴！</span> Ahh, refreshing!` : `<span class="zh">好吃！</span> Yum, ${esc(it.en)}!`);
-      afterCare();
-      setTimeout(() => refreshHome(), 1700);
+      closeModal(); sfx.yum();
+      eatAnimation(kv, fx, id);
+      setTimeout(() => burst(fx, 'heart', 3, '50%', '25%'), 2300);
+      setTimeout(() => {   // after she has finished eating
+        toast(it.water && !it.hunger ? `<span class="zh">好解渴！</span> Ahh, refreshing!` : `<span class="zh">好吃！</span> Yum, ${esc(it.en)}!`);
+        afterCare();
+      }, 2600);
+      setTimeout(() => refreshHome(), 3000);
     };
     pantry.appendChild(b);
   });

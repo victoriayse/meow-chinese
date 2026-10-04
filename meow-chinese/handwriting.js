@@ -309,6 +309,7 @@ export class SnapBox {
     Object.assign(this, { box, size, data, padding, leniency, hintAfter, onHit, onMiss, onComplete, onHint });
     this.scale = (size - 2 * padding) / 1024;
     this.done = new Set(); this.misses = 0; this.hinted = false; this.complete = false;
+    this.result = []; // [inkIndex, realStrokeIndex] pairs that are accepted
     this.ink = []; // her accepted strokes so far, in character coordinates
     this.medians = data.medians.map((m) => m.map(([x, y]) => [x, y]));
     const svg = document.createElementNS(SVGNS, 'svg');
@@ -377,8 +378,8 @@ export class SnapBox {
     pad.clear();
     if (this.complete || !raw) return;
     this.ink.push(raw.map((p) => this.toChar(p)));
-    const result = this.solve();
     const newIdx = this.ink.length - 1;
+    const result = this.solveKeeping(newIdx);
     if (!result.some(([i]) => i === newIdx)) {
       this.ink.pop();                                          // didn't match anything: let it fade
       this.misses++;
@@ -391,19 +392,41 @@ export class SnapBox {
     this.onHit && this.onHit(this);
     if (this.done.size === this.paths.length) { this.complete = true; this.onComplete && this.onComplete(this); }
   }
-  // keep only strokes that are still matched (rarely one gets pushed out), then redraw
+  // Re-match everything (so an early wrong guess can be corrected), but strokes she already wrote
+  // correctly must never disappear: if re-matching would drop one, keep the old matches and just
+  // try to fit the new stroke into one of the strokes still missing.
+  solveKeeping(newIdx) {
+    const full = this.solve();
+    const kept = new Set(full.map(([i]) => i));
+    if (this.result.every(([i]) => kept.has(i))) return full;
+    const old = this.result.slice(), used = new Set(old.map(([, j]) => j));
+    const fit = this.fitFrom(old), raw = this.ink[newIdx];
+    const adj = raw.map(([x, y]) => [fit.ax * x + fit.bx, fit.ay * y + fit.by]);
+    let best = -1, bc = Infinity;
+    this.medians.forEach((m, j) => {
+      if (used.has(j)) return;
+      const c = Math.min(strokeFit(adj, m, this.leniency), strokeFit(raw, m, this.leniency));
+      if (c < bc) { bc = c; best = j; }
+    });
+    return best >= 0 && Number.isFinite(bc) ? [...old, [newIdx, best]] : old;
+  }
+  // redraw the matched strokes (her ink list only ever loses the stroke she takes back with Undo)
   apply(result) {
     const keep = new Set(result.map(([i]) => i));
-    this.ink = this.ink.filter((_, i) => keep.has(i));
+    const map = new Map(); let n = 0;
+    this.ink = this.ink.filter((_, i) => { if (keep.has(i)) { map.set(i, n++); return true; } return false; });
+    this.result = result.map(([i, j]) => [map.get(i), j]);
     this.done = new Set(result.map(([, j]) => j));
     this.paths.forEach((p, j) => p.setAttribute('fill', this.done.has(j) ? '#2b2140' : (this.outline ? '#e4d9c6' : 'transparent')));
   }
   // take back her most recent stroke
   undo() {
     if (!this.ink.length || !this.pad.enabled) return false;
+    const last = this.ink.length - 1;
     this.ink.pop();
     this.complete = false;
-    this.apply(this.ink.length ? this.solve() : []);
+    // forget only that stroke; everything else stays where it was
+    this.apply(this.result.filter(([i]) => i !== last));
     return true;
   }
   hint() {
