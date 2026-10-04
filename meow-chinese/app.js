@@ -419,12 +419,12 @@ function homeScreen(params = {}) {
     ? Math.max(3, Math.min(9, Math.floor((roomH * 0.5) / 38)))
     : (portrait ? Math.max(4, Math.min(7, Math.floor((window.innerHeight * 0.36) / 38))) : Math.max(5, Math.min(9, Math.floor((window.innerHeight * 0.5) / 38))));
 
-  const task = (done, zh, en, coins, prog = '') => `
-    <div class="task ${done ? 'done' : ''}">
+  const task = (done, zh, en, coins, prog = '', key = '') => `
+    <button type="button" class="task ${done ? 'done' : ''}" data-task="${key}">
       <span class="check">${done ? '✓' : ''}</span>
       <span><div class="t-zh">${zh}${prog ? ` <span class="prog">${prog}</span>` : ''}</div><div class="t-en">${en}</div></span>
-      <span class="reward">+${coins}${coinI(18)}</span>
-    </div>`;
+      <span class="reward">+${coins}${coinI(18)}<i class="go">›</i></span>
+    </button>`;
 
   const n = html`<section class="home">
     <div class="stage ${inHouse ? 'in-house' : ''}" id="stage">
@@ -452,7 +452,7 @@ function homeScreen(params = {}) {
       <div class="card">
         <div class="h-title" style="font-size:22px;margin-bottom:8px"><span class="zh">今日任务</span><span class="en">Daily tasks</span></div>
         <div class="tasks">
-          ${S.dailyTasks().map((t) => task(t.done, esc(t.zh), esc(t.en), t.coins, t.key === 'perfect' ? `写了${d.tried} · 对${d.right}` : '')).join('') || '<p class="help" style="margin:0">今天没有任务，好好玩吧！ No tasks today.</p>'}
+          ${S.dailyTasks().map((t) => task(t.done, esc(t.zh), esc(t.en), t.coins, t.key === 'perfect' ? `写了${d.tried} · 对${d.right}` : '', t.key)).join('') || '<p class="help" style="margin:0">今天没有任务，好好玩吧！ No tasks today.</p>'}
         </div>
         ${S.dailyTasks().length ? `<div class="bonus-line" style="margin-top:8px">${d.paid.bonus ? '🎉 全部完成！All done today!' : S.dailyBonus() ? `全部完成再得 +${S.dailyBonus()} 🪙 bonus` : '全部完成吧！ Finish them all!'}</div>` : ''}
       </div>
@@ -680,6 +680,24 @@ function homeScreen(params = {}) {
   // (a checked composition now arrives as a phone notification instead of a pop-up)
   const bh = $('#b-house', n); if (bh) bh.onclick = () => (inHouse ? goBack() : go('home', { view: 'house' }));
   $('#b-feed', n).onclick = () => openFeed(kv, fx, afterCare);
+  // daily tasks: tap one to go straight to it
+  n.querySelectorAll('[data-task]').forEach((b) => { b.onclick = () => { sfx.unlock(); openTask(b.dataset.task); }; });
+  function openTask(key) {
+    if (key === 'spell' || key === 'perfect') {
+      const l = S.activeList();
+      if (!S.releasedLists().length) return toast('<span class="zh">还没有听写</span> No spelling yet — ask Mum', { ms: 3000 });
+      const st = S.listStatus(l);
+      if (st === 'open') return go('spell', { mode: 'list' });
+      const open = S.releasedLists().find((x) => S.listStatus(x) === 'open');
+      if (open) { S.get().activeListId = open.id; S.saveQuiet(); return go('spell', { mode: 'list' }); }
+      return toast(st === 'day-limit' ? '<span class="zh">今天的听写做完了！</span> That\'s all the spelling for today' : '<span class="zh">今天写过了！</span> No spelling left today — come back tomorrow', { ms: 3500 });
+    }
+    if (key === 'care') return openFeed(kv, fx, afterCare);
+    if (key === 'choice' || key === 'match' || key === 'order') return go('practiceList', { kind: key });
+    if (key === 'essay') return S.outstandingEssays().length ? go('essay') : toast('<span class="zh">现在没有作文要写</span> No picture writing to do right now', { ms: 3000 });
+    if (key === 'review') return S.reviewWords().length ? go('spell', { mode: 'review' }) : toast('<span class="zh">错词本是空的！</span> No mistakes to practise — great job!', { ms: 3000 });
+    if (key === 'listen') return openPhone({ start: 'listen', after: refreshHome });
+  }
   $('#b-friends', n).onclick = () => go('friends');
   n._mounted = () => { if (inHouse) { drawRoom($('#roombg', n)); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
   return n;

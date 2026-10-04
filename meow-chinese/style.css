@@ -184,7 +184,9 @@ canvas.sprite, .kitten-canvas { display: block; }
 .bar.segmented::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 3px), rgba(43,33,64,.25) calc(10% - 3px) 10%); }
 
 .tasks { display: flex; flex-direction: column; gap: 8px; }
-.task { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px; background: #fff; border: 3px solid var(--ink); border-radius: 6px; padding: 8px 10px; }
+.task { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px; background: #fff; border: 3px solid var(--ink); border-radius: 6px; padding: 8px 10px; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.task:active { transform: translateY(2px); }
+.task .go { font-style: normal; font-size: 22px; margin-left: 4px; color: var(--ink-2); line-height: 1; }
 .task .check { width: 30px; height: 30px; border: 3px solid var(--ink); border-radius: 4px; display: grid; place-items: center; font-family: var(--px); font-weight: 700; background: #f3ecdf; }
 .task.done { background: #eaf9e6; }
 .task.done .check { background: var(--green); color: #fff; }
