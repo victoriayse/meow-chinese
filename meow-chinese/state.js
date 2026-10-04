@@ -3,7 +3,8 @@
 import { ITEMS } from './pixel.js';
 import { BANKS } from './banks.js';
 
-const KEY = 'meow-chinese-v1';
+const OWN_KEY = 'meow-chinese-v1';
+let KEY = OWN_KEY;   // a parent looking after a linked child's account uses a separate copy on this device
 
 export const REWARDS = {
   firstTry: 3,      // word correct on first try
@@ -131,6 +132,12 @@ export function saveQuiet() { try { localStorage.setItem(KEY, JSON.stringify(sta
 export function replaceAll(obj) { state = migrate(obj); save(); }
 export function replaceQuiet(obj) { state = migrate(obj); saveQuiet(); }
 export function resetAll() { state = fresh(); save(); }
+// switch which account's game is loaded on this device (a parent managing a child); null = her own
+export function useStorage(childId) {
+  KEY = childId ? `meow-chinese-child-${childId}` : OWN_KEY;
+  state = load();
+  return state;
+}
 
 // ---------- time passing ----------
 // God mode (parent setting): the kitten never gets hungry, thirsty, sick or dies

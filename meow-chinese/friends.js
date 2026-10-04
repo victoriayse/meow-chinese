@@ -1,7 +1,7 @@
 // Friends: add friends by email, visit their kitten, feed it, write letters and send gifts.
 import * as S from './state.js';
 import * as Auth from './auth.js';
-import { rest } from './cloud.js';
+import { rest, managing } from './cloud.js';
 import { ITEMS, spriteCanvas, itemEffect, FURS } from './pixel.js';
 import { TABS } from './shop.js';
 import { $, html, esc, coinI, KittenView, toast, openModal, closeModal, confirmBox, burst, confetti, hydrateIcons } from './ui.js';
@@ -42,7 +42,7 @@ let activity = 'online';
 export function setActivity(a) { if (a === activity) return; activity = a; publishCard(true); }
 let lastCard = '', lastSent = 0, cardTimer = null;
 export function publishCard(now = false) {
-  if (!Auth.session()) return;
+  if (!Auth.session() || managing()) return;   // a parent looking after a child's account: don't show the child's cat as hers
   const c = myCard(), j = JSON.stringify(c);
   if (j === lastCard && Date.now() - lastSent < 40000) return;   // unchanged: still re-send every 40 s so friends see she's online
   clearTimeout(cardTimer);
@@ -73,7 +73,7 @@ const doingHTML = (f) => { const c = f.card || {}, d = DOING[c.doing] || DOING.o
 // ---------- things friends send me ----------
 let polling = false, onNews = () => {};
 export async function pollInbox() {
-  if (polling || !Auth.session() || !Auth.user()) return;
+  if (polling || !Auth.session() || !Auth.user() || managing()) return;   // her own letters and gifts wait until she's back on her account
   polling = true;
   try {
     const me = Auth.user().id;

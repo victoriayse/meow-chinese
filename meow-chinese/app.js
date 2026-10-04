@@ -52,6 +52,8 @@ let currentParams = {};
 const NO_HISTORY = ['welcome', 'setup', 'grave', 'login'];
 export function go(name, params = {}, opts = {}) {
   if (window.speechSynthesis) speechSynthesis.cancel();
+  // leaving the parent area while looking after a child's account: switch back to her own account first
+  if (Cloud.managing() && name !== 'parent') { app.style.opacity = '.5'; Cloud.stopManaging().finally(() => { app.style.opacity = ''; go(name, params, opts); }); return; }
   if (!opts.back && !opts.replace && current && !NO_HISTORY.includes(current)) {
     const same = current === name && JSON.stringify(params) === JSON.stringify(currentParams);
     if (name === 'home' && !params.view) stack.length = 0;          // the main page is the bottom of the stack

@@ -15,7 +15,14 @@ export async function rest(path, opts = {}) {
   if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
   return r.json();
 }
-const getRemote = async () => (await rest('user_saves?select=data,client_updated'))[0] || null;
+// ---------- a parent looking after a linked child's account ----------
+let child = null, childName = '';
+export const managing = () => child;
+export const managingName = () => childName;
+const rpcCall = (name, body) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
+const getRemote = async () => (child
+  ? (await rpcCall('get_child_save', { p_child: child }))[0] || null
+  : (await rest('user_saves?select=data,client_updated'))[0] || null);
 function payload() {
   const data = JSON.parse(JSON.stringify(S.get()));
   delete data.sync;
@@ -25,14 +32,15 @@ const sync = () => { const s = S.get(); if (!s.sync) s.sync = { lastSynced: 0 };
 
 // the last copy this device and the cloud agreed on (used to merge changes from both sides)
 const ANC_KEY = 'meow-chinese-synced';
-const loadAnc = () => { try { const t = localStorage.getItem(ANC_KEY); return t ? JSON.parse(t) : undefined; } catch { return undefined; } };
-const saveAnc = (d) => { try { localStorage.setItem(ANC_KEY, JSON.stringify(d)); } catch {} };
+const ancKey = () => (child ? `${ANC_KEY}-child-${child}` : ANC_KEY);
+const loadAnc = () => { try { const t = localStorage.getItem(ancKey()); return t ? JSON.parse(t) : undefined; } catch { return undefined; } };
+const saveAnc = (d) => { try { localStorage.setItem(ancKey(), JSON.stringify(d)); } catch {} };
 export const clearAnc = () => { try { localStorage.removeItem(ANC_KEY); } catch {} };
 
 let ready = false, timer = null, onReplaced = () => {}, running = null, again = false;
 function useCopy(data) {
   // put a merged/cloud copy on this device without counting it as a new change
-  const owner = Auth.user() && Auth.user().id;
+  const owner = child || (Auth.user() && Auth.user().id);
   const keep = sync();
   S.replaceQuiet(data);
   const s = S.get();
@@ -42,7 +50,9 @@ function useCopy(data) {
 // write only if the cloud still has the copy we read (otherwise read again and merge)
 async function write(data, expected) {
   const stamp = Math.max(Date.now(), (expected || 0) + 1);
-  const r = await rest('rpc/put_my_save2', { method: 'POST', body: JSON.stringify({ p_data: data, p_client_updated: stamp, p_expected: expected }) });
+  const r = child
+    ? await rpcCall('put_child_save', { p_child: child, p_data: data, p_client_updated: stamp, p_expected: expected })
+    : await rest('rpc/put_my_save2', { method: 'POST', body: JSON.stringify({ p_data: data, p_client_updated: stamp, p_expected: expected }) });
   return r && r.ok ? stamp : null;
 }
 
@@ -109,8 +119,7 @@ let lastRemoteStamp = null;
 async function quickCheck() {
   if (!ready || !Auth.session() || document.hidden || running) return;
   try {
-    const r = (await rest('user_saves?select=client_updated'))[0];
-    const stamp = r ? r.client_updated : null;
+    const stamp = child ? await rpcCall('get_child_stamp', { p_child: child }) : ((await rest('user_saves?select=client_updated'))[0] || {}).client_updated ?? null;
     if (stamp !== lastRemoteStamp) runSync();
   } catch (e) { /* offline: the next check will try again */ }
 }
@@ -124,7 +133,42 @@ export function init(replacedCallback) {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) pull(); });
   window.addEventListener('online', () => pull());
 }
-export function stop() { ready = false; clearTimeout(timer); clearAnc(); setStatus('idle'); }
+export function stop() {
+  ready = false; child = null; childName = ''; S.useStorage(null); clearTimeout(timer); clearAnc(); setStatus('idle');
+  // forget the copies of linked children's accounts kept on this device
+  try { Object.keys(localStorage).filter((k) => /^meow-chinese-(child-|synced-child-)/.test(k)).forEach((k) => localStorage.removeItem(k)); } catch {}
+}
+// ---------- family: link a parent's account and a child's account ----------
+export const family = {
+  list: () => rpcCall('my_family', {}),
+  code: () => rpcCall('create_link_code', {}),
+  link: (code) => rpcCall('link_child', { p_code: String(code).replace(/\D/g, '') }),
+  unlink: (id) => rpcCall('unlink_family', { p_other: id }),
+};
+
+// Start looking after a child's account on this device: her own game is saved first and set aside.
+export async function manage(childId, name = '') {
+  if (childId === child) return;
+  clearTimeout(timer);
+  if (running) await running;
+  await runSync().catch(() => {});                // send any last changes of the current account
+  const remote = await (async () => { const was = child; child = childId; try { return await getRemote(); } catch (e) { child = was; throw e; } })();
+  childName = name;
+  lastRemoteStamp = null;
+  S.useStorage(childId);
+  if (remote && remote.data) { useCopy(remote.data); saveAnc(payload()); lastRemoteStamp = remote.client_updated; }
+  setStatus('ok');
+}
+// back to her own account
+export async function stopManaging() {
+  if (!child) return;
+  clearTimeout(timer);
+  if (running) await running;
+  await runSync().catch(() => {});                // send the last changes made to the child's account
+  child = null; childName = ''; lastRemoteStamp = null;
+  S.useStorage(null);
+  runSync().catch(() => {});
+}
 export const backupNow = () => runSync();
 
 // ---------- photos for picture compositions (private storage, per account) ----------
@@ -145,7 +189,7 @@ export async function uploadEssayImage(file) {
   const t = await Auth.token(), me = Auth.user();
   if (!t || !me) throw new Error('Please log in first');
   const blob = await compress(file);
-  const path = `${me.id}/${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}.jpg`;
+  const path = `${child || me.id}/${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}.jpg`;
   const r = await fetch(`${Auth.API}/storage/v1/object/${BUCKET}/${path}`, { method: 'POST', headers: { apikey: Auth.KEY, Authorization: `Bearer ${t}`, 'Content-Type': 'image/jpeg' }, body: blob });
   if (!r.ok) throw new Error(`Upload failed (${r.status})`);
   imgCache.set(path, URL.createObjectURL(blob));

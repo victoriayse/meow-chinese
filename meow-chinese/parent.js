@@ -21,13 +21,14 @@ export function parentScreen(params) {
         <div class="h-title"><span class="zh">家长专区</span><span class="en">Parent area</span><small class="acct">👤 ${esc((Auth.user() || {}).email || '')}</small></div>
         <div class="row" style="gap:8px"><button class="btn white small" id="p-logout">🚪 Log out</button><button class="btn white small" id="home">← 回家 Home</button></div>
       </div>
+      <div id="acct-bar"></div>
       <div class="tabs" id="tabs">
         <button class="tab" data-tab="lists"><span class="zh">听写词语</span> Lists</button>
         <button class="tab" data-tab="progress"><span class="zh">学习进度</span> Progress</button>
         <button class="tab" data-tab="essays"><span class="zh">作文</span> Essays${S.essays().some((e) => e.status === 'submitted') ? ' 🔴' : ''}</button>
         <button class="tab" data-tab="practice"><span class="zh">练习</span> Practice</button>
         <button class="tab" data-tab="acts"><span class="zh">活动设置</span> 🎯 Activities</button>
-        <button class="tab" data-tab="friends"><span class="zh">朋友</span> Friends${incomingRequests().length ? ' 🔴' : ''}</button>
+        ${Cloud.managing() ? '' : `<button class="tab" data-tab="friends"><span class="zh">朋友</span> Friends${incomingRequests().length ? ' 🔴' : ''}</button>`}
         <button class="tab" data-tab="bank"><span class="zh">银行</span> Bank</button>
         <button class="tab" data-tab="shop"><span class="zh">商店价格</span> Prices</button>
         <button class="tab" data-tab="settings"><span class="zh">设置</span> Settings</button>
@@ -38,6 +39,7 @@ export function parentScreen(params) {
   let dirty = false;
   const show = (t) => {
     if (t !== tab) window.scrollTo(0, 0);
+    if (t === 'friends' && Cloud.managing()) t = 'lists';   // friends belong to each account's own phone
     tab = t; params.tab = t; dirty = false;     // remember the tab, so a refresh stays on it
     $$('.tab', n).forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
     body.innerHTML = '';
@@ -48,7 +50,7 @@ export function parentScreen(params) {
   $('#tabs', n).onclick = (e) => { const b = e.target.closest('[data-tab]'); if (b) show(b.dataset.tab); };
   $('#home', n).onclick = () => { unlockedUntil = 0; go('home'); };
   $('#p-logout', n).onclick = () => logOut(go);
-  n._mounted = () => show(tab);
+  n._mounted = () => { show(tab); accountBar($('#acct-bar', n), go, () => tab); };
   // newer data arrived (cloud sync): redraw this tab in place — but never while she's typing or a box is open
   body.addEventListener('input', () => { dirty = true; });
   n._refresh = () => {
@@ -58,6 +60,89 @@ export function parentScreen(params) {
     const y = window.scrollY; show(tab); window.scrollTo(0, y);
   };
   return n;
+}
+
+// ---------- whose account the parent area is changing (her own, or a linked child's) ----------
+let familyCache = null;
+async function loadFamily(force) {
+  if (familyCache && !force) return familyCache;
+  try { familyCache = await Cloud.family.list(); } catch { familyCache = familyCache || []; }
+  return familyCache;
+}
+const kidLabel = (k) => k.child_name || k.cat_name || (k.email || '').split('@')[0] || 'Child';
+async function accountBar(bar, go, getTab) {
+  const kids = (await loadFamily()).filter((f) => f.role === 'child');
+  if (!bar.isConnected) return;
+  const cur = Cloud.managing();
+  if (!kids.length && !cur) { bar.innerHTML = ''; return; }
+  const curKid = kids.find((k) => k.other === cur);
+  bar.innerHTML = `<div class="acct-bar ${cur ? 'child' : ''}">
+      <span class="lbl">Settings for</span>
+      <div class="seg">
+        <button type="button" data-acc="" class="${cur ? '' : 'on'}">🙋 My account</button>
+        ${kids.map((k) => `<button type="button" data-acc="${k.other}" class="${k.other === cur ? 'on' : ''}">👧 ${esc(kidLabel(k))}</button>`).join('')}
+      </div>
+      ${cur ? `<p class="note">You are changing <b>${esc(curKid ? kidLabel(curKid) : Cloud.managingName())}</b>'s account${curKid ? ` (${esc(curKid.email)})` : ''}. Everything here — lists, essays, rewards, settings — goes straight to her phone. Leaving the parent area switches back to yours.</p>` : ''}
+    </div>`;
+  bar.querySelectorAll('[data-acc]').forEach((b) => { b.onclick = async () => {
+    const id = b.dataset.acc || null;
+    if (id === (cur || null)) return;
+    bar.querySelectorAll('button').forEach((x) => { x.disabled = true; });
+    b.textContent = '…';
+    try {
+      if (id) { const k = kids.find((x) => x.other === id); await Cloud.manage(id, k ? kidLabel(k) : ''); toast(`Now changing ${esc(k ? kidLabel(k) : 'her')}'s account`); }
+      else { await Cloud.stopManaging(); toast('Back to your own account'); }
+    } catch (e) { toast(`Couldn’t switch: ${esc(e.message || e)}`, { ms: 4000 }); }
+    go('parent', { tab: getTab() }, { replace: true });
+  }; });
+}
+
+// ---------- 👨‍👩‍👧 family links (in Settings) ----------
+const LINK_ERR = { bad_code: 'That code isn’t right or has expired — make a new one on her phone.', self: 'That code is from this same account. Use it on the parent’s phone instead.', too_many: 'Too many wrong codes — wait an hour and try again.' };
+async function familySection(box, rerender, go) {
+  if (Cloud.managing()) { box.innerHTML = '<p class="help" style="margin:0">Switch back to <b>🙋 My account</b> (at the top) to link or unlink accounts.</p>'; return; }
+  const fam = await loadFamily(true);
+  if (!box.isConnected) return;
+  const kids = fam.filter((f) => f.role === 'child'), parents = fam.filter((f) => f.role === 'parent');
+  box.innerHTML = `
+    <p class="help" style="margin:0">Mum (or Dad) and the child can each have their own account on their own phone. Link them once, and the parent can change all of the child’s settings from the parent’s own phone.</p>
+    ${kids.length ? `<div class="fam-list"><b>My children</b>${kids.map((k) => `<div class="fam-row"><span>👧 <b>${esc(kidLabel(k))}</b> <small>${esc(k.email || '')}</small></span><span class="row" style="gap:6px"><button class="btn small green" data-manage="${k.other}">⚙️ Change her settings</button><button class="btn small white" data-unlink="${k.other}" data-name="${esc(kidLabel(k))}">Unlink</button></span></div>`).join('')}</div>` : ''}
+    ${parents.length ? `<div class="fam-list"><b>My parents</b>${parents.map((k) => `<div class="fam-row"><span>👩 <small>${esc(k.email || '')}</small></span><button class="btn small white" data-unlink="${k.other}" data-name="${esc(k.email || 'this parent')}">Unlink</button></div>`).join('')}</div>` : ''}
+    <div class="fam-box">
+      <b>📱 This is the child’s phone</b>
+      <p class="help" style="margin:0">Make a code, then type it on the parent’s phone (Parent area → Settings → Family). The code works for 30 minutes.</p>
+      <div class="row"><button class="btn blue" id="fam-code">🔢 Show a link code</button><span id="fam-code-out" class="fam-code"></span></div>
+    </div>
+    <div class="fam-box">
+      <b>📱 This is the parent’s phone</b>
+      <p class="help" style="margin:0">Type the 6-digit code shown on the child’s phone.</p>
+      <div class="row" style="align-items:flex-end"><label class="field" style="margin:0;max-width:200px">Link code<input id="fam-in" inputmode="numeric" maxlength="7" placeholder="123456" autocomplete="off"></label><button class="btn green" id="fam-link">🔗 Link my child</button></div>
+    </div>`;
+  $('#fam-code', box).onclick = async (e) => {
+    const b = e.currentTarget; b.disabled = true;
+    try { const c = await Cloud.family.code(); $('#fam-code-out', box).innerHTML = `${esc(String(c).replace(/(\d{3})(\d{3})/, '$1 $2'))}<small>valid for 30 min</small>`; }
+    catch (err) { toast(`Couldn’t make a code: ${esc(err.message || err)}`); }
+    b.disabled = false;
+  };
+  $('#fam-link', box).onclick = async (e) => {
+    const code = $('#fam-in', box).value.replace(/\D/g, '');
+    if (code.length !== 6) return toast('Type the 6 numbers from her phone');
+    const b = e.currentTarget; b.disabled = true;
+    try {
+      const r = await Cloud.family.link(code);
+      if (r && r.error) { toast(LINK_ERR[r.error] || r.error, { ms: 4500 }); b.disabled = false; return; }
+      familyCache = null; toast('🔗 Linked! You can now change her settings from here.', { ms: 3500 }); rerender();
+    } catch (err) { b.disabled = false; toast(`Couldn’t link: ${esc(err.message || err)}`); }
+  };
+  box.querySelectorAll('[data-manage]').forEach((b) => { b.onclick = async () => {
+    const k = kids.find((x) => x.other === b.dataset.manage); b.disabled = true;
+    try { await Cloud.manage(k.other, kidLabel(k)); toast(`Now changing ${esc(kidLabel(k))}'s account`); go('parent', { tab: 'lists' }, { replace: true }); }
+    catch (err) { b.disabled = false; toast(`Couldn’t open her account: ${esc(err.message || err)}`); }
+  }; });
+  box.querySelectorAll('[data-unlink]').forEach((b) => { b.onclick = async () => {
+    if (!(await confirmBox('Unlink?', `You won’t be able to change ${esc(b.dataset.name)}’s settings from this account any more. You can link again with a new code.`, 'Unlink'))) return;
+    try { await Cloud.family.unlink(b.dataset.unlink); familyCache = null; toast('Unlinked'); rerender(); } catch (err) { toast(`Couldn’t unlink: ${esc(err.message || err)}`); }
+  }; });
 }
 
 async function logOut(go) {
@@ -436,7 +521,8 @@ async function pushSection(box, rerender) {
   if (!box.isConnected) return;
   const onHere = here && list.some((d) => d.endpoint === here);
   box.innerHTML = `
-    <p class="help" style="margin:0">Get notifications on a phone even when the app is closed. Turn them on once on <b>each</b> phone or iPad (yours and hers), then choose which ones each device gets.</p>
+    <p class="help" style="margin:0">Get notifications on a phone even when the app is closed. Turn them on once on <b>each</b> phone or iPad (yours and hers), then choose which ones each device gets. A parent’s phone also gets the notifications of linked children (with the child’s name in front).</p>
+    ${Cloud.managing() ? `<p class="push-warn" style="margin:0">The devices below are <b>yours</b>. The quiet hours and reminder time below are for <b>${esc(Cloud.managingName() || 'her')}</b>’s account.</p>` : ''}
     <div class="push-here">
       ${onHere ? '<div class="push-ok">✅ Notifications are on for this device.</div>'
         : why ? `<div class="push-warn">${PUSH_WHY[why] || ''}</div>`
@@ -525,6 +611,8 @@ function settingsView(rerender, go) {
       </div>
       <div class="row"><span class="help" style="margin:0">Quick:</span>${[5, 10, 20, 50, 100].map((v) => `<button class="btn small white" data-xq="${v}">${v}</button>`).join('')}</div>
       <div class="toggle"><span>Unlock all levels (for you to preview everything)<br><small class="help">Hair, shoes, extras, clothes and Home normally unlock at Lv5 / 10 / 15 / 20 / 25.</small></span><button class="switch ${set.unlockAll ? 'on' : ''}" id="ul"></button></div>
+      <h3>👨‍👩‍👧 Family</h3>
+      <div id="fam-box" class="stack"><p class="help" style="margin:0">Loading…</p></div>
       <h3>🔔 Phone notifications</h3>
       <div id="push-box" class="stack"><p class="help" style="margin:0">Loading…</p></div>
       <h3>🛡️ God mode</h3>
@@ -587,6 +675,7 @@ function settingsView(rerender, go) {
     S.addXp(-v); S.save(); $('#xp-amt', n).value = ''; xpPlan(); toast(`Removed ${v} XP`);
   };
   pushSection($('#push-box', n), rerender);
+  familySection($('#fam-box', n), rerender, go);
   $('#god', n).onclick = () => { S.setGodMode(!S.godMode()); toast(S.godMode() ? '🛡️ God mode on' : 'God mode off'); rerender(); };
   $('#ul', n).onclick = () => { set.unlockAll = !set.unlockAll; S.save(); rerender(); };
   const showStatus = () => {

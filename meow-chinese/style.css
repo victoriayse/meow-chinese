@@ -1006,3 +1006,18 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .eat-crumb:nth-child(odd) { --dx: -10px; }
 .eat-say { position: absolute; transform: translate(-50%, -100%); background: #fff; border: 3px solid var(--ink); border-radius: 12px; padding: 2px 10px; font-weight: 700; font-size: 18px; white-space: nowrap; z-index: 4; animation: say-pop .3s ease-out; }
 @keyframes say-pop { from { transform: translate(-50%, -80%) scale(.5); opacity: 0; } to { transform: translate(-50%, -100%) scale(1); opacity: 1; } }
+
+/* parent: whose account + family links */
+.acct-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 12px; margin-bottom: 10px; border: 3px solid var(--ink); border-radius: 12px; background: #fffaf0; }
+.acct-bar.child { background: #fff0c2; }
+.acct-bar .lbl { font-weight: 800; }
+.acct-bar .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.acct-bar .seg button { padding: 6px 12px; border: 3px solid var(--ink); border-radius: 10px; background: #fff; font: inherit; font-weight: 800; cursor: pointer; }
+.acct-bar .seg button.on { background: var(--green); color: #fff; }
+.acct-bar .note { flex-basis: 100%; margin: 0; font-size: 14px; font-weight: 600; }
+.fam-list { display: flex; flex-direction: column; gap: 6px; }
+.fam-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 10px; border: 2px solid var(--ink); border-radius: 12px; background: #fffaf0; }
+.fam-row small { color: var(--ink-2); }
+.fam-box { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 2px dashed var(--ink); border-radius: 12px; }
+.fam-code { font-family: var(--px); font-size: 30px; font-weight: 700; letter-spacing: 3px; display: inline-flex; flex-direction: column; line-height: 1.1; }
+.fam-code small { font-family: inherit; font-size: 12px; letter-spacing: 0; color: var(--ink-2); font-weight: 600; }
