@@ -37,7 +37,7 @@ const screens = {
   spell: (p) => spellingScreen({ ...p, go }),
   shop: (p) => shopScreen({ go, ...p }),
   wardrobe: () => wardrobeScreen({ go }),
-  parent: (p) => parentScreen({ ...p, go }),
+  parent: (p) => { p.go = go; return parentScreen(p); },
   grave: graveScreen,
   essay: (p) => essayScreen({ ...p, go }),
   friends: () => Friends.friendsScreen({ go }),
@@ -704,7 +704,7 @@ function renderAlert(box, md, k) {
     $('#med', box).onclick = () => go('shop', { tab: 'pharmacy' });
   } else if (md.face === 'bored') {
     card('play', `🎮 ${name}好无聊！<span class="en">Bored</span>`,
-      `复习10个以前的词语，写对8个得${S.PLAY_REWARD}金币！<br>Revise 10 old words — get 8 right to win ${S.PLAY_REWARD} coins!`,
+      S.rewardText(S.playReward()) ? `复习10个以前的词语，写对8个得${S.rewardText(S.playReward(), false)}！<br>Revise 10 old words — get 8 right to win ${S.rewardText(S.playReward())}!` : `复习10个以前的词语，陪${name}玩一玩！<br>Revise 10 old words to cheer ${name} up!`,
       `<button class="btn big green block" id="play">🎮 Play with Me!</button>`);
     $('#play', box).onclick = () => { sfx.unlock(); go('spell', { mode: 'play' }); };
   } else if (missed >= 1) {
@@ -817,9 +817,15 @@ S.onExternalChange(() => {
   if (['home', 'shop', 'wardrobe'].includes(current) && !document.querySelector('.room.arranging')) go(current, currentParams, { replace: true });
 });
 // cloud backup & sync: if another device saved newer progress, show it
+const REDRAW_PAGES = ['home', 'shop', 'wardrobe', 'tasks', 'practiceList', 'friends', 'grave'];
 Cloud.init(() => {
-  if (current === 'spell' || current === 'login') return;   // don't interrupt a spelling round
-  go(S.get().onboarded ? (current === 'welcome' || current === 'setup' ? 'home' : current) : 'welcome', currentParams, { replace: true });
+  if (current === 'parent') { const el = app.firstElementChild; if (el && el._refresh) el._refresh(); return; }   // stay on the same tab
+  if (!S.get().onboarded) { if (current !== 'login') go('welcome', {}, { replace: true }); return; }
+  if (current === 'welcome' || current === 'setup') { go('home', {}, { replace: true }); return; }
+  // only redraw "resting" pages — never restart an activity she is doing (spelling, practice, essay, a friend's page)
+  const m = document.querySelector('#modal');
+  if (!REDRAW_PAGES.includes(current) || (m && !m.classList.contains('hidden')) || document.querySelector('.room.arranging')) return;
+  go(current, currentParams, { replace: true });
 });
 if (!Auth.session()) go('login');
 else { go(S.get().onboarded ? 'home' : 'welcome'); Cloud.pull(); }

@@ -207,7 +207,7 @@ export function spellingScreen({ mode = 'list', go }) {
     const result = item.attempt === 0 ? 'first' : 'retry';
     status[item.i] = result;
     S.recordWord(item.w, result);
-    const coins = result === 'first' ? S.REWARDS.firstTry : S.REWARDS.retry;
+    const coins = S.spellCoins(result), gotXp = S.xpPerWord();
     addCoins(coins);
     drawDots();
     sfx.correct();
@@ -218,11 +218,11 @@ export function spellingScreen({ mode = 'list', go }) {
     actions.replaceWith(html`<div class="feedback">
         <div class="big-msg good">${praise} <span class="en">${result === 'first' ? 'Correct!' : 'You remembered it!'}</span></div>
         <div class="answer"><div class="py">${esc(pinyinOf(item.w))}</div></div>
-        <div class="row" style="justify-content:center"><span class="price" style="font-size:22px">+${coins} ${coinI(22)}</span></div>
+        ${coins || gotXp ? `<div class="row" style="justify-content:center"><span class="price" style="font-size:22px">${coins ? `+${coins} ${coinI(22)}` : ''}${coins && gotXp ? ' · ' : ''}${gotXp ? `+${gotXp} XP` : ''}</span></div>` : ''}
         <button class="btn big green" id="nx">${queue.length ? '下一个 Next ➜' : '完成 Finish ★'}</button>
       </div>`);
     hydrateIcons(main);
-    burst($('.boxes', main), 'coin', 3, '50%', '40%');
+    if (coins) burst($('.boxes', main), 'coin', 3, '50%', '40%');
     $('#nx', main).onclick = next;
   }
 
@@ -325,7 +325,7 @@ export function spellingScreen({ mode = 'list', go }) {
     const rewards = S.checkDaily();
     if (mode === 'play') {
       const won = S.finishPlay(first, total);
-      rewards.push(won ? { label: `🎮 ${S.RIGHT_TARGET}/${S.WORDS_TARGET}! 小猫好开心 Play reward`, coins: won } : { label: `🎮 ${first}/${total} — 下次加油！Need ${S.RIGHT_TARGET} in ${S.WORDS_TARGET} for the prize`, coins: 0 });
+      rewards.push(won.passed ? { label: `🎮 ${S.RIGHT_TARGET}/${S.WORDS_TARGET}! 小猫好开心 Play reward${won.xp ? ` · +${won.xp} XP` : ''}`, coins: won.coins } : { label: `🎮 ${first}/${total} — 下次加油！Need ${S.RIGHT_TARGET} in ${S.WORDS_TARGET} for the prize`, coins: 0 });
     }
     const great = first / total >= 0.8;
     kv.setMood('happy');

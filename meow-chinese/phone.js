@@ -264,8 +264,9 @@ export function openPhone({ start = 'home', after } = {}) {
           const stars = right >= 9 ? 3 : right >= 6 ? 2 : right >= 3 ? 1 : 0;
           ui.innerHTML = `<div class="listen-end"><div style="font-size:44px">${'⭐'.repeat(stars) || '💪'}</div><div class="zh" style="font-size:22px">答对 ${right}/${ROUNDS}</div><div>${right >= 8 ? '太棒了！ Amazing!' : right >= 5 ? '很好！ Good job!' : '多听几次就会了！ Keep practising!'}</div><button class="ph-btn green block" id="again">↺ 再玩一次 Play again</button></div>`;
           const won = S.listenReward(right);
-          if (won) { sfx.fanfare(); confetti(); toast(`🎉 <span class="zh">答对${right}题！</span> +${won} coins`, { coins: 0 }); ui.querySelector('.listen-end').insertAdjacentHTML('beforeend', `<div class="price" style="font-size:22px">+${won} ${coinI(20)}</div>`); hydrateIcons(ui); }
-          else ui.querySelector('.listen-end').insertAdjacentHTML('beforeend', `<div class="help" style="margin:0">答对 ${8} 题以上可以得到 ${S.LISTEN_REWARD} 个金币！ Get 8 or more right to win ${S.LISTEN_REWARD} coins.</div>`);
+          const info = S.rewardText(S.listenRewardInfo());
+          if (won) { sfx.fanfare(); confetti(); if (won.coins || won.xp) { toast(`🎉 <span class="zh">答对${right}题！</span> +${S.rewardText(won)}`, { coins: 0 }); ui.querySelector('.listen-end').insertAdjacentHTML('beforeend', `<div class="price" style="font-size:22px">${won.coins ? `+${won.coins} ${coinI(20)}` : ''}${won.coins && won.xp ? ' · ' : ''}${won.xp ? `+${won.xp} XP` : ''}</div>`); hydrateIcons(ui); } }
+          else if (info) ui.querySelector('.listen-end').insertAdjacentHTML('beforeend', `<div class="help" style="margin:0">答对 8 题以上可以得到${S.rewardText(S.listenRewardInfo(), false)}！ Get 8 or more right to win ${info}.</div>`);
           $('#again', ui).onclick = () => show('listen');
           return;
         }

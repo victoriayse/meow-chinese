@@ -12,7 +12,8 @@ import { KINDS, parseSet } from './practice.js';
 
 let unlockedUntil = 0;
 
-export function parentScreen({ go, tab = 'lists' }) {
+export function parentScreen(params) {
+  const go = params.go; let tab = params.tab || 'lists';
   if (Date.now() > unlockedUntil) return pinGate(go, tab);
   const n = html`<section class="screen"><div class="parent stack">
       <div class="parent-head">
@@ -32,8 +33,10 @@ export function parentScreen({ go, tab = 'lists' }) {
       <div class="card" id="body" style="border-top-left-radius:0"></div>
     </div></section>`;
   const body = $('#body', n);
+  let dirty = false;
   const show = (t) => {
-    tab = t;
+    if (t !== tab) window.scrollTo(0, 0);
+    tab = t; params.tab = t; dirty = false;     // remember the tab, so a refresh stays on it
     $$('.tab', n).forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
     body.innerHTML = '';
     body.appendChild(t === 'lists' ? listsView(rerender) : t === 'progress' ? progressView(rerender) : t === 'shop' ? pricesView(rerender) : t === 'essays' ? essaysView(rerender) : t === 'friends' ? parentFriendsView(rerender) : t === 'practice' ? practiceView(rerender) : t === 'bank' ? bankView(rerender) : settingsView(rerender, go));
@@ -44,6 +47,14 @@ export function parentScreen({ go, tab = 'lists' }) {
   $('#home', n).onclick = () => { unlockedUntil = 0; go('home'); };
   $('#p-logout', n).onclick = () => logOut(go);
   n._mounted = () => show(tab);
+  // newer data arrived (cloud sync): redraw this tab in place — but never while she's typing or a box is open
+  body.addEventListener('input', () => { dirty = true; });
+  n._refresh = () => {
+    const a = document.activeElement;
+    const m = document.querySelector('#modal');
+    if (dirty || (a && body.contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) || (m && !m.classList.contains('hidden'))) return;
+    const y = window.scrollY; show(tab); window.scrollTo(0, y);
+  };
   return n;
 }
 
@@ -360,11 +371,17 @@ function settingsView(rerender, go) {
         <button class="btn white" id="coin-sub">－ <span class="zh">扣除</span> Remove</button>
       </div>
       <div class="row"><span class="help" style="margin:0">Quick:</span>${[5, 10, 20, 50, 100].map((v) => `<button class="btn small white" data-q="${v}">${v}</button>`).join('')}</div>
+      <h3>🎁 Rewards for activities</h3>
+      <p class="help" style="margin:0">For each activity, choose whether she gets coins, XP, or both — and how much. Changes apply straight away.</p>
+      <div class="rw-list">${Object.entries(S.REWARD_ACTS).map(([k, a]) => { const r = S.rewardSetting(k); return `<div class="rw-row" data-rw="${k}">
+          <div class="rw-name"><b><span class="zh">${a.zh}</span> ${a.en}</b><small class="help">for ${a.per}</small></div>
+          <div class="rw-ctl"><button class="switch small ${r.coinsOn ? 'on' : ''}" data-f="coinsOn" aria-label="Coins on/off"></button><span>🪙 Coins</span><input type="number" min="0" max="9999" inputmode="numeric" data-f="coins" value="${r.coins}" ${r.coinsOn ? '' : 'disabled'}></div>
+          <div class="rw-ctl"><button class="switch small ${r.xpOn ? 'on' : ''}" data-f="xpOn" aria-label="XP on/off"></button><span>⭐ XP</span><input type="number" min="0" max="9999" inputmode="numeric" data-f="xp" value="${r.xp}" ${r.xpOn ? '' : 'disabled'}></div>
+        </div>`; }).join('')}</div>
+      <p class="help" style="margin:0">Daily task bonuses (spelling done, 8/10 right, kitten care, all done) and the daily check-in gifts stay the same.</p>
       <h3>Levels &amp; XP</h3>
-      <p class="help">She is <b>Lv<span id="lv-now">${S.level()}</span></b> with <b id="xp-have">${S.xp()}</b> XP. She gets XP for every word written correctly and for each composition you check.</p>
+      <p class="help">She is <b>Lv<span id="lv-now">${S.level()}</span></b> with <b id="xp-have">${S.xp()}</b> XP. How much XP each activity gives is set in 🎁 Rewards above.</p>
       <div class="xp-grid">
-        <label class="field">XP per correct word<input type="number" id="xp-word" min="0" max="999" inputmode="numeric" value="${S.xpPerWord()}"></label>
-        <label class="field">XP per composition<small class="help" style="margin:0">(you can change it when checking each one)</small><input type="number" id="xp-essay" min="0" max="999" inputmode="numeric" value="${S.xpPerEssay()}"></label>
         <label class="field">XP needed for each level<input type="number" id="xp-level" min="1" max="9999" inputmode="numeric" value="${S.xpPerLevel()}"></label>
       </div>
       <p class="help" id="xp-plan"></p>
@@ -422,12 +439,22 @@ function settingsView(rerender, go) {
     const words = (lv) => (w ? Math.ceil(((lv - 1) * per) / w) : '—');
     $('#xp-plan', n).innerHTML = w
       ? `With these numbers, unlocks need about: Lv5 hair <b>${words(5)}</b> words · Lv10 shoes <b>${words(10)}</b> · Lv15 extras <b>${words(15)}</b> · Lv20 clothes <b>${words(20)}</b> · Lv25 Home <b>${words(25)}</b> correct words (compositions make it quicker).`
-      : 'Words give no XP right now, so she will only level up from compositions and XP you add.';
+      : 'Spelling gives no XP right now, so she will only level up from the other activities and XP you add.';
     $('#lv-now', n).textContent = S.level(); $('#xp-have', n).textContent = S.xp();
   };
   xpPlan();
-  [['#xp-word', 'word'], ['#xp-essay', 'essay'], ['#xp-level', 'level']].forEach(([sel, k]) => {
-    $(sel, n).onchange = (e) => { S.setXpSetting(k, e.target.value); e.target.value = k === 'word' ? S.xpPerWord() : k === 'essay' ? S.xpPerEssay() : S.xpPerLevel(); xpPlan(); toast('Saved ✓'); };
+  $('#xp-level', n).onchange = (e) => { S.setXpSetting('level', e.target.value); e.target.value = S.xpPerLevel(); xpPlan(); toast('Saved ✓'); };
+  // rewards per activity
+  n.querySelectorAll('[data-rw]').forEach((row) => {
+    const k = row.dataset.rw;
+    row.querySelectorAll('.switch[data-f]').forEach((b) => { b.onclick = () => {
+      const on = !b.classList.contains('on'); S.setReward(k, b.dataset.f, on);
+      b.classList.toggle('on', on); row.querySelector(`input[data-f=${b.dataset.f === 'coinsOn' ? 'coins' : 'xp'}]`).disabled = !on;
+      xpPlan(); toast(on ? 'Turned on ✓' : 'Turned off ✓');
+    }; });
+    row.querySelectorAll('input[data-f]').forEach((i) => { i.onchange = () => {
+      S.setReward(k, i.dataset.f, i.value); i.value = S.rewardSetting(k)[i.dataset.f]; xpPlan(); toast('Saved ✓');
+    }; });
   });
   const xamt = () => Math.round(Math.abs(Number($('#xp-amt', n).value)));
   n.addEventListener('click', (e) => { const q = e.target.closest('[data-xq]'); if (q) $('#xp-amt', n).value = q.dataset.xq; });
@@ -478,7 +505,7 @@ function settingsView(rerender, go) {
 function pricesView(rerender) {
   const groups = [['food', '食物 Food & drink'], ['special', '道具 Special'], ['pharmacy', '药房 Pharmacy'], ['service', '医院 Hospital'], ['wear', '衣服 Clothes'], ['decor', '花园 Garden']];
   const n = html`<div class="stack">
-      <p class="help">Set how many coins each item costs. Changes apply straight away. For reference, a perfect day earns about ${S.REWARDS.taskSpell + S.REWARDS.taskPerfect + S.REWARDS.taskCare + S.REWARDS.allBonus} coins from tasks, plus ${S.REWARDS.firstTry} per word written right first time.</p>
+      <p class="help">Set how many coins each item costs. Changes apply straight away. For reference, a perfect day earns about ${S.REWARDS.taskSpell + S.REWARDS.taskPerfect + S.REWARDS.taskCare + S.REWARDS.allBonus} coins from tasks, plus ${S.rewardFor('spelling').coins} per word written right first time (change this in Settings → 🎁 Rewards).</p>
       <div id="groups" class="stack"></div>
       <button class="btn white" id="reset" style="align-self:flex-start">↺ Reset all to default prices</button>
     </div>`;
@@ -538,7 +565,7 @@ function essaysView(rerender) {
       rv.innerHTML = `<div class="review-box stack">
           <b>Review her composition</b>
           <div class="star-pick">${[1, 2, 3].map((i) => `<button type="button" data-s="${i}" class="on">★</button>`).join('')}</div>
-          <label class="field" style="width:150px">Coins to award<input type="number" min="0" max="999" inputmode="numeric" value="30" class="coins"></label>
+          <label class="field" style="width:150px">Coins to award<input type="number" min="0" max="999" inputmode="numeric" value="${S.rewardFor('essay').coins}" class="coins"></label>
           <div class="row" style="gap:6px"><span class="help" style="margin:0">Quick:</span>${[10, 20, 30, 50].map((v) => `<button class="btn small white" data-q="${v}">${v}</button>`).join('')}</div>
           <label class="field" style="width:150px">XP to award<input type="number" min="0" max="999" inputmode="numeric" value="${S.xpPerEssay()}" class="xp"></label>
           <label class="field">Comment for her (optional)<textarea class="comment" rows="2" style="min-height:70px;font-size:18px" placeholder="例如：写得很好！下次用多一点好词。"></textarea></label>

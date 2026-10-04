@@ -214,7 +214,7 @@ export function practiceScreen({ go, kind, id }) {
         <div class="kv"></div>
         <div class="big-msg" style="font-family:var(--zh);font-size:34px">${great ? '全对了！🎉' : right / total >= 0.6 ? '做得好！' : '继续加油！'}</div>
         <div class="kpis"><div class="kpi"><b style="color:var(--green-d)">${right}/${total}</b><span>一次做对 Right first time</span></div></div>
-        ${res.coins ? `<div class="price" style="font-size:24px">+${res.coins} ${coinI(22)} · +${res.xp} XP</div>` : '<p class="help" style="margin:0">今天这一组的奖励已经领过了。 Today\'s reward for this set was already given.</p>'}
+        ${!res.paid ? '<p class="help" style="margin:0">今天这一组的奖励已经领过了。 Today\'s reward for this set was already given.</p>' : res.coins || res.xp ? `<div class="price" style="font-size:24px">${res.coins ? `+${res.coins} ${coinI(22)}` : ''}${res.coins && res.xp ? ' · ' : ''}${res.xp ? `+${res.xp} XP` : ''}</div>` : ''}
         <div class="row" style="justify-content:center"><button class="btn white" id="again">↺ <span class="zh">再做一次</span> Again</button><button class="btn green" id="more">${K.icon} <span class="zh">别的练习</span> More sets</button></div>
       </div>`;
     $('.kv', main).replaceWith(kv.canvas); kv.setMood('happy');

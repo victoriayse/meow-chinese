@@ -246,8 +246,45 @@ export function mood() {
 // XP: parents can change how much each thing gives and how much one level needs
 export const XP_DEFAULTS = { word: 1, essay: 10, level: 20 };
 const xpSetting = (k) => { const v = Number((state.settings.xp || {})[k]); return Number.isFinite(v) && v >= 0 ? v : XP_DEFAULTS[k]; };
-export const xpPerWord = () => xpSetting('word');
-export const xpPerEssay = () => xpSetting('essay');
+// ---------- Rewards: for each activity parents choose coins and/or XP, and how much ----------
+// per: what one reward is for (shown to parents). coins/xp = amounts; coinsOn/xpOn = switched on?
+export const REWARD_ACTS = {
+  spelling: { zh: '✏️ 听写', en: 'Spelling', per: 'each word right first time', coins: 3, xp: 1 },
+  choice: { zh: '🔤 词语选择', en: 'Word choice', per: 'each question right first time (once a day per set)', coins: 1, xp: 1 },
+  match: { zh: '🧩 词语搭配', en: 'Word match', per: 'each question right first time (once a day per set)', coins: 1, xp: 1 },
+  order: { zh: '🧱 排句子', en: 'Sentence builder', per: 'each sentence right first time (once a day per set)', coins: 1, xp: 1 },
+  essay: { zh: '✍️ 看图作文', en: 'Picture writing', per: 'each composition (starting amount — you can change it when checking)', coins: 30, xp: 10 },
+  play: { zh: '🎮 陪我玩', en: 'Play with me', per: 'each round with 8/10 or more right', coins: 15, xp: 0 },
+  listen: { zh: '🎧 听一听', en: 'Listen & pick (phone game)', per: 'each round with 8/10 or more right', coins: 3, xp: 0 },
+};
+export function rewardSetting(k) {
+  const d = REWARD_ACTS[k], r = (state.settings.rewards || {})[k] || {};
+  const num = (v, def) => { v = Number(v); return Number.isFinite(v) && v >= 0 ? Math.round(v) : def; };
+  const xs = state.settings.xp || {};
+  const xpDef = k === 'spelling' && xs.word != null ? num(xs.word, d.xp) : k === 'essay' && xs.essay != null ? num(xs.essay, d.xp) : d.xp;
+  return { coinsOn: r.coinsOn !== false, coins: num(r.coins, d.coins), xpOn: r.xpOn !== undefined ? !!r.xpOn : d.xp > 0 || xpDef > 0, xp: num(r.xp, xpDef) };
+}
+// what one reward actually gives right now (0 when switched off)
+export function rewardFor(k) { const r = rewardSetting(k); return { coins: r.coinsOn ? r.coins : 0, xp: r.xpOn ? r.xp : 0 }; }
+export function setReward(k, field, v) {
+  if (!REWARD_ACTS[k]) return;
+  const cur = { ...((state.settings.rewards || {})[k] || {}) };
+  if (field === 'coinsOn' || field === 'xpOn') cur[field] = !!v;
+  else cur[field] = Math.max(0, Math.min(9999, Math.round(Number(v) || 0)));
+  state.settings.rewards = { ...(state.settings.rewards || {}), [k]: cur };
+  save();
+}
+export const xpPerWord = () => rewardFor('spelling').xp;
+// e.g. "15 coins + 5 XP" — for kids' screens
+export function rewardText(r, en = true) {
+  const p = [];
+  if (r.coins) p.push(en ? `${r.coins} coins` : `${r.coins}个金币`);
+  if (r.xp) p.push(en ? `${r.xp} XP` : `${r.xp} XP`);
+  return p.join(en ? ' + ' : '和');
+}
+export const xpPerEssay = () => rewardFor('essay').xp;
+// a word only learned after a mistake gets a third of the coins (at least 1 if coins are on)
+export const spellCoins = (result) => { const c = rewardFor('spelling').coins; return result === 'first' ? c : c ? Math.max(1, Math.round(c / 3)) : 0; };
 export const xpPerLevel = () => Math.max(1, xpSetting('level'));
 export function setXpSetting(k, v) {
   v = Math.max(k === 'level' ? 1 : 0, Math.round(Number(v) || 0));
@@ -430,7 +467,7 @@ export function parseLines(text) {
 }
 
 // ---------- "Play with me": a surprise revision round of past words ----------
-export const PLAY_REWARD = 15;
+export const playReward = () => rewardFor('play');
 // the kitten gets bored at most once every 3 hours; after she plays, the next one is 3 hours later
 export const BORED_EVERY = 3 * 3600000;
 export const isBored = () => !!state.boredSince;
@@ -454,10 +491,11 @@ export function finishPlay(first, total) {
   d.playDone = true; d.bored = false;
   state.boredSince = null; state.lastPlayAt = Date.now();
   let won = 0;
-  if (total > 0 && first / total >= RIGHT_TARGET / WORDS_TARGET) { state.coins += PLAY_REWARD; won = PLAY_REWARD; }
+  let gotXp = 0;
+  if (total > 0 && first / total >= RIGHT_TARGET / WORDS_TARGET) { const r = rewardFor('play'); won = r.coins; gotXp = r.xp; state.coins += won; addXp(gotXp); }
   state.kitten.happy = Math.min(100, state.kitten.happy + 15);
   save();
-  return won;
+  return { coins: won, xp: gotXp, passed: total > 0 && first / total >= RIGHT_TARGET / WORDS_TARGET };
 }
 
 // ---------- level unlocks ----------
@@ -569,22 +607,22 @@ export function restoreBuiltins(kind) {
 // finishing a set: 1 coin + XP for each question right first time — paid once a day per set
 export function finishPracticeSet(kind, id, right, total) {
   const x = practiceSets(kind).find((y) => y.id === id);
-  if (!x) return { coins: 0, xp: 0 };
+  if (!x) return { coins: 0, xp: 0, paid: false };
   const t = todayStr();
   x.best = Math.max(x.best || 0, total ? Math.round((right / total) * 100) : 0);
   x.lastDone = t;
-  let coins = 0, gotXp = 0;
-  if (x.lastPaid !== t) { x.lastPaid = t; coins = right; gotXp = right * xpPerWord(); state.coins += coins; addXp(gotXp); }
+  let coins = 0, gotXp = 0, paid = false;
+  if (x.lastPaid !== t) { paid = true; x.lastPaid = t; const r = rewardFor(kind); coins = right * r.coins; gotXp = right * r.xp; state.coins += coins; addXp(gotXp); }
   markActive(); save();
-  return { coins, xp: gotXp };
+  return { coins, xp: gotXp, paid };
 }
 // what shows on the home page (parents choose); the rest are under Tasks
 export const HOME_ACTS = ['spelling', 'essay', 'choice', 'match', 'order'];
 export const homeActs = () => (Array.isArray(state.settings.homeActs) ? state.settings.homeActs : ['spelling']);
 export function setHomeActs(list) { state.settings.homeActs = HOME_ACTS.filter((k) => list.includes(k)); save(); }
 // phone game reward
-export const LISTEN_REWARD = 3;
-export function listenReward(right) { if (right >= 8) { state.coins += LISTEN_REWARD; save(); return LISTEN_REWARD; } return 0; }
+export const listenRewardInfo = () => rewardFor('listen');
+export function listenReward(right) { if (right < 8) return null; const r = rewardFor('listen'); state.coins += r.coins; addXp(r.xp); save(); return r; }
 
 // ----- flip phone -----
 export function notify(n) {
