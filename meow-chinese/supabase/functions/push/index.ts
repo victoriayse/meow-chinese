@@ -176,6 +176,7 @@ Deno.serve(async (req) => {
       const token = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
       const { data: u } = await sb.auth.getUser(token);
       if (!u?.user) return json({ error: "not signed in" }, 401);
+      if (body.delay) await new Promise((r) => setTimeout(r, Math.min(10, Number(body.delay) || 6) * 1000));   // time to leave the app (iPhone doesn't pop up notifications for the app on screen)
       const n = await sendTo(u.user.id, "test", { title: "🐱 喵！通知开好了", body: "Notifications are working! 喵喵中文" });
       return json({ sent: n });
     }

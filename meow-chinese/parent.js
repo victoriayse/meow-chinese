@@ -561,7 +561,13 @@ async function pushSection(box, rerender) {
     };
   });
   const t = $('#push-test', box);
-  if (t) t.onclick = async () => { t.disabled = true; try { const n = await Push.test(); toast(n ? `📨 Sent to ${n} device${n > 1 ? 's' : ''} ✓` : 'No device received it — try turning notifications on again', { ms: 3500 }); } catch (e) { toast(`Couldn’t send: ${esc(e.message)}`); } t.disabled = false; };
+  if (t) t.onclick = async () => {
+    t.disabled = true;
+    toast('📨 Sending in 6 seconds — go to the Home Screen or lock the phone now to see it pop up', { ms: 6000 });
+    try { const n = await Push.test(); toast(n ? `📨 Sent to ${n} device${n > 1 ? 's' : ''} ✓ (if nothing popped up, check Notification Center, Focus / Sleep mode, and Settings → Notifications → 喵喵中文)` : 'This account has no phones with notifications on — tap “Turn on notifications here” on each phone', { ms: 6000 }); }
+    catch (e) { toast(`Couldn’t send: ${esc(e.message)}`); }
+    t.disabled = false;
+  };
   $('#pq', box).onclick = (e) => { const v = !S.pushSettings().quietOn; S.setPushSetting('quietOn', v); e.currentTarget.classList.toggle('on', v); $('#pq-from', box).disabled = !v; $('#pq-to', box).disabled = !v; toast(v ? 'Quiet hours on ✓' : 'Quiet hours off'); };
   $('#pq-from', box).onchange = (e) => { if (e.target.value) { S.setPushSetting('quietFrom', e.target.value); toast('Saved ✓'); } };
   $('#pq-to', box).onchange = (e) => { if (e.target.value) { S.setPushSetting('quietTo', e.target.value); toast('Saved ✓'); } };
