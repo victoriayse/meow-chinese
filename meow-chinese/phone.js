@@ -200,11 +200,14 @@ export function openPhone({ start = 'home', after } = {}) {
     // ----- tic-tac-toe against the kitten -----
     ttt() {
       header('⭕ 井字棋 Tic-tac-toe');
+      const lim = S.canDo('ttt');
+      if (!lim.ok) { body.appendChild(html`<p class="ph-empty">${S.limitText(lim, 'games')}</p>`); return; }
+      const tw = S.rewardText(S.rewardFor('ttt'));
       const board = Array(9).fill(''), LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
       let over = false;
       const score = (this._ttt = this._ttt || { me: 0, cat: 0, draw: 0 });
       const ui = html`<div class="ttt"><div class="ttt-score">你 You <b id="sm">${score.me}</b> · 平 Draw <b id="sd">${score.draw}</b> · 🐱 <b id="sc">${score.cat}</b></div>
-          <div class="ttt-msg" id="msg">你先走！你是 ❌ · You go first — you are ❌</div>
+          <div class="ttt-msg" id="msg">你先走！你是 ❌ · You go first — you are ❌${tw ? `<br><small>赢了得${S.rewardText(S.rewardFor('ttt'), false)} · Win to get ${tw}</small>` : ''}</div>
           <div class="ttt-board">${board.map((_, i) => `<button data-c="${i}"></button>`).join('')}</div>
           <button class="ph-btn green block" id="again">↺ 再来一局 Play again</button></div>`;
       const cells = [...ui.querySelectorAll('[data-c]')];
@@ -225,7 +228,8 @@ export function openPhone({ start = 'home', after } = {}) {
       const finish = (w) => {
         over = true;
         if (w.line) w.line.forEach((k) => cells[k].classList.add('win'));
-        if (w.who === 'X') { score.me++; $('#msg', ui).textContent = '🎉 你赢了！ You win!'; sfx.fanfare(); }
+        const r = S.finishTtt(w.who === 'X');
+        if (w.who === 'X') { score.me++; $('#msg', ui).textContent = '🎉 你赢了！ You win!'; sfx.fanfare(); if (r && (r.coins || r.xp)) toast(`🎉 <span class="zh">你赢了！</span> +${S.rewardText(r)}`, { coins: 0 }); }
         else if (w.who === 'O') { score.cat++; $('#msg', ui).textContent = '😼 小猫赢了！ The kitten wins!'; sfx.miss(); }
         else { score.draw++; $('#msg', ui).textContent = '🤝 平局！ It\'s a draw!'; }
         $('#sm', ui).textContent = score.me; $('#sc', ui).textContent = score.cat; $('#sd', ui).textContent = score.draw;
@@ -248,6 +252,8 @@ export function openPhone({ start = 'home', after } = {}) {
     // ----- listen and pick the right word -----
     listen() {
       header('👂 听一听 Listen & pick');
+      const lim = S.canDo('listen');
+      if (!lim.ok) { body.appendChild(html`<p class="ph-empty">${S.limitText(lim, 'rounds')}</p>`); return; }
       const pool = [...new Set([...S.get().lists.flatMap((l) => l.words.map((x) => x.w)), ...Object.keys(S.get().words)])].filter((w) => /\p{Script=Han}/u.test(w));
       if (pool.length < 4) { body.appendChild(html`<p class="ph-empty">词语不够，先让妈妈加一些听写词语吧！<br>Not enough words yet — ask Mum to add a spelling list.</p>`); return; }
       const ROUNDS = 10;
@@ -267,6 +273,7 @@ export function openPhone({ start = 'home', after } = {}) {
           const info = S.rewardText(S.listenRewardInfo());
           if (won) { sfx.fanfare(); confetti(); if (won.coins || won.xp) { toast(`🎉 <span class="zh">答对${right}题！</span> +${S.rewardText(won)}`, { coins: 0 }); ui.querySelector('.listen-end').insertAdjacentHTML('beforeend', `<div class="price" style="font-size:22px">${won.coins ? `+${won.coins} ${coinI(20)}` : ''}${won.coins && won.xp ? ' · ' : ''}${won.xp ? `+${won.xp} XP` : ''}</div>`); hydrateIcons(ui); } }
           else if (info) ui.querySelector('.listen-end').insertAdjacentHTML('beforeend', `<div class="help" style="margin:0">答对 8 题以上可以得到${S.rewardText(S.listenRewardInfo(), false)}！ Get 8 or more right to win ${info}.</div>`);
+          S.checkDaily().forEach((g, k) => setTimeout(() => toast(g.label, { coins: g.coins }), 1500 + k * 700));
           $('#again', ui).onclick = () => show('listen');
           return;
         }

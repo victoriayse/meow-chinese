@@ -330,8 +330,8 @@ function spellPicker() {
   const date = (l) => new Date(S.listDate(l) + 'T00:00').toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
   const label = (l) => {
     const st = S.listStatus(l);
-    const icon = st === 'done-today' ? '✅' : st === 'locked' ? '🔒' : l.id === cur.id ? '⭐' : '📝';
-    const note = st === 'done-today' ? ' · 今天写过了' : st === 'locked' ? ' · 先写新的' : l.id === cur.id ? (l.done ? '' : ' · 新!') : '';
+    const icon = st === 'done-today' || st === 'day-limit' ? '✅' : st === 'locked' ? '🔒' : l.id === cur.id ? '⭐' : '📝';
+    const note = st === 'done-today' ? ' · 今天写过了' : st === 'day-limit' ? ' · 明天再写' : st === 'locked' ? ' · 先写新的' : l.id === cur.id ? (l.done ? '' : ' · 新!') : '';
     return `${icon} ${l.name} (${date(l)})${note}`;
   };
   const st = S.listStatus(sel);
@@ -339,7 +339,7 @@ function spellPicker() {
   return `<div class="spell-pick card">
       <label class="pick-label"><span class="zh">选听写</span> Choose a list
         <select id="list-pick">${lists.map((l) => `<option value="${l.id}" ${l.id === sel.id ? 'selected' : ''}>${esc(label(l))}</option>`).join('')}</select></label>
-      <button class="btn big block col ${ok ? '' : 'dim'}" id="b-spell"><span class="zh">${ok ? '✏️ 开始听写' : st === 'done-today' ? '✅ 今天写过了' : '🔒 先写新的听写'}</span><span class="en">${ok ? `Start · ${esc(sel.name)}` : st === 'done-today' ? 'Done today — come back tomorrow' : `Finish “${esc(cur.name)}” first`}</span></button>
+      <button class="btn big block col ${ok ? '' : 'dim'}" id="b-spell"><span class="zh">${ok ? '✏️ 开始听写' : st === 'done-today' ? '✅ 今天写过了' : st === 'day-limit' ? '✅ 今天的听写做完了' : '🔒 先写新的听写'}</span><span class="en">${ok ? `Start · ${esc(sel.name)}` : st === 'done-today' ? 'Done today — come back tomorrow' : st === 'day-limit' ? 'All done for today — come back tomorrow' : `Finish “${esc(cur.name)}” first`}</span></button>
     </div>`;
 }
 
@@ -363,6 +363,7 @@ function wireActivities(root, refresh) {
     sfx.unlock();
     const st = S.listStatus(S.activeList());
     if (st === 'done-today') return toast('<span class="zh">这个今天写过了！</span> Done today — pick another list or come back tomorrow', { ms: 3500 });
+    if (st === 'day-limit') return toast('<span class="zh">今天的听写做完了！</span> That\'s all the spelling for today — come back tomorrow', { ms: 3500 });
     if (st === 'locked') return toast(`<span class="zh">先完成「${esc(S.currentList().name)}」</span> Finish the newest list first`, { ms: 3500 });
     go('spell', { mode: 'list' });
   };
@@ -381,6 +382,23 @@ function tasksScreen() {
   return n;
 }
 
+// home page buttons (parents choose the order)
+function menuButton(b, { reviewN, inHouse }) {
+  const out = S.outstandingEssays().length, req = Friends.incomingRequests().length;
+  switch (b) {
+    case 'tasks': return `<button class="btn ${out ? 'pink has-badge' : 'green'}" id="b-tasks"><span class="zh">📋 功课</span><span class="en">Tasks</span>${out ? `<i class="badge">${out}</i>` : ''}</button>`;
+    case 'review': return `<button class="btn pink" id="b-review" ${reviewN ? '' : 'disabled'}><span class="zh">错词本</span><span class="en">Mistakes (${reviewN})</span></button>`;
+    case 'feed': return '<button class="btn white" id="b-feed"><span class="zh">喂食喝水</span><span class="en">Food &amp; water</span></button>';
+    case 'shop': return '<button class="btn blue" id="b-shop"><span class="zh">商店</span><span class="en">Shop</span></button>';
+    case 'dress': return '<button class="btn white" id="b-dress"><span class="zh">我的物品</span><span class="en">My Items</span></button>';
+    case 'house': return S.unlocked('decor')
+      ? (inHouse ? '<button class="btn green" id="b-house"><span class="zh">🌳 去草地</span><span class="en">Go outside</span></button>'
+                 : '<button class="btn green" id="b-house"><span class="zh">🏠 我的家</span><span class="en">Go to Home</span></button>')
+      : `<button class="btn white" disabled><span class="zh">🔒 我的家</span><span class="en">Home · Lv${S.UNLOCKS.decor}</span></button>`;
+    case 'friends': return `<button class="btn blue ${req ? 'has-badge' : ''}" id="b-friends"><span class="zh">👫 朋友</span><span class="en">Friends</span>${req ? `<i class="badge">${req}</i>` : ''}</button>`;
+    default: return '';
+  }
+}
 function homeScreen(params = {}) {
   S.tick();
   S.essayNotifications();
@@ -434,24 +452,13 @@ function homeScreen(params = {}) {
       <div class="card">
         <div class="h-title" style="font-size:22px;margin-bottom:8px"><span class="zh">今日任务</span><span class="en">Daily tasks</span></div>
         <div class="tasks">
-          ${task(d.spell, '完成一次听写', 'Finish one spelling round', S.REWARDS.taskSpell)}
-          ${task(S.perfectDone(), `今天写对 ${S.RIGHT_TARGET}/${S.WORDS_TARGET}`, `Write ${S.WORDS_TARGET}+ words, get ${S.RIGHT_TARGET} in ${S.WORDS_TARGET} right`, S.REWARDS.taskPerfect, `写了${d.tried} · 对${d.right}`)}
-          ${task(d.care, `照顾${esc(k.name)}`, 'Feed or pet your kitten', S.REWARDS.taskCare)}
+          ${S.dailyTasks().map((t) => task(t.done, esc(t.zh), esc(t.en), t.coins, t.key === 'perfect' ? `写了${d.tried} · 对${d.right}` : '')).join('') || '<p class="help" style="margin:0">今天没有任务，好好玩吧！ No tasks today.</p>'}
         </div>
-        <div class="bonus-line" style="margin-top:8px">${d.paid.bonus ? '🎉 全部完成！All done today!' : `全部完成再得 +${S.REWARDS.allBonus} 🪙 bonus`}</div>
+        ${S.dailyTasks().length ? `<div class="bonus-line" style="margin-top:8px">${d.paid.bonus ? '🎉 全部完成！All done today!' : S.dailyBonus() ? `全部完成再得 +${S.dailyBonus()} 🪙 bonus` : '全部完成吧！ Finish them all!'}</div>` : ''}
       </div>
       ${S.homeActs().length ? `<div class="home-acts">${S.homeActs().map((k) => (k === 'spelling' ? spellPicker() : activityButton(k))).join('')}</div>` : ''}
       <div class="menu-grid">
-        <button class="btn pink" id="b-review" ${reviewN ? '' : 'disabled'}><span class="zh">错词本</span><span class="en">Mistakes (${reviewN})</span></button>
-        <button class="btn white" id="b-feed"><span class="zh">喂食喝水</span><span class="en">Food &amp; water</span></button>
-        <button class="btn blue" id="b-shop"><span class="zh">商店</span><span class="en">Shop</span></button>
-        <button class="btn white" id="b-dress"><span class="zh">我的物品</span><span class="en">My Items</span></button>
-        ${S.unlocked('decor')
-          ? (inHouse ? '<button class="btn green" id="b-house"><span class="zh">🌳 去草地</span><span class="en">Go outside</span></button>'
-                     : '<button class="btn green" id="b-house"><span class="zh">🏠 我的家</span><span class="en">Go to Home</span></button>')
-          : `<button class="btn white" disabled><span class="zh">🔒 我的家</span><span class="en">Home · Lv${S.UNLOCKS.decor}</span></button>`}
-        <button class="btn blue ${Friends.incomingRequests().length ? 'has-badge' : ''}" id="b-friends"><span class="zh">👫 朋友</span><span class="en">Friends</span>${Friends.incomingRequests().length ? `<i class="badge">${Friends.incomingRequests().length}</i>` : ''}</button>
-        <button class="btn ${S.outstandingEssays().length ? 'pink has-badge' : ''}" id="b-tasks"><span class="zh">📋 功课</span><span class="en">Tasks</span>${S.outstandingEssays().length ? `<i class="badge">${S.outstandingEssays().length}</i>` : ''}</button>
+        ${S.menuOrder().map((b) => menuButton(b, { reviewN, inHouse })).join('')}
       </div>
     </div>
   </section>`;

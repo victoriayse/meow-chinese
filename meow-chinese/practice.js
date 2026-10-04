@@ -10,6 +10,9 @@ export const KINDS = {
 };
 const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const BLANK = /_{2,}|＿{2,}|（\s*）|\(\s*\)/;
+const pinyinOf = (w) => { try { return window.pinyinPro.pinyin(w); } catch { return ''; } };
+// a word with its Hanyu Pinyin on top (when the parent switched it on for this activity)
+const word = (kind, w) => (S.showPinyin(kind) ? `<span class="pyw"><span class="py">${esc(pinyinOf(w))}</span><span class="w">${esc(w)}</span></span>` : esc(w));
 
 // ---------- parsers (also used by the parent editor to check what she typed) ----------
 export function parseChoice(text) {
@@ -98,10 +101,12 @@ export function practiceListScreen({ go, kind }) {
       </div></div></section>`;
   const grid = $('.set-grid', n);
   if (!sets.length) grid.innerHTML = '<p class="help">还没有练习。请妈妈在 🔒 家长专区加一些！ No sets yet — ask Mum to add some in the 🔒 Parent area.</p>';
+  const dayLim = S.canDo(kind);
+  if (!dayLim.ok) grid.insertAdjacentHTML('beforebegin', `<div class="limit-note">${S.limitText(dayLim, 'sets')}</div>`);
   sets.forEach((x) => {
-    const done = x.lastDone === S.todayStr();
-    const b = html`<button class="set-tile ${done ? 'done' : ''}"><b class="zh">${esc(x.name)}</b><small>${setSize(kind, x.text)} 题 questions</small>${x.best != null ? `<span class="best">${x.best >= 100 ? '⭐ ' : ''}${x.best}%</span>` : '<span class="new">新 New</span>'}${done ? '<i class="tick">✓</i>' : ''}</button>`;
-    b.onclick = () => go('practice', { kind, id: x.id });
+    const done = x.lastDone === S.todayStr(), lim = S.canDo(kind, x);
+    const b = html`<button class="set-tile ${done ? 'done' : ''} ${lim.ok ? '' : 'blocked'}"><b class="zh">${esc(x.name)}</b><small>${setSize(kind, x.text)} 题 questions</small>${x.best != null ? `<span class="best">${x.best >= 100 ? '⭐ ' : ''}${x.best}%</span>` : '<span class="new">新 New</span>'}${done ? '<i class="tick">✓</i>' : ''}</button>`;
+    b.onclick = () => (lim.ok ? go('practice', { kind, id: x.id }) : toast(S.limitText(lim, 'sets'), { ms: 3500 }));
     grid.appendChild(b);
   });
   return n;
@@ -116,6 +121,12 @@ export function practiceScreen({ go, kind, id }) {
   if (!set) { main.innerHTML = '<p class="help">找不到这个练习。 This set is gone.</p>'; return n; }
   const parsed = parseSet(kind, set.text);
   if (!parsed.items.length) { main.innerHTML = '<p class="help">这个练习是空的。 This set has no questions.</p>'; return n; }
+  const lim = S.canDo(kind, set);
+  if (!lim.ok) {
+    main.innerHTML = `<div class="feedback" style="text-align:center"><div class="big-msg" style="font-size:28px">⏰</div><p style="font-weight:800">${S.limitText(lim, 'sets')}</p><button class="btn green" id="more">${K.icon} <span class="zh">别的练习</span> More sets</button></div>`;
+    $('#more', main).onclick = () => go('practiceList', { kind }, { replace: true });
+    return n;
+  }
   const total = parsed.items.length;
   let i = 0, right = 0, tries = 0;
   const kv = new KittenView({ scale: 3 }); kv.canvas.classList.remove('bob');
@@ -135,7 +146,7 @@ export function practiceScreen({ go, kind, id }) {
     const it = parsed.items[i];
     const [before, after] = it.q.split(BLANK);
     const q = html`<div class="pr-q zh">${esc(before)}<span class="pr-blank" id="blank"></span>${esc(after || '')}</div>`;
-    const opts = html`<div class="pr-opts">${it.opts.map((o, k) => `<button class="pr-opt zh" data-k="${k}"><small>${k + 1}.</small> ${esc(o)}</button>`).join('')}</div>`;
+    const opts = html`<div class="pr-opts">${it.opts.map((o, k) => `<button class="pr-opt zh" data-k="${k}"><small>${k + 1}.</small> ${word('choice', o)}</button>`).join('')}</div>`;
     opts.onclick = (e) => {
       const b = e.target.closest('[data-k]'); if (!b || b.disabled) return;
       if (+b.dataset.k === it.ans) {
@@ -152,7 +163,7 @@ export function practiceScreen({ go, kind, id }) {
   const usedWords = new Set();
   function renderMatch() {
     const it = parsed.items[i];
-    const box = html`<div class="pr-wordbox">${parsed.bank.map((w, k) => `<button class="pr-word zh ${usedWords.has(w) ? 'used' : ''}" data-w="${esc(w)}"><small>${k + 1}.</small> ${esc(w)}</button>`).join('')}</div>`;
+    const box = html`<div class="pr-wordbox">${parsed.bank.map((w, k) => `<button class="pr-word zh ${usedWords.has(w) ? 'used' : ''}" data-w="${esc(w)}"><small>${k + 1}.</small> ${word('match', w)}</button>`).join('')}</div>`;
     const [before, after] = it.p.split(BLANK);
     const q = html`<div class="pr-q zh">${esc(before)}<span class="pr-blank paren" id="blank">（　　）</span>${esc(after || '')}</div>`;
     box.onclick = (e) => {
@@ -178,14 +189,14 @@ export function practiceScreen({ go, kind, id }) {
         <p class="help" style="margin:0">把词语拖到上面，排成一个正确的句子。也可以点一下词语。<br>Drag the words up to make a sentence (or tap them). You can move them around or drag them back.</p>
         <div class="ord-line" id="line"><span class="ord-ph">把词语放在这里 · Put the words here</span></div>
         <div class="ord-cap">参考词语 Helping words</div>
-        <div class="ord-bank" id="bank">${order.map((x) => `<span class="ord-chip zh" data-k="${x.k}">${esc(x.w)}</span>`).join('')}</div>
+        <div class="ord-bank" id="bank">${order.map((x) => `<span class="ord-chip zh" data-k="${x.k}" data-w="${esc(x.w)}">${word('order', x.w)}</span>`).join('')}</div>
         <div class="row" style="justify-content:center"><button class="btn white" id="reset">↺ <span class="zh">重来</span> Reset</button><button class="btn green" id="check">✔ <span class="zh">检查</span> Check</button></div>
         <div class="ord-msg" id="msg"></div>
       </div>`;
     const line = $('#line', ui), bank = $('#bank', ui), msg = $('#msg', ui);
     const ph = () => { $('.ord-ph', ui).style.display = line.querySelector('.ord-chip') ? 'none' : ''; };
     const chips = () => [...ui.querySelectorAll('.ord-chip')];
-    const current = () => [...line.querySelectorAll('.ord-chip')].map((c) => c.textContent).join('');
+    const current = () => [...line.querySelectorAll('.ord-chip')].map((c) => c.dataset.w).join('');
     chips().forEach((c) => attachDrag(c, ui, [line, bank], () => { ph(); msg.textContent = ''; line.classList.remove('wrong'); }));
     $('#reset', ui).onclick = () => { chips().forEach((c) => bank.appendChild(c)); ph(); msg.textContent = ''; };
     $('#check', ui).onclick = () => {
@@ -209,17 +220,18 @@ export function practiceScreen({ go, kind, id }) {
 
   function finish() {
     const res = S.finishPracticeSet(kind, set.id, right, total);
+    S.checkDaily().forEach((g, k) => setTimeout(() => toast(g.label, { coins: g.coins }), 1200 + k * 700));
     const great = right === total;
     main.innerHTML = `<div class="summary stack" style="align-items:center;text-align:center">
         <div class="kv"></div>
         <div class="big-msg" style="font-family:var(--zh);font-size:34px">${great ? '全对了！🎉' : right / total >= 0.6 ? '做得好！' : '继续加油！'}</div>
         <div class="kpis"><div class="kpi"><b style="color:var(--green-d)">${right}/${total}</b><span>一次做对 Right first time</span></div></div>
         ${!res.paid ? '<p class="help" style="margin:0">今天这一组的奖励已经领过了。 Today\'s reward for this set was already given.</p>' : res.coins || res.xp ? `<div class="price" style="font-size:24px">${res.coins ? `+${res.coins} ${coinI(22)}` : ''}${res.coins && res.xp ? ' · ' : ''}${res.xp ? `+${res.xp} XP` : ''}</div>` : ''}
-        <div class="row" style="justify-content:center"><button class="btn white" id="again">↺ <span class="zh">再做一次</span> Again</button><button class="btn green" id="more">${K.icon} <span class="zh">别的练习</span> More sets</button></div>
+        <div class="row" style="justify-content:center">${S.canDo(kind, set).ok ? '<button class="btn white" id="again">↺ <span class="zh">再做一次</span> Again</button>' : ''}<button class="btn green" id="more">${K.icon} <span class="zh">别的练习</span> More sets</button></div>
       </div>`;
     $('.kv', main).replaceWith(kv.canvas); kv.setMood('happy');
     if (great) { sfx.fanfare(); confetti(); }
-    $('#again', main).onclick = () => go('practice', { kind, id }, { replace: true });
+    const ag = $('#again', main); if (ag) ag.onclick = () => go('practice', { kind, id }, { replace: true });
     $('#more', main).onclick = () => go('practiceList', { kind }, { replace: true });
     hydrateIcons(main);
   }

@@ -25,6 +25,7 @@ export function parentScreen(params) {
         <button class="tab" data-tab="progress"><span class="zh">学习进度</span> Progress</button>
         <button class="tab" data-tab="essays"><span class="zh">作文</span> Essays${S.essays().some((e) => e.status === 'submitted') ? ' 🔴' : ''}</button>
         <button class="tab" data-tab="practice"><span class="zh">练习</span> Practice</button>
+        <button class="tab" data-tab="acts"><span class="zh">活动设置</span> 🎯 Activities</button>
         <button class="tab" data-tab="friends"><span class="zh">朋友</span> Friends${incomingRequests().length ? ' 🔴' : ''}</button>
         <button class="tab" data-tab="bank"><span class="zh">银行</span> Bank</button>
         <button class="tab" data-tab="shop"><span class="zh">商店价格</span> Prices</button>
@@ -39,10 +40,10 @@ export function parentScreen(params) {
     tab = t; params.tab = t; dirty = false;     // remember the tab, so a refresh stays on it
     $$('.tab', n).forEach((b) => b.classList.toggle('on', b.dataset.tab === t));
     body.innerHTML = '';
-    body.appendChild(t === 'lists' ? listsView(rerender) : t === 'progress' ? progressView(rerender) : t === 'shop' ? pricesView(rerender) : t === 'essays' ? essaysView(rerender) : t === 'friends' ? parentFriendsView(rerender) : t === 'practice' ? practiceView(rerender) : t === 'bank' ? bankView(rerender) : settingsView(rerender, go));
+    body.appendChild(t === 'lists' ? listsView(rerender) : t === 'progress' ? progressView(rerender) : t === 'shop' ? pricesView(rerender) : t === 'essays' ? essaysView(rerender) : t === 'friends' ? parentFriendsView(rerender) : t === 'practice' ? practiceView(rerender) : t === 'acts' ? activitiesView(rerender) : t === 'bank' ? bankView(rerender) : settingsView(rerender, go));
     hydrateIcons(body);
   };
-  const rerender = () => show(tab);
+  const rerender = () => { const y = window.scrollY; show(tab); window.scrollTo(0, y); };
   $('#tabs', n).onclick = (e) => { const b = e.target.closest('[data-tab]'); if (b) show(b.dataset.tab); };
   $('#home', n).onclick = () => { unlockedUntil = 0; go('home'); };
   $('#p-logout', n).onclick = () => logOut(go);
@@ -233,7 +234,7 @@ function listsView(rerender) {
       st === 'future' ? `<span class="list-badge sched">📅 Shows on ${new Date(S.listDate(l) + 'T00:00').toLocaleDateString('en-SG', { day: 'numeric', month: 'short' })}</span>` : '',
       isCur ? `<span class="list-badge cur">⭐ Current${l.done ? ' · done' : ' · not done yet'}</span>` : '',
       st === 'locked' ? '<span class="list-badge lock">🔒 after current</span>' : '',
-      st === 'done-today' ? '<span class="list-badge done">✅ done today</span>' : '',
+      S.itemCount(l) ? `<span class="list-badge done">✅ done today${S.itemCount(l) > 1 ? ` ×${S.itemCount(l)}` : ''}</span>` : '',
     ].join('');
     const r = html`<div class="list-row dated ${isCur ? 'on' : ''}">
         <label class="field" style="margin:0;font-size:12px">Date<input type="date" class="date-in" value="${S.listDate(l)}"></label>
@@ -341,6 +342,84 @@ function progressView(rerender) {
 }
 
 // ---------- settings ----------
+// ---------- 🎯 Activities: home page, daily tasks, rewards, daily limits, pinyin ----------
+const ACT_NAMES = { spelling: '✏️ 听写 Spelling', essay: '✍️ 看图作文 Picture writing', choice: '🔤 词语选择 Word choice', match: '🧩 词语搭配 Word match', order: '🧱 排句子 Sentence builder' };
+const MENU_NAMES = { tasks: '📋 功课 Tasks', review: '📕 错词本 Mistakes', feed: '🐟 喂食喝水 Food & water', shop: '🛍️ 商店 Shop', dress: '👗 我的物品 My Items', house: '🏠 我的家 Home', friends: '👫 朋友 Friends' };
+function activitiesView(rerender) {
+  const shown = S.homeActs(), acts = [...shown, ...S.HOME_ACTS.filter((k) => !shown.includes(k))];
+  const menu = S.menuOrder();
+  const arrows = (i, len, grp) => `<span class="mv"><button class="btn small white" data-mv="${grp}" data-i="${i}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Move up">▲</button><button class="btn small white" data-mv="${grp}" data-i="${i}" data-d="1" ${i === len - 1 ? 'disabled' : ''} aria-label="Move down">▼</button></span>`;
+  const n = html`<div class="stack acts-set">
+      <p class="help" style="margin:0">Everything about her activities in one place. Changes apply straight away.</p>
+      <h3>🏠 Home page — activity shortcuts</h3>
+      <p class="help" style="margin:0">Tick what shows on her home page, and use ▲▼ to put them in order. Everything is always in the 📋 Tasks button too.</p>
+      <div class="order-list">${acts.map((k, i) => `<div class="order-row ${shown.includes(k) ? '' : 'off'}"><label class="chk"><input type="checkbox" data-ha="${k}" ${shown.includes(k) ? 'checked' : ''}> ${ACT_NAMES[k]}</label>${shown.includes(k) ? arrows(shown.indexOf(k), shown.length, 'ha') : ''}</div>`).join('')}</div>
+      <h3>🔘 Home page — button order</h3>
+      <p class="help" style="margin:0">The buttons under her daily tasks. Use ▲▼ to change the order.</p>
+      <div class="order-list">${menu.map((k, i) => `<div class="order-row"><span class="nm">${i + 1}. ${esc(MENU_NAMES[k])}</span>${arrows(i, menu.length, 'menu')}</div>`).join('')}</div>
+      <h3>📋 Daily tasks</h3>
+      <p class="help" style="margin:0">Choose her daily tasks and the coins for each. When she finishes all of them she gets the bonus and her streak goes up. (If a day has no tasks done, the kitten feels it — same as before.)</p>
+      <div class="rw-list">${Object.entries(S.DAILY_TASKS).map(([k, t]) => { const r = S.dailyTaskSetting(k); return `<div class="rw-row dt-row" data-dt="${k}">
+          <div class="rw-name"><b><span class="zh">${esc(k === 'care' ? '照顾小猫' : t.zh)}</span></b><small class="help">${esc(t.en)}</small></div>
+          <div class="rw-ctl"><button class="switch small ${r.on ? 'on' : ''}" data-f="on" aria-label="On/off"></button><span>🪙 Coins</span><input type="number" min="0" max="9999" inputmode="numeric" data-f="coins" value="${r.coins}" ${r.on ? '' : 'disabled'}></div>
+        </div>`; }).join('')}
+        <div class="rw-row dt-row"><div class="rw-name"><b>🎉 全部完成 All-done bonus</b><small class="help">extra coins when every task above is done</small></div><div class="rw-ctl"><span>🪙 Coins</span><input type="number" min="0" max="9999" inputmode="numeric" id="dt-bonus" value="${S.dailyBonus()}"></div></div>
+      </div>
+      <h3>🎁 Rewards for activities</h3>
+      <p class="help" style="margin:0">For each activity, choose whether she gets coins, XP, or both — and how much.</p>
+      <div class="rw-list">${Object.entries(S.REWARD_ACTS).map(([k, a]) => { const r = S.rewardSetting(k); return `<div class="rw-row" data-rw="${k}">
+          <div class="rw-name"><b><span class="zh">${a.zh}</span> ${a.en}</b><small class="help">for ${a.per}</small></div>
+          <div class="rw-ctl"><button class="switch small ${r.coinsOn ? 'on' : ''}" data-f="coinsOn" aria-label="Coins on/off"></button><span>🪙 Coins</span><input type="number" min="0" max="9999" inputmode="numeric" data-f="coins" value="${r.coins}" ${r.coinsOn ? '' : 'disabled'}></div>
+          <div class="rw-ctl"><button class="switch small ${r.xpOn ? 'on' : ''}" data-f="xpOn" aria-label="XP on/off"></button><span>⭐ XP</span><input type="number" min="0" max="9999" inputmode="numeric" data-f="xp" value="${r.xp}" ${r.xpOn ? '' : 'disabled'}></div>
+        </div>`; }).join('')}</div>
+      <h3>⏰ Times a day</h3>
+      <p class="help" style="margin:0">How many times a day she can do each activity. <b>0 = no limit.</b> “Whole activity” counts every round she finishes; “each list / set” stops her repeating the same one. The Mistakes book and Play with me are never limited.</p>
+      <div class="rw-list">${Object.entries(S.LIMIT_ACTS).map(([k, a]) => { const l = S.limitSetting(k); return `<div class="rw-row lim-row" data-lim="${k}">
+          <div class="rw-name"><b><span class="zh">${a.zh}</span> ${a.en}</b><small class="help">done today: ${S.todayCount(k)} ${a.unit}</small></div>
+          <div class="rw-ctl"><span>Whole activity</span><input type="number" min="0" max="99" inputmode="numeric" data-f="perDay" value="${l.perDay}"></div>
+          ${l.perItem !== null ? `<div class="rw-ctl"><span>${a.item === 'each list' ? 'Each list' : 'Each set'}</span><input type="number" min="0" max="99" inputmode="numeric" data-f="perItem" value="${l.perItem}"></div>` : '<div></div>'}
+        </div>`; }).join('')}</div>
+      <h3>🔤 Hanyu Pinyin</h3>
+      <p class="help" style="margin:0">Show pinyin above the words she picks from.</p>
+      ${Object.entries(S.PINYIN_ACTS).map(([k, nm]) => `<div class="toggle"><span>${nm}</span><button class="switch ${S.showPinyin(k) ? 'on' : ''}" data-py="${k}"></button></div>`).join('')}
+    </div>`;
+  // home shortcuts + order
+  const saveActs = () => { S.setHomeActs([...n.querySelectorAll('[data-ha]')].filter((x) => x.checked).map((x) => x.dataset.ha)); toast('Home page updated ✓'); rerender(); };
+  n.querySelectorAll('[data-ha]').forEach((c) => { c.onchange = saveActs; });
+  n.querySelectorAll('[data-mv]').forEach((b) => { b.onclick = () => {
+    const i = +b.dataset.i, d = +b.dataset.d;
+    const list = b.dataset.mv === 'ha' ? S.homeActs().slice() : S.menuOrder().slice();
+    [list[i], list[i + d]] = [list[i + d], list[i]];
+    if (b.dataset.mv === 'ha') S.setHomeActs(list); else S.setMenuOrder(list);
+    toast('Order saved ✓'); rerender();
+  }; });
+  // daily tasks
+  n.querySelectorAll('[data-dt]').forEach((row) => {
+    const k = row.dataset.dt;
+    $('.switch', row).onclick = (e) => { const on = !e.currentTarget.classList.contains('on'); S.setDailyTask(k, 'on', on); e.currentTarget.classList.toggle('on', on); $('input', row).disabled = !on; toast(on ? 'Task added ✓' : 'Task removed ✓'); };
+    $('input', row).onchange = (e) => { S.setDailyTask(k, 'coins', e.target.value); e.target.value = S.dailyTaskSetting(k).coins; toast('Saved ✓'); };
+  });
+  $('#dt-bonus', n).onchange = (e) => { S.setDailyTask('bonus', null, e.target.value); e.target.value = S.dailyBonus(); toast('Saved ✓'); };
+  // rewards per activity
+  n.querySelectorAll('[data-rw]').forEach((row) => {
+    const k = row.dataset.rw;
+    row.querySelectorAll('.switch[data-f]').forEach((b) => { b.onclick = () => {
+      const on = !b.classList.contains('on'); S.setReward(k, b.dataset.f, on);
+      b.classList.toggle('on', on); row.querySelector(`input[data-f=${b.dataset.f === 'coinsOn' ? 'coins' : 'xp'}]`).disabled = !on;
+      toast(on ? 'Turned on ✓' : 'Turned off ✓');
+    }; });
+    row.querySelectorAll('input[data-f]').forEach((i) => { i.onchange = () => { S.setReward(k, i.dataset.f, i.value); i.value = S.rewardSetting(k)[i.dataset.f]; toast('Saved ✓'); }; });
+  });
+  // limits
+  n.querySelectorAll('[data-lim]').forEach((row) => {
+    const k = row.dataset.lim;
+    row.querySelectorAll('input[data-f]').forEach((i) => { i.onchange = () => { S.setLimit(k, i.dataset.f, i.value); i.value = S.limitSetting(k)[i.dataset.f]; toast(+i.value ? `Saved ✓ — ${i.value} a day` : 'Saved ✓ — no limit'); }; });
+  });
+  // pinyin
+  n.querySelectorAll('[data-py]').forEach((b) => { b.onclick = () => { const on = !b.classList.contains('on'); S.setPinyin(b.dataset.py, on); b.classList.toggle('on', on); toast(on ? 'Pinyin on ✓' : 'Pinyin off ✓'); }; });
+  return n;
+}
+
 function settingsView(rerender, go) {
   const s = S.get(), set = s.settings;
   const voices = chineseVoices();
@@ -371,16 +450,8 @@ function settingsView(rerender, go) {
         <button class="btn white" id="coin-sub">－ <span class="zh">扣除</span> Remove</button>
       </div>
       <div class="row"><span class="help" style="margin:0">Quick:</span>${[5, 10, 20, 50, 100].map((v) => `<button class="btn small white" data-q="${v}">${v}</button>`).join('')}</div>
-      <h3>🎁 Rewards for activities</h3>
-      <p class="help" style="margin:0">For each activity, choose whether she gets coins, XP, or both — and how much. Changes apply straight away.</p>
-      <div class="rw-list">${Object.entries(S.REWARD_ACTS).map(([k, a]) => { const r = S.rewardSetting(k); return `<div class="rw-row" data-rw="${k}">
-          <div class="rw-name"><b><span class="zh">${a.zh}</span> ${a.en}</b><small class="help">for ${a.per}</small></div>
-          <div class="rw-ctl"><button class="switch small ${r.coinsOn ? 'on' : ''}" data-f="coinsOn" aria-label="Coins on/off"></button><span>🪙 Coins</span><input type="number" min="0" max="9999" inputmode="numeric" data-f="coins" value="${r.coins}" ${r.coinsOn ? '' : 'disabled'}></div>
-          <div class="rw-ctl"><button class="switch small ${r.xpOn ? 'on' : ''}" data-f="xpOn" aria-label="XP on/off"></button><span>⭐ XP</span><input type="number" min="0" max="9999" inputmode="numeric" data-f="xp" value="${r.xp}" ${r.xpOn ? '' : 'disabled'}></div>
-        </div>`; }).join('')}</div>
-      <p class="help" style="margin:0">Daily task bonuses (spelling done, 8/10 right, kitten care, all done) and the daily check-in gifts stay the same.</p>
       <h3>Levels &amp; XP</h3>
-      <p class="help">She is <b>Lv<span id="lv-now">${S.level()}</span></b> with <b id="xp-have">${S.xp()}</b> XP. How much XP each activity gives is set in 🎁 Rewards above.</p>
+      <p class="help">She is <b>Lv<span id="lv-now">${S.level()}</span></b> with <b id="xp-have">${S.xp()}</b> XP. How much XP each activity gives is set in the 🎯 Activities tab → 🎁 Rewards.</p>
       <div class="xp-grid">
         <label class="field">XP needed for each level<input type="number" id="xp-level" min="1" max="9999" inputmode="numeric" value="${S.xpPerLevel()}"></label>
       </div>
@@ -392,9 +463,6 @@ function settingsView(rerender, go) {
       </div>
       <div class="row"><span class="help" style="margin:0">Quick:</span>${[5, 10, 20, 50, 100].map((v) => `<button class="btn small white" data-xq="${v}">${v}</button>`).join('')}</div>
       <div class="toggle"><span>Unlock all levels (for you to preview everything)<br><small class="help">Hair, shoes, extras, clothes and Home normally unlock at Lv5 / 10 / 15 / 20 / 25.</small></span><button class="switch ${set.unlockAll ? 'on' : ''}" id="ul"></button></div>
-      <h3>🏠 Home page shortcuts</h3>
-      <p class="help" style="margin:0">Choose what shows on her home page (where 开始听写 is). Everything is always in the 📋 Tasks button too.</p>
-      <div class="home-acts-pick">${S.HOME_ACTS.map((k) => `<label class="chk"><input type="checkbox" data-ha="${k}" ${S.homeActs().includes(k) ? 'checked' : ''}> ${{ spelling: '✏️ 听写 Spelling', essay: '✍️ 看图作文 Picture writing', choice: '🔤 词语选择 Word choice', match: '🧩 词语搭配 Word match', order: '🧱 排句子 Sentence builder' }[k]}</label>`).join('')}</div>
       <h3>🛡️ God mode</h3>
       <div class="toggle"><span>God mode — the kitten never gets hungry, thirsty, sick or dies<br><small class="help">Use it for holidays, exam weeks or sick days. Food, Water and Happy stay topped up, and missed days don't count. Turning it on also cures and brings back the kitten. Daily tasks and coins still work as usual.</small></span><button class="switch ${S.godMode() ? 'on' : ''}" id="god"></button></div>
       <h3>☁️ Account &amp; cloud backup</h3>
@@ -444,18 +512,6 @@ function settingsView(rerender, go) {
   };
   xpPlan();
   $('#xp-level', n).onchange = (e) => { S.setXpSetting('level', e.target.value); e.target.value = S.xpPerLevel(); xpPlan(); toast('Saved ✓'); };
-  // rewards per activity
-  n.querySelectorAll('[data-rw]').forEach((row) => {
-    const k = row.dataset.rw;
-    row.querySelectorAll('.switch[data-f]').forEach((b) => { b.onclick = () => {
-      const on = !b.classList.contains('on'); S.setReward(k, b.dataset.f, on);
-      b.classList.toggle('on', on); row.querySelector(`input[data-f=${b.dataset.f === 'coinsOn' ? 'coins' : 'xp'}]`).disabled = !on;
-      xpPlan(); toast(on ? 'Turned on ✓' : 'Turned off ✓');
-    }; });
-    row.querySelectorAll('input[data-f]').forEach((i) => { i.onchange = () => {
-      S.setReward(k, i.dataset.f, i.value); i.value = S.rewardSetting(k)[i.dataset.f]; xpPlan(); toast('Saved ✓');
-    }; });
-  });
   const xamt = () => Math.round(Math.abs(Number($('#xp-amt', n).value)));
   n.addEventListener('click', (e) => { const q = e.target.closest('[data-xq]'); if (q) $('#xp-amt', n).value = q.dataset.xq; });
   $('#xp-add', n).onclick = () => {
@@ -466,7 +522,6 @@ function settingsView(rerender, go) {
     const v = xamt(); if (!v) return toast('Type how much XP first');
     S.addXp(-v); S.save(); $('#xp-amt', n).value = ''; xpPlan(); toast(`Removed ${v} XP`);
   };
-  n.querySelectorAll('[data-ha]').forEach((c) => { c.onchange = () => { S.setHomeActs([...n.querySelectorAll('[data-ha]:checked')].map((x) => x.dataset.ha)); toast('Home page updated ✓'); }; });
   $('#god', n).onclick = () => { S.setGodMode(!S.godMode()); toast(S.godMode() ? '🛡️ God mode on' : 'God mode off'); rerender(); };
   $('#ul', n).onclick = () => { set.unlockAll = !set.unlockAll; S.save(); rerender(); };
   const showStatus = () => {
@@ -505,7 +560,7 @@ function settingsView(rerender, go) {
 function pricesView(rerender) {
   const groups = [['food', '食物 Food & drink'], ['special', '道具 Special'], ['pharmacy', '药房 Pharmacy'], ['service', '医院 Hospital'], ['wear', '衣服 Clothes'], ['decor', '花园 Garden']];
   const n = html`<div class="stack">
-      <p class="help">Set how many coins each item costs. Changes apply straight away. For reference, a perfect day earns about ${S.REWARDS.taskSpell + S.REWARDS.taskPerfect + S.REWARDS.taskCare + S.REWARDS.allBonus} coins from tasks, plus ${S.rewardFor('spelling').coins} per word written right first time (change this in Settings → 🎁 Rewards).</p>
+      <p class="help">Set how many coins each item costs. Changes apply straight away. For reference, a perfect day earns about ${S.dailyTasks().reduce((a, t) => a + t.coins, 0) + (S.dailyTasks().length ? S.dailyBonus() : 0)} coins from daily tasks, plus ${S.rewardFor('spelling').coins} per word written right first time (change this in 🎯 Activities → 🎁 Rewards).</p>
       <div id="groups" class="stack"></div>
       <button class="btn white" id="reset" style="align-self:flex-start">↺ Reset all to default prices</button>
     </div>`;

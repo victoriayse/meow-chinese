@@ -66,7 +66,7 @@ function fresh() {
     activeListId: list.id,
     words: {},       // per-word stats: { attempts, firstTry, wrong, lastSeen, lastResult, review, okStreak }
     sessions: [],    // { at, listName, total, firstTry, coins, mode }
-    daily: { date: todayStr(), spell: false, tried: 0, right: 0, care: false, paid: { spell: false, perfect: false, care: false, bonus: false } },
+    daily: { date: todayStr(), spell: false, tried: 0, right: 0, care: false, done: {}, count: {}, paid: { spell: false, perfect: false, care: false, bonus: false } },
     streak: { count: 0, lastDate: null, freezes: 0 },
     health: { stage: 'ok', lastActive: todayStr(), treated: null },
     settings: { rate: 0.75, voiceURI: null, pin: null, sound: true },
@@ -162,7 +162,7 @@ export function tick() {
   }
   const d = todayStr();
   if (state.daily.date !== d) {
-    state.daily = { date: d, spell: false, tried: 0, right: 0, care: false, paid: { spell: false, perfect: false, care: false, bonus: false } };
+    state.daily = { date: d, spell: false, tried: 0, right: 0, care: false, done: {}, count: {}, paid: { spell: false, perfect: false, care: false, bonus: false } };
     k.petsToday = 0;
     // missed days: use streak freezes if she has enough, otherwise the streak resets
     const st = state.streak;
@@ -226,7 +226,7 @@ export function restartKitten() {
   save();
 }
 
-export const tasksDone = () => !!state.daily.paid.bonus;
+export const tasksDone = () => !!state.daily.paid.bonus || !dailyTasks().length;
 export function mood() {
   const k = state.kitten, needs = [];
   if (k.hunger < 50) needs.push('hungry');
@@ -256,6 +256,7 @@ export const REWARD_ACTS = {
   essay: { zh: '✍️ 看图作文', en: 'Picture writing', per: 'each composition (starting amount — you can change it when checking)', coins: 30, xp: 10 },
   play: { zh: '🎮 陪我玩', en: 'Play with me', per: 'each round with 8/10 or more right', coins: 15, xp: 0 },
   listen: { zh: '🎧 听一听', en: 'Listen & pick (phone game)', per: 'each round with 8/10 or more right', coins: 3, xp: 0 },
+  ttt: { zh: '⭕ 井字棋', en: 'Tic-tac-toe (phone game)', per: 'each game she wins against the kitten', coins: 1, xp: 0 },
 };
 export function rewardSetting(k) {
   const d = REWARD_ACTS[k], r = (state.settings.rewards || {})[k] || {};
@@ -308,19 +309,61 @@ export function perfectDone() {
   const d = state.daily;
   return d.tried >= WORDS_TARGET && d.right / d.tried >= RIGHT_TARGET / WORDS_TARGET;
 }
+// ---------- daily tasks: parents choose which ones, and the coins for each and for finishing them all ----------
+export const DAILY_TASKS = {
+  spell: { zh: '完成一次听写', en: 'Finish one spelling round', coins: REWARDS.taskSpell, on: true },
+  perfect: { zh: `今天写对 ${RIGHT_TARGET}/${WORDS_TARGET}`, en: `Write ${WORDS_TARGET}+ words, get ${RIGHT_TARGET} in ${WORDS_TARGET} right`, coins: REWARDS.taskPerfect, on: true },
+  care: { zh: '照顾小猫', en: 'Feed or pet your kitten', coins: REWARDS.taskCare, on: true },
+  choice: { zh: '做一组词语选择', en: 'Finish a Word choice set', coins: 5, on: false },
+  match: { zh: '做一组词语搭配', en: 'Finish a Word match set', coins: 5, on: false },
+  order: { zh: '做一组排句子', en: 'Finish a Sentence builder set', coins: 5, on: false },
+  essay: { zh: '交一篇看图作文', en: 'Hand in a picture writing', coins: 10, on: false },
+  review: { zh: '复习错词本', en: 'Practise the Mistakes book', coins: 5, on: false },
+  listen: { zh: '玩一次听一听', en: 'Play one Listen & pick round', coins: 3, on: false },
+};
+export const BONUS_DEFAULT = REWARDS.allBonus;
+const dtSet = () => state.settings.daily || {};
+export function dailyTaskSetting(k) {
+  const d = DAILY_TASKS[k], c = (dtSet().coins || {})[k], on = (dtSet().on || {})[k];
+  return { on: on === undefined ? d.on : !!on, coins: Number.isFinite(Number(c)) && c !== null && c !== '' ? Math.max(0, Math.round(Number(c))) : d.coins };
+}
+export const dailyBonus = () => { const b = Number(dtSet().bonus); return Number.isFinite(b) && dtSet().bonus != null ? Math.max(0, Math.round(b)) : BONUS_DEFAULT; };
+export function setDailyTask(k, field, v) {
+  const cur = { ...dtSet() };
+  if (k === 'bonus') cur.bonus = Math.max(0, Math.min(9999, Math.round(Number(v) || 0)));
+  else if (field === 'on') cur.on = { ...(cur.on || {}), [k]: !!v };
+  else cur.coins = { ...(cur.coins || {}), [k]: Math.max(0, Math.min(9999, Math.round(Number(v) || 0))) };
+  state.settings.daily = cur; save();
+}
+// she did one of the optional daily things today (practice set, essay, mistakes book, listen game)
+export function markTask(k) { const d = state.daily; d.done = { ...(d.done || {}), [k]: true }; }
+function taskDone(k) {
+  const d = state.daily;
+  if (k === 'spell') return !!d.spell;
+  if (k === 'perfect') return perfectDone();
+  if (k === 'care') return !!d.care;
+  return !!(d.done || {})[k];
+}
+// today's tasks, in order: [{ key, zh, en, coins, done }]
+export function dailyTasks() {
+  return Object.keys(DAILY_TASKS).filter((k) => dailyTaskSetting(k).on).map((k) => {
+    const t = DAILY_TASKS[k];
+    return { key: k, zh: k === 'care' ? `照顾${state.kitten.name || '小猫'}` : t.zh, en: t.en, coins: dailyTaskSetting(k).coins, done: taskDone(k) };
+  });
+}
 // returns list of {label, coins} rewards newly granted
 export function checkDaily() {
   const d = state.daily, got = [];
-  if (d.spell || d.fed || perfectDone()) markActive();
+  d.paid = d.paid || {};
+  if (d.spell || d.fed || perfectDone() || Object.values(d.done || {}).some(Boolean)) markActive();
   const pay = (key, coins, label) => { if (!d.paid[key]) { d.paid[key] = true; state.coins += coins; got.push({ label, coins }); } };
-  if (d.spell) pay('spell', REWARDS.taskSpell, '完成听写 Spelling done');
-  if (perfectDone()) pay('perfect', REWARDS.taskPerfect, `${RIGHT_TARGET}/${WORDS_TARGET} 写对 Great accuracy`);
-  if (d.care) pay('care', REWARDS.taskCare, '照顾小猫 Kitten care');
-  if (d.paid.spell && d.paid.perfect && d.paid.care && !d.paid.bonus) {
-    pay('bonus', REWARDS.allBonus, '全部完成！All tasks bonus');
-    const s = state.streak;
-    s.count = s.lastDate === yesterdayStr() ? s.count + 1 : (s.lastDate === todayStr() ? s.count : 1);
-    s.lastDate = todayStr();
+  const list = dailyTasks();
+  list.forEach((t) => { if (t.done) pay(t.key, t.coins, `${t.zh} ${t.en}`); });
+  if (list.length && list.every((t) => d.paid[t.key]) && !d.paid.bonus) {
+    pay('bonus', dailyBonus(), '全部完成！All tasks bonus');
+    const st = state.streak;
+    st.count = st.lastDate === yesterdayStr() ? st.count + 1 : (st.lastDate === todayStr() ? st.count : 1);
+    st.lastDate = todayStr();
   }
   save();
   return got;
@@ -404,7 +447,8 @@ export const currentList = () => releasedLists()[0] || null;
 export function listStatus(l) {
   if (!l) return 'future';
   if (listDate(l) > todayStr()) return 'future';
-  if (l.lastDone === todayStr()) return 'done-today';
+  const lim = canDo('spelling', l);
+  if (!lim.ok) return lim.why === 'day' ? 'day-limit' : 'done-today';
   const cur = currentList();
   if (cur && cur.id !== l.id && !cur.done) return 'locked';
   return 'open';
@@ -412,6 +456,7 @@ export function listStatus(l) {
 export function finishList(id) {
   const l = state.lists.find((x) => x.id === id);
   if (!l) return;
+  countDone('spelling', l);
   l.done = true; l.lastDone = todayStr();
   save();
 }
@@ -611,18 +656,69 @@ export function finishPracticeSet(kind, id, right, total) {
   const t = todayStr();
   x.best = Math.max(x.best || 0, total ? Math.round((right / total) * 100) : 0);
   x.lastDone = t;
+  countDone(kind, x); markTask(kind);
   let coins = 0, gotXp = 0, paid = false;
   if (x.lastPaid !== t) { paid = true; x.lastPaid = t; const r = rewardFor(kind); coins = right * r.coins; gotXp = right * r.xp; state.coins += coins; addXp(gotXp); }
   markActive(); save();
   return { coins, xp: gotXp, paid };
 }
+// ---------- daily limits: how many times a day (0 = no limit) ----------
+export const LIMIT_ACTS = {
+  spelling: { zh: '✏️ 听写', en: 'Spelling', unit: 'rounds', item: 'each list', perItem: 1 },
+  choice: { zh: '🔤 词语选择', en: 'Word choice', unit: 'sets', item: 'each set', perItem: 0 },
+  match: { zh: '🧩 词语搭配', en: 'Word match', unit: 'sets', item: 'each set', perItem: 0 },
+  order: { zh: '🧱 排句子', en: 'Sentence builder', unit: 'sets', item: 'each set', perItem: 0 },
+  listen: { zh: '🎧 听一听', en: 'Listen & pick', unit: 'rounds' },
+  ttt: { zh: '⭕ 井字棋', en: 'Tic-tac-toe', unit: 'games' },
+};
+export function limitSetting(k) {
+  const d = LIMIT_ACTS[k], r = (state.settings.limits || {})[k] || {};
+  const num = (v, def) => { v = Number(v); return v !== null && Number.isFinite(v) && v >= 0 ? Math.round(v) : def; };
+  return { perDay: num(r.perDay, 0), perItem: 'perItem' in d ? num(r.perItem, d.perItem) : null };
+}
+export function setLimit(k, field, v) {
+  if (!LIMIT_ACTS[k]) return;
+  state.settings.limits = { ...(state.settings.limits || {}), [k]: { ...((state.settings.limits || {})[k] || {}), [field]: Math.max(0, Math.min(99, Math.round(Number(v) || 0))) } };
+  save();
+}
+export const todayCount = (k) => ((state.daily.count || {})[k] || 0);
+// how many times a list/set was finished today (lists finished before this version count once)
+export const itemCount = (x) => (!x ? 0 : x.countDate === todayStr() ? x.countToday || 0 : x.lastDone === todayStr() ? 1 : 0);
+// can she start this activity (and this list/set) now? → { ok, why: 'day' | 'item' }
+export function canDo(k, item) {
+  const l = limitSetting(k);
+  if (l.perDay && todayCount(k) >= l.perDay) return { ok: false, why: 'day', max: l.perDay };
+  if (item && l.perItem && itemCount(item) >= l.perItem) return { ok: false, why: 'item', max: l.perItem };
+  return { ok: true };
+}
+export function countDone(k, item) {
+  const d = state.daily; d.count = { ...(d.count || {}), [k]: todayCount(k) + 1 };
+  if (item) { const c = itemCount(item); item.countDate = todayStr(); item.countToday = c + 1; }
+}
+export const limitText = (r, unit = 'times') => (r.why === 'day' ? `今天的次数用完了，明天再来！<br>That's all for today (${r.max} ${unit} a day) — come back tomorrow!` : `这个今天做过${r.max}次了，换一个吧！<br>Done ${r.max} time${r.max > 1 ? 's' : ''} today already — pick another one.`);
+
+// ---------- Hanyu Pinyin above the words to pick (parents switch it on per activity) ----------
+export const PINYIN_ACTS = { choice: '🔤 词语选择 Word choice', match: '🧩 词语搭配 Word match', order: '🧱 排句子 Sentence builder' };
+export const showPinyin = (k) => !!(state.settings.pinyin || {})[k];
+export function setPinyin(k, on) { state.settings.pinyin = { ...(state.settings.pinyin || {}), [k]: !!on }; save(); }
+
+// ---------- home page buttons: parents choose the order ----------
+export const MENU_BTNS = ['tasks', 'review', 'feed', 'shop', 'dress', 'house', 'friends'];
+export function menuOrder() {
+  const o = Array.isArray(state.settings.menuOrder) ? state.settings.menuOrder.filter((k) => MENU_BTNS.includes(k)) : [];
+  return [...o, ...MENU_BTNS.filter((k) => !o.includes(k))];
+}
+export function setMenuOrder(list) { state.settings.menuOrder = list.filter((k) => MENU_BTNS.includes(k)); save(); }
+
 // what shows on the home page (parents choose); the rest are under Tasks
 export const HOME_ACTS = ['spelling', 'essay', 'choice', 'match', 'order'];
 export const homeActs = () => (Array.isArray(state.settings.homeActs) ? state.settings.homeActs : ['spelling']);
-export function setHomeActs(list) { state.settings.homeActs = HOME_ACTS.filter((k) => list.includes(k)); save(); }
+export function setHomeActs(list) { state.settings.homeActs = list.filter((k, i) => HOME_ACTS.includes(k) && list.indexOf(k) === i); save(); }
 // phone game reward
 export const listenRewardInfo = () => rewardFor('listen');
-export function listenReward(right) { if (right < 8) return null; const r = rewardFor('listen'); state.coins += r.coins; addXp(r.xp); save(); return r; }
+// tic-tac-toe: every finished game counts towards the daily limit; a win earns the reward
+export function finishTtt(won) { countDone('ttt'); let r = null; if (won) { r = rewardFor('ttt'); state.coins += r.coins; addXp(r.xp); } save(); return r; }
+export function listenReward(right) { countDone('listen'); markTask('listen'); if (right < 8) { save(); return null; } const r = rewardFor('listen'); state.coins += r.coins; addXp(r.xp); save(); return r; }
 
 // ----- flip phone -----
 export function notify(n) {
@@ -800,7 +896,7 @@ export function submitEssay(id) {
   const e = essays().find((x) => x.id === id);
   if (!e || e.status !== 'assigned') return false;
   e.status = 'submitted'; e.submittedAt = Date.now();
-  markActive(); save(); return true;
+  markTask('essay'); markActive(); save(); return true;
 }
 export function reviewEssay(id, { stars, coins, xp: x, comment }) {
   const e = essays().find((x) => x.id === id);

@@ -47,8 +47,8 @@ export function spellingScreen({ mode = 'list', go }) {
 
   if (listBlocked) {
     const why = S.listStatus(list);
-    main.innerHTML = `<div class="feedback"><div class="big-msg">${why === 'done-today' ? '今天已经写过了！' : why === 'locked' ? '先完成新的听写' : '还不能写'}</div>
-      <div class="sub">${why === 'done-today' ? 'You already did this list today — come back tomorrow, or pick another list.' : why === 'locked' ? 'Finish the newest spelling first, then the old lists open again.' : 'This list is not ready yet.'}</div>
+    main.innerHTML = `<div class="feedback"><div class="big-msg">${why === 'done-today' ? '今天已经写过了！' : why === 'day-limit' ? '今天的听写做完了！' : why === 'locked' ? '先完成新的听写' : '还不能写'}</div>
+      <div class="sub">${why === 'done-today' ? 'You already did this list today — come back tomorrow, or pick another list.' : why === 'day-limit' ? `That's all the spelling for today (${S.limitSetting('spelling').perDay} a day) — come back tomorrow!` : why === 'locked' ? 'Finish the newest spelling first, then the old lists open again.' : 'This list is not ready yet.'}</div>
       <button class="btn" id="home">回家 Home</button></div>`;
     $('#home', main).onclick = () => go('home');
     $('#back', root).onclick = () => go('home');
@@ -322,6 +322,7 @@ export function spellingScreen({ mode = 'list', go }) {
     const d = S.get().daily;
     if (skipped < total) { d.spell = true; S.save(); if (mode === 'list' && list) S.finishList(list.id); } // skipping every word doesn't count as a round
     S.logSession({ mode, listName: mode === 'review' ? '错词本 Mistakes' : mode === 'play' ? '陪我玩 Play with me' : (list ? list.name : ''), total, firstTry: first, retry, wrong, skipped, coins: roundCoins });
+    if (mode === 'review' && skipped < total) S.markTask('review');
     const rewards = S.checkDaily();
     if (mode === 'play') {
       const won = S.finishPlay(first, total);

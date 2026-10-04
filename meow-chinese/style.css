@@ -955,3 +955,18 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .rw-ctl span { flex: 1; }
   .rw-ctl input { width: 90px; }
 }
+
+/* parent: activities tab */
+.order-list { display: flex; flex-direction: column; gap: 6px; }
+.order-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; border: 2px solid var(--ink); border-radius: 12px; background: #fffaf0; font-weight: 700; }
+.order-row.off { opacity: .6; border-style: dashed; }
+.order-row .chk { margin: 0; }
+.order-row .mv { display: flex; gap: 6px; flex-shrink: 0; }
+.order-row .mv .btn { min-width: 40px; padding: 4px 8px; }
+.lim-row .rw-ctl span { font-size: 14px; }
+/* pinyin above words */
+.pyw { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; vertical-align: middle; }
+.pyw .py { font-family: var(--ui, system-ui), sans-serif; font-size: .55em; font-weight: 700; color: var(--ink-2, #6b5b4b); letter-spacing: 0; white-space: nowrap; }
+.ord-chip .pyw .py { font-size: .5em; }
+.set-tile.blocked { opacity: .55; filter: grayscale(.4); }
+.limit-note { padding: 10px 12px; border: 2px dashed var(--ink); border-radius: 12px; background: #fff3d6; font-weight: 800; text-align: center; }
