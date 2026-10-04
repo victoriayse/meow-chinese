@@ -970,3 +970,14 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .ord-chip .pyw .py { font-size: .5em; }
 .set-tile.blocked { opacity: .55; filter: grayscale(.4); }
 .limit-note { padding: 10px 12px; border: 2px dashed var(--ink); border-radius: 12px; background: #fff3d6; font-weight: 800; text-align: center; }
+
+/* parent: phone notifications */
+.push-ok, .push-warn { padding: 10px 12px; border: 2px solid var(--ink); border-radius: 12px; font-weight: 700; }
+.push-ok { background: #e3f6dc; }
+.push-warn { background: #fff3d6; font-weight: 600; line-height: 1.45; }
+.push-devs { display: flex; flex-direction: column; gap: 10px; }
+.push-dev { padding: 10px 12px; border: 2px solid var(--ink); border-radius: 14px; background: #fffaf0; display: flex; flex-direction: column; gap: 8px; }
+.push-types { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 4px 12px; }
+.push-types .chk { margin: 0; font-size: 15px; }
+.push-times { display: flex; flex-direction: column; gap: 8px; }
+.push-types .chk input { flex-shrink: 0; width: 20px; height: 20px; }

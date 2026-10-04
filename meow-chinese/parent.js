@@ -7,6 +7,7 @@ import { $, $$, html, esc, coinI, hydrateIcons, KittenView, toast, confirmBox, o
 import { speak, chineseVoices, sfx } from './audio.js';
 import * as Cloud from './cloud.js';
 import * as Auth from './auth.js';
+import * as Push from './push.js';
 import { parentFriendsView, incomingRequests } from './friends.js';
 import { KINDS, parseSet } from './practice.js';
 
@@ -420,6 +421,67 @@ function activitiesView(rerender) {
   return n;
 }
 
+// ---------- 🔔 phone notifications ----------
+const PUSH_WHY = {
+  homescreen: '<b>On iPhone / iPad, first add the app to the Home Screen:</b> in Safari tap <b>Share</b> (the square with an arrow) → <b>Add to Home Screen</b>. Then open 喵喵中文 from that new icon and come back here.',
+  denied: 'Notifications were blocked for this app. On iPhone: <b>Settings → Notifications → 喵喵中文</b> → turn on <b>Allow Notifications</b>, then come back here.',
+  unsupported: 'This browser can’t show notifications. On iPhone/iPad it needs iOS 16.4 or newer, opened from the Home Screen icon.',
+  https: 'Notifications only work on the real website.',
+};
+async function pushSection(box, rerender) {
+  const ps = S.pushSettings();
+  const why = Push.blocker();
+  let list = [], here = null, err = '';
+  try { [list, here] = await Promise.all([Push.devices(), Push.currentEndpoint()]); } catch (e) { err = String(e.message || e); }
+  if (!box.isConnected) return;
+  const onHere = here && list.some((d) => d.endpoint === here);
+  box.innerHTML = `
+    <p class="help" style="margin:0">Get notifications on a phone even when the app is closed. Turn them on once on <b>each</b> phone or iPad (yours and hers), then choose which ones each device gets.</p>
+    <div class="push-here">
+      ${onHere ? '<div class="push-ok">✅ Notifications are on for this device.</div>'
+        : why ? `<div class="push-warn">${PUSH_WHY[why] || ''}</div>`
+        : `<div class="row" style="align-items:flex-end"><label class="field" style="flex:1;min-width:150px;margin:0">Name for this device<input id="push-name" value="${esc(Push.defaultName())}" placeholder="e.g. Joreen's iPhone"></label><button class="btn green" id="push-on">🔔 Turn on notifications here</button></div>`}
+    </div>
+    ${err ? `<p class="help" style="color:var(--red-d);margin:0">Couldn’t load devices: ${esc(err)}</p>` : ''}
+    ${list.length ? `<div class="push-devs">${list.map((d) => `<div class="push-dev" data-id="${d.id}">
+        <div class="row" style="justify-content:space-between;align-items:center;gap:8px"><b>📱 <span class="dn">${esc(d.name)}</span>${d.endpoint === here ? ' <span class="list-badge cur">this device</span>' : ''}</b><span class="row" style="gap:6px"><button class="btn small white" data-a="rename">✏️ Rename</button><button class="btn small white" data-a="del">🗑 Remove</button></span></div>
+        <div class="push-types">${Push.TYPES.map(([k, nm]) => `<label class="chk"><input type="checkbox" data-t="${k}" ${!d.prefs || d.prefs[k] !== false ? 'checked' : ''}> ${nm}</label>`).join('')}</div>
+      </div>`).join('')}</div>
+      <div class="row"><button class="btn white small" id="push-test">📨 Send a test notification</button></div>` : ''}
+    <div class="push-times">
+      <div class="toggle"><span>🌙 Quiet hours — no notifications between<br><small class="help">e.g. school time or bedtime</small></span><button class="switch ${ps.quietOn ? 'on' : ''}" id="pq"></button></div>
+      <div class="row"><label class="field" style="margin:0">From<input type="time" id="pq-from" value="${esc(ps.quietFrom)}" ${ps.quietOn ? '' : 'disabled'}></label><label class="field" style="margin:0">To<input type="time" id="pq-to" value="${esc(ps.quietTo)}" ${ps.quietOn ? '' : 'disabled'}></label></div>
+      <label class="field" style="margin:0;max-width:260px">📋 Daily-task reminder time<small class="help" style="margin:0">sent once, only if her tasks aren’t done yet</small><input type="time" id="p-remind" value="${esc(ps.remindAt)}"></label>
+    </div>`;
+  const on = $('#push-on', box);
+  if (on) on.onclick = async () => {
+    on.disabled = true; on.textContent = '…';
+    try { await Push.enable($('#push-name', box).value.trim()); toast('🔔 Notifications are on ✓'); try { await Push.test(); } catch {} pushSection(box, rerender); }
+    catch (e) { on.disabled = false; on.textContent = '🔔 Turn on notifications here'; toast(e.message === 'denied' ? 'Notifications were not allowed' : PUSH_WHY[e.message] ? 'Can’t turn on here yet — see the note' : `Couldn’t turn on: ${esc(e.message)}`, { ms: 4000 }); if (PUSH_WHY[e.message]) pushSection(box, rerender); }
+  };
+  box.querySelectorAll('.push-dev').forEach((row) => {
+    const id = +row.dataset.id, d = list.find((x) => x.id === id);
+    row.querySelectorAll('[data-t]').forEach((c) => { c.onchange = async () => {
+      const prefs = { ...(d.prefs || {}) }; row.querySelectorAll('[data-t]').forEach((x) => { prefs[x.dataset.t] = x.checked; });
+      try { await Push.setPrefs(id, prefs); d.prefs = prefs; toast('Saved ✓'); } catch (e) { c.checked = !c.checked; toast('Couldn’t save — check the internet'); }
+    }; });
+    $('[data-a=rename]', row).onclick = async () => {
+      const nm = prompt('Name for this device', d.name); if (!nm || !nm.trim()) return;
+      try { await Push.rename(id, nm.trim()); $('.dn', row).textContent = nm.trim(); toast('Renamed ✓'); } catch { toast('Couldn’t rename'); }
+    };
+    $('[data-a=del]', row).onclick = async () => {
+      if (!(await confirmBox('Stop notifications on this device?', `“${esc(d.name)}” won’t get notifications any more.`, 'Remove'))) return;
+      try { await Push.remove(id, d.endpoint); toast('Removed ✓'); pushSection(box, rerender); } catch { toast('Couldn’t remove'); }
+    };
+  });
+  const t = $('#push-test', box);
+  if (t) t.onclick = async () => { t.disabled = true; try { const n = await Push.test(); toast(n ? `📨 Sent to ${n} device${n > 1 ? 's' : ''} ✓` : 'No device received it — try turning notifications on again', { ms: 3500 }); } catch (e) { toast(`Couldn’t send: ${esc(e.message)}`); } t.disabled = false; };
+  $('#pq', box).onclick = (e) => { const v = !S.pushSettings().quietOn; S.setPushSetting('quietOn', v); e.currentTarget.classList.toggle('on', v); $('#pq-from', box).disabled = !v; $('#pq-to', box).disabled = !v; toast(v ? 'Quiet hours on ✓' : 'Quiet hours off'); };
+  $('#pq-from', box).onchange = (e) => { if (e.target.value) { S.setPushSetting('quietFrom', e.target.value); toast('Saved ✓'); } };
+  $('#pq-to', box).onchange = (e) => { if (e.target.value) { S.setPushSetting('quietTo', e.target.value); toast('Saved ✓'); } };
+  $('#p-remind', box).onchange = (e) => { if (e.target.value) { S.setPushSetting('remindAt', e.target.value); toast('Saved ✓'); } };
+}
+
 function settingsView(rerender, go) {
   const s = S.get(), set = s.settings;
   const voices = chineseVoices();
@@ -463,6 +525,8 @@ function settingsView(rerender, go) {
       </div>
       <div class="row"><span class="help" style="margin:0">Quick:</span>${[5, 10, 20, 50, 100].map((v) => `<button class="btn small white" data-xq="${v}">${v}</button>`).join('')}</div>
       <div class="toggle"><span>Unlock all levels (for you to preview everything)<br><small class="help">Hair, shoes, extras, clothes and Home normally unlock at Lv5 / 10 / 15 / 20 / 25.</small></span><button class="switch ${set.unlockAll ? 'on' : ''}" id="ul"></button></div>
+      <h3>🔔 Phone notifications</h3>
+      <div id="push-box" class="stack"><p class="help" style="margin:0">Loading…</p></div>
       <h3>🛡️ God mode</h3>
       <div class="toggle"><span>God mode — the kitten never gets hungry, thirsty, sick or dies<br><small class="help">Use it for holidays, exam weeks or sick days. Food, Water and Happy stay topped up, and missed days don't count. Turning it on also cures and brings back the kitten. Daily tasks and coins still work as usual.</small></span><button class="switch ${S.godMode() ? 'on' : ''}" id="god"></button></div>
       <h3>☁️ Account &amp; cloud backup</h3>
@@ -522,6 +586,7 @@ function settingsView(rerender, go) {
     const v = xamt(); if (!v) return toast('Type how much XP first');
     S.addXp(-v); S.save(); $('#xp-amt', n).value = ''; xpPlan(); toast(`Removed ${v} XP`);
   };
+  pushSection($('#push-box', n), rerender);
   $('#god', n).onclick = () => { S.setGodMode(!S.godMode()); toast(S.godMode() ? '🛡️ God mode on' : 'God mode off'); rerender(); };
   $('#ul', n).onclick = () => { set.unlockAll = !set.unlockAll; S.save(); rerender(); };
   const showStatus = () => {

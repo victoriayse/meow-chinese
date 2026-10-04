@@ -702,6 +702,15 @@ export const PINYIN_ACTS = { choice: '🔤 词语选择 Word choice', match: '�
 export const showPinyin = (k) => !!(state.settings.pinyin || {})[k];
 export function setPinyin(k, on) { state.settings.pinyin = { ...(state.settings.pinyin || {}), [k]: !!on }; save(); }
 
+// ---------- phone notifications: quiet hours and the daily-task reminder time (the server reads these) ----------
+export const PUSH_DEFAULTS = { quietOn: true, quietFrom: '21:00', quietTo: '07:00', remindAt: '18:00' };
+export const pushSettings = () => ({ ...PUSH_DEFAULTS, ...(state.settings.push || {}) });
+export function setPushSetting(k, v) {
+  let tz = 'Asia/Singapore'; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch {}
+  state.settings.push = { ...pushSettings(), tz, [k]: v };
+  save();
+}
+
 // ---------- home page buttons: parents choose the order ----------
 export const MENU_BTNS = ['tasks', 'review', 'feed', 'shop', 'dress', 'house', 'friends'];
 export function menuOrder() {
