@@ -62,7 +62,7 @@ export async function remove(id, endpoint) {
 }
 export async function test() {
   const t = await Auth.token();
-  const r = await fetch(`${Auth.API}/functions/v1/push`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: Auth.KEY, Authorization: `Bearer ${t}` }, body: JSON.stringify({ mode: 'test', delay: 6 }) });
+  const r = await fetch(`${Auth.API}/functions/v1/push`, { method: 'POST', headers: { 'Content-Type': 'application/json', apikey: Auth.KEY, Authorization: `Bearer ${t}` }, body: JSON.stringify({ mode: 'test' }) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || `Error ${r.status}`);
   return j.sent || 0;

@@ -563,8 +563,7 @@ async function pushSection(box, rerender) {
   const t = $('#push-test', box);
   if (t) t.onclick = async () => {
     t.disabled = true;
-    toast('📨 Sending in 6 seconds — go to the Home Screen or lock the phone now to see it pop up', { ms: 6000 });
-    try { const n = await Push.test(); toast(n ? `📨 Sent to ${n} device${n > 1 ? 's' : ''} ✓ (if nothing popped up, check Notification Center, Focus / Sleep mode, and Settings → Notifications → 喵喵中文)` : 'This account has no phones with notifications on — tap “Turn on notifications here” on each phone', { ms: 6000 }); }
+    try { const n = await Push.test(); toast(n ? `📨 Sent to ${n} device${n > 1 ? 's' : ''} ✓` : 'This account has no phones with notifications on — tap “Turn on notifications here” on each phone', { ms: 6000 }); }
     catch (e) { toast(`Couldn’t send: ${esc(e.message)}`); }
     t.disabled = false;
   };
