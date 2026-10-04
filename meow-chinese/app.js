@@ -8,6 +8,7 @@ import { shopScreen, wardrobeScreen } from './shop.js';
 import { parentScreen } from './parent.js';
 import { essayScreen, showEssayReward } from './essay.js';
 import * as Cloud from './cloud.js';
+import { APP_VERSION } from './version.js';
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
@@ -885,6 +886,38 @@ Cloud.init(() => {
 });
 if (!Auth.session()) go('login');
 else { go(S.get().onboarded ? 'home' : 'welcome'); Cloud.pull(); }
+
+// ---------- "New version — tap to update" ----------
+// every minute (and whenever the app comes back to the front) look at the live version number
+let updateShown = false;
+async function checkForUpdate() {
+  if (updateShown || document.hidden || !navigator.onLine) return;
+  try {
+    const t = await (await fetch(`sw.js?check=${Date.now()}`, { cache: 'no-store' })).text();
+    const live = (t.match(/VERSION\s*=\s*'([^']+)'/) || [])[1];
+    if (live && live !== APP_VERSION) showUpdateBar();
+  } catch { /* offline: try again later */ }
+}
+function showUpdateBar() {
+  updateShown = true;
+  const bar = html`<div class="update-bar" role="status">
+      <button class="go" type="button">✨ <span class="zh">新版本</span> New version — tap to update</button>
+      <button class="x" type="button" aria-label="Later">✕</button>
+    </div>`;
+  $('.go', bar).onclick = async () => {
+    $('.go', bar).textContent = '…';
+    try { const reg = await navigator.serviceWorker?.getRegistration(); if (reg) await reg.update(); } catch {}
+    try { await Cloud.backupNow(); } catch {}
+    location.reload();
+  };
+  $('.x', bar).onclick = () => { bar.remove(); setTimeout(() => { updateShown = false; }, 30 * 60000); };   // ask again in 30 minutes
+  document.body.appendChild(bar);
+}
+if (location.protocol === 'https:' || location.hostname === 'localhost') {
+  setTimeout(checkForUpdate, 5000);
+  setInterval(checkForUpdate, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(); });
+}
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {});

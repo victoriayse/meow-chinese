@@ -1021,3 +1021,9 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .fam-box { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 2px dashed var(--ink); border-radius: 12px; }
 .fam-code { font-family: var(--px); font-size: 30px; font-weight: 700; letter-spacing: 3px; display: inline-flex; flex-direction: column; line-height: 1.1; }
 .fam-code small { font-family: inherit; font-size: 12px; letter-spacing: 0; color: var(--ink-2); font-weight: 600; }
+
+/* "New version — tap to update" */
+.update-bar { position: fixed; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 2000; display: flex; align-items: stretch; max-width: calc(100vw - 24px); border: 3px solid var(--ink); border-radius: 14px; background: var(--yellow); box-shadow: 0 4px 0 var(--ink); animation: say-pop .3s ease-out; }
+.update-bar button { border: 0; background: none; font: inherit; font-weight: 800; color: var(--ink); cursor: pointer; }
+.update-bar .go { padding: 10px 14px; font-size: 16px; text-align: left; }
+.update-bar .x { padding: 10px 12px; border-left: 2px solid var(--ink); font-size: 16px; }
