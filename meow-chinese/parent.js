@@ -98,7 +98,7 @@ async function accountBar(bar, go, getTab) {
 }
 
 // ---------- 👨‍👩‍👧 family links (in Settings) ----------
-const LINK_ERR = { bad_code: 'That code isn’t right or has expired — make a new one on her phone.', self: 'That code is from this same account. Use it on the parent’s phone instead.', too_many: 'Too many wrong codes — wait an hour and try again.' };
+const LINK_ERR = { bad_code: 'That code isn’t right or has expired — make a new one on her phone.', self: 'That code is from this same account. Use it on the parent’s phone instead.', too_many: 'Too many wrong codes — wait an hour and try again.', reverse: 'This account is already the child’s parent the other way round. The code must be made on the CHILD’s phone and typed on the PARENT’s phone.' };
 async function familySection(box, rerender, go) {
   if (Cloud.managing()) { box.innerHTML = '<p class="help" style="margin:0">Switch back to <b>🙋 My account</b> (at the top) to link or unlink accounts.</p>'; return; }
   const fam = await loadFamily(true);
@@ -106,8 +106,8 @@ async function familySection(box, rerender, go) {
   const kids = fam.filter((f) => f.role === 'child'), parents = fam.filter((f) => f.role === 'parent');
   box.innerHTML = `
     <p class="help" style="margin:0">Mum (or Dad) and the child can each have their own account on their own phone. Link them once, and the parent can change all of the child’s settings from the parent’s own phone.</p>
-    ${kids.length ? `<div class="fam-list"><b>My children</b>${kids.map((k) => `<div class="fam-row"><span>👧 <b>${esc(kidLabel(k))}</b> <small>${esc(k.email || '')}</small></span><span class="row" style="gap:6px"><button class="btn small green" data-manage="${k.other}">⚙️ Change her settings</button><button class="btn small white" data-unlink="${k.other}" data-name="${esc(kidLabel(k))}">Unlink</button></span></div>`).join('')}</div>` : ''}
-    ${parents.length ? `<div class="fam-list"><b>My parents</b>${parents.map((k) => `<div class="fam-row"><span>👩 <small>${esc(k.email || '')}</small></span><button class="btn small white" data-unlink="${k.other}" data-name="${esc(k.email || 'this parent')}">Unlink</button></div>`).join('')}</div>` : ''}
+    ${kids.length ? `<div class="fam-list"><b>My children</b>${kids.map((k) => `<div class="fam-row"><span>👧 <b>${esc(kidLabel(k))}</b> <small>${esc(k.email || '')}</small></span><span class="row" style="gap:6px"><button class="btn small green" data-manage="${k.other}">⚙️ Change her settings</button><button class="btn small white" data-unlink="${k.other}" data-role="child" data-name="${esc(kidLabel(k))}">Unlink</button></span></div>`).join('')}</div>` : ''}
+    ${parents.length ? `<div class="fam-list"><b>My parents</b>${parents.map((k) => `<div class="fam-row"><span>👩 <small>${esc(k.email || '')}</small></span><button class="btn small white" data-unlink="${k.other}" data-role="parent" data-name="${esc(k.email || 'this parent')}">Unlink</button></div>`).join('')}</div>` : ''}
     <div class="fam-box">
       <b>📱 This is the child’s phone</b>
       <p class="help" style="margin:0">Make a code, then type it on the parent’s phone (Parent area → Settings → Family). The code works for 30 minutes.</p>
@@ -141,7 +141,7 @@ async function familySection(box, rerender, go) {
   }; });
   box.querySelectorAll('[data-unlink]').forEach((b) => { b.onclick = async () => {
     if (!(await confirmBox('Unlink?', `You won’t be able to change ${esc(b.dataset.name)}’s settings from this account any more. You can link again with a new code.`, 'Unlink'))) return;
-    try { await Cloud.family.unlink(b.dataset.unlink); familyCache = null; toast('Unlinked'); rerender(); } catch (err) { toast(`Couldn’t unlink: ${esc(err.message || err)}`); }
+    try { await Cloud.family.unlink(b.dataset.unlink, b.dataset.role); familyCache = null; toast('Unlinked'); rerender(); } catch (err) { toast(`Couldn’t unlink: ${esc(err.message || err)}`); }
   }; });
 }
 

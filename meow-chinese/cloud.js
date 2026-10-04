@@ -143,7 +143,7 @@ export const family = {
   list: () => rpcCall('my_family', {}),
   code: () => rpcCall('create_link_code', {}),
   link: (code) => rpcCall('link_child', { p_code: String(code).replace(/\D/g, '') }),
-  unlink: (id) => rpcCall('unlink_family', { p_other: id }),
+  unlink: (id, role) => rpcCall('unlink_family2', { p_other: id, p_role: role }),   // role: 'child' or 'parent' (only that one link)
 };
 
 // Start looking after a child's account on this device: her own game is saved first and set aside.
