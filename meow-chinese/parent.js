@@ -431,7 +431,7 @@ function progressView(rerender) {
 // ---------- settings ----------
 // ---------- 🎯 Activities: home page, daily tasks, rewards, daily limits, pinyin ----------
 const ACT_NAMES = { spelling: '✏️ 听写 Spelling', essay: '✍️ 看图作文 Picture writing', choice: '🔤 词语选择 Word choice', match: '🧩 词语搭配 Word match', order: '🧱 排句子 Sentence builder' };
-const MENU_NAMES = { tasks: '📋 功课 Tasks', review: '📕 错词本 Mistakes', feed: '🐟 喂食喝水 Food & water', shop: '🛍️ 商店 Shop', dress: '👗 我的物品 My Items', house: '🏠 我的家 Home', friends: '👫 朋友 Friends' };
+const MENU_NAMES = { tasks: '📋 功课 Tasks', review: '📕 错词本 Mistakes', shop: '🛍️ 商店 Shop', dress: '🎒 我的物品 My items', house: '🏠 我的家 Home', friends: '👫 朋友 Friends' };
 function activitiesView(rerender) {
   const shown = S.homeActs(), acts = [...shown, ...S.HOME_ACTS.filter((k) => !shown.includes(k))];
   const menu = S.menuOrder();
@@ -729,7 +729,7 @@ function settingsView(rerender, go) {
 
 // ---------- shop prices ----------
 function pricesView(rerender) {
-  const groups = [['food', '食物 Food & drink'], ['toiletry', '洗护用品 Toiletries'], ['special', '道具 Special'], ['pharmacy', '药房 Pharmacy'], ['service', '医院 Hospital'], ['wear', '衣服 Clothes'], ['decor', '花园 Garden']];
+  const groups = [['food', '食物 Food & drink'], ['toiletry', '洗护用品 Toiletries'], ['pharmacy', '药房 Pharmacy'], ['service', '医院 Hospital'], ['wear', '衣服 Clothes'], ['decor', '花园 Garden']];
   const n = html`<div class="stack">
       <p class="help">Set how many coins each item costs. Changes apply straight away. For reference, a perfect day earns about ${S.dailyTasks().reduce((a, t) => a + t.coins, 0) + (S.dailyTasks().length ? S.dailyBonus() : 0)} coins from daily tasks, plus ${S.rewardFor('spelling').coins} per word written right first time (change this in 🎯 Activities → 🎁 Rewards).</p>
       <div id="groups" class="stack"></div>

@@ -739,7 +739,11 @@ export function setPushSetting(k, v) {
 }
 
 // ---------- home page buttons: parents choose the order ----------
-export const MENU_BTNS = ['tasks', 'review', 'feed', 'shop', 'dress', 'house', 'friends'];
+export const MENU_BTNS = ['tasks', 'review', 'shop', 'dress', 'house', 'friends'];   // (Food & water is now inside My items)
+// something to do with the kitten at home (feed / groom / play), chosen in My items
+let pendingCare = null;
+export const setPendingCare = (c) => { pendingCare = c; };
+export const takePendingCare = () => { const c = pendingCare; pendingCare = null; return c; };
 export function menuOrder() {
   const o = Array.isArray(state.settings.menuOrder) ? state.settings.menuOrder.filter((k) => MENU_BTNS.includes(k)) : [];
   return [...o, ...MENU_BTNS.filter((k) => !o.includes(k))];

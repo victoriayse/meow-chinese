@@ -57,7 +57,7 @@ const screens = {
   home: (p) => homeScreen(p),
   spell: (p) => spellingScreen({ ...p, go }),
   shop: (p) => shopScreen({ go, ...p }),
-  wardrobe: () => wardrobeScreen({ go }),
+  wardrobe: (p) => wardrobeScreen({ ...p, go }),
   parent: (p) => { p.go = go; return parentScreen(p); },
   grave: graveScreen,
   essay: (p) => essayScreen({ ...p, go }),
@@ -141,7 +141,6 @@ function renderTopbar() {
     </button>
     <span class="spacer"></span>
     ${showGame ? `
-      <span class="pill" title="Streak"><span style="font-size:18px">🔥</span>${s.streak.lastDate && daysSince(s.streak.lastDate) <= 1 ? s.streak.count : 0}<span class="sub">天</span>${s.streak.freezes ? `<span class="sub" title="Streak freezes">❄️${s.streak.freezes}</span>` : ''}</span>
       <span class="pill" id="coin-pill" title="Coins">${coinI(22)}<span id="coin-n">${s.coins}</span></span>
       <button class="icon-btn" data-go="parent" aria-label="Parent area" title="家长 Parent">🔒</button>` : ''}
   `;
@@ -412,9 +411,8 @@ function menuButton(b, { reviewN, inHouse }) {
   switch (b) {
     case 'tasks': return `<button class="btn ${out ? 'pink has-badge' : 'green'}" id="b-tasks"><span class="zh">📋 功课</span><span class="en">Tasks</span>${out ? `<i class="badge">${out}</i>` : ''}</button>`;
     case 'review': return `<button class="btn pink" id="b-review" ${reviewN ? '' : 'disabled'}><span class="zh">错词本</span><span class="en">Mistakes (${reviewN})</span></button>`;
-    case 'feed': return '<button class="btn white" id="b-feed"><span class="zh">喂食喝水</span><span class="en">Food &amp; water</span></button>';
     case 'shop': return '<button class="btn blue" id="b-shop"><span class="zh">商店</span><span class="en">Shop</span></button>';
-    case 'dress': return '<button class="btn white" id="b-dress"><span class="zh">我的物品</span><span class="en">My Items</span></button>';
+    case 'dress': return '<button class="btn white" id="b-dress"><span class="zh">🎒 我的物品</span><span class="en">My items</span></button>';
     case 'house': return S.unlocked('decor')
       ? (inHouse ? '<button class="btn green" id="b-house"><span class="zh">🌳 去草地</span><span class="en">Go outside</span></button>'
                  : '<button class="btn green" id="b-house"><span class="zh">🏠 我的家</span><span class="en">Go to Home</span></button>')
@@ -521,10 +519,7 @@ function homeScreen(params = {}) {
     setTimeout(() => { sfx.fanfare(); toast(`⭐ <span class="zh">升级了！</span> Level ${lvNow}!`, { ms: 3500 }); }, 400);
     opened.forEach(([k], i) => setTimeout(() => toast(`🔓 <span class="zh">解锁：</span>${S.UNLOCK_NAMES[k]}`, { ms: 4500 }), 1300 + i * 900));
   } else if (!s.lastLevel) { s.lastLevel = lvNow; S.save(); }
-  if (s.freezeUsed) {
-    const n = s.freezeUsed; delete s.freezeUsed; S.save();
-    setTimeout(() => toast(`❄️ <span class="zh">冰冻卡保护了你的连胜！</span> Streak freeze used${n > 1 ? ` ×${n}` : ''}`, { ms: 4000 }), 500);
-  }
+  if (s.freezeUsed) { delete s.freezeUsed; S.save(); }   // streak freezes left from before still work, quietly
 
   renderAlert($('#alert', n), md, k);
   if (!$('#alert', n) && weatherOn() && Weather.supported() && !Weather.asked() && window.isSecureContext) {
@@ -544,10 +539,14 @@ function homeScreen(params = {}) {
         <button class="tray-btn phone-btn ${pb ? 'new' : ''}" id="t-phone" title="Phone">${PHONE_ICON}${pb ? `<i class="badge">${pb}</i>` : ''}</button>
         ${gifts.length ? `<button class="tray-btn gift" id="t-gift" title="Gifts">🎁<i class="badge">${gifts.length}</i></button>` : ''}
         <button class="tray-btn ${S.checkinStatus().claimed ? '' : 'gift'}" id="t-ck" title="Daily check-in">📅${S.checkinStatus().claimed ? '' : '<i class="badge">!</i>'}</button>
+        <button class="tray-btn" id="t-shop" title="Shop" aria-label="Shop">🛍️</button>
+        <button class="tray-btn" id="t-bag" title="My items" aria-label="My items">🎒</button>
       </div>`;
     $('#stage', n).appendChild(tray);
     const tg = $('#t-gift', tray); if (tg) tg.onclick = () => Friends.openGiftBox(S.unopenedGifts()[0], refreshHome);
     $('#t-ck', tray).onclick = () => openCheckin(refreshHome);
+    $('#t-shop', tray).onclick = () => go('shop');
+    $('#t-bag', tray).onclick = () => go('wardrobe');
     if (!S.checkinStatus().claimed && !checkinShown && S.get().onboarded) { checkinShown = true; setTimeout(() => { if (current === 'home' && $('#modal').classList.contains('hidden')) openCheckin(refreshHome); }, 1200); }
     $('#t-phone', tray).onclick = () => openPhone({ start: S.unreadNotifications().length ? 'noti' : S.unreadLetters().length ? 'mail' : 'home', after: refreshHome });
   }
@@ -719,7 +718,9 @@ function homeScreen(params = {}) {
   // a parent has checked a composition: show the stars, coins and comment once
   // (a checked composition now arrives as a phone notification instead of a pop-up)
   const bh = $('#b-house', n); if (bh) bh.onclick = () => (inHouse ? goBack() : go('home', { view: 'house' }));
-  $('#b-feed', n).onclick = () => openFeed(kv, fx, afterCare);
+  // something chosen in My items (feed / bath / play)
+  const care = S.takePendingCare();
+  if (care) setTimeout(() => doCare(care, kv, fx, afterCare), 450);
   n.querySelectorAll('[data-info]').forEach((b) => { b.onclick = () => openStatInfo(b.dataset.info); });
   requestAnimationFrame(() => fitBubbles(n)); setTimeout(() => fitBubbles(n), 300);
   // daily tasks: tap one to go straight to it
@@ -734,7 +735,7 @@ function homeScreen(params = {}) {
       if (open) { S.get().activeListId = open.id; S.saveQuiet(); return go('spell', { mode: 'list' }); }
       return toast(st === 'day-limit' ? '<span class="zh">今天的听写做完了！</span> That\'s all the spelling for today' : '<span class="zh">今天写过了！</span> No spelling left today — come back tomorrow', { ms: 3500 });
     }
-    if (key === 'care') return openFeed(kv, fx, afterCare);
+    if (key === 'care') return go('wardrobe', { tab: 'food' });
     if (key === 'choice' || key === 'match' || key === 'order') return go('practiceList', { kind: key });
     if (key === 'essay') return S.outstandingEssays().length ? go('essay') : toast('<span class="zh">现在没有作文要写</span> No picture writing to do right now', { ms: 3000 });
     if (key === 'review') return S.reviewWords().length ? go('spell', { mode: 'review' }) : toast('<span class="zh">错词本是空的！</span> No mistakes to practise — great job!', { ms: 3000 });
@@ -870,12 +871,11 @@ function groomAnimation(kv, fx, id) {
 // tap the Happy / Hygiene bar: what makes it go up and down
 const STAT_INFO = {
   happy: { title: '❤ 开心 Happy', intro: 'Goes down by itself about 1 point an hour (about 24 a day), never below 8. Below 30 the kitten looks sleepy and says “好无聊… Play with me?”.',
-    rows: [['Pet the kitten', '+2 each time (up to 10 times a day)'], ['Play with a toy (Food & water → Play together)', '+6'], ['Finish a “Play with me” round', '+15'], ['Shampoo or comb', '+2'], ['A friend feeds her kitten', 'the food’s amount +3'],
-      ['🍶 Fresh water', '+2'], ['🐟 Fish snack', '+3'], ['🥟 Steamed bun', '+4'], ['🥛 Milk · 🥫 Tuna can', '+8'], ['🍪 Paw cookie', '+15'], ['🥮 Mooncake', '+18'], ['🍦 Ice cream', '+25'], ['🍰 Strawberry cake', '+30'],
-      ['🛡️ God mode', 'stays at 60 or more'], ['🏥 Hospital', 'back up to at least 60']] },
+    rows: [['Pet the kitten', '+2 each time (up to 10 times a day)'], ['Play with a toy (🎒 My items → Toys)', '+6'], ['Finish a “Play with me” round', '+15'], ['Shampoo or comb', '+2'], ['A friend feeds her kitten', 'the food’s amount +3'],
+      ['🍶 Fresh water', '+2'], ['🐟 Fish snack', '+3'], ['🥟 Steamed bun', '+4'], ['🥛 Milk · 🥫 Tuna can', '+8'], ['🍪 Paw cookie', '+15'], ['🥮 Mooncake', '+18'], ['🍦 Ice cream', '+25'], ['🍰 Strawberry cake', '+30']] },
   hygiene: { title: '🛁 干净 Hygiene', intro: 'A full bar lasts about 24 hours (it goes down about 4 points an hour). Below 50% the kitten says “哎呀该帮我洗澡了”, and below 20% “我好臭啊！快帮我洗澡!”.',
-    rows: [['🧴 Shampoo', '+50'], ['🪮 Comb', '+20'], ['🛡️ God mode', 'stays at 60 or more'], ['🏥 Hospital', 'back up to at least 60']],
-    shop: 'Buy shampoo and combs in the shop → 🧴 Toiletries, then use them in 喂食喝水 Food & water.' },
+    rows: [['🧴 Shampoo', '+50'], ['🪮 Comb', '+20']],
+    shop: 'Buy shampoo and combs in the shop → 🧴 Toiletries, then use them in 🎒 My items.' },
 };
 function openStatInfo(key) {
   const d = STAT_INFO[key]; if (!d) return;
@@ -902,69 +902,30 @@ function fitBubbles(root) {
     if (shift) { b.style.marginLeft = `${Math.round(shift)}px`; b.style.setProperty('--tail', `${Math.max(10, Math.min(r.width - 24, 14 - shift))}px`); }
   });
 }
-function openFeed(kv, fx, afterCare) {
-  const s = S.get();
-  const foods = Object.entries(s.pantry).filter(([id, c]) => c > 0 && ITEMS[id] && ITEMS[id].cat === 'food');
-  const soaps = Object.entries(s.pantry).filter(([id, c]) => c > 0 && ITEMS[id] && ITEMS[id].cat === 'toiletry');
-  const toys = s.owned.filter((id) => ITEMS[id] && ITEMS[id].toy);
-  const n = html`<div class="card stack">
-      <div class="h-title"><span class="zh">喂${esc(s.kitten.name)}吃东西</span><span class="en">Feed your kitten</span></div>
-      ${foods.length ? '<div class="pantry" id="pantry"></div>' : `<p class="help">冰箱空空的！Your pantry is empty — buy food in the shop.</p>`}
-      <div class="h-title" style="font-size:20px"><span class="zh">洗澡梳毛</span><span class="en">Bath &amp; grooming · 🛁 ${Math.round(s.kitten.hygiene ?? 100)}%</span></div>
-      ${soaps.length ? '<div class="pantry" id="soaps"></div>' : '<p class="help" style="margin:0">没有洗护用品。去商店买洗发水或梳子！ No shampoo or comb yet — buy them in the shop (🧴 Toiletries).</p>'}
-      ${toys.length ? `<div class="h-title" style="font-size:20px"><span class="zh">一起玩</span><span class="en">Play together</span></div><div class="pantry" id="toys"></div>` : ''}
-      <div class="row" style="justify-content:space-between">
-        <button class="btn blue" id="to-shop"><span class="zh">去商店</span> Shop</button>
-        <button class="btn white" id="close">关闭 Close</button>
-      </div>
-    </div>`;
-  const pantry = $('#pantry', n);
-  foods.forEach(([id, count]) => {
-    const it = ITEMS[id];
-    const b = html`<button class="item"><span class="count">×${count}</span><div class="art"></div><div class="nm">${it.name}</div><div class="eff">${itemEffect(it)}</div></button>`;
-    $('.art', b).appendChild(spriteCanvas(id, 56));
-    b.onclick = () => {
-      if (!S.feed(id)) return;
-      closeModal(); sfx.yum();
-      eatAnimation(kv, fx, id);
-      setTimeout(() => burst(fx, 'heart', 3, '50%', '25%'), 2300);
-      setTimeout(() => {   // after she has finished eating
-        toast(it.water && !it.hunger ? `<span class="zh">好解渴！</span> Ahh, refreshing!` : `<span class="zh">好吃！</span> Yum, ${esc(it.en)}!`);
-        afterCare();
-      }, 2600);
-      setTimeout(() => refreshHome(), 3000);
-    };
-    pantry.appendChild(b);
-  });
-  const soapBox = $('#soaps', n);
-  soaps.forEach(([id, count]) => {
-    const it = ITEMS[id];
-    const b = html`<button class="item"><span class="count">×${count}</span><div class="art"></div><div class="nm">${it.name}</div><div class="eff">${itemEffect(it)}</div></button>`;
-    $('.art', b).appendChild(spriteCanvas(id, 56));
-    b.onclick = () => {
-      if (!S.groom(id)) return;
-      closeModal(); sfx.purr();
-      groomAnimation(kv, fx, id);
-      setTimeout(() => { toast(id === 'shampoo' ? '<span class="zh">洗得香喷喷！</span> Squeaky clean!' : '<span class="zh">毛毛好顺！</span> So fluffy!'); afterCare(); }, 3000);
-      setTimeout(() => refreshHome(), 3300);
-    };
-    soapBox.appendChild(b);
-  });
-  const toyBox = $('#toys', n);
-  toys.forEach((id) => {
-    const it = ITEMS[id];
-    const b = html`<button class="item"><div class="art"></div><div class="nm">${it.name}</div><div class="eff">+6 ❤</div></button>`;
-    $('.art', b).appendChild(spriteCanvas(id, 56));
-    b.onclick = () => {
-      closeModal(); S.play(); sfx.purr(); kv.flash('happy', 1800); kv.jump(); setTimeout(() => kv.jump(), 600);
-      burst(fx, 'heart', 4, '50%', '25%');
+// feed / bath / play — chosen in 🎒 My items, done at home so she can watch her kitten
+function doCare({ kind, id }, kv, fx, afterCare) {
+  const it = ITEMS[id]; if (!it) return;
+  if (kind === 'feed') {
+    if (!S.feed(id)) return;
+    sfx.yum();
+    eatAnimation(kv, fx, id);
+    setTimeout(() => burst(fx, 'heart', 3, '50%', '25%'), 2300);
+    setTimeout(() => {   // after she has finished eating
+      toast(it.water && !it.hunger ? `<span class="zh">好解渴！</span> Ahh, refreshing!` : `<span class="zh">好吃！</span> Yum, ${esc(it.en)}!`);
       afterCare();
-    };
-    toyBox.appendChild(b);
-  });
-  $('#close', n).onclick = closeModal;
-  $('#to-shop', n).onclick = () => { closeModal(); go('shop'); };
-  openModal(n);
+    }, 2600);
+    setTimeout(() => refreshHome(), 3000);
+  } else if (kind === 'groom') {
+    if (!S.groom(id)) return;
+    sfx.purr();
+    groomAnimation(kv, fx, id);
+    setTimeout(() => { toast(id === 'shampoo' ? '<span class="zh">洗得香喷喷！</span> Squeaky clean!' : '<span class="zh">毛毛好顺！</span> So fluffy!'); afterCare(); }, 3000);
+    setTimeout(() => refreshHome(), 3300);
+  } else if (kind === 'play') {
+    S.play(); sfx.purr(); kv.flash('love', 1800); kv.jump(); setTimeout(() => kv.jump(), 600);
+    burst(fx, 'heart', 4, '50%', '25%');
+    afterCare();
+  }
 }
 
 // ---------- boot ----------

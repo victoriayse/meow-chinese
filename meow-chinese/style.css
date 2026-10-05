@@ -1088,3 +1088,4 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 }
 @keyframes snow { to { background-position: 30px 90px, -40px 120px; } }
 @media (prefers-reduced-motion: reduce) { #wx { animation: none !important; } }
+.ph-head .ph-plus { margin-left: auto; font-size: 22px; font-weight: 800; }

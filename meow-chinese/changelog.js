@@ -13,4 +13,10 @@ export const CHANGES = [
     'Real weather: rain, sunshine or clouds, just like outside where you are.',
     'This “What’s new” notice now shows every new thing in an update.',
   ] },
+  { v: 55, items: [
+    'Food & water and My items are now one place: 🎒 My items, with tabs like the shop.',
+    'New shop 🛍️ and bag 🎒 buttons next to the calendar.',
+    'Message any friend: tap ＋ in the phone’s Messages.',
+    'The streak counter and streak freeze are gone.',
+  ] },
 ];

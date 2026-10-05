@@ -13,10 +13,17 @@ export const TABS = [
   { key: 'feet', lock: 'feet', zh: '鞋子', en: 'Shoes', icon: '👟', test: isWear(['feet']) },
   { key: 'acc', lock: 'acc', zh: '配饰', en: 'Extras', icon: '👓', test: isWear(['face', 'neck']) },
   { key: 'decor', lock: 'decor', zh: '家具', en: 'Home', icon: '🛋️', test: (it) => it.cat === 'decor' },
-  { key: 'special', zh: '道具', en: 'Special', icon: '❄️', test: (it) => it.cat === 'special' },
-  { key: 'pharmacy', zh: '药房', en: 'Pharmacy', icon: '💊', test: (it) => it.cat === 'pharmacy' },
+  { key: 'pharmacy', zh: '药房', en: 'Pharmacy', icon: '💊', test: (it) => it.cat === 'pharmacy', order: 90 },
 ];
 const SLOT_NAME = Object.fromEntries(WEAR_SLOTS.map(([k, zh]) => [k, zh]));
+// tab order: everyday things first (food, toiletries), then what she has unlocked (by level), locked ones last
+export function orderTabs(tabs) {
+  const daily = ['food', 'toiletry'], lv = (t) => t.order ?? (t.lock ? S.UNLOCKS[t.lock] : 0);
+  const locked = (t) => t.lock && !S.unlocked(t.lock);
+  const rest = tabs.filter((t) => !daily.includes(t.key));
+  return [...daily.map((k) => tabs.find((t) => t.key === k)).filter(Boolean),
+    ...rest.filter((t) => !locked(t)).sort((a, b) => lv(a) - lv(b)), ...rest.filter(locked).sort((a, b) => lv(a) - lv(b))];
+}
 
 export function shopScreen({ go, tab = 'food' }) {
   if (tab === 'wear') tab = 'body';
@@ -57,7 +64,7 @@ export function shopScreen({ go, tab = 'food' }) {
   function render() {
     const s = S.get();
     $('#wallet', n).textContent = s.coins;
-    $('#tabs', n).innerHTML = TABS.map((t) => {
+    $('#tabs', n).innerHTML = orderTabs(TABS).map((t) => {
       const locked = t.lock && !S.unlocked(t.lock);
       return `<button class="aisle ${t.key === tab ? 'on' : ''} ${locked ? 'locked' : ''}" data-tab="${t.key}"><span class="ic">${locked ? '🔒' : t.icon}</span><span class="zh">${t.zh}</span><small>${locked ? `Lv${S.UNLOCKS[t.lock]}` : t.en}</small></button>`;
     }).join('');
@@ -123,8 +130,7 @@ export function shopScreen({ go, tab = 'food' }) {
     kv.flash('happy', 1500); kv.jump();
     burst($('#fx', n), 'heart', 3, '50%', '20%');
     toast(it.cat === 'special' ? `❄️ <span class="zh">有${S.get().streak.freezes}张冰冻卡了！</span> Streak freeze ready`
-      : it.cat === 'food' ? `<span class="zh">买了${it.name}！</span> Feed it at home`
-      : it.cat === 'toiletry' ? `<span class="zh">买了${it.name}！</span> Use it in 喂食喝水 Food & water at home`
+      : it.cat === 'food' || it.cat === 'toiletry' ? `<span class="zh">买了${it.name}！</span> Find it in 🎒 My items`
       : it.cat === 'wear' ? `<span class="zh">穿上${it.name}！</span>`
       : `<span class="zh">${it.name}放进家里了！</span> Added to your home`);
     render();
@@ -136,47 +142,94 @@ export function shopScreen({ go, tab = 'food' }) {
   return n;
 }
 
-export function wardrobeScreen({ go }) {
-  const n = html`<section class="screen"><div class="shop">
-      <div class="preview card">
-        <div class="h-title" style="font-size:24px"><span class="zh">我的物品</span><span class="en">My Items</span></div>
-        <div class="stage-mini" id="mini"></div>
-        <p class="help" style="text-align:center;margin:0">每类可以穿一件：头饰、衣服、鞋子…<br>One of each: hair, clothes, shoes…</p>
-        <button class="btn white block" id="home">← <span class="zh">回家</span> Home</button>
+// ---------- 🎒 My items: food, toiletries, toys, clothes and home — one tab per kind, like the shop ----------
+const MY_TABS = [
+  { key: 'food', zh: '食物', en: 'Food', icon: '🐟', use: 'feed', shop: 'food', test: (it) => it.cat === 'food' },
+  { key: 'toiletry', zh: '洗护用品', en: 'Toiletries', icon: '🧴', use: 'groom', shop: 'toiletry', test: (it) => it.cat === 'toiletry' },
+  { key: 'toys', lock: 'decor', zh: '玩具', en: 'Toys', icon: '🧶', use: 'play', shop: 'decor', test: (it) => !!it.toy },
+  { key: 'head', lock: 'head', zh: '头饰', en: 'Hair', icon: '🎀', shop: 'head', test: (it) => it.cat === 'wear' && it.slot === 'head' },
+  { key: 'body', lock: 'body', zh: '衣服', en: 'Clothes', icon: '👕', shop: 'body', test: (it) => it.cat === 'wear' && it.slot === 'body' },
+  { key: 'feet', lock: 'feet', zh: '鞋子', en: 'Shoes', icon: '👟', shop: 'feet', test: (it) => it.cat === 'wear' && it.slot === 'feet' },
+  { key: 'acc', lock: 'acc', zh: '配饰', en: 'Extras', icon: '👓', shop: 'acc', test: (it) => it.cat === 'wear' && ['face', 'neck'].includes(it.slot) },
+  { key: 'decor', lock: 'decor', zh: '家具', en: 'Home', icon: '🛋️', shop: 'decor', test: (it) => it.cat === 'decor' },
+];
+export function wardrobeScreen({ go, tab }) {
+  const tabs = orderTabs(MY_TABS);
+  if (!tab || !tabs.some((t) => t.key === tab)) tab = tabs[0].key;
+  const n = html`<section class="screen"><div class="store mine">
+      <div class="storefront">
+        <div class="signboard"><span class="zh">🎒 我的物品</span><small>MY ITEMS</small></div>
+        <div class="front-row">
+          <div class="shopwindow"><div class="stage-mini" id="mini"></div></div>
+          <div class="counter">
+            <p class="help" id="my-note"></p>
+            <button class="btn blue block" id="to-shop">🛍️ <span class="zh">去商店</span> Shop</button>
+            <button class="btn white block" id="home">← <span class="zh">回家</span> Home</button>
+          </div>
+        </div>
       </div>
-      <div class="stack" id="groups"></div>
+      <div class="aisles" id="tabs"></div>
+      <div class="shelves" id="list"></div>
     </div></section>`;
   const mini = $('#mini', n);
   let kv;
+  const drawKitten = () => { if (kv) kv.canvas.remove(); kv = new KittenView({ scale: 5 }); kv.setMood(S.mood().face === 'cry' ? 'normal' : S.mood().face); mini.appendChild(kv.canvas); };
   function render() {
     const s = S.get();
-    if (kv) kv.canvas.remove();
-    kv = new KittenView({ scale: 5 }); mini.appendChild(kv.canvas);
-    const groups = $('#groups', n);
-    groups.innerHTML = '';
-    const section = (zh, en, ids, isOn, toggle, empty) => {
-      const card = html`<div class="card"><div class="h-title" style="font-size:22px"><span class="zh">${zh}</span><span class="en">${en}</span></div><div class="shop-list"></div></div>`;
-      const el = $('.shop-list', card);
-      if (!ids.length) el.innerHTML = `<p class="help">${empty}</p>`;
-      ids.forEach((id) => {
-        const it = ITEMS[id], on = isOn(id);
-        const c = html`<button class="item ${on ? 'sel' : ''}">${on ? '<span class="owned">✓</span>' : ''}<div class="art"></div><div class="nm">${it.name}</div><div class="nm-en">${it.en}</div></button>`;
-        $('.art', c).appendChild(spriteCanvas(id, 56));
-        c.onclick = () => { toggle(id); sfx.click(); render(); kv.flash('happy', 900); };
-        el.appendChild(c);
-      });
-      groups.appendChild(card);
-    };
-    const ownedWear = (slot) => s.owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'wear' && ITEMS[id].slot === slot);
-    const anyWear = WEAR_SLOTS.some(([slot]) => ownedWear(slot).length);
-    WEAR_SLOTS.forEach(([slot, zh, en]) => {
-      const ids = ownedWear(slot);
-      if (ids.length) section(zh, `${en} — tap to wear / take off`, ids, (id) => s.kitten.equipped[slot] === id, S.toggleWear, '');
+    drawKitten();
+    $('#tabs', n).innerHTML = tabs.map((t) => {
+      const locked = t.lock && !S.unlocked(t.lock);
+      return `<button class="aisle ${t.key === tab ? 'on' : ''} ${locked ? 'locked' : ''}" data-tab="${t.key}"><span class="ic">${locked ? '🔒' : t.icon}</span><span class="zh">${t.zh}</span><small>${locked ? `Lv${S.UNLOCKS[t.lock]}` : t.en}</small></button>`;
+    }).join('');
+    const def = tabs.find((t) => t.key === tab);
+    $('#my-note', n).innerHTML = def.use === 'feed' ? '点食物喂小猫！<br>Tap food to feed your kitten.'
+      : def.use === 'groom' ? '点洗发水或梳子帮小猫洗澡！<br>Tap to bath or brush your kitten.'
+      : def.use === 'play' ? '点玩具一起玩！<br>Tap a toy to play together.'
+      : def.key === 'decor' ? '点家具放进家里或收起来。<br>Tap to show or hide it at home.'
+      : '点一下穿上或脱下。每类一件。<br>Tap to wear or take off — one of each.';
+    const list = $('#list', n);
+    list.innerHTML = '';
+    if (def.lock && !S.unlocked(def.lock)) {
+      const need = S.UNLOCKS[def.lock], lv = S.level();
+      list.innerHTML = `<div class="locked-shelf"><div class="big">🔒</div><div class="h-title" style="justify-content:center"><span class="zh">${def.zh}要到 Lv${need} 才解锁</span></div><p class="help">${def.en} unlock at level ${need}. You're level ${lv}.</p></div>`;
+      return;
+    }
+    const counted = def.use === 'feed' || def.use === 'groom';
+    const ids = counted ? Object.keys(s.pantry).filter((id) => s.pantry[id] > 0 && ITEMS[id] && def.test(ITEMS[id]))
+      : s.owned.filter((id) => ITEMS[id] && def.test(ITEMS[id]));
+    if (!ids.length) {
+      list.innerHTML = `<div class="locked-shelf"><div class="big">${def.icon}</div><p class="help">还没有${def.zh}。去商店看看吧！<br>No ${def.en.toLowerCase()} yet — visit the shop.</p><button class="btn blue" id="empty-shop">🛍️ <span class="zh">去商店</span> Shop</button></div>`;
+      $('#empty-shop', list).onclick = () => go('shop', { tab: def.shop });
+      return;
+    }
+    ids.forEach((id) => {
+      const it = ITEMS[id];
+      const on = def.key === 'decor' ? !s.decorHidden.includes(id) : it.cat === 'wear' ? s.kitten.equipped[it.slot] === id : false;
+      const eff = counted ? itemEffect(it) : def.use === 'play' ? '+6 ❤' : '';
+      const action = def.use === 'feed' ? (it.water && !it.hunger ? '💧 喝 Drink' : '🍽️ 喂 Feed') : def.use === 'groom' ? '🛁 用 Use' : def.use === 'play' ? '🎾 玩 Play'
+        : def.key === 'decor' ? (on ? '👁 摆着 Shown' : '🙈 收起 Hidden') : (on ? '✓ 穿着 Wearing' : '穿上 Wear');
+      const card = html`<button type="button" class="product ${on ? 'sel' : ''}">
+          ${counted ? `<span class="count">×${s.pantry[id]}</span>` : ''}
+          <div class="art"></div><div class="shelf-board"></div>
+          <div class="nm">${it.name}</div><div class="nm-en">${it.en}</div>
+          ${eff ? `<div class="eff">${eff}</div>` : ''}
+          <span class="tag ${on ? 'done' : ''}">${action}</span>
+        </button>`;
+      $('.art', card).appendChild(spriteCanvas(id, it.cat === 'decor' ? 76 : 60));
+      card.onclick = () => {
+        sfx.click();
+        // eating, bathing and playing happen at home, so she can watch her kitten
+        if (def.use) { S.setPendingCare({ kind: def.use, id }); go('home'); return; }
+        if (def.key === 'decor') S.toggleDecor(id); else S.toggleWear(id);
+        render(); kv.flash('happy', 900);
+      };
+      list.appendChild(card);
     });
-    if (!anyWear) section('我的衣柜', 'My wardrobe', [], () => false, () => {}, '还没有衣服，去商店看看吧！ No clothes yet — visit the shop.');
-    section('我的家', 'My home — tap to show / hide', s.owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'decor'), (id) => !s.decorHidden.includes(id), S.toggleDecor, '家里还是空的。 Your home is empty — buy furniture in the shop.');
+    hydrateIcons(n);
   }
+  $('#tabs', n).onclick = (e) => { const t = e.target.closest('[data-tab]'); if (t) { tab = t.dataset.tab; render(); } };
   $('#home', n).onclick = () => go('home');
+  $('#to-shop', n).onclick = () => go('shop', { tab: tabs.find((t) => t.key === tab).shop });
   n._mounted = render;
   return n;
 }

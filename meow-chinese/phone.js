@@ -3,7 +3,7 @@ import * as S from './state.js';
 import { ITEMS, spriteCanvas } from './pixel.js';
 import { $, html, esc, toast, openModal, closeModal, confetti, coinI, hydrateIcons } from './ui.js';
 import { sfx, speak } from './audio.js';
-import { acceptedFriends, refreshFriends, sendLetter, errorText, LETTER_MAX, setActivity, isOnline, doingText, lastSeen } from './friends.js';
+import { acceptedFriends, refreshFriends, sendLetter, errorText, LETTER_MAX, setActivity, isOnline, doingText, lastSeen, friendName } from './friends.js';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const when = (t) => new Date(t).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
@@ -134,10 +134,13 @@ export function openPhone({ start = 'home', after } = {}) {
     // ----- messages: one chat per friend -----
     mail() {
       S.purgeOldMessages();
-      header('💬 信息 Messages');
+      const h = html`<div class="ph-head"><button class="ph-back">◀</button><b>💬 信息 Messages</b><button class="ph-x ph-plus" id="new-chat" aria-label="New message">＋</button></div>`;
+      $('.ph-back', h).onclick = back;
+      $('#new-chat', h).onclick = () => go('newchat');
+      body.appendChild(h);
       body.appendChild(html`<div class="ph-tip">⏳ 信息会在 ${S.MESSAGE_DAYS} 天后自动删除。<br>Messages disappear after ${S.MESSAGE_DAYS} days.</div>`);
       const ts = S.threads();
-      if (!ts.length) { body.appendChild(html`<p class="ph-empty">还没有信息。<br>No messages yet.</p>`); return; }
+      if (!ts.length) { body.appendChild(html`<p class="ph-empty">还没有信息。<br>No messages yet.<br><br>点 ＋ 给朋友写信息！<br>Tap ＋ to message a friend.</p>`); return; }
       const list = html`<div class="ph-list"></div>`;
       ts.forEach((t) => {
         const last = t.msgs[t.msgs.length - 1];
@@ -150,15 +153,36 @@ export function openPhone({ start = 'home', after } = {}) {
       // fetch who is online, then redraw once
       if (!this._fetched) { this._fetched = true; refreshFriends().then(() => { if (body.isConnected && history[history.length - 1] && history[history.length - 1][0] === 'mail') show('mail'); }); }
     },
+    // pick a friend to write to (a friend you already chat with opens that chat)
+    newchat() {
+      header('✏️ 新信息 New message');
+      const list = html`<div class="ph-list"></div>`;
+      body.appendChild(list);
+      const fill = () => {
+        const fs = acceptedFriends();
+        list.innerHTML = '';
+        if (!fs.length) { list.appendChild(html`<p class="ph-empty">还没有朋友。<br>No friends yet — add friends on the 👫 Friends page.</p>`); return; }
+        fs.forEach((f) => {
+          const on = isOnline(f), has = S.threads().some((t) => t.id === f.other);
+          const r = html`<button class="ph-item chat-row"><span class="avatar">🐱${on ? '<i class="ph-online" title="Online"></i>' : ''}</span><span class="txt"><b class="zh">${esc(friendName(f))}</b><span class="prev">${has ? '继续聊天 Open chat' : '写新信息 New chat'}</span></span></button>`;
+          r.onclick = () => { history.pop(); go('chat', f.other); };
+          list.appendChild(r);
+        });
+      };
+      fill();
+      refreshFriends().then(() => { if (list.isConnected) fill(); }).catch(() => {});
+    },
     chat(fid) {
       S.purgeOldMessages();
-      const t = S.threads().find((x) => x.id === fid);
       const fr = acceptedFriends().find((x) => x.other === fid), on = isOnline(fr);
+      // a friend you haven't chatted with yet starts with an empty chat
+      const t = S.threads().find((x) => x.id === fid) || (fr ? { id: fid, name: friendName(fr), msgs: [] } : null);
       const h = html`<div class="ph-head"><button class="ph-back">◀</button><span class="chat-who"><b class="zh">${esc((t && t.name) || '朋友')}</b><small class="${on ? 'on' : ''}">${on ? `<i class="ph-online"></i> ${esc(doingText(fr))}` : (fr && fr.card_updated ? `最后上线 Last seen: ${esc(lastSeen(fr))}` : '不在线 · Offline')}</small></span><button class="ph-x" id="del-chat" aria-label="Delete chat">🗑</button></div>`;
       $('.ph-back', h).onclick = back;
       body.appendChild(h);
       body.classList.add('chat-mode');
       if (!t) { body.appendChild(html`<p class="ph-empty">没有信息。 No messages.</p>`); $('#del-chat', h).remove(); return; }
+      if (!t.msgs.length) $('#del-chat', h).remove();
       S.readThread(fid);
       const log = html`<div class="chat-log"><div class="ph-tip small">⏳ 信息会在 ${S.MESSAGE_DAYS} 天后自动删除 · Messages disappear after ${S.MESSAGE_DAYS} days</div></div>`;
       let lastDay = '';
@@ -178,7 +202,8 @@ export function openPhone({ start = 'home', after } = {}) {
       const canReply = fid !== 'unknown';
       const bar = html`<div class="chat-input">${canReply ? `<textarea id="tx" rows="1" maxlength="${LETTER_MAX}" placeholder="写信息… Message"></textarea><button class="ph-btn green" id="send">➤</button>` : '<small>不能回复 Can\'t reply</small>'}</div>`;
       body.appendChild(bar);
-      $('#del-chat', h).onclick = async () => {
+      const delBtn = $('#del-chat', h);
+      if (delBtn) delBtn.onclick = async () => {
         if (!(await ask('要删除和这个朋友的全部信息吗？<br>Delete this whole chat?'))) return;
         if (!(await ask('真的要删除吗？删除了就找不回来了。<br>Are you sure? It can\'t be brought back.', '确定删除 Yes, delete'))) return;
         S.deleteThread(fid); toast('🗑 已删除 Deleted'); back();
