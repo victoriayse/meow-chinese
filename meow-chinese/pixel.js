@@ -71,8 +71,9 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
   }
   // muzzle
   fillShape((x, y) => inEllipse(x, y, 16, Y(15.2), 4.6, 2.9), P.w, 'head');
-  // cheeks blush
+  // cheeks blush (rosier when she is smitten)
   [[7, 14], [8, 14], [24, 14], [23, 14]].forEach(([x, y]) => set(x, Y(y), BLUSH));
+  if (mood === 'love') [[6, 14], [7, 15], [8, 15], [25, 14], [24, 15], [23, 15]].forEach(([x, y]) => set(x, Y(y), BLUSH));
   // nose + mouth
   set(15, Y(13), NOSE); set(16, Y(13), NOSE);
   if (mood === 'eat') {
@@ -92,12 +93,21 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
     // open mouth, tongue out
     set(14, Y(15), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(15), P.o);
     set(15, Y(16), '#ff7f9f'); set(16, Y(16), '#ff7f9f'); set(15, Y(17), '#ff7f9f'); set(16, Y(17), '#e8607f');
+  } else if (mood === 'love') {
+    // big happy smile
+    set(13, Y(14), P.o); set(14, Y(15), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(15), P.o); set(18, Y(14), P.o);
+    set(15, Y(16), '#ff7f9f'); set(16, Y(16), '#ff7f9f');
   } else {
     set(14, Y(15), P.o); set(15, Y(14), P.o); set(16, Y(14), P.o); set(17, Y(15), P.o);
   }
   // eyes
   const eyes = (ex) => {
-    if (mood === 'happy' || mood === 'eat') {
+    if (mood === 'love') {
+      // heart eyes
+      const HEART = '#ff3f74';
+      [[0, 9], [2, 9], [-1, 10], [0, 10], [1, 10], [2, 10], [3, 10], [0, 11], [1, 11], [2, 11], [1, 12]].forEach(([dx, y]) => set(ex + dx, Y(y), HEART));
+      set(ex - 1, Y(10), '#ffb3c8');
+    } else if (mood === 'happy' || mood === 'eat') {
       set(ex - 1, Y(12), EYE); set(ex, Y(11), EYE); set(ex + 1, Y(11), EYE); set(ex + 2, Y(12), EYE);
     } else if (mood === 'sleepy' || mood === 'blink') {
       for (let i = -1; i <= 2; i++) set(ex + i, Y(12), EYE);
@@ -363,6 +373,33 @@ export const ITEMS = {
       'oggggggggggo',
       '.odddddddddo',
       '..oooooooo..',
+    ] },
+
+  // ---- toiletries (used up) ----
+  shampoo: { cat: 'toiletry', name: '洗发水', en: 'Shampoo', price: 12, hygiene: 50,
+    pal: { o: O, p: '#ff9ec7', d: '#e86fa3', w: '#ffffff', b: '#7ec8f5' },
+    art: [
+      '...oooo...',
+      '...owwo...',
+      '....oo....',
+      '..oooooo..',
+      '.oppppppo.',
+      '.opwwwwdo.',
+      '.opwbbwdo.',
+      '.opwwwwdo.',
+      '.oppppppo.',
+      '.oppppddo.',
+      '..oooooo..',
+    ] },
+  comb: { cat: 'toiletry', name: '梳子', en: 'Comb', price: 5, hygiene: 20,
+    pal: { o: O, b: '#c58bf0', l: '#e3c4fa' },
+    art: [
+      '..oooooooooo..',
+      '.obbbbbbbbbbo.',
+      '.obllllllllbo.',
+      '.oooooooooooo.',
+      '.o.o.o.o.o.o..',
+      '.o.o.o.o.o.o..',
     ] },
 
   // ---- pharmacy (only when the kitten is ill) ----
@@ -675,17 +712,38 @@ export function drawLandscape(canvas, opts = {}) {
   const put = (x, y, c) => {
     x |= 0; y |= 0; if (x < 0 || y < 0 || x >= W || y >= H) return;
     const i = (y * W + x) * 4, rgb = typeof c === 'string' ? hex(c) : c; d[i] = rgb[0]; d[i + 1] = rgb[1]; d[i + 2] = rgb[2]; d[i + 3] = 255;
+    skyPix[y * W + x] = paintingSky ? 1 : 0;
   };
   const horizon = Math.round(H * (opts.horizon || 0.56));
+  const night = !!opts.night;
+  const skyPix = new Uint8Array(W * H);   // which pixels are sky (at night everything else gets darker)
+  let paintingSky = true;
+  const putT = put;
 
   // sky bands with dithering
-  const sky = ['#3a78d4', '#4a8ade', '#5c9de6', '#73b2ec', '#8cc6f0', '#a6d8f3'];
+  const sky = night ? ['#0b1035', '#10174a', '#161f5a', '#1d286a', '#25337a', '#2f3f8a'] : ['#3a78d4', '#4a8ade', '#5c9de6', '#73b2ec', '#8cc6f0', '#a6d8f3'];
   const band = Math.ceil(horizon / sky.length);
   for (let y = 0; y < horizon + 10; y++) for (let x = 0; x < W; x++) {
     let b = Math.min(sky.length - 1, Math.floor(y / band));
     const into = y % band;
     if (into < 2 && b > 0 && (x + y) % 2 === 0) b -= 1;
-    put(x, y, sky[b]);
+    putT(x, y, sky[b]);
+  }
+  if (night) {
+    // stars (some twinkle brighter) and a crescent moon
+    const S = rng(31);
+    for (let i = 0; i < W * 0.6; i++) {
+      const x = Math.floor(S() * W), y = Math.floor(S() * horizon * 0.85);
+      const c = S() < 0.25 ? '#ffe9a8' : '#ffffff';
+      putT(x, y, c);
+      if (S() < 0.12) { putT(x - 1, y, '#8fa0d8'); putT(x + 1, y, '#8fa0d8'); putT(x, y - 1, '#8fa0d8'); putT(x, y + 1, '#8fa0d8'); }
+    }
+    const mx = Math.round(W * (opts.moonX ?? 0.34)), my = Math.round(horizon * (opts.moonY ?? 0.2)), mr = Math.max(6, Math.round(H * 0.06));
+    for (let y = my - mr - 3; y <= my + mr + 3; y++) for (let x = mx - mr - 3; x <= mx + mr + 3; x++) {
+      const d1 = Math.hypot(x - mx, y - my), d2 = Math.hypot(x - (mx + mr * 0.75), y - (my - mr * 0.45));
+      if (d1 <= mr && d2 > mr * 0.78) putT(x, y, d1 > mr - 1.2 ? '#f3d77a' : '#fff4c2');
+      else if (d1 <= mr + 2.5 && d1 > mr && d2 > mr * 0.85 && (x + y) % 2 === 0) putT(x, y, '#3a4890');   // soft glow
+    }
   }
   // clouds
   const cloud = (cx, cy, size) => {
@@ -699,11 +757,12 @@ export function drawLandscape(canvas, opts = {}) {
         if (dx * dx + dy * dy < r * r) { inside = true; if (y > py + r * 0.25) shade = true; }
       }
       if (y > cy + size * 0.35) continue; // flat bottom
-      if (inside) put(x, y, shade ? '#d3ecfa' : '#ffffff');
+      if (inside) putT(x, y, night ? (shade ? '#2a3570' : '#3d4a86') : (shade ? '#d3ecfa' : '#ffffff'));
     }
   };
   const nClouds = Math.round(W / 38);
   for (let i = 0; i < nClouds; i++) cloud(R() * W, 10 + R() * (horizon * 0.55), 4 + R() * 6);
+  paintingSky = false;
 
   // ridge helper (midpoint displacement)
   const ridge = (base, amp, rough, seedShift) => {
@@ -775,6 +834,14 @@ export function drawLandscape(canvas, opts = {}) {
       put(x, y + 1, g4); put(x, y, c); put(x - 1, y, p); put(x + 1, y, p); put(x, y - 1, p);
     }
   }
+  if (night) {
+    // moonlight: the hills, trees and meadow turn dark blue
+    for (let k = 0; k < W * H; k++) {
+      if (skyPix[k]) continue;
+      const i = k * 4;
+      d[i] = d[i] * 0.36 + 6; d[i + 1] = d[i + 1] * 0.42 + 10; d[i + 2] = d[i + 2] * 0.62 + 34;
+    }
+  }
   ctx.putImageData(img, 0, 0);
 
   const dpr = window.devicePixelRatio || 1;
@@ -790,6 +857,7 @@ export function itemEffect(it) {
   if (it.hunger) parts.push(`+${it.hunger} 饱`);
   if (it.water) parts.push(`+${it.water} 💧`);
   if (it.happy) parts.push(`+${it.happy} ❤`);
+  if (it.hygiene) parts.push(`+${it.hygiene} 🛁`);
   return parts.join(' · ');
 }
 
@@ -1242,7 +1310,7 @@ function lowres(canvas, W, H, paint) {
 }
 // window position inside the room (fractions), shared with the curtains
 export const ROOM_WINDOW = { x0: 0.39, x1: 0.61, y0: 0.08, y1: 0.42 };
-export function drawRoom(canvas) {
+export function drawRoom(canvas, night = false) {
   const cssW = canvas.clientWidth || 300, cssH = canvas.clientHeight || 200;
   const W = 120, H = Math.max(40, Math.round(W * cssH / cssW));
   lowres(canvas, W, H, (R) => {
@@ -1263,10 +1331,18 @@ export function drawRoom(canvas) {
     // window with the sky outside
     const wx0 = Math.round(W * ROOM_WINDOW.x0), wx1 = Math.round(W * ROOM_WINDOW.x1), wy0 = Math.round(H * ROOM_WINDOW.y0), wy1 = Math.round(H * ROOM_WINDOW.y1);
     R(wx0 - 2, wy0 - 2, wx1 - wx0 + 4, wy1 - wy0 + 4, '#ffffff');
-    R(wx0, wy0, wx1 - wx0, wy1 - wy0, '#8cc6f0');
-    R(wx0, wy0, wx1 - wx0, Math.round((wy1 - wy0) * 0.35), '#6aaee8');
-    R(wx0 + 2, wy0 + 3, 6, 2, '#ffffff'); R(wx0 + 3, wy0 + 2, 3, 1, '#ffffff');
-    R(wx0, wy1 - 4, wx1 - wx0, 4, '#6db35c'); R(wx0 + 4, wy1 - 6, 7, 2, '#5fa252');
+    if (night) {
+      R(wx0, wy0, wx1 - wx0, wy1 - wy0, '#1d286a');
+      R(wx0, wy0, wx1 - wx0, Math.round((wy1 - wy0) * 0.35), '#10174a');
+      [[3, 3], [9, 6], [5, 9], [15, 4], [20, 8], [17, 11], [24, 3]].forEach(([x, y]) => { if (wx0 + x < wx1 - 1 && wy0 + y < wy1 - 5) R(wx0 + x, wy0 + y, 1, 1, '#ffffff'); });
+      R(wx1 - 7, wy0 + 2, 3, 3, '#fff4c2'); R(wx1 - 6, wy0 + 2, 2, 2, '#10174a');   // little crescent moon
+      R(wx0, wy1 - 4, wx1 - wx0, 4, '#26453a'); R(wx0 + 4, wy1 - 6, 7, 2, '#1f3a31');
+    } else {
+      R(wx0, wy0, wx1 - wx0, wy1 - wy0, '#8cc6f0');
+      R(wx0, wy0, wx1 - wx0, Math.round((wy1 - wy0) * 0.35), '#6aaee8');
+      R(wx0 + 2, wy0 + 3, 6, 2, '#ffffff'); R(wx0 + 3, wy0 + 2, 3, 1, '#ffffff');
+      R(wx0, wy1 - 4, wx1 - wx0, 4, '#6db35c'); R(wx0 + 4, wy1 - 6, 7, 2, '#5fa252');
+    }
     const mx = Math.round((wx0 + wx1) / 2), my = Math.round((wy0 + wy1) / 2);
     R(mx, wy0, 1, wy1 - wy0, '#ffffff'); R(wx0, my, wx1 - wx0, 1, '#ffffff');
     R(wx0 - 3, wy1 + 1, wx1 - wx0 + 6, 2, '#e9e1d4');

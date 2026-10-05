@@ -19,14 +19,19 @@ const app = $('#app');
 let current = null;
 
 // ---------- background ----------
+// 6pm to 5am (this device's clock): night sky with stars and the moon
+export function isNight(d = new Date()) { return d.getHours() >= 18 || d.getHours() < 5; }
 let skyKey = '';
 function paintSky(force) {
   const portrait = window.innerHeight > window.innerWidth || window.innerWidth <= 900;
-  const key = `${window.innerWidth}x${window.innerHeight}`;
+  const key = `${window.innerWidth}x${window.innerHeight}${isNight() ? 'n' : 'd'}`;
   if (!force && key === skyKey) return;
   skyKey = key;
-  drawLandscape($('#sky'), { horizon: portrait ? 0.4 : 0.5, seed: 7 });
+  drawLandscape($('#sky'), { horizon: portrait ? 0.4 : 0.5, seed: 7, night: isNight(), moonX: window.innerWidth <= 600 ? 0.8 : 0.34, moonY: window.innerWidth <= 600 ? 0.36 : 0.2 });
+  document.body.classList.toggle('night', isNight());
 }
+let nightNow = isNight();
+setInterval(() => { if (isNight() !== nightNow) { nightNow = isNight(); paintSky(true); if (current === 'home') refreshHome(); } }, 60000);
 window.addEventListener('resize', () => { clearTimeout(paintSky.t); paintSky.t = setTimeout(() => { paintSky(); if (current === 'home') refreshHome(); }, 200); });
 
 // ---------- router ----------
@@ -448,7 +453,8 @@ function homeScreen(params = {}) {
       <div class="card stack" style="gap:8px">
         <div class="stat"><span><i data-icon="fish" data-size="22"></i></span><span>饱饱 <span class="en">Food</span></span><div class="bar segmented"><i style="width:${k.hunger}%;--c:#f59b2a"></i></div></div>
         <div class="stat"><span style="font-size:20px;text-align:center">💧</span><span>喝水 <span class="en">Water</span></span><div class="bar segmented"><i style="width:${k.water ?? 75}%;--c:#4fb3ef"></i></div></div>
-        <div class="stat"><span>${'<i data-icon="heart" data-size="22"></i>'}</span><span>开心 <span class="en">Happy</span></span><div class="bar segmented"><i style="width:${k.happy}%;--c:#ff6f9c"></i></div></div>
+        <button type="button" class="stat stat-btn" data-info="happy" aria-label="What makes the kitten happy"><span>${'<i data-icon="heart" data-size="22"></i>'}</span><span>开心 <span class="en">Happy</span></span><div class="bar segmented"><i style="width:${k.happy}%;--c:#ff6f9c"></i></div><b class="info-i">i</b></button>
+        <button type="button" class="stat stat-btn" data-info="hygiene" aria-label="What keeps the kitten clean"><span style="font-size:20px;text-align:center">🛁</span><span>干净 <span class="en">Hygiene</span></span><div class="bar segmented"><i style="width:${k.hygiene ?? 100}%;--c:#9b7bea"></i></div><b class="info-i">i</b></button>
         <div class="stat"><span style="font-family:var(--px);font-weight:700">Lv</span><span>等级 ${S.level()}</span><div class="bar xp-bar"><i style="width:${S.levelProgress() * 100}%;--c:#6cb6f2"></i><b>${S.xpIntoLevel()}/${S.xpPerLevel()} XP</b></div></div>
         ${S.nextUnlock() ? `<div class="next-unlock">🔓 Lv${S.nextUnlock().level} 解锁 ${S.nextUnlock().name}</div>` : ''}
       </div>
@@ -480,6 +486,7 @@ function homeScreen(params = {}) {
   else if (md.face === 'dizzy') kwrap.appendChild(html`<div class="bubble sad">😵‍💫 ${esc(md.text)}</div>`);
   else if (md.face === 'cough') kwrap.appendChild(html`<div class="bubble sad">🤒 ${esc(md.text)}</div>`);
   else if (S.phoneBadge()) kwrap.appendChild(html`<div class="bubble">📱 你有新消息！<br><small>You have a new message!</small></div>`);
+  else if (md.dirty) kwrap.appendChild(html`<div class="bubble ${(k.hygiene ?? 100) < 20 ? 'sad' : ''}">🛁 ${esc(md.text)}</div>`);
   else if (md.essay) kwrap.appendChild(html`<div class="bubble">✍️ ${esc(md.text)}</div>`);
   else if (md.face === 'bored') kwrap.appendChild(html`<div class="bubble">🥱 ${esc(md.text)}</div>`);
   else if (md.face === 'cry') kwrap.appendChild(html`<div class="bubble sad">😿 ${esc(md.text)}</div>`);
@@ -488,7 +495,7 @@ function homeScreen(params = {}) {
   else if (md.face === 'sleepy') kwrap.appendChild(html`<div class="zzz">z Z z</div>`);
   else if (Math.random() < 0.35) kwrap.appendChild(html`<div class="bubble joke">😹 ${esc(randomJoke())}</div>`);
   else if (s.childName && Math.random() < 0.6) kwrap.appendChild(html`<div class="bubble">${esc(s.childName)}，喵～</div>`);
-  if (md.needs.length) kwrap.appendChild(html`<div class="needs">${md.needs.includes('hungry') ? '<span>🐟 饿了 Hungry</span>' : ''}${md.needs.includes('thirsty') ? '<span>💧 口渴 Thirsty</span>' : ''}</div>`);
+  if (md.needs.length) kwrap.appendChild(html`<div class="needs">${md.needs.includes('hungry') ? '<span>🐟 饿了 Hungry</span>' : ''}${md.needs.includes('thirsty') ? '<span>💧 口渴 Thirsty</span>' : ''}${md.needs.includes('dirty') ? '<span>🛁 要洗澡 Bath time</span>' : ''}</div>`);
   const lvNow = S.level();
   if ((s.lastLevel || 1) < lvNow) {
     const from = s.lastLevel || 1; s.lastLevel = lvNow; S.save();
@@ -653,17 +660,21 @@ function homeScreen(params = {}) {
   function petKitten() {
     const face = md.face;
     meow(face);
-    const sad = ['faint', 'dizzy', 'cough', 'cry', 'hungry', 'thirsty', 'bored', 'sleepy'].includes(face);
-    if (!sad) { kv.flash('happy', 1400); kv.jump(); }
+    // a touch always makes her smitten for 3 seconds — unless she is ill
+    const sad = ['faint', 'dizzy', 'cough'].includes(face);
+    if (!sad) { kv.flash('love', 3000); kv.jump(); }   // smitten: heart eyes and blushing for 3 seconds
     const EMO = { happy: ['😊', '喵～最喜欢你了！'], normal: ['😺', '喵～'], cry: ['😿', '喵呜…快做任务吧'], hungry: ['😿', '喵…好饿'], thirsty: ['🥵', '喵…想喝水'],
       cough: ['🤒', '喵…咳咳'], dizzy: ['😵‍💫', '喵…头好晕'], faint: ['😵', '……'], bored: ['🥱', '喵～陪我玩'], sleepy: ['😴', '喵…困了'] };
-    const [emoji, words] = EMO[face] || EMO.normal;
+    const [emoji, words] = sad ? EMO[face] : ['😻', ['喵～最喜欢你了！', '好幸福～', '喵～再摸摸我！'][Math.floor(Math.random() * 3)]];
     const pop = document.createElement('div');
     pop.className = 'emo-pop'; pop.innerHTML = `<span class="e">${emoji}</span><span class="w">${esc(words)}</span>`;
     fx.appendChild(pop);
     const bubbles = [...kwrap.querySelectorAll('.bubble')]; bubbles.forEach((b) => { b.style.visibility = 'hidden'; });
-    setTimeout(() => { pop.remove(); bubbles.forEach((b) => { b.style.visibility = ''; }); }, 1800);
+    setTimeout(() => { pop.remove(); bubbles.forEach((b) => { b.style.visibility = ''; }); }, sad ? 1800 : 3000);
     burst(fx, 'heart', sad ? 2 : 4, '50%', '30%');
+    if (!sad) {   // hearts keep floating around her for 3 seconds
+      [500, 1000, 1500, 2000, 2500].forEach((t, i) => setTimeout(() => burst(fx, 'heart', 2, `${[25, 75, 35, 65, 50][i]}%`, `${[35, 30, 20, 25, 15][i]}%`), t));
+    }
     S.pet();
     afterCare();
   }
@@ -683,6 +694,8 @@ function homeScreen(params = {}) {
   // (a checked composition now arrives as a phone notification instead of a pop-up)
   const bh = $('#b-house', n); if (bh) bh.onclick = () => (inHouse ? goBack() : go('home', { view: 'house' }));
   $('#b-feed', n).onclick = () => openFeed(kv, fx, afterCare);
+  n.querySelectorAll('[data-info]').forEach((b) => { b.onclick = () => openStatInfo(b.dataset.info); });
+  requestAnimationFrame(() => fitBubbles(n)); setTimeout(() => fitBubbles(n), 300);
   // daily tasks: tap one to go straight to it
   n.querySelectorAll('[data-task]').forEach((b) => { b.onclick = () => { sfx.unlock(); openTask(b.dataset.task); }; });
   function openTask(key) {
@@ -702,7 +715,7 @@ function homeScreen(params = {}) {
     if (key === 'listen') return openPhone({ start: 'listen', after: refreshHome });
   }
   $('#b-friends', n).onclick = () => go('friends');
-  n._mounted = () => { if (inHouse) { drawRoom($('#roombg', n)); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
+  n._mounted = () => { if (inHouse) { drawRoom($('#roombg', n), isNight()); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
   return n;
 }
 
@@ -789,13 +802,90 @@ function eatAnimation(kv, fx, id) {
   setTimeout(() => { clearInterval(munch); sfx.yum(); }, 2300);
   setTimeout(() => { c.classList.remove('eating'); bowl.classList.add('gone'); say.remove(); setTimeout(() => bowl.remove(), 300); }, 2600);
 }
+// shampoo: bubbles and foam for 3 seconds; comb: the comb brushes her fur with sparkles
+function groomAnimation(kv, fx, id) {
+  const c = kv.canvas, fr = fx.getBoundingClientRect(), cr = c.getBoundingClientRect();
+  if (!cr.width) return;
+  const box = document.createElement('div');
+  box.className = `groom ${id}`;
+  box.style.cssText = `left:${cr.left - fr.left}px;top:${cr.top - fr.top}px;width:${cr.width}px;height:${cr.height}px`;
+  const tool = spriteCanvas(id, Math.max(30, Math.round(cr.width * (id === 'comb' ? 0.32 : 0.26))));
+  tool.classList.add('groom-tool');
+  box.appendChild(tool);
+  if (id === 'shampoo') {
+    for (let k = 0; k < 14; k++) {
+      const b = document.createElement('i'); b.className = 'groom-bubble';
+      const sz = 8 + Math.random() * 16;
+      b.style.cssText = `left:${10 + Math.random() * 80}%;top:${25 + Math.random() * 55}%;width:${sz}px;height:${sz}px;animation-delay:${(Math.random() * 2).toFixed(2)}s`;
+      box.appendChild(b);
+    }
+    box.appendChild(Object.assign(document.createElement('i'), { className: 'groom-foam' }));
+  } else {
+    for (let k = 0; k < 6; k++) {
+      const sp = document.createElement('i'); sp.className = 'groom-spark'; sp.textContent = '✨';
+      sp.style.cssText = `left:${15 + Math.random() * 70}%;top:${30 + Math.random() * 50}%;animation-delay:${(0.3 + Math.random() * 2.2).toFixed(2)}s`;
+      box.appendChild(sp);
+    }
+  }
+  const say = document.createElement('div');
+  say.className = 'eat-say zh'; say.textContent = id === 'shampoo' ? '洗白白～' : '好舒服～';
+  say.style.cssText = `left:${cr.left - fr.left + cr.width / 2}px;top:${Math.max(0, cr.top - fr.top - 8)}px`;
+  fx.append(box, say);
+  const bubbles = [...(fx.parentElement || fx).querySelectorAll('.bubble')]; bubbles.forEach((b) => { b.style.visibility = 'hidden'; });
+  kv.flash('happy', 3000);
+  c.classList.add(id === 'shampoo' ? 'washing' : 'combing');
+  setTimeout(() => {
+    c.classList.remove('washing', 'combing'); box.classList.add('gone'); say.remove();
+    bubbles.forEach((b) => { b.style.visibility = ''; });
+    setTimeout(() => box.remove(), 300);
+  }, 3000);
+}
+
+// tap the Happy / Hygiene bar: what makes it go up and down
+const STAT_INFO = {
+  happy: { title: '❤ 开心 Happy', intro: 'Goes down by itself about 1 point an hour (about 24 a day), never below 8. Below 30 the kitten looks sleepy and says “好无聊… Play with me?”.',
+    rows: [['Pet the kitten', '+2 each time (up to 10 times a day)'], ['Play with a toy (Food & water → Play together)', '+6'], ['Finish a “Play with me” round', '+15'], ['Shampoo or comb', '+2'], ['A friend feeds her kitten', 'the food’s amount +3'],
+      ['🍶 Fresh water', '+2'], ['🐟 Fish snack', '+3'], ['🥟 Steamed bun', '+4'], ['🥛 Milk · 🥫 Tuna can', '+8'], ['🍪 Paw cookie', '+15'], ['🥮 Mooncake', '+18'], ['🍦 Ice cream', '+25'], ['🍰 Strawberry cake', '+30'],
+      ['🛡️ God mode', 'stays at 60 or more'], ['🏥 Hospital', 'back up to at least 60']] },
+  hygiene: { title: '🛁 干净 Hygiene', intro: 'A full bar lasts about 24 hours (it goes down about 4 points an hour). Below 50% the kitten says “哎呀该帮我洗澡了”, and below 20% “我好臭啊！快帮我洗澡!”.',
+    rows: [['🧴 Shampoo', '+50'], ['🪮 Comb', '+20'], ['🛡️ God mode', 'stays at 60 or more'], ['🏥 Hospital', 'back up to at least 60']],
+    shop: 'Buy shampoo and combs in the shop → 🧴 Toiletries, then use them in 喂食喝水 Food & water.' },
+};
+function openStatInfo(key) {
+  const d = STAT_INFO[key]; if (!d) return;
+  const n = html`<div class="card stack stat-info">
+      <div class="h-title" style="font-size:24px">${d.title}</div>
+      <p class="help" style="margin:0">${d.intro}</p>
+      <table class="info-table"><thead><tr><th>What she does</th><th>${key === 'happy' ? 'Happy' : 'Hygiene'}</th></tr></thead>
+        <tbody>${d.rows.map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).join('')}</tbody></table>
+      ${d.shop ? `<p class="help" style="margin:0">${esc(d.shop)}</p>` : ''}
+      <div class="row" style="justify-content:flex-end">${d.shop ? '<button class="btn blue" id="si-shop">🧴 <span class="zh">去买</span> Shop</button>' : ''}<button class="btn white" id="si-close">好的 OK</button></div>
+    </div>`;
+  $('#si-close', n).onclick = closeModal;
+  const sh = $('#si-shop', n); if (sh) sh.onclick = () => { closeModal(); go('shop', { tab: 'toiletry' }); };
+  openModal(n);
+}
+// keep the kitten's speech bubbles inside the screen (long ones on a phone)
+function fitBubbles(root) {
+  root.querySelectorAll('.kitten-wrap .bubble').forEach((b) => {
+    b.style.marginLeft = '0px';
+    const r = b.getBoundingClientRect(), vw = document.documentElement.clientWidth, pad = 8;
+    let shift = 0;
+    if (r.right > vw - pad) shift = vw - pad - r.right;
+    if (r.left + shift < pad) shift = pad - r.left;
+    if (shift) { b.style.marginLeft = `${Math.round(shift)}px`; b.style.setProperty('--tail', `${Math.max(10, Math.min(r.width - 24, 14 - shift))}px`); }
+  });
+}
 function openFeed(kv, fx, afterCare) {
   const s = S.get();
-  const foods = Object.entries(s.pantry).filter(([id, c]) => c > 0 && ITEMS[id]);
+  const foods = Object.entries(s.pantry).filter(([id, c]) => c > 0 && ITEMS[id] && ITEMS[id].cat === 'food');
+  const soaps = Object.entries(s.pantry).filter(([id, c]) => c > 0 && ITEMS[id] && ITEMS[id].cat === 'toiletry');
   const toys = s.owned.filter((id) => ITEMS[id] && ITEMS[id].toy);
   const n = html`<div class="card stack">
       <div class="h-title"><span class="zh">喂${esc(s.kitten.name)}吃东西</span><span class="en">Feed your kitten</span></div>
       ${foods.length ? '<div class="pantry" id="pantry"></div>' : `<p class="help">冰箱空空的！Your pantry is empty — buy food in the shop.</p>`}
+      <div class="h-title" style="font-size:20px"><span class="zh">洗澡梳毛</span><span class="en">Bath &amp; grooming · 🛁 ${Math.round(s.kitten.hygiene ?? 100)}%</span></div>
+      ${soaps.length ? '<div class="pantry" id="soaps"></div>' : '<p class="help" style="margin:0">没有洗护用品。去商店买洗发水或梳子！ No shampoo or comb yet — buy them in the shop (🧴 Toiletries).</p>'}
       ${toys.length ? `<div class="h-title" style="font-size:20px"><span class="zh">一起玩</span><span class="en">Play together</span></div><div class="pantry" id="toys"></div>` : ''}
       <div class="row" style="justify-content:space-between">
         <button class="btn blue" id="to-shop"><span class="zh">去商店</span> Shop</button>
@@ -819,6 +909,20 @@ function openFeed(kv, fx, afterCare) {
       setTimeout(() => refreshHome(), 3000);
     };
     pantry.appendChild(b);
+  });
+  const soapBox = $('#soaps', n);
+  soaps.forEach(([id, count]) => {
+    const it = ITEMS[id];
+    const b = html`<button class="item"><span class="count">×${count}</span><div class="art"></div><div class="nm">${it.name}</div><div class="eff">${itemEffect(it)}</div></button>`;
+    $('.art', b).appendChild(spriteCanvas(id, 56));
+    b.onclick = () => {
+      if (!S.groom(id)) return;
+      closeModal(); sfx.purr();
+      groomAnimation(kv, fx, id);
+      setTimeout(() => { toast(id === 'shampoo' ? '<span class="zh">洗得香喷喷！</span> Squeaky clean!' : '<span class="zh">毛毛好顺！</span> So fluffy!'); afterCare(); }, 3000);
+      setTimeout(() => refreshHome(), 3300);
+    };
+    soapBox.appendChild(b);
   });
   const toyBox = $('#toys', n);
   toys.forEach((id) => {

@@ -7,6 +7,7 @@ import { sfx } from './audio.js';
 const isWear = (slots) => (it) => it.cat === 'wear' && !it.special && slots.includes(it.slot);
 export const TABS = [
   { key: 'food', zh: '食物', en: 'Food', icon: '🐟', test: (it) => it.cat === 'food' },
+  { key: 'toiletry', zh: '洗护用品', en: 'Toiletries', icon: '🧴', test: (it) => it.cat === 'toiletry' },
   { key: 'head', lock: 'head', zh: '头饰', en: 'Hair', icon: '🎀', test: isWear(['head']) },
   { key: 'body', lock: 'body', zh: '衣服', en: 'Clothes', icon: '👕', test: isWear(['body']) },
   { key: 'feet', lock: 'feet', zh: '鞋子', en: 'Shoes', icon: '👟', test: isWear(['feet']) },
@@ -75,12 +76,12 @@ export function shopScreen({ go, tab = 'food' }) {
       const cost = S.price(id);
       const special = it.cat === 'special';
       const owned = (it.cat === 'wear' || it.cat === 'decor') && s.owned.includes(id);
-      const have = it.cat === 'food' ? s.pantry[id] || 0 : special ? s.streak.freezes || 0 : 0;
+      const have = it.cat === 'food' || it.cat === 'toiletry' ? s.pantry[id] || 0 : special ? s.streak.freezes || 0 : 0;
       const full = special && have >= S.MAX_FREEZES;
       const pharm = it.cat === 'pharmacy';
       const needed = !pharm || S.health() === it.cures;
       const can = s.coins >= cost && !full && needed;
-      const eff = it.cat === 'food' ? itemEffect(it) : it.toy ? '可以一起玩 Toy'
+      const eff = it.cat === 'food' || it.cat === 'toiletry' ? itemEffect(it) : it.toy ? '可以一起玩 Toy'
         : special ? `漏了一天也不会断连胜 · Keeps your streak if you miss a day${full ? ` (max ${S.MAX_FREEZES})` : ''}`
         : pharm ? (needed ? `治好${it.cures === 'cough' ? '咳嗽' : '头晕'}！Cures ${it.cures === 'cough' ? 'a cough' : 'dizziness'}` : `小猫${it.cures === 'cough' ? '咳嗽' : '头晕'}时才需要 · Only when your kitten ${it.cures === 'cough' ? 'coughs' : 'is dizzy'}`)
         : it.cat === 'wear' ? `${SLOT_NAME[it.slot] || ''}` : '';
@@ -123,6 +124,7 @@ export function shopScreen({ go, tab = 'food' }) {
     burst($('#fx', n), 'heart', 3, '50%', '20%');
     toast(it.cat === 'special' ? `❄️ <span class="zh">有${S.get().streak.freezes}张冰冻卡了！</span> Streak freeze ready`
       : it.cat === 'food' ? `<span class="zh">买了${it.name}！</span> Feed it at home`
+      : it.cat === 'toiletry' ? `<span class="zh">买了${it.name}！</span> Use it in 喂食喝水 Food & water at home`
       : it.cat === 'wear' ? `<span class="zh">穿上${it.name}！</span>`
       : `<span class="zh">${it.name}放进家里了！</span> Added to your home`);
     render();

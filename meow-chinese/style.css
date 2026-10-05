@@ -1027,3 +1027,35 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .update-bar button { border: 0; background: none; font: inherit; font-weight: 800; color: var(--ink); cursor: pointer; }
 .update-bar .go { padding: 10px 14px; font-size: 16px; text-align: left; }
 .update-bar .x { padding: 10px 12px; border-left: 2px solid var(--ink); font-size: 16px; }
+
+/* tap the Happy / Hygiene bar for what changes it */
+.stat-btn { width: 100%; border: 0; background: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; grid-template-columns: 30px 92px 1fr 22px; }
+.stat-btn .info-i { width: 20px; height: 20px; border: 2px solid var(--ink); border-radius: 50%; font-family: var(--ui, system-ui), sans-serif; font-size: 12px; font-weight: 800; display: grid; place-items: center; font-style: italic; background: #fff; }
+.stat-btn:active { transform: translateY(1px); }
+.info-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.info-table th, .info-table td { border: 2px solid var(--ink); padding: 6px 8px; text-align: left; vertical-align: top; }
+.info-table th { background: #f3ecdf; }
+.info-table td:last-child { font-weight: 800; white-space: nowrap; }
+.stat-info { max-height: 80vh; overflow: auto; }
+
+/* shampoo / comb (3 s) */
+.groom { position: absolute; z-index: 3; pointer-events: none; transition: opacity .3s; }
+.groom.gone { opacity: 0; }
+.groom-tool { position: absolute; z-index: 2; image-rendering: pixelated; }
+.groom.shampoo .groom-tool { left: 60%; top: -6%; transform-origin: 50% 80%; animation: squeeze .75s ease-in-out 4; }
+@keyframes squeeze { 0%, 100% { transform: rotate(-150deg); } 50% { transform: rotate(-125deg) scaleY(.85); } }
+.groom-foam { position: absolute; left: 22%; right: 22%; top: 8%; height: 22%; border-radius: 50% 50% 40% 40%; background: radial-gradient(circle at 30% 40%, #fff 0 30%, transparent 31%), radial-gradient(circle at 65% 35%, #fff 0 28%, transparent 29%), radial-gradient(circle at 50% 65%, #f2f8ff 0 34%, transparent 35%); opacity: 0; animation: foam 3s ease-out forwards; }
+@keyframes foam { 15% { opacity: .95; } 80% { opacity: .95; } 100% { opacity: 0; } }
+.groom-bubble { position: absolute; border-radius: 50%; border: 2px solid #7ec8f5; background: radial-gradient(circle at 30% 30%, #fff 0 25%, rgba(200, 235, 255, .55) 26%); opacity: 0; animation: bubble-up 1.6s ease-out infinite; }
+@keyframes bubble-up { 0% { transform: translateY(0) scale(.4); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-60px) scale(1.1); opacity: 0; } }
+.groom.comb .groom-tool { left: 15%; top: 38%; animation: brush .75s ease-in-out 4; }
+@keyframes brush { 0%, 100% { transform: translateX(0) rotate(-8deg); } 50% { transform: translateX(110%) rotate(8deg); } }
+.groom-spark { position: absolute; font-style: normal; font-size: 18px; opacity: 0; animation: spark .8s ease-out forwards; }
+@keyframes spark { 0% { transform: scale(.3); opacity: 0; } 40% { opacity: 1; transform: scale(1.1); } 100% { transform: scale(.8) translateY(-10px); opacity: 0; } }
+.kitten-canvas.washing { animation: wash .3s steps(2) infinite !important; }
+@keyframes wash { 50% { transform: translateX(3px); } }
+.kitten-canvas.combing { animation: bob .6s steps(2) infinite !important; }
+
+/* long speech bubbles stay on screen; the little tail follows the kitten */
+.bubble { max-width: calc(100vw - 24px); }
+.bubble::after { left: var(--tail, 14px); }

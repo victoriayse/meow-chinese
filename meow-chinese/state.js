@@ -46,7 +46,7 @@ function fresh() {
     version: 1,
     onboarded: false,
     childName: '',
-    kitten: { name: '咪咪', fur: 'ginger', hunger: 75, water: 75, happy: 75, lastTick: Date.now(), equipped: { head: null, body: null, feet: null, neck: null, face: null }, xp: 0, petsToday: 0 },
+    kitten: { name: '咪咪', fur: 'ginger', hunger: 75, water: 75, happy: 75, hygiene: 100, lastTick: Date.now(), equipped: { head: null, body: null, feet: null, neck: null, face: null }, xp: 0, petsToday: 0 },
     coins: 30,
     pantry: { fish: 2, milk: 1, water: 2 },
     prices: {},      // parent overrides: { itemId: price }
@@ -146,7 +146,7 @@ export function setGodMode(on) {
   state.settings.godMode = !!on;
   if (on) {
     const k = state.kitten;
-    k.hunger = Math.max(k.hunger, 80); k.water = Math.max(k.water ?? 75, 80); k.happy = Math.max(k.happy, 80);
+    k.hunger = Math.max(k.hunger, 80); k.water = Math.max(k.water ?? 75, 80); k.happy = Math.max(k.happy, 80); k.hygiene = Math.max(k.hygiene ?? 100, 80);
     state.health.stage = 'ok'; state.health.treated = todayStr();
   } else {
     state.health.treated = todayStr();        // switching it off starts the sickness count fresh from today
@@ -159,12 +159,13 @@ export function tick() {
   const hours = Math.max(0, (now - (k.lastTick || now)) / 3600000);
   if (godMode()) {
     k.lastTick = now;
-    k.hunger = Math.max(k.hunger, 60); k.water = Math.max(k.water ?? 75, 60); k.happy = Math.max(k.happy, 60);
+    k.hunger = Math.max(k.hunger, 60); k.water = Math.max(k.water ?? 75, 60); k.happy = Math.max(k.happy, 60); k.hygiene = Math.max(k.hygiene ?? 100, 60);
   }
   if (hours > 0.05 && !godMode()) {
     k.hunger = Math.max(0, k.hunger - hours * (100 / 24));   // a full tummy lasts 24 hours
     k.happy = Math.max(8, k.happy - hours * 1.0);     // ~24 per day
     k.water = Math.max(0, (k.water ?? 75) - hours * (100 / 24)); // a full water bowl lasts 24 hours
+    k.hygiene = Math.max(0, (k.hygiene ?? 100) - hours * (100 / 24)); // a bath lasts 24 hours
     k.lastTick = now;
   }
   const d = todayStr();
@@ -218,7 +219,7 @@ export function treat(id) {
   if (state.coins < cost) return false;
   state.coins -= cost;
   h.stage = 'ok'; h.treated = todayStr();
-  if (id === 'hospital') { const k = state.kitten; k.hunger = Math.max(k.hunger, 60); k.water = Math.max(k.water ?? 0, 60); k.happy = Math.max(k.happy, 60); }
+  if (id === 'hospital') { const k = state.kitten; k.hunger = Math.max(k.hunger, 60); k.water = Math.max(k.water ?? 0, 60); k.happy = Math.max(k.happy, 60); k.hygiene = Math.max(k.hygiene ?? 0, 60); }
   save();
   return true;
 }
@@ -238,12 +239,16 @@ export function mood() {
   const k = state.kitten, needs = [];
   if (k.hunger < 50) needs.push('hungry');
   if ((k.water ?? 75) < 50) needs.push('thirsty');
+  const hyg = k.hygiene ?? 100;
+  if (hyg < 50) needs.push('dirty');
   const st = state.health.stage;
   if (st === 'faint') return { face: 'faint', needs, text: '' };
   if (st === 'dizzy') return { face: 'dizzy', needs, text: '头好晕…需要药药' };
   if (st === 'cough') return { face: 'cough', needs, text: '咳咳…咳咳…' };
   if (needs.includes('thirsty')) return { face: 'thirsty', needs, text: '好渴…想喝水 · I\'m thirsty!' };
   if (needs.includes('hungry')) return { face: 'hungry', needs, text: '肚子饿了… · I\'m hungry!' };
+  if (hyg < 20) return { face: 'hungry', needs, text: '我好臭啊！快帮我洗澡!', dirty: true };
+  if (hyg < 50) return { face: 'normal', needs, text: '哎呀该帮我洗澡了', dirty: true };
   if ((state.essays || []).some((e) => e.status === 'assigned')) return { face: 'happy', needs, text: '我们一起写作文！', essay: true };
   if (state.boredSince) return { face: 'bored', needs, text: '好无聊…陪我玩嘛！' };
   if (!tasksDone()) return { face: 'cry', needs, text: '呜呜…今天的任务还没做完' };
@@ -391,6 +396,20 @@ export function feed(id) {
   save();
   return true;
 }
+// shampoo / comb: cleaner kitten (counts as looking after her)
+export function groom(id) {
+  const it = ITEMS[id];
+  if (!it || it.cat !== 'toiletry' || !(state.pantry[id] > 0)) return false;
+  state.pantry[id] -= 1;
+  if (!state.pantry[id]) delete state.pantry[id];
+  const k = state.kitten;
+  k.hygiene = Math.min(100, (k.hygiene ?? 100) + (it.hygiene || 0));
+  k.happy = Math.min(100, k.happy + 2);
+  state.daily.care = true;
+  markActive();
+  save();
+  return true;
+}
 export function pet() {
   const k = state.kitten;
   k.petsToday = (k.petsToday || 0) + 1;
@@ -420,9 +439,10 @@ export function buy(id) {
     if ((state.streak.freezes || 0) >= MAX_FREEZES) return false;
     state.coins -= cost; state.streak.freezes = (state.streak.freezes || 0) + 1; save(); return true;
   }
-  if (it.cat !== 'food' && state.owned.includes(id)) return false;
+  const usedUp = it.cat === 'food' || it.cat === 'toiletry';
+  if (!usedUp && state.owned.includes(id)) return false;
   state.coins -= cost;
-  if (it.cat === 'food') state.pantry[id] = (state.pantry[id] || 0) + 1;
+  if (usedUp) state.pantry[id] = (state.pantry[id] || 0) + 1;
   else state.owned.push(id);
   if (it.cat === 'wear') state.kitten.equipped[it.slot] = id;
   save();
