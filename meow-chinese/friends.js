@@ -275,7 +275,7 @@ export async function sendLetter(to, text, toName) {
   return r;
 }
 export const errorText = (code) => ERR[code];
-const GIFT_TABS = TABS.filter((t) => ['food', 'head', 'body', 'feet', 'acc', 'decor'].includes(t.key));
+const GIFT_TABS = TABS.filter((t) => ['food', 'toiletry', 'head', 'body', 'feet', 'acc', 'decor'].includes(t.key));
 function sendGift(f) {
   let tab = 'food', pick = null;
   const box = html`<div class="card stack gift-pick">
@@ -323,6 +323,49 @@ function sendGift(f) {
   render();
   openModal(box);
   $('#modal .card').style.width = 'min(760px, 96vw)';
+}
+
+// ---------- from the shop: buy this item as a present for a friend ----------
+export async function giftFromShop(id, after) {
+  if (!Auth.session() || managing()) return toast('Log in on her own account to send gifts');
+  const it = ITEMS[id], cost = S.price(id);
+  let to = null;
+  const box = html`<div class="card stack gift-pick">
+      <div class="h-title"><span class="zh">🎁 买来送朋友</span><span class="en">Buy as a gift</span></div>
+      <div class="row" style="gap:12px;align-items:center"><div class="art" id="art"></div>
+        <div class="gp-info"><div><b class="zh">${it.name}</b> <small>${esc(it.en)}</small></div><div class="gp-price">${coinI(16)} <b>${cost}</b> <small class="help">(你有 You have ${S.get().coins})</small></div></div></div>
+      <div class="help" style="margin:0">送给谁？ Who is it for?</div>
+      <div class="gift-friends" id="fr"><span class="help">Loading friends…</span></div>
+      <label class="field">写几句话 Add a message (optional)<textarea id="msg" maxlength="${LETTER_MAX}" rows="2" placeholder="送给你！"></textarea></label>
+      <div class="row" style="justify-content:flex-end"><button class="btn white" id="c">取消 Cancel</button><button class="btn pink" id="ok" disabled>🎁 <span class="zh">送出</span> Send · ${cost} ${coinI(16)}</button></div>
+    </div>`;
+  $('#art', box).appendChild(spriteCanvas(id, 56));
+  const drawFriends = () => {
+    const list = acceptedFriends(), fr = $('#fr', box);
+    if (!list.length) { fr.innerHTML = '<p class="help" style="margin:0">还没有朋友。先在 👫 朋友 Friends 加朋友吧！<br>No friends yet — add one in 👫 Friends first.</p>'; return; }
+    fr.innerHTML = list.map((f) => `<button class="btn white small friend-pick ${to === f.other ? 'on' : ''}" data-f="${f.other}">${esc(friendName(f))}</button>`).join('');
+    $('#ok', box).disabled = !to || cost > S.get().coins;
+  };
+  $('#fr', box).onclick = (e) => { const b = e.target.closest('[data-f]'); if (b) { to = b.dataset.f; drawFriends(); } };
+  $('#c', box).onclick = closeModal;
+  $('#ok', box).onclick = async (e) => {
+    const f = acceptedFriends().find((x) => x.other === to); if (!f) return;
+    if (!S.spend(cost)) return toast('金币不够 Not enough coins');
+    e.currentTarget.disabled = true;
+    try {
+      await sendEvent(f.other, 'gift', { item: id, message: $('#msg', box).value.trim().slice(0, LETTER_MAX) });
+      closeModal(); sfx.fanfare(); confetti();
+      toast(`🎁 <span class="zh">礼物送给${esc(friendName(f))}了！</span> Gift sent!`, { ms: 3000 });
+    } catch (x) {
+      S.addCoins(cost);                                                      // refund
+      e.currentTarget.disabled = false;
+      toast(ERR[x.message] || '没送到，请再试。 Could not send — try again.');
+    }
+    if (after) after();
+  };
+  openModal(box); hydrateIcons(box);
+  drawFriends();
+  await refreshFriends(); if (box.isConnected) drawFriends();
 }
 
 // ---------- my gift box and mailbox ----------

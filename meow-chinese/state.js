@@ -892,7 +892,7 @@ export function openGift(id) {
   const it = ITEMS[g.item];
   g.opened = true; g.openedAt = Date.now();
   let result = 'added';
-  if (it.cat === 'food') state.pantry[g.item] = (state.pantry[g.item] || 0) + 1;
+  if (it.cat === 'food' || it.cat === 'toiletry') state.pantry[g.item] = (state.pantry[g.item] || 0) + 1;
   else if (state.owned.includes(g.item)) { state.coins += price(g.item); result = 'coins'; }   // already has it: turn it into coins
   else state.owned.push(g.item);
   save();

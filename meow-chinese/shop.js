@@ -3,7 +3,11 @@ import * as S from './state.js';
 import { ITEMS, spriteCanvas, itemEffect, WEAR_SLOTS } from './pixel.js';
 import { $, html, esc, coinI, hydrateIcons, KittenView, toast, burst } from './ui.js';
 import { sfx } from './audio.js';
+import * as Auth from './auth.js';
+import { managing } from './cloud.js';
 
+// things she can buy for a friend (not medicine); needs her own logged-in account
+const giftable = (it) => ['food', 'toiletry', 'wear', 'decor'].includes(it.cat) && !it.special && Auth.session() && !managing();
 const isWear = (slots) => (it) => it.cat === 'wear' && !it.special && slots.includes(it.slot);
 export const TABS = [
   { key: 'food', zh: '食物', en: 'Food', icon: '🐟', test: (it) => it.cat === 'food' },
@@ -100,10 +104,12 @@ export function shopScreen({ go, tab = 'food' }) {
           <div class="nm">${it.name}</div><div class="nm-en">${it.en}</div>
           ${eff ? `<div class="eff">${eff}</div>` : ''}
           ${owned ? '<span class="tag done">✓ 已买</span>' : `<button class="tag ${can ? '' : 'off'}" ${can ? '' : 'disabled'} data-buy="${id}"><span class="price">${cost}${coinI(16)}</span></button>`}
+          ${giftable(it) ? `<button class="gift-tag" data-gift="${id}" ${s.coins >= cost ? '' : 'disabled'} title="Buy as a gift for a friend">🎁 <span class="zh">送朋友</span></button>` : ''}
         </div>`;
       $('.art', card).appendChild(spriteCanvas(id, it.cat === 'decor' ? 76 : 60));
       card.addEventListener('click', (e) => {
         if (e.target.closest('[data-buy]')) return buy(id);
+        if (e.target.closest('[data-gift]')) return import('./friends.js').then((F) => F.giftFromShop(id, render));
         if (it.cat === 'wear') {
           const eq = S.get().kitten.equipped;
           tryOn[it.slot] = tryOn[it.slot] === id ? (eq[it.slot] === id ? null : eq[it.slot]) : id;

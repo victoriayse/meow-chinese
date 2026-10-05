@@ -26,4 +26,7 @@ export const CHANGES = [
     'Fixed: new or edited spelling lists sometimes didn’t save.',
     'New “↵ Next word” button when typing a spelling list.',
   ] },
+  { v: 58, items: [
+    'Buy something in the shop as a gift for a friend — tap 🎁 送朋友 under any item.',
+  ] },
 ];
