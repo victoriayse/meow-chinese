@@ -130,7 +130,13 @@ if (typeof window !== 'undefined') window.addEventListener('storage', (e) => {
 // save bookkeeping (e.g. sync status) without counting it as a change
 export function saveQuiet() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { console.warn('save failed', e); } }
 export function replaceAll(obj) { state = migrate(obj); save(); }
-export function replaceQuiet(obj) { state = migrate(obj); saveQuiet(); }
+// a synced copy arrived: update the game IN PLACE, so screens that are open (e.g. a parent typing a new
+// spelling list) keep pointing at the live game and their Save isn't lost
+export function replaceQuiet(obj) {
+  const next = migrate(obj);
+  if (next !== state) { for (const k of Object.keys(state)) delete state[k]; Object.assign(state, next); }
+  saveQuiet();
+}
 export function resetAll() { state = fresh(); save(); }
 // switch which account's game is loaded on this device (a parent managing a child); null = her own
 export function useStorage(childId) {

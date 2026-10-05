@@ -22,4 +22,8 @@ export const CHANGES = [
   { v: 56, items: [
     'Fixed: messages and gifts from friends could sometimes go missing. Lost ones will come back.',
   ] },
+  { v: 57, items: [
+    'Fixed: new or edited spelling lists sometimes didn’t save.',
+    'New “↵ Next word” button when typing a spelling list.',
+  ] },
 ];

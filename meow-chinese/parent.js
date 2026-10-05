@@ -329,9 +329,10 @@ function listsView(rerender) {
           <div class="words">${esc(l.words.map((w) => w.w).join('、'))}</div></div>
         <div class="row" style="gap:6px"><button class="btn white small" data-a="hide" title="Show / hide for her">${l.hidden ? '🙈 Hidden' : '👁 Shown'}</button><button class="btn white small" data-a="edit">Edit</button><button class="btn white small" data-a="del">🗑</button></div>
       </div>`;
-    $('.date-in', r).onchange = (e) => { if (!e.target.value) return; l.date = e.target.value; S.save(); rerender(); toast('Date saved ✓'); };
+    const live = () => s.lists.find((x) => x.id === l.id) || l;   // the game may have synced since this was drawn
+    $('.date-in', r).onchange = (e) => { if (!e.target.value) return; live().date = e.target.value; S.save(); rerender(); toast('Date saved ✓'); };
     r.querySelector('[data-a=edit]').onclick = () => editList(l, rerender);
-    r.querySelector('[data-a=hide]').onclick = () => { l.hidden = !l.hidden; S.save(); rerender(); toast(l.hidden ? 'Hidden from her' : 'Shown to her ✓'); };
+    r.querySelector('[data-a=hide]').onclick = () => { const x = live(); x.hidden = !x.hidden; S.save(); rerender(); toast(x.hidden ? 'Hidden from her' : 'Shown to her ✓'); };
     r.querySelector('[data-a=del]').onclick = async () => {
       if (s.lists.length === 1) return toast('Keep at least one list');
       if (!(await confirmBox('Delete list?', `“${esc(l.name)}” will be removed. Progress on its words is kept.`, 'Delete'))) return;
@@ -360,6 +361,7 @@ function editList(list, rerender) {
         <textarea id="tx" placeholder="公园 | 我们去公园玩&#10;朋友&#10;高兴 | 我今天很高兴">${esc(text)}</textarea>
         <small>Optional: after a <b>|</b> add a short sentence. The kitten reads it when she taps 💬 Sentence, which helps with words that sound alike (e.g. 公园 vs 公元).</small>
       </label>
+      <button type="button" class="btn white small" id="nl" style="align-self:flex-start">↵ Next word</button>
       <div class="chips" id="pv"></div>
       <div class="row" style="justify-content:space-between">
         <button class="btn white" id="test">🔊 Test voice</button>
@@ -375,6 +377,17 @@ function editList(list, rerender) {
   };
   $('#tx', box).oninput = preview;
   preview();
+  // a sure way to start a new line on any phone keyboard
+  const nl = $('#nl', box);
+  nl.onpointerdown = (e) => e.preventDefault();       // keep the keyboard open
+  nl.onclick = (e) => {
+    e.preventDefault();
+    const t = $('#tx', box), a = t.selectionStart ?? t.value.length, b = t.selectionEnd ?? a;
+    const before = t.value.slice(0, a).replace(/[ \t]+$/, '');
+    t.value = before + '\n' + t.value.slice(b);
+    const at = before.length + 1;
+    t.focus(); t.setSelectionRange(at, at); preview();
+  };
   $('#test', box).onclick = async () => { const w = S.parseWords($('#tx', box).value); for (const x of w.slice(0, 3)) await speak(x.w); };
   $('#c', box).onclick = closeModal;
   $('#ok', box).onclick = () => {
@@ -382,11 +395,14 @@ function editList(list, rerender) {
     if (!words.length) return toast('Add at least one word');
     const name = $('#nm', box).value.trim() || 'Spelling list';
     const date = $('#dt', box).value || S.todayStr();
-    if (isNew) {
-      const l = { id: S.uid(), name, words, date, createdAt: Date.now() };
-      s.lists.unshift(l);
-      if (date <= S.todayStr()) s.activeListId = l.id;
-    } else { list.name = name; list.words = words; list.date = date; }
+    const g = S.get();                                 // the live game (it may have synced while this box was open)
+    const live = !isNew && (g.lists || []).find((x) => x.id === list.id);
+    if (live) { live.name = name; live.words = words; live.date = date; }
+    else {
+      const l = { id: isNew ? S.uid() : list.id, name, words, date, createdAt: Date.now() };
+      g.lists = [l, ...(g.lists || [])];
+      if (date <= S.todayStr()) g.activeListId = l.id;
+    }
     S.save(); closeModal(); rerender();
     toast(isNew ? (date > S.todayStr() ? 'List scheduled ✓' : 'List added ✓') : 'Saved ✓');
   };
