@@ -8,6 +8,7 @@ import { speak, chineseVoices, sfx } from './audio.js';
 import * as Cloud from './cloud.js';
 import * as Auth from './auth.js';
 import * as Push from './push.js';
+import * as Weather from './weather.js';
 import { parentFriendsView, incomingRequests } from './friends.js';
 import { KINDS, parseSet } from './practice.js';
 
@@ -620,6 +621,9 @@ function settingsView(rerender, go) {
       <div id="fam-box" class="stack"><p class="help" style="margin:0">Loading…</p></div>
       <h3>🔔 Phone notifications</h3>
       <div id="push-box" class="stack"><p class="help" style="margin:0">Loading…</p></div>
+      <h3>🌦️ Real weather</h3>
+      <div class="toggle"><span>Show the real weather (rain, sunshine, clouds) on the home page<br><small class="help">Uses the phone’s location to look up the weather nearby. Nothing else is done with it.</small></span><button class="switch ${set.weatherOff ? '' : 'on'}" id="wx-on"></button></div>
+      <div class="row" style="align-items:center"><span class="help" style="margin:0" id="wx-state">This phone: ${Weather.allowed() ? `✅ location allowed${Weather.current() ? ` · now: ${Weather.current()}` : ''}` : Weather.asked() === 'no' ? '❌ location not allowed' : 'not asked yet'}</span>${Weather.allowed() ? '' : '<button class="btn white small" id="wx-allow">📍 Allow on this phone</button>'}</div>
       <h3>🛡️ God mode</h3>
       <div class="toggle"><span>God mode — the kitten never gets hungry, thirsty, sick or dies<br><small class="help">Use it for holidays, exam weeks or sick days. Food, Water and Happy stay topped up, and missed days don't count. Turning it on also cures and brings back the kitten. Daily tasks and coins still work as usual.</small></span><button class="switch ${S.godMode() ? 'on' : ''}" id="god"></button></div>
       <h3>☁️ Account &amp; cloud backup</h3>
@@ -681,6 +685,14 @@ function settingsView(rerender, go) {
   };
   pushSection($('#push-box', n), rerender);
   familySection($('#fam-box', n), rerender, go);
+  $('#wx-on', n).onclick = () => { set.weatherOff = !set.weatherOff; S.save(); toast(set.weatherOff ? 'Real weather off' : '🌦️ Real weather on'); rerender(); };
+  const wxa = $('#wx-allow', n);
+  if (wxa) wxa.onclick = async () => {
+    Weather.setAllowed(true); wxa.disabled = true; wxa.textContent = '…';
+    const kind = await Weather.refresh(true);
+    toast(kind ? `🌦️ Weather found: ${kind}` : Weather.allowed() ? 'Couldn’t get the weather right now — it will try again later' : 'Location was not allowed. On iPhone: Settings → Privacy & Security → Location Services → turn on for Safari Websites (or 喵喵中文).', { ms: 5000 });
+    rerender();
+  };
   $('#god', n).onclick = () => { S.setGodMode(!S.godMode()); toast(S.godMode() ? '🛡️ God mode on' : 'God mode off'); rerender(); };
   $('#ul', n).onclick = () => { set.unlockAll = !set.unlockAll; S.save(); rerender(); };
   const showStatus = () => {

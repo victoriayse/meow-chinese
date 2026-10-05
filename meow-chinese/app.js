@@ -9,6 +9,8 @@ import { parentScreen } from './parent.js';
 import { essayScreen, showEssayReward } from './essay.js';
 import * as Cloud from './cloud.js';
 import { APP_VERSION } from './version.js';
+import * as Weather from './weather.js';
+let pendingNotes = null, notesDismissed = false;   // a newer version is waiting: its "what's new" lines
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
@@ -21,13 +23,26 @@ let current = null;
 // ---------- background ----------
 // 6pm to 5am (this device's clock): night sky with stars and the moon
 export function isNight(d = new Date()) { return d.getHours() >= 18 || d.getHours() < 5; }
+// real weather where she is (parents can switch it off; this phone asks for its location once)
+const weatherOn = () => S.get().settings.weatherOff !== true;
+const weatherKind = () => (weatherOn() ? Weather.current() : null);
+function updateWeather(force) {
+  if (!weatherOn() || !Weather.allowed()) return;
+  const before = weatherKind();
+  Weather.refresh(force).then(() => { if (weatherKind() !== before) { paintSky(true); if (current === 'home') refreshHome(); } });
+}
+setTimeout(() => updateWeather(), 2500);
+setInterval(() => { if (!document.hidden) updateWeather(); }, 30 * 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) updateWeather(); });
 let skyKey = '';
 function paintSky(force) {
   const portrait = window.innerHeight > window.innerWidth || window.innerWidth <= 900;
-  const key = `${window.innerWidth}x${window.innerHeight}${isNight() ? 'n' : 'd'}`;
+  const wx = weatherKind();
+  const key = `${window.innerWidth}x${window.innerHeight}${isNight() ? 'n' : 'd'}${wx || ''}`;
   if (!force && key === skyKey) return;
   skyKey = key;
-  drawLandscape($('#sky'), { horizon: portrait ? 0.4 : 0.5, seed: 7, night: isNight(), moonX: window.innerWidth <= 600 ? 0.8 : 0.34, moonY: window.innerWidth <= 600 ? 0.36 : 0.2 });
+  drawLandscape($('#sky'), { horizon: portrait ? 0.4 : 0.5, seed: 7, night: isNight(), moonX: window.innerWidth <= 600 ? 0.8 : 0.34, moonY: window.innerWidth <= 600 ? 0.36 : 0.2, weather: wx });
+  Weather.paintOverlay(wx);
   document.body.classList.toggle('night', isNight());
 }
 let nightNow = isNight();
@@ -76,6 +91,7 @@ export function go(name, params = {}, opts = {}) {
   if (node._mounted) node._mounted();
   // soothing music on the calm pages; quiet during spelling so she can hear the words
   if (MUSIC_PAGES.includes(name)) startMusic(); else stopMusic();
+  if (name === 'home' && pendingNotes && !notesDismissed) setTimeout(() => { if (current === 'home') showUpdateNotice(); }, 1500);
 }
 function refreshHome() { go('home', current === 'home' ? currentParams : {}, { replace: true }); }
 export function goBack() {
@@ -493,6 +509,8 @@ function homeScreen(params = {}) {
   else if (md.face === 'thirsty') kwrap.appendChild(html`<div class="bubble">💧 ${esc(md.text)}</div>`);
   else if (md.face === 'hungry') kwrap.appendChild(html`<div class="bubble">🐟 ${esc(md.text)}</div>`);
   else if (md.face === 'sleepy') kwrap.appendChild(html`<div class="zzz">z Z z</div>`);
+  else if (['rain', 'storm'].includes(weatherKind()) && Math.random() < 0.5) kwrap.appendChild(html`<div class="bubble">🌧️ 下雨了…我们在家学中文吧！</div>`);
+  else if (weatherKind() === 'sun' && !isNight() && Math.random() < 0.4) kwrap.appendChild(html`<div class="bubble">☀️ 今天天气真好！</div>`);
   else if (Math.random() < 0.35) kwrap.appendChild(html`<div class="bubble joke">😹 ${esc(randomJoke())}</div>`);
   else if (s.childName && Math.random() < 0.6) kwrap.appendChild(html`<div class="bubble">${esc(s.childName)}，喵～</div>`);
   if (md.needs.length) kwrap.appendChild(html`<div class="needs">${md.needs.includes('hungry') ? '<span>🐟 饿了 Hungry</span>' : ''}${md.needs.includes('thirsty') ? '<span>💧 口渴 Thirsty</span>' : ''}${md.needs.includes('dirty') ? '<span>🛁 要洗澡 Bath time</span>' : ''}</div>`);
@@ -509,6 +527,14 @@ function homeScreen(params = {}) {
   }
 
   renderAlert($('#alert', n), md, k);
+  if (!$('#alert', n) && weatherOn() && Weather.supported() && !Weather.asked() && window.isSecureContext) {
+    const box = document.createElement('div'); $('.side', n).prepend(box);
+    box.innerHTML = `<div class="card alert wx-ask"><div class="h-title" style="font-size:21px">🌦️ <span class="zh">看看外面的天气？</span></div>
+      <p class="help" style="margin:4px 0 10px">Let ${esc(k.name)} show the real weather outside — rain, sunshine or clouds. Your phone will ask to use your location.</p>
+      <div class="row"><button class="btn green" id="wx-yes">好！ Yes</button><button class="btn white" id="wx-no">不用了 No thanks</button></div></div>`;
+    $('#wx-yes', box).onclick = async () => { Weather.setAllowed(true); box.innerHTML = ''; toast('🌦️ <span class="zh">正在看天气…</span> Checking the weather…'); const kind = await Weather.refresh(true); paintSky(true); if (kind) refreshHome(); else if (!Weather.allowed()) toast('Location was not allowed — you can turn it on later in the Parent area', { ms: 4000 }); };
+    $('#wx-no', box).onclick = () => { Weather.setAllowed(false); box.innerHTML = ''; };
+  }
 
   // presents and letters from friends wait on the stage until she opens them
   // the flip phone (mail, notifications, tools) is always there; presents wait beside it
@@ -994,26 +1020,54 @@ else { go(S.get().onboarded ? 'home' : 'welcome'); Cloud.pull(); }
 // ---------- "New version — tap to update" ----------
 // every minute (and whenever the app comes back to the front) look at the live version number
 let updateShown = false;
+const verNum = (v) => Number(String(v || '').replace(/\D/g, '')) || 0;
 async function checkForUpdate() {
   if (updateShown || document.hidden || !navigator.onLine) return;
   try {
     const t = await (await fetch(`sw.js?check=${Date.now()}`, { cache: 'no-store' })).text();
     const live = (t.match(/VERSION\s*=\s*'([^']+)'/) || [])[1];
-    if (live && live !== APP_VERSION) showUpdateBar();
+    if (live && live !== APP_VERSION) {
+      updateShown = true;
+      // the notes for every version she hasn't got yet, all in one list
+      let items = [];
+      try {
+        const mod = await import(`./changelog.js?v=${encodeURIComponent(live)}`);
+        const from = verNum(APP_VERSION), to = verNum(live);
+        items = (mod.CHANGES || []).filter((c) => c.v > from && c.v <= to).flatMap((c) => c.items);
+      } catch { /* notes unavailable: a plain notice is fine */ }
+      pendingNotes = items;
+      if (current === 'home' && !notesDismissed) showUpdateNotice(); else showUpdateBar();
+    }
   } catch { /* offline: try again later */ }
 }
+async function updateNow(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
+  try { const reg = await navigator.serviceWorker?.getRegistration(); if (reg) await reg.update(); } catch {}
+  try { await Cloud.backupNow(); } catch {}
+  location.reload();
+}
+// the pop-up on the home page: what's new + Update now
+function showUpdateNotice() {
+  if (!$('#modal')?.classList.contains('hidden')) { showUpdateBar(); return; }   // something else is open: just the small bar
+  document.querySelector('.update-bar')?.remove();
+  const items = pendingNotes || [];
+  const n = html`<div class="card stack update-notice">
+      <div class="un-head"><span class="un-star">✨</span><div><b>A new update is ready!</b><small>Here’s what’s new:</small></div></div>
+      ${items.length ? `<ul class="un-list">${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="help" style="margin:0">Some improvements and fixes.</p>'}
+      <button class="btn big green block" id="un-go">🔄 Update now</button>
+      <button class="btn white small" id="un-later" style="align-self:center">Later</button>
+    </div>`;
+  $('#un-go', n).onclick = (e) => updateNow(e.currentTarget);
+  $('#un-later', n).onclick = () => { notesDismissed = true; closeModal(); showUpdateBar(); };
+  openModal(n);
+}
 function showUpdateBar() {
-  updateShown = true;
+  if (document.querySelector('.update-bar')) return;
   const bar = html`<div class="update-bar" role="status">
       <button class="go" type="button">✨ <span class="zh">新版本</span> New version — tap to update</button>
       <button class="x" type="button" aria-label="Later">✕</button>
     </div>`;
-  $('.go', bar).onclick = async () => {
-    $('.go', bar).textContent = '…';
-    try { const reg = await navigator.serviceWorker?.getRegistration(); if (reg) await reg.update(); } catch {}
-    try { await Cloud.backupNow(); } catch {}
-    location.reload();
-  };
+  $('.go', bar).onclick = () => (pendingNotes && pendingNotes.length ? (bar.remove(), notesDismissed = false, showUpdateNotice()) : updateNow($('.go', bar)));
   $('.x', bar).onclick = () => { bar.remove(); setTimeout(() => { updateShown = false; }, 30 * 60000); };   // ask again in 30 minutes
   document.body.appendChild(bar);
 }

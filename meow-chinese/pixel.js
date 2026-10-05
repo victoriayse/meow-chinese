@@ -721,7 +721,12 @@ export function drawLandscape(canvas, opts = {}) {
   const putT = put;
 
   // sky bands with dithering
-  const sky = night ? ['#0b1035', '#10174a', '#161f5a', '#1d286a', '#25337a', '#2f3f8a'] : ['#3a78d4', '#4a8ade', '#5c9de6', '#73b2ec', '#8cc6f0', '#a6d8f3'];
+  const wx = opts.weather || null, wet = wx === 'rain' || wx === 'storm', grey = wx === 'cloud' || wx === 'snow';
+  const sky = night
+    ? (wet ? ['#0a0d1e', '#0e1226', '#12172e', '#171d37', '#1c2340', '#222a4a'] : ['#0b1035', '#10174a', '#161f5a', '#1d286a', '#25337a', '#2f3f8a'])
+    : wet ? ['#56637a', '#5f6d84', '#69788e', '#748399', '#7f8ea3', '#8b9aae']
+    : grey ? ['#5a83bd', '#6891c6', '#779fcf', '#87add7', '#98bbde', '#aac9e4']
+    : ['#3a78d4', '#4a8ade', '#5c9de6', '#73b2ec', '#8cc6f0', '#a6d8f3'];
   const band = Math.ceil(horizon / sky.length);
   for (let y = 0; y < horizon + 10; y++) for (let x = 0; x < W; x++) {
     let b = Math.min(sky.length - 1, Math.floor(y / band));
@@ -732,24 +737,34 @@ export function drawLandscape(canvas, opts = {}) {
   if (night) {
     // stars (some twinkle brighter) and a crescent moon
     const S = rng(31);
-    for (let i = 0; i < W * 0.6; i++) {
+    for (let i = 0; i < W * (wet ? 0 : grey ? 0.25 : 0.6); i++) {
       const x = Math.floor(S() * W), y = Math.floor(S() * horizon * 0.85);
       const c = S() < 0.25 ? '#ffe9a8' : '#ffffff';
       putT(x, y, c);
       if (S() < 0.12) { putT(x - 1, y, '#8fa0d8'); putT(x + 1, y, '#8fa0d8'); putT(x, y - 1, '#8fa0d8'); putT(x, y + 1, '#8fa0d8'); }
     }
     const mx = Math.round(W * (opts.moonX ?? 0.34)), my = Math.round(horizon * (opts.moonY ?? 0.2)), mr = Math.max(6, Math.round(H * 0.06));
-    for (let y = my - mr - 3; y <= my + mr + 3; y++) for (let x = mx - mr - 3; x <= mx + mr + 3; x++) {
+    if (!wet) for (let y = my - mr - 3; y <= my + mr + 3; y++) for (let x = mx - mr - 3; x <= mx + mr + 3; x++) {
       const d1 = Math.hypot(x - mx, y - my), d2 = Math.hypot(x - (mx + mr * 0.75), y - (my - mr * 0.45));
       if (d1 <= mr && d2 > mr * 0.78) putT(x, y, d1 > mr - 1.2 ? '#f3d77a' : '#fff4c2');
       else if (d1 <= mr + 2.5 && d1 > mr && d2 > mr * 0.85 && (x + y) % 2 === 0) putT(x, y, '#3a4890');   // soft glow
     }
   }
-  // clouds
+  if (!night && wx === 'sun') {
+    // a big friendly sun with rays
+    const sx = Math.round(W * (opts.moonX ?? 0.34)), sy = Math.round(horizon * (opts.moonY ?? 0.2)), sr = Math.max(6, Math.round(H * 0.06));
+    for (let y = sy - sr * 2; y <= sy + sr * 2; y++) for (let x = sx - sr * 2; x <= sx + sr * 2; x++) {
+      const dd = Math.hypot(x - sx, y - sy), a = Math.atan2(y - sy, x - sx);
+      if (dd <= sr) putT(x, y, dd > sr - 1.3 ? '#ffb627' : dd < sr * 0.45 ? '#fff6b0' : '#ffd84a');
+      else if (dd <= sr * 1.75 && dd > sr + 1.5 && Math.abs(((a / (Math.PI / 4)) % 1 + 1) % 1 - 0.5) > 0.38) putT(x, y, '#ffd84a');
+    }
+  }
+  // clouds (their own random numbers, so the trees and flowers stay put whatever the weather)
+  const RC = rng(13);
   const cloud = (cx, cy, size) => {
     const puffs = [];
-    const n = 4 + Math.floor(R() * 4);
-    for (let i = 0; i < n; i++) puffs.push([cx + (R() - 0.5) * size * 2.6, cy + (R() - 0.5) * size * 0.5, size * (0.45 + R() * 0.5)]);
+    const n = 4 + Math.floor(RC() * 4);
+    for (let i = 0; i < n; i++) puffs.push([cx + (RC() - 0.5) * size * 2.6, cy + (RC() - 0.5) * size * 0.5, size * (0.45 + RC() * 0.5)]);
     for (let y = Math.floor(cy - size * 1.5); y < cy + size; y++) for (let x = Math.floor(cx - size * 3); x < cx + size * 3; x++) {
       let inside = false, shade = false;
       for (const [px, py, r] of puffs) {
@@ -757,11 +772,12 @@ export function drawLandscape(canvas, opts = {}) {
         if (dx * dx + dy * dy < r * r) { inside = true; if (y > py + r * 0.25) shade = true; }
       }
       if (y > cy + size * 0.35) continue; // flat bottom
-      if (inside) putT(x, y, night ? (shade ? '#2a3570' : '#3d4a86') : (shade ? '#d3ecfa' : '#ffffff'));
+      if (inside) putT(x, y, night ? (wet ? (shade ? '#1a1f33' : '#262c45') : (shade ? '#2a3570' : '#3d4a86'))
+        : wet ? (shade ? '#6f7a8e' : '#8a94a6') : grey ? (shade ? '#c3cfdb' : '#e6edf3') : (shade ? '#d3ecfa' : '#ffffff'));
     }
   };
-  const nClouds = Math.round(W / 38);
-  for (let i = 0; i < nClouds; i++) cloud(R() * W, 10 + R() * (horizon * 0.55), 4 + R() * 6);
+  const nClouds = Math.round(W / 38 * (wet ? 2.6 : grey ? 1.9 : wx === 'sun' ? 0.6 : 1));
+  for (let i = 0; i < nClouds; i++) cloud(RC() * W, 10 + RC() * (horizon * 0.55), 4 + RC() * 6);
   paintingSky = false;
 
   // ridge helper (midpoint displacement)
@@ -833,6 +849,10 @@ export function drawLandscape(canvas, opts = {}) {
       const [p, c] = flowerCols[Math.floor(R() * (R() < 0.7 ? 1 : 3))];
       put(x, y + 1, g4); put(x, y, c); put(x - 1, y, p); put(x + 1, y, p); put(x, y - 1, p);
     }
+  }
+  if (!night && wet) {
+    // a rainy day: everything a bit darker
+    for (let k = 0; k < W * H; k++) { if (skyPix[k]) continue; const i = k * 4; d[i] *= 0.78; d[i + 1] *= 0.8; d[i + 2] *= 0.86; }
   }
   if (night) {
     // moonlight: the hills, trees and meadow turn dark blue
