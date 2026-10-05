@@ -19,4 +19,7 @@ export const CHANGES = [
     'Message any friend: tap ＋ in the phone’s Messages.',
     'The streak counter and streak freeze are gone.',
   ] },
+  { v: 56, items: [
+    'Fixed: messages and gifts from friends could sometimes go missing. Lost ones will come back.',
+  ] },
 ];

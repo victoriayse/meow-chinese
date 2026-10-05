@@ -74,12 +74,16 @@ async function syncNow() {
     // a device that was never set up just takes the account's copy
     const merged = (!anc && !local.onboarded) ? remote.data : mergeSaves(anc, local, remote.data);
     if (!sameSave(merged, local)) { useCopy(merged); onReplaced(); }
+    // freeze what we send: anything that arrives on this device while it uploads (a friend's letter, say)
+    // must NOT be remembered as "already in the cloud", or the next merge would treat it as deleted
+    const out = payload();
     if (!sameSave(merged, remote.data)) {
-      const st = await write(payload(), remote.client_updated);
+      const st = await write(out, remote.client_updated);
       if (st == null) continue;                    // someone else saved in between: read and merge again
       lastRemoteStamp = st;
     }
-    saveAnc(payload()); sync().lastSynced = S.get().updatedAt; S.saveQuiet();
+    saveAnc(out); sync().lastSynced = out.updatedAt; S.saveQuiet();
+    if (!sameSave(payload(), out)) again = true;   // changed while uploading: send that too
     setStatus('ok'); return;
   }
   setStatus('offline', 'busy — will try again');
