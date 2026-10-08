@@ -93,6 +93,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
       <div class="visit-top"><button class="btn white small" id="leave">← <span class="zh">回家</span> Leave</button>
         <div class="visit-title"><span class="zh">🏠 ${esc(name || '朋友')}的家</span><small id="vt-sub">敲门中… Knocking…</small></div></div>
       <div class="stage in-house"><div class="house" id="house"></div></div>
+      <div class="visit-log" id="vlog"><div class="vl-empty">💬 聊天记录会出现在这里 · Chat shows up here</div></div>
       <div class="visit-chat" id="vchat"></div>
     </section>`;
   const box = $('#house', n), sub = $('#vt-sub', n);
@@ -121,7 +122,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
       } else if (ev === 'chat') {
         others.say(p.id, p.text);
         const c = others.m.get(p.id);
-        if (!(c && c.el)) toast(`💬 ${esc((c && c.look && c.look.name) || '朋友')}：${esc(String(p.text).slice(0, 60))}`, { ms: 3500 });
+        logLine((c && c.look && c.look.name) || '朋友', p.text, false);
       } else if (ev === 'bye') others.remove(p.id);
     },
     onPresence: (present, joins, leaves) => {
@@ -132,6 +133,15 @@ export function visitScreen({ go, id: hostId, name = '' }) {
       if (joins.includes(hostId) && gotHouse && !hostHere) knock();
     },
   });
+  // this visit's chat, newest at the bottom (it is only kept while you are in the house)
+  const log = $('#vlog', n);
+  function logLine(who, text, mineLine) {
+    const e = log.querySelector('.vl-empty'); if (e) e.remove();
+    const t = new Date(), hm = `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
+    log.appendChild(html`<div class="vl-line ${mineLine ? 'mine' : ''}"><b>${esc(who)}</b><span class="zh">${esc(String(text).slice(0, 60))}</span><small>${hm}</small></div>`);
+    while (log.children.length > 100) log.firstElementChild.remove();
+    log.scrollTop = log.scrollHeight;
+  }
   const knock = () => ch.send('knock', { id: me, look: myLook(), ...mine });
   const sendMine = () => ch.send('pos', { id: me, look: myLook(), ...mine });
   const sendMove = throttle((p) => ch.send('pos', p));
@@ -186,6 +196,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
   // chat
   $('#vchat', n).appendChild(chatBar((text) => {
     if (myWrap) say(myWrap, text);
+    logLine(S.get().kitten.name, text, true);
     ch.send('chat', { id: me, text }); sfx.click();
   }));
   const refit = () => { if (!n.isConnected) { window.removeEventListener('resize', refit); return; } fitHouse(box, $('#hunit', box)); };

@@ -1167,3 +1167,19 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .visit-home .stage.in-house .house { top: 2%; }
   .house-chat input { font-size: 16px; padding: 7px 10px; }
 }
+/* visit: chat history between the house and the chat bar */
+.visit-home { grid-template-rows: auto minmax(0, 1fr) auto auto; }
+.visit-log { margin: 4px 14px 0; max-height: 26vh; min-height: 84px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;
+  padding: 8px 10px; background: rgba(255,255,255,.9); border: 3px solid var(--ink); border-radius: 10px; }
+.visit-log .vl-empty { margin: auto; color: var(--ink-2); font-size: 14px; font-family: var(--zh); }
+.vl-line { display: flex; align-items: baseline; gap: 8px; font-size: 15px; line-height: 1.35; }
+.vl-line b { flex: none; color: #c94f7c; font-family: var(--zh); }
+.vl-line.mine b { color: #2f8f5b; }
+.vl-line .zh { flex: 1; min-width: 0; overflow-wrap: anywhere; font-family: var(--zh); }
+.vl-line small { flex: none; color: var(--ink-2); font-size: 11px; }
+@media (min-width: 901px) { .visit-log { max-width: 760px; width: calc(100% - 28px); margin: 4px auto 0; } .visit-home .visit-chat .house-chat { max-width: 760px; } }
+@media (max-width: 900px) {
+  .visit-home { grid-template-rows: auto auto minmax(0, 1fr) auto; }
+  .visit-home .stage.in-house { height: auto; aspect-ratio: 780 / 690; max-height: 58vh; }
+  .visit-home .visit-log { max-height: none; min-height: 70px; }
+}

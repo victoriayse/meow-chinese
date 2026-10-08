@@ -66,4 +66,7 @@ export const CHANGES = [
   { v: 67, items: [
     'New parent setting: 😊 Always smiling — keeps your kitten\'s face happy.',
   ] },
+  { v: 68, items: [
+    'When visiting a friend, the chat history now shows under the house (it clears when you leave).',
+  ] },
 ];
