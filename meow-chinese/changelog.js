@@ -36,4 +36,8 @@ export const CHANGES = [
   { v: 60, items: [
     'Spelling: the green Next button is now right above the writing boxes — no scrolling on phones.',
   ] },
+  { v: 61, items: [
+    'Your home now looks the same on phone and computer — furniture stays in the same place.',
+    'Fixed: holding an arrow button no longer makes your kitten jump back.',
+  ] },
 ];

@@ -93,7 +93,7 @@ export function go(name, params = {}, opts = {}) {
   if (MUSIC_PAGES.includes(name)) startMusic(); else stopMusic();
   if (name === 'home' && pendingNotes && !notesDismissed) setTimeout(() => { if (current === 'home') showUpdateNotice(); }, 1500);
 }
-function refreshHome() { go('home', current === 'home' ? currentParams : {}, { replace: true }); }
+function refreshHome() { if (homeRedrawWaits()) return; go('home', current === 'home' ? currentParams : {}, { replace: true }); }
 export function goBack() {
   const prev = stack.pop() || { name: 'home', params: {} };
   go(prev.name, prev.params, { back: true });
@@ -276,6 +276,23 @@ function setupScreen() {
 }
 
 // ---------- home ----------
+// the house is laid out at this one size on every device, then scaled to fit the screen,
+// so furniture placed on a computer sits in exactly the same spot on a phone
+const HOUSE = { w: 720, roof: 48, room: 600, kitten: 7, decor: 5 };
+let houseK = 1;
+function fitHouse(n) {
+  const box = $('#house', n), unit = $('#hunit', n); if (!box || !unit) return;
+  const k = Math.min(box.clientWidth / HOUSE.w, box.clientHeight / (HOUSE.roof + HOUSE.room)) || 1;
+  houseK = k;
+  unit.style.setProperty('--k', k); unit.style.setProperty('--inv', 1 / k);
+}
+// while she walks the kitten (or drags furniture), redraws of the home page wait until she lets go
+let homeBusy = false, homeRedrawLater = false;
+function homeRedrawWaits() { if (homeBusy && current === 'home') { homeRedrawLater = true; return true; } return false; }
+function setHomeBusy(b) {
+  homeBusy = b;
+  if (!b && homeRedrawLater) { homeRedrawLater = false; setTimeout(() => { if (!homeBusy && current === 'home') go('home', currentParams, { replace: true }); }, 50); }
+}
 // where each home item sits inside the room (percent of the room box)
 const DECOR_POS = {
   ceiling: 'left:27%;top:0',
@@ -435,10 +452,8 @@ function homeScreen(params = {}) {
   const d = s.daily;
   const portrait = window.innerHeight > window.innerWidth || window.innerWidth <= 900;
   // size the kitten to the room: the room is most of the stage under the roof
-  const stageH = (window.innerHeight - 70) * (portrait ? 0.54 : 1);
-  const roomH = stageH * 0.92 * 0.84;
   const scale = inHouse
-    ? Math.max(3, Math.min(9, Math.floor((roomH * 0.5) / 38)))
+    ? HOUSE.kitten                                   // the house is drawn at one fixed size and shrunk/grown to fit, so it looks the same on every screen
     : (portrait ? Math.max(4, Math.min(7, Math.floor((window.innerHeight * 0.36) / 38))) : Math.max(5, Math.min(9, Math.floor((window.innerHeight * 0.5) / 38))));
 
   const task = (done, zh, en, coins, prog = '', key = '') => `
@@ -450,7 +465,7 @@ function homeScreen(params = {}) {
 
   const n = html`<section class="home">
     <div class="stage ${inHouse ? 'in-house' : ''}" id="stage">
-      ${inHouse ? `<div class="house">
+      ${inHouse ? `<div class="house" id="house"><div class="house-unit" id="hunit">
         <canvas class="roof" id="roof"></canvas>
         <div class="room" id="room">
           <canvas class="room-bg" id="roombg"></canvas>
@@ -460,7 +475,7 @@ function homeScreen(params = {}) {
             <button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button>
           </div>
         </div>
-      </div>` : `<div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>`}
+      </div></div>` : `<div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>`}
     </div>
     <div class="side">
       <div id="alert"></div>
@@ -554,7 +569,7 @@ function homeScreen(params = {}) {
   const room = $('#room', n);
   const decorEls = [];
   if (room) {
-  const dscale = Math.max(2, Math.round(scale * 0.72));
+  const dscale = HOUSE.decor;
   s.decorPos = s.decorPos || {};
   s.owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && !s.decorHidden.includes(id)).forEach((id) => {
     const it = ITEMS[id];
@@ -612,7 +627,7 @@ function homeScreen(params = {}) {
   const held = new Set();
   let raf = 0, lastT = 0;
   const walk = (t) => {
-    if (!ground.isConnected) { held.clear(); raf = 0; return; }
+    if (!ground.isConnected) { held.clear(); raf = 0; setHomeBusy(false); return; }
     const dt = Math.min(0.05, (t - (lastT || t)) / 1000); lastT = t;
     let dx = 0, dy = 0;
     if (held.has('left')) dx -= 1; if (held.has('right')) dx += 1;
@@ -620,12 +635,13 @@ function homeScreen(params = {}) {
     cat.x += dx * 32 * dt; cat.y += dy * 22 * dt;
     if (dx) kv.setFacing(dx < 0);
     placeCat();
+    S.get().catPos = { x: +cat.x.toFixed(1), y: +cat.y.toFixed(1) };   // remembered as she goes (saved when she stops)
     if (held.size) raf = requestAnimationFrame(walk);
-    else { raf = 0; lastT = 0; kv.canvas.classList.remove('walking'); s.catPos = { x: +cat.x.toFixed(1), y: +cat.y.toFixed(1) }; S.save(); }
+    else { raf = 0; lastT = 0; kv.canvas.classList.remove('walking'); S.save(); setHomeBusy(false); }
   };
   const press = (d) => {
     if (md.face === 'faint') return;          // a fainted kitten can't walk
-    held.add(d); kv.canvas.classList.add('walking');
+    held.add(d); kv.canvas.classList.add('walking'); setHomeBusy(true);
     if (!raf) raf = requestAnimationFrame(walk);
   };
   const release = (d) => held.delete(d);
@@ -641,9 +657,17 @@ function homeScreen(params = {}) {
     window.addEventListener('blur', () => held.clear(), { once: true });
     $('#dpad', n).querySelectorAll('button').forEach((b) => {
       const d = b.dataset.d;
-      b.addEventListener('pointerdown', (e) => { e.preventDefault(); b.setPointerCapture(e.pointerId); b.classList.add('down'); press(d); });
+      const down = () => { b.classList.add('down'); press(d); };
       const up = () => { b.classList.remove('down'); release(d); };
-      b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
+      // fingers: plain touch events, so the iPhone's "touch and hold" can't cancel the press half-way
+      b.addEventListener('touchstart', (e) => { e.preventDefault(); down(); }, { passive: false });
+      b.addEventListener('touchend', (e) => { e.preventDefault(); up(); }, { passive: false });
+      b.addEventListener('touchcancel', up);
+      // mouse / pen
+      b.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') return; e.preventDefault(); b.setPointerCapture(e.pointerId); down(); });
+      b.addEventListener('pointerup', (e) => { if (e.pointerType !== 'touch') up(); });
+      b.addEventListener('pointercancel', (e) => { if (e.pointerType !== 'touch') up(); });
+      b.addEventListener('lostpointercapture', (e) => { if (e.pointerType !== 'touch') up(); });
       b.addEventListener('contextmenu', (e) => e.preventDefault());
     });
 
@@ -666,16 +690,17 @@ function homeScreen(params = {}) {
         const W = room.clientWidth, H = room.clientHeight;
         const sx = e.clientX, sy = e.clientY, ox = el.offsetLeft, oy = el.offsetTop;
         el.classList.add('dragging'); el.style.zIndex = 200;
+        setHomeBusy(true);
         const mv = (ev) => {
-          const x = Math.max(0, Math.min(W - el.offsetWidth, ox + ev.clientX - sx));
-          const y = Math.max(0, Math.min(H - el.offsetHeight, oy + ev.clientY - sy));
+          const x = Math.max(0, Math.min(W - el.offsetWidth, ox + (ev.clientX - sx) / houseK));
+          const y = Math.max(0, Math.min(H - el.offsetHeight, oy + (ev.clientY - sy) / houseK));
           el.style.left = (x / W) * 100 + '%'; el.style.top = (y / H) * 100 + '%';
         };
         const end = () => {
           el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', end); el.removeEventListener('pointercancel', end);
           el.classList.remove('dragging');
           s.decorPos[el.dataset.id] = pin(el);
-          S.saveQuiet();
+          S.saveQuiet(); setHomeBusy(false);
         };
         el.addEventListener('pointermove', mv); el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
       });
@@ -742,7 +767,11 @@ function homeScreen(params = {}) {
     if (key === 'listen') return openPhone({ start: 'listen', after: refreshHome });
   }
   $('#b-friends', n).onclick = () => go('friends');
-  n._mounted = () => { if (inHouse) { drawRoom($('#roombg', n), isNight()); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
+  if (inHouse) {
+    const refit = () => { if (!n.isConnected) return window.removeEventListener('resize', refit); fitHouse(n); };
+    window.addEventListener('resize', refit);
+  }
+  n._mounted = () => { if (inHouse) { fitHouse(n); drawRoom($('#roombg', n), isNight()); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
   return n;
 }
 
@@ -962,6 +991,7 @@ let lastReq = 0;
 Friends.onFriends(() => { const r = Friends.incomingRequests().length; if (r !== lastReq) { lastReq = r; if (current === 'home') refreshHome(); } });
 // another tab changed the game: show the new state on calm pages
 S.onExternalChange(() => {
+  if (homeRedrawWaits()) return;
   if (['home', 'shop', 'wardrobe'].includes(current) && !document.querySelector('.room.arranging')) go(current, currentParams, { replace: true });
 });
 // cloud backup & sync: if another device saved newer progress, show it
@@ -972,7 +1002,7 @@ Cloud.init(() => {
   if (current === 'welcome' || current === 'setup') { go('home', {}, { replace: true }); return; }
   // only redraw "resting" pages — never restart an activity she is doing (spelling, practice, essay, a friend's page)
   const m = document.querySelector('#modal');
-  if (!REDRAW_PAGES.includes(current) || (m && !m.classList.contains('hidden')) || document.querySelector('.room.arranging')) return;
+  if (!REDRAW_PAGES.includes(current) || (m && !m.classList.contains('hidden')) || document.querySelector('.room.arranging') || homeRedrawWaits()) return;
   go(current, currentParams, { replace: true });
 });
 if (!Auth.session()) go('login');
