@@ -46,4 +46,8 @@ export const CHANGES = [
     '12 new pieces of furniture: bed, wardrobe, bedside table, dresser, star night light, teddy bear, fridge, stove, sink, spice shelf, dining table and kitty bowl.',
     'In 🎒 My items → Home, tap 📍 to move furniture to another room.',
   ] },
+  { v: 63, items: [
+    'The shop and My items now stay on the same aisle after you buy something.',
+    'Simpler ◀ ▶ room arrows, placed just outside the house.',
+  ] },
 ];

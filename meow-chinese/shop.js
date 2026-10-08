@@ -148,6 +148,7 @@ export function shopScreen({ go, tab = 'food' }) {
   $('#reset', n).onclick = () => { tryOn = { ...S.get().kitten.equipped }; drawKitten(); render(); };
   $('#home', n).onclick = () => go('home');
   n._mounted = () => { drawKitten(); render(); };
+  n._refresh = () => { const y = window.scrollY; render(); window.scrollTo(0, y); };   // new data arrived: redraw in place, same aisle
   return n;
 }
 
@@ -249,5 +250,6 @@ export function wardrobeScreen({ go, tab }) {
   $('#home', n).onclick = () => go('home');
   $('#to-shop', n).onclick = () => go('shop', { tab: tabs.find((t) => t.key === tab).shop });
   n._mounted = render;
+  n._refresh = () => { const y = window.scrollY; render(); window.scrollTo(0, y); };
   return n;
 }

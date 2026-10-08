@@ -279,10 +279,12 @@ function setupScreen() {
 // the house is laid out at this one size on every device, then scaled to fit the screen,
 // so furniture placed on a computer sits in exactly the same spot on a phone
 const HOUSE = { w: 720, roof: 48, room: 600, kitten: 7, decor: 5 };
+const ROOM_ARROW = 40;   // screen px kept free on each side for the ◀ ▶ room arrows
 let houseK = 1;
 function fitHouse(n) {
   const box = $('#house', n), unit = $('#hunit', n); if (!box || !unit) return;
-  const k = Math.min(box.clientWidth / HOUSE.w, box.clientHeight / (HOUSE.roof + HOUSE.room)) || 1;
+  const side = box.querySelector('.room-nav') ? (window.innerWidth <= 600 ? 28 : ROOM_ARROW) : 0;            // leave space for the room arrows outside the house
+  const k = Math.min((box.clientWidth - 2 * side) / HOUSE.w, box.clientHeight / (HOUSE.roof + HOUSE.room)) || 1;
   houseK = k;
   unit.style.setProperty('--k', k); unit.style.setProperty('--inv', 1 / k);
   box.style.setProperty('--gap', `${Math.max(0, (box.clientWidth - HOUSE.w * k) / 2)}px`);   // the arrows hug the house's sides
@@ -450,8 +452,7 @@ function homeScreen(params = {}) {
   const roomArrow = (d) => {
     const r = sideRoom(d); if (!r) return '';
     const open = S.roomOpen(r.key), lv = r.lock ? S.UNLOCKS[r.lock] : 0;
-    return `<button class="room-nav ${d < 0 ? 'left' : 'right'} ${open ? '' : 'locked'}" data-room="${r.key}" aria-label="${r.en}">
-      <span class="ar">${d < 0 ? '◀' : '▶'}</span><span class="ic">${open ? r.icon : '🔒'}</span><small>${open ? r.zh : `Lv${lv}`}</small></button>`;
+    return `<button class="room-nav ${d < 0 ? 'left' : 'right'} ${open ? '' : 'locked'}" data-room="${r.key}" aria-label="${r.en}${open ? '' : ` (Lv${lv})`}">${d < 0 ? '◀' : '▶'}</button>`;
   };
   if (S.health() === 'dead') return graveScreen();
   if (S.get().needsSetup) return setupScreen();
@@ -1014,12 +1015,14 @@ Friends.onFriends(() => { const r = Friends.incomingRequests().length; if (r !==
 // another tab changed the game: show the new state on calm pages
 S.onExternalChange(() => {
   if (homeRedrawWaits()) return;
-  if (['home', 'shop', 'wardrobe'].includes(current) && !document.querySelector('.room.arranging')) go(current, currentParams, { replace: true });
+  if (['shop', 'wardrobe'].includes(current)) { const el = app.firstElementChild; if (el && el._refresh) el._refresh(); return; }
+  if (current === 'home' && !document.querySelector('.room.arranging')) go(current, currentParams, { replace: true });
 });
 // cloud backup & sync: if another device saved newer progress, show it
 const REDRAW_PAGES = ['home', 'shop', 'wardrobe', 'tasks', 'practiceList', 'friends', 'grave'];
 Cloud.init(() => {
-  if (current === 'parent') { const el = app.firstElementChild; if (el && el._refresh) el._refresh(); return; }   // stay on the same tab
+  // pages that can redraw themselves in place (parent area, shop, my items) stay on the same tab
+  if (['parent', 'shop', 'wardrobe'].includes(current)) { const el = app.firstElementChild; if (el && el._refresh) el._refresh(); return; }
   if (!S.get().onboarded) { if (current !== 'login') go('welcome', {}, { replace: true }); return; }
   if (current === 'welcome' || current === 'setup') { go('home', {}, { replace: true }); return; }
   // only redraw "resting" pages — never restart an activity she is doing (spelling, practice, essay, a friend's page)
