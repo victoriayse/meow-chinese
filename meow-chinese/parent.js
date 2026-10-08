@@ -642,6 +642,8 @@ function settingsView(rerender, go) {
       <h3>🌦️ Real weather</h3>
       <div class="toggle"><span>Show the real weather (rain, sunshine, clouds) on the home page<br><small class="help">Uses the phone’s location to look up the weather nearby. Nothing else is done with it.</small></span><button class="switch ${set.weatherOff ? '' : 'on'}" id="wx-on"></button></div>
       <div class="row" style="align-items:center"><span class="help" style="margin:0" id="wx-state">This phone: ${Weather.allowed() ? `✅ location allowed${Weather.current() ? ` · now: ${Weather.current()}` : ''}` : Weather.asked() === 'no' ? '❌ location not allowed' : 'not asked yet'}</span>${Weather.allowed() ? '' : '<button class="btn white small" id="wx-allow">📍 Allow on this phone</button>'}</div>
+      <h3>😊 Always smiling</h3>
+      <div class="toggle"><span>Make the kitten always smile<br><small class="help">Her kitten's face stays happy whatever its Food, Water, Happy or Hygiene bars say. The bars and reminders still work as usual.</small></span><button class="switch ${S.get().settings.alwaysSmile ? 'on' : ''}" id="smile"></button></div>
       <h3>🛡️ God mode</h3>
       <div class="toggle"><span>God mode — the kitten never gets hungry, thirsty, sick or dies<br><small class="help">Use it for holidays, exam weeks or sick days. Food, Water and Happy stay topped up, and missed days don't count. Turning it on also cures and brings back the kitten. Daily tasks and coins still work as usual.</small></span><button class="switch ${S.godMode() ? 'on' : ''}" id="god"></button></div>
       <h3>☁️ Account &amp; cloud backup</h3>
@@ -711,6 +713,7 @@ function settingsView(rerender, go) {
     toast(kind ? `🌦️ Weather found: ${kind}` : Weather.allowed() ? 'Couldn’t get the weather right now — it will try again later' : 'Location was not allowed. On iPhone: Settings → Privacy & Security → Location Services → turn on for Safari Websites (or 喵喵中文).', { ms: 5000 });
     rerender();
   };
+  $('#smile', n).onclick = () => { const st = S.get().settings; st.alwaysSmile = !st.alwaysSmile; S.save(); toast(st.alwaysSmile ? '😊 Always smiling on' : 'Always smiling off'); rerender(); };
   $('#god', n).onclick = () => { S.setGodMode(!S.godMode()); toast(S.godMode() ? '🛡️ God mode on' : 'God mode off'); rerender(); };
   $('#ul', n).onclick = () => { set.unlockAll = !set.unlockAll; S.save(); rerender(); };
   const showStatus = () => {

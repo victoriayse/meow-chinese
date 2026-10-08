@@ -57,7 +57,10 @@ export class KittenView {
     this.draw();
   }
   draw() {
-    const m = this.temp || (this.blinkT ? 'blink' : this.mood);
+    let m = this.temp || (this.blinkT ? 'blink' : this.mood);
+    // parent setting "always smiling": her own kitten keeps a happy face (a fainted kitten still lies down)
+    const s = get();
+    if (!this.furOverride && s && s.settings && s.settings.alwaysSmile && !['faint', 'love', 'happy'].includes(m)) m = 'happy';
     let g = kittenGrid(this.fur, m, this.equipped, Math.floor(this.frame / 3), !!this.left);
     if (this.left) g = g.map((row) => [...row].reverse());
     drawGrid(this.canvas, g, this.scale);

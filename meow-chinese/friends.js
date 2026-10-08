@@ -34,7 +34,7 @@ const myName = () => { const s = S.get(); return s.childName ? `${s.childName}çš
 function myCard() {
   const s = S.get(), k = s.kitten, md = S.mood();
   return { v: 1, name: k.name, childName: s.childName || '', fur: k.fur, equipped: k.equipped,
-    hunger: Math.round(k.hunger), water: Math.round(k.water ?? 75), happy: Math.round(k.happy), level: S.level(), stage: S.health(), face: md.face,
+    hunger: Math.round(k.hunger), water: Math.round(k.water ?? 75), happy: Math.round(k.happy), level: S.level(), stage: S.health(), face: s.settings.alwaysSmile && md.face !== 'faint' ? 'happy' : md.face,
     doing: document.hidden ? 'away' : activity };
 }
 // what she is doing right now, shown to friends ('essay', 'spelling', 'phone', ...)
