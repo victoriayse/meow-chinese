@@ -1146,7 +1146,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .house .bubble.chat-bubble::after { left: calc(50% - 7px); }
 .house .vcat .bubble.chat-bubble { zoom: var(--inv, 1); }
 .house .kitten-wrap .bubble.chat-bubble { zoom: var(--inv, 1); font-size: 16px; max-width: 220px; }
-.vcat { position: absolute; transform: translateX(-50%); pointer-events: none; transition: left .14s linear, bottom .14s linear; }
+.vcat { position: absolute; transform: translateX(-50%); pointer-events: none; }
 .vcat.me { transition: none; }
 .vcat .nametag { zoom: max(1, calc(var(--inv, 1) * 0.65)); }
 .visit-home { height: 100%; display: grid; grid-template-rows: auto 1fr auto; }

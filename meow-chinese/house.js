@@ -82,13 +82,44 @@ export function say(wrapEl, text) {
 // ---------- other cats in the room (friends visiting, or the friend whose house it is) ----------
 // look: { name, level, fur, equipped }  ·  where: { x, y, room, left }
 export class OtherCats {
-  constructor() { this.m = new Map(); this.roomEl = null; this.roomKey = null; }
+  constructor() { this.m = new Map(); this.roomEl = null; this.roomKey = null; this.raf = 0; }
   attach(roomEl, roomKey) { this.roomEl = roomEl; this.roomKey = roomKey; this.m.forEach((c) => { c.el = null; }); this.m.forEach((_, id) => this.draw(id)); }
-  upsert(id, data) { const c = this.m.get(id) || { x: 30, y: 6, room: 'living' }; Object.assign(c, data); this.m.set(id, c); this.draw(id); return c; }
+  // the latest place we heard about is the target; the cat walks there smoothly (updates arrive in uneven bursts)
+  upsert(id, data) {
+    const c = this.m.get(id) || { x: 30, y: 6, room: 'living' };
+    const roomChanged = data.room && data.room !== c.room;
+    Object.assign(c, data);
+    if (c.dx == null || roomChanged || Math.hypot(c.x - c.dx, (c.y - c.dy) * 1.5) > 25) { c.dx = c.x; c.dy = c.y; }   // first sight, new room or a big jump: just appear there
+    this.m.set(id, c); this.draw(id); this.go(); return c;
+  }
   remove(id) { const c = this.m.get(id); if (c && c.el) c.el.remove(); this.m.delete(id); }
   has(id) { return this.m.has(id); }
   ids() { return [...this.m.keys()]; }
   say(id, text) { const c = this.m.get(id); if (c && c.el) say($w(c.el), text); }
+  go() { if (!this.raf) { this.last = 0; this.raf = requestAnimationFrame((t) => this.tick(t)); } }
+  tick(t) {
+    const dt = Math.min(0.05, (t - (this.last || t)) / 1000); this.last = t;
+    let moving = false;
+    this.m.forEach((c, id) => {
+      const ex = c.x - c.dx, ey = c.y - c.dy;
+      const walking = Math.abs(ex) > 0.15 || Math.abs(ey) > 0.15;
+      if (walking) {
+        // same speed as walking with the arrows, a little faster if it has fallen behind
+        const boost = 1 + Math.min(2, Math.hypot(ex, ey) / 12);
+        const sx = 32 * boost * dt, sy = 22 * boost * dt;
+        c.dx += Math.max(-sx, Math.min(sx, ex)); c.dy += Math.max(-sy, Math.min(sy, ey));
+        moving = true;
+      } else { c.dx = c.x; c.dy = c.y; }
+      if (c.kv) { c.kv.canvas.classList.toggle('walking', walking); if (Math.abs(ex) > 0.15) c.kv.setFacing(ex < 0); else c.kv.setFacing(!!c.left); }
+      this.place(c);
+    });
+    this.raf = moving ? requestAnimationFrame((tt) => this.tick(tt)) : 0;
+  }
+  place(c) {
+    if (!c.el) return;
+    c.el.style.left = `${c.dx}%`; c.el.style.bottom = `${c.dy}%`;
+    c.el.style.zIndex = 2 + Math.round(100 - c.dy);
+  }
   draw(id) {
     const c = this.m.get(id); if (!c) return;
     const here = this.roomEl && this.roomEl.isConnected && c.room === this.roomKey && c.look;
@@ -96,14 +127,12 @@ export class OtherCats {
     if (!c.el || !c.el.isConnected) {
       const el = html`<div class="vcat"><div class="kitten-wrap"><div class="kflip"></div><div class="nametag">${esc(c.look.name || '🐱')}<span class="lv">Lv${c.look.level || 1}</span></div></div></div>`;
       const kv = new KittenView({ scale: HOUSE.kitten, fur: c.look.fur || 'ginger', equipped: { ...(c.look.equipped || {}) } });
-      kv.setMood('happy');
+      kv.setMood('happy'); kv.setFacing(!!c.left);
       el.querySelector('.kflip').appendChild(kv.canvas);
       c.kv = kv; c.el = el;
       this.roomEl.appendChild(el);
     }
-    c.el.style.left = `${c.x}%`; c.el.style.bottom = `${c.y}%`;
-    c.el.style.zIndex = 2 + Math.round(100 - c.y);
-    if (c.kv) c.kv.setFacing(!!c.left);
+    this.place(c);
   }
 }
 const $w = (el) => el.querySelector('.kitten-wrap');

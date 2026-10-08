@@ -60,4 +60,7 @@ export const CHANGES = [
     'Chat with speech bubbles: type at the bottom of the house and your kitten says it.',
     'In your house your kitten stays quiet until you type something to say.',
   ] },
+  { v: 66, items: [
+    'Visiting friends now walk smoothly around your house.',
+  ] },
 ];

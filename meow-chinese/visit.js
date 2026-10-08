@@ -134,7 +134,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
   });
   const knock = () => ch.send('knock', { id: me, look: myLook(), ...mine });
   const sendMine = () => ch.send('pos', { id: me, look: myLook(), ...mine });
-  const sendMove = throttle(() => ch.send('pos', { id: me, ...mine }));
+  const sendMove = throttle((p) => ch.send('pos', p));
   ch.open();
   // keep knocking until the friend answers; if nobody is home, say so
   let tries = 0;
@@ -173,7 +173,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
         mine.x += dx * 32 * dt; mine.y += dy * 22 * dt;
         if (dx) { mine.left = dx < 0; myKv.setFacing(mine.left); }
         myKv.canvas.classList.add('walking');
-        place(); sendMove();
+        place(); sendMove({ id: me, ...mine });
       },
       onStop: () => { if (myKv) myKv.canvas.classList.remove('walking'); sendMine(); },
     });
