@@ -54,6 +54,8 @@ function fresh() {
     decorHidden: [],
     decorPos: {},
     decorRoom: {},     // furniture id -> 'living' | 'bedroom' | 'kitchen' (when moved from its usual room)
+    lightsOff: {},     // room -> true when its ceiling light is switched off (the room goes dark)
+    powerOff: {},      // lamp / TV id -> true when switched off
     letters: [],       // letters from friends: { id, from, fromName, text, at, read }
     gifts: [],         // gifts from friends: { id, from, fromName, item, message, at, opened }
     friendNews: [],    // e.g. a friend fed her kitten: { id, fromName, item, at, seen }
@@ -477,6 +479,10 @@ export function setDecorRoom(id, room) {
   delete state.decorPos[id];                // start in its usual spot in the new room
   save();
 }
+// lights and TV at home
+export const roomDark = (room) => !!(state.lightsOff || {})[room];
+export function toggleRoomLight(room) { state.lightsOff = state.lightsOff || {}; state.lightsOff[room] = !state.lightsOff[room]; save(); return !state.lightsOff[room]; }
+export function togglePower(id) { state.powerOff = state.powerOff || {}; state.powerOff[id] = !state.powerOff[id]; save(); return !state.powerOff[id]; }
 // furniture storage: owned furniture that isn't standing in any room (decorHidden)
 function storeDecorQuiet(id) { if (!state.decorHidden.includes(id)) state.decorHidden.push(id); }
 export const storedDecor = () => state.owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && state.decorHidden.includes(id));

@@ -12,7 +12,7 @@ import { Channel } from './rt.js';
 import { drawRoom, drawRoof } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons } from './ui.js';
 import { sfx } from './audio.js';
-import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable } from './house.js';
+import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon } from './house.js';
 
 const isNight = () => { const h = new Date().getHours(); return h >= 18 || h < 5; };
 export function myLook() {
@@ -60,6 +60,10 @@ export function startHosting(hooks) {
           const c = visitors.m.get(p.id);
           visitors.say(p.id, p.text);
           api.chat && api.chat(p.id, String(p.text || '').slice(0, 60), (c && c.look) || {}, !!(c && c.el));
+        } else if (ev === 'emote') {
+          visitors.emote(p.id, p.mood);
+          const c = visitors.m.get(p.id);
+          api.chat && api.chat(p.id, emoteIcon(p.mood), (c && c.look) || {}, true);
         } else if (ev === 'bye') {
           if (visitors.has(p.id)) { const c = visitors.m.get(p.id); visitors.remove(p.id); api.left && api.left(p.id, (c && c.look) || {}); api.changed && api.changed(); }
         }
@@ -81,6 +85,7 @@ function sendHouse(to) {
 }
 export const hostResendHouse = () => { if (visitors.ids().length) sendHouse(null); };
 export const hostMove = throttle((pos) => { if (hostCh && visitors.ids().length) hostCh.send('pos', { id: hostUser, ...pos }); });
+export function hostEmote(mood) { if (hostCh && visitors.ids().length) hostCh.send('emote', { id: hostUser, mood }); }
 export function hostSay(text) { if (hostCh && visitors.ids().length) hostCh.send('chat', { id: hostUser, text }); }
 export const visitorCount = () => visitors.ids().length;
 
@@ -123,6 +128,10 @@ export function visitScreen({ go, id: hostId, name = '' }) {
         others.say(p.id, p.text);
         const c = others.m.get(p.id);
         logLine((c && c.look && c.look.name) || '朋友', p.text, false);
+      } else if (ev === 'emote') {
+        others.emote(p.id, p.mood);
+        const c = others.m.get(p.id);
+        logLine((c && c.look && c.look.name) || '朋友', emoteIcon(p.mood), false);
       } else if (ev === 'bye') others.remove(p.id);
     },
     onPresence: (present, joins, leaves) => {
@@ -171,6 +180,8 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     fitHouse(box, unit);
     drawRoom($('#roombg', box), isNight(), roomKey); drawRoof($('#roof', box));
     room.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, room); });
+    const pw = house.power || {};
+    applyPower(room, { dark: !!(pw.dark || {})[roomKey], off: pw.off || {} });
     place();
     box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { roomKey = b.dataset.room; mine.room = roomKey; sfx.click(); render(); sendMine(); }; });
     walker($('.dpad', room), {
@@ -194,6 +205,10 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     if (myWrap) say(myWrap, text);
     logLine(S.get().kitten.name, text, true);
     ch.send('chat', { id: me, text }); sfx.click();
+  }, (mood) => {
+    if (myKv) { myKv.flash(mood, 3000); myKv.jump(); }
+    logLine(S.get().kitten.name, emoteIcon(mood), true);
+    ch.send('emote', { id: me, mood });
   }));
   const refit = () => { if (!n.isConnected) { window.removeEventListener('resize', refit); return; } fitHouse(box, $('#hunit', box)); };
   window.addEventListener('resize', refit);

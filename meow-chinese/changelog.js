@@ -77,4 +77,10 @@ export const CHANGES = [
     'Smaller shop top: just your kitten and your coins, and it stays put while you scroll — easy to try on clothes.',
     'The shop now asks "Buy this?" before spending coins.',
   ] },
+  { v: 71, items: [
+    'Lights at home: tap 💡 to switch the room light off and on. Tap a lamp or the TV to switch it too.',
+    'New 😊 button beside the chat box: pick a face and your kitten makes it for 3 seconds (6 faces!).',
+    'Long messages now grow upwards in the speech bubble, staying inside the house.',
+    'Kittens are a little smaller at home, with smaller speech bubbles.',
+  ] },
 ];

@@ -4,7 +4,7 @@ import { ITEMS, drawGrid, artGrid, ROOM_WINDOW } from './pixel.js';
 import { KittenView, esc, html } from './ui.js';
 import { sfx } from './audio.js';
 
-export const HOUSE = { w: 720, roof: 48, room: 600, kitten: 7, decor: 5 };
+export const HOUSE = { w: 720, roof: 48, room: 600, kitten: 5, decor: 5 };   // kitten 30% smaller than before (was 7)
 const ROOM_ARROW = 40;   // screen px kept free on each side for the ◀ ▶ room arrows
 export let houseK = 1;
 
@@ -60,6 +60,7 @@ export function decorEl({ id, css, kind }, { putAway = false } = {}) {
   if (kind === 'curtain') wrap.classList.add('curtain');
   else { wrap.classList.add('movable'); if (kind === 'flat') wrap.classList.add('flat'); }
   if (it.playable) wrap.classList.add('playable');
+  if (it.power) { wrap.dataset.power = it.power; if (it.power === 'tv') wrap.appendChild(Object.assign(document.createElement('i'), { className: 'tv-screen' })); }
   wrap.appendChild(c);
   if (putAway) { const pa = document.createElement('button'); pa.className = 'put-away'; pa.type = 'button'; pa.title = 'Put away'; pa.textContent = '📦'; wrap.appendChild(pa); }
   return wrap;
@@ -77,6 +78,19 @@ export function say(wrapEl, text) {
   wrapEl.querySelectorAll('.bubble').forEach((b) => b.remove());
   const b = html`<div class="bubble chat-bubble">${esc(String(text).slice(0, CHAT_MAX))}</div>`;
   wrapEl.appendChild(b);
+  // it grows upwards from above the head; slide it sideways so it stays inside the room (the tail keeps pointing at the kitten)
+  const room = wrapEl.closest('.room');
+  if (room) {
+    const r = b.getBoundingClientRect(), R = room.getBoundingClientRect(), pad = 6;
+    let shift = 0;
+    if (r.left < R.left + pad) shift = R.left + pad - r.left;
+    else if (r.right > R.right - pad) shift = R.right - pad - r.right;
+    if (shift) {
+      const scale = r.width / (b.offsetWidth || r.width) || 1;          // screen px per bubble px
+      b.style.marginLeft = `${shift / scale}px`;
+      b.style.setProperty('--tailx', `${-shift / scale}px`);
+    }
+  }
   const ms = Math.min(12000, 5000 + String(text).length * 150);
   setTimeout(() => b.remove(), ms);
 }
@@ -98,6 +112,7 @@ export class OtherCats {
   has(id) { return this.m.has(id); }
   ids() { return [...this.m.keys()]; }
   say(id, text) { const c = this.m.get(id); if (c && c.el) say($w(c.el), text); }
+  emote(id, mood) { const c = this.m.get(id); if (c && c.kv && EMOTES.some((e) => e[0] === mood)) { c.kv.flash(mood, 3000); c.kv.jump(); } }
   go() { if (!this.raf) { this.last = 0; this.raf = requestAnimationFrame((t) => this.tick(t)); } }
   tick(t) {
     const dt = Math.min(0.05, (t - (this.last || t)) / 1000); this.last = t;
@@ -140,13 +155,23 @@ export class OtherCats {
 const $w = (el) => el.querySelector('.kitten-wrap');
 
 // ---------- chat bar at the bottom of the house ----------
-export function chatBar(onSend) {
+// six faces she can send with the emoji button
+export const EMOTES = [['e-laugh', '😆'], ['e-wow', '😮'], ['e-angry', '😠'], ['e-wink', '😉'], ['e-shy', '☺️'], ['e-cool', '😎']];
+export const emoteIcon = (m) => (EMOTES.find((e) => e[0] === m) || [0, ''])[1];
+export function chatBar(onSend, onEmote) {
   const bar = html`<form class="house-chat" autocomplete="off">
+      ${onEmote ? `<div class="emote-wrap"><button type="button" class="btn white small emote-btn" aria-label="Faces">😊</button>
+        <div class="emote-pick hidden">${EMOTES.map(([k, e]) => `<button type="button" data-emote="${k}">${e}</button>`).join('')}</div></div>` : ''}
       <input type="text" maxlength="${CHAT_MAX}" placeholder="说点什么… Say something" enterkeyhint="send">
       <button type="submit" class="btn green small">➤ <span class="zh">说</span></button>
     </form>`;
   const inp = bar.querySelector('input');
   bar.onsubmit = (e) => { e.preventDefault(); const t = inp.value.trim(); if (!t) return; inp.value = ''; onSend(t); };
+  if (onEmote) {
+    const pick = bar.querySelector('.emote-pick');
+    bar.querySelector('.emote-btn').onclick = () => pick.classList.toggle('hidden');
+    pick.addEventListener('click', (e) => { const b = e.target.closest('[data-emote]'); if (!b) return; pick.classList.add('hidden'); onEmote(b.dataset.emote); });
+  }
   return bar;
 }
 
@@ -229,4 +254,30 @@ export function chatLog(entries) {
       el.scrollTop = el.scrollHeight;
     },
   };
+}
+
+// ---------- lights and TV ----------
+// look: { dark: is the room's ceiling light off, off: { id: true } furniture switched off }
+export function applyPower(roomEl, { dark = false, off = {} } = {}) {
+  if (!roomEl) return;
+  roomEl.querySelectorAll('.decor[data-power]').forEach((d) => d.classList.toggle('off', !!off[d.dataset.id]));
+  let shade = roomEl.querySelector('.room-dark');
+  if (!shade) { shade = document.createElement('div'); shade.className = 'room-dark'; roomEl.appendChild(shade); }
+  roomEl.classList.toggle('lights-off', !!dark);
+  // lamps that are still on glow in the dark
+  roomEl.querySelectorAll('.lamp-glow').forEach((g) => g.remove());
+  if (dark) roomEl.querySelectorAll('.decor[data-power="light"]:not(.off), .decor[data-power="tv"]:not(.off)').forEach((d) => {
+    const g = document.createElement('div');
+    g.className = `lamp-glow ${d.dataset.power}`;
+    g.style.left = `${d.offsetLeft + d.offsetWidth / 2}px`; g.style.top = `${d.offsetTop + d.offsetHeight * (d.dataset.power === 'tv' ? 0.4 : 0.25)}px`;
+    roomEl.appendChild(g);
+  });
+}
+// tap a lamp or the TV to switch it (not while moving furniture)
+export function wirePower(roomEl, onToggle) {
+  roomEl.addEventListener('click', (e) => {
+    const d = e.target.closest('.decor[data-power]');
+    if (!d || roomEl.classList.contains('arranging')) return;
+    sfx.click(); onToggle(d.dataset.id);
+  });
 }

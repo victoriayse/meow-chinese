@@ -14,7 +14,7 @@ let pendingNotes = null, notesDismissed = false;   // a newer version is waiting
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable } from './house.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon } from './house.js';
 import * as Visit from './visit.js';
 import { randomJoke } from './jokes.js';
 import { practiceListScreen, practiceScreen, KINDS } from './practice.js';
@@ -281,7 +281,7 @@ function setupScreen() {
 
 // ---------- home ----------
 // while she walks the kitten (or drags furniture), redraws of the home page wait until she lets go
-let homeBusy = false, homeRedrawLater = false, hostRoomNow = 'living';
+let homeBusy = false, homeRedrawLater = false, hostRoomNow = 'living', roomPower = null;
 // chat in my own house: kept while I stay in the house (redraws keep it), cleared when I leave
 const houseChat = []; let houseLog = null;
 function homeRedrawWaits() { if (homeBusy && current === 'home') { homeRedrawLater = true; return true; } return false; }
@@ -459,6 +459,7 @@ function homeScreen(params = {}) {
 
           <div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>
           <div class="arrange-bar"><button class="arrange-btn" id="b-arrange"><span class="zh">🪑 摆家具</span> Move furniture</button><button class="arrange-btn store-btn" id="b-store">📦 <span class="zh">收纳箱</span> Storage <b id="store-n"></b></button></div>
+          <button class="light-switch ${S.roomDark(roomKey) ? 'off' : ''}" id="b-light" aria-label="Lights">💡</button>
           <div class="dpad" id="dpad">
             <button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button>
           </div>
@@ -795,13 +796,25 @@ function homeScreen(params = {}) {
     houseLog = chatLog(houseChat);
     $('#hlog', n).appendChild(houseLog.el);
     wirePlayable(room);
+    // lights: the 💡 switch darkens the room; lamps and the TV switch on and off when tapped
+    const power = () => applyPower(room, { dark: S.roomDark(roomKey), off: S.get().powerOff || {} });
+    $('#b-light', n).onclick = () => {
+      const on = S.toggleRoomLight(roomKey); sfx.click();
+      $('#b-light', n).classList.toggle('off', !on); power(); Visit.hostResendHouse();
+    };
+    wirePower(room, (id) => { S.togglePower(id); power(); Visit.hostResendHouse(); });
+    roomPower = power;
     $('#hchat', n).appendChild(chatBar((text) => {
       say(kwrap, text); sfx.click();
       houseLog.add(k.name, text, true);
       Visit.hostSay(text);
+    }, (mood) => {
+      kv.flash(mood, 3000); kv.jump(); sfx.click();
+      houseLog.add(k.name, emoteIcon(mood), true);
+      Visit.hostEmote(mood);
     }));
-  } else hostRoomNow = 'living';
-  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
+  } else { hostRoomNow = 'living'; roomPower = null; }
+  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
   return n;
 }
 
@@ -1022,7 +1035,7 @@ Visit.startHosting({
   house: () => {
     const st = S.get(), rooms = {}, open = S.ROOMS.filter((r) => S.roomOpen(r.key) && S.unlocked('decor')).map((r) => r.key);
     (open.length ? open : ['living']).forEach((k) => { rooms[k] = roomLayout(st, k, S.roomOf); });
-    return { rooms, open: open.length ? open : ['living'] };
+    return { rooms, open: open.length ? open : ['living'], power: { dark: { ...(st.lightsOff || {}) }, off: { ...(st.powerOff || {}) } } };
   },
   myPos: () => { const p = S.get().catPos || {}; return { x: p.x ?? 50, y: p.y ?? 3, room: hostRoomNow, left: false }; },
   arrived: (id, look) => {

@@ -93,15 +93,66 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
     // open mouth, tongue out
     set(14, Y(15), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(15), P.o);
     set(15, Y(16), '#ff7f9f'); set(16, Y(16), '#ff7f9f'); set(15, Y(17), '#ff7f9f'); set(16, Y(17), '#e8607f');
-  } else if (mood === 'love') {
+  } else if (mood === 'love' || mood === 'e-wink') {
     // big happy smile
     set(13, Y(14), P.o); set(14, Y(15), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(15), P.o); set(18, Y(14), P.o);
     set(15, Y(16), '#ff7f9f'); set(16, Y(16), '#ff7f9f');
+  } else if (mood === 'e-laugh') {
+    // wide-open laughing mouth
+    set(13, Y(14), P.o); set(18, Y(14), P.o);
+    for (let x = 14; x <= 17; x++) set(x, Y(15), P.o);
+    set(14, Y(16), P.o); set(15, Y(16), '#ff7f9f'); set(16, Y(16), '#ff7f9f'); set(17, Y(16), P.o);
+    set(15, Y(17), P.o); set(16, Y(17), P.o);
+  } else if (mood === 'e-wow') {
+    // little round "o"
+    set(15, Y(15), P.o); set(16, Y(15), P.o); set(14, Y(16), P.o); set(17, Y(16), P.o); set(15, Y(17), P.o); set(16, Y(17), P.o);
+    set(15, Y(16), '#5a2d3c'); set(16, Y(16), '#5a2d3c');
+  } else if (mood === 'e-angry') {
+    set(14, Y(16), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(16), P.o);
+  } else if (mood === 'e-shy') {
+    // small wavy mouth
+    set(14, Y(15), P.o); set(15, Y(16), P.o); set(16, Y(15), P.o); set(17, Y(16), P.o);
+  } else if (mood === 'e-cool') {
+    // smirk
+    set(14, Y(15), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(14), P.o);
   } else {
     set(14, Y(15), P.o); set(15, Y(14), P.o); set(16, Y(14), P.o); set(17, Y(15), P.o);
   }
   // eyes
   const eyes = (ex) => {
+    const left = ex < 16;
+    if (mood === 'e-laugh' || mood === 'e-shy') {
+      // squeezed  > <  eyes (laugh) or happy ^ ^ (shy)
+      if (mood === 'e-shy') { set(ex - 1, Y(12), EYE); set(ex, Y(11), EYE); set(ex + 1, Y(11), EYE); set(ex + 2, Y(12), EYE); return; }
+      if (left) [[-1, 10], [0, 10], [1, 11], [0, 12], [-1, 12]].forEach(([dx, y]) => set(ex + dx, Y(y), EYE));
+      else [[2, 10], [1, 10], [0, 11], [1, 12], [2, 12]].forEach(([dx, y]) => set(ex + dx, Y(y), EYE));
+      return;
+    }
+    if (mood === 'e-wow') {
+      // big round eyes
+      for (let dx = -1; dx <= 2; dx++) { set(ex + dx, Y(9), EYE); set(ex + dx, Y(12), EYE); }
+      for (let y = 10; y <= 11; y++) { set(ex - 1, Y(y), EYE); set(ex + 2, Y(y), EYE); set(ex, Y(y), '#ffffff'); set(ex + 1, Y(y), '#ffffff'); }
+      set(ex, Y(11), EYE);
+      return;
+    }
+    if (mood === 'e-angry') {
+      for (let yy = 10; yy <= 12; yy++) { set(ex, Y(yy), EYE); set(ex + 1, Y(yy), EYE); }
+      // brows slanting down to the middle
+      if (left) { set(ex - 1, Y(8), P.o); set(ex, Y(8), P.o); set(ex + 1, Y(9), P.o); set(ex + 2, Y(9), P.o); }
+      else { set(ex + 2, Y(8), P.o); set(ex + 1, Y(8), P.o); set(ex, Y(9), P.o); set(ex - 1, Y(9), P.o); }
+      return;
+    }
+    if (mood === 'e-wink') {
+      if (left) { for (let yy = 10; yy <= 12; yy++) { set(ex, Y(yy), EYE); set(ex + 1, Y(yy), EYE); } set(ex, Y(10), '#ffffff'); }
+      else { set(ex - 1, Y(12), EYE); set(ex, Y(11), EYE); set(ex + 1, Y(11), EYE); set(ex + 2, Y(12), EYE); }
+      return;
+    }
+    if (mood === 'e-cool') {
+      // sunglasses
+      for (let dx = -2; dx <= 3; dx++) for (let y = 10; y <= 12; y++) set(ex + dx, Y(y), '#1f1a2e');
+      set(ex - 1, Y(10), '#9aa6c8'); set(ex, Y(10), '#9aa6c8');
+      return;
+    }
     if (mood === 'love') {
       // heart eyes
       const HEART = '#ff3f74';
@@ -177,6 +228,10 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
       [[0, 0, S], [1, 0, D], [-1, 0, D], [0, 1, D], [0, -1, D]].forEach(([dx, dy, c]) => { const yy = Y(y) + dy; if (yy >= 0 && out[yy] && x + dx >= 0 && x + dx < KW) out[yy][x + dx] = c; });
     });
   }
+  if (mood === 'e-cool') for (let x = 13; x <= 18; x++) out[Y(10)][x] = '#1f1a2e';
+  if (mood === 'e-angry') [[26, 4], [28, 4], [27, 5], [26, 6], [28, 6], [25, 5], [29, 5]].forEach(([x, y]) => { if (out[Y(y)] && x < KW) out[Y(y)][x] = '#e8384f'; });
+  if (mood === 'e-shy') [[6, 14], [7, 15], [8, 14], [9, 15], [22, 14], [23, 15], [24, 14], [25, 15]].forEach(([x, y]) => { out[Y(y)][x] = '#ff5d8a'; });
+  if (mood === 'e-wow') [[27, 3], [27, 4], [27, 6]].forEach(([x, y]) => { if (out[Y(y)] && x < KW) out[Y(y)][x] = '#ffd23f'; });
   if (mood === 'thirsty' || mood === 'hungry') {
     [[27, 5], [26, 6], [27, 6], [28, 6], [26, 7], [27, 7], [28, 7], [27, 8]].forEach(([x, y]) => { out[Y(y)][x] = mood === 'thirsty' ? T1 : T2; });
     out[Y(6)][27] = '#ffffff';
@@ -1690,6 +1745,10 @@ Object.assign(ITEMS, {
       '..ooo......................ooo..',
     ] },
 });
+
+// furniture you can switch on and off at home
+ITEMS.tv.power = 'tv';
+['lamp', 'lantern', 'starlight', 'nightstand'].forEach((id) => { if (ITEMS[id]) ITEMS[id].power = 'light'; });
 
 export const ROOM_WINDOW = { x0: 0.39, x1: 0.61, y0: 0.08, y1: 0.42 };
 // kind: 'living' (cream & pink, wooden floor) · 'bedroom' (lilac with stars, soft carpet) · 'kitchen' (tiles, chequered floor)

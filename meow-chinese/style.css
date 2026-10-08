@@ -1228,3 +1228,33 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .store.compact .counter { flex-direction: column; gap: 8px; }
 .store.compact .counter .reset-try { position: static; transform: none; }
 .buy-ask .nowrap { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+/* ---------- speech bubbles in the house: smaller, and they grow upwards from above the head ---------- */
+.house .kitten-wrap .bubble.chat-bubble { top: auto; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); zoom: var(--inv, 1);
+  font-size: 13px; line-height: 1.35; padding: 4px 9px; border-width: 2px; max-width: 160px; width: max-content; white-space: normal; text-align: center; overflow-wrap: anywhere; }
+.house .kitten-wrap .bubble.chat-bubble::after { left: calc(50% - 6px + var(--tailx, 0px)); width: 10px; height: 10px; bottom: -8px; border-width: 2px; }
+.house .nametag { zoom: max(0.8, calc(var(--inv, 1) * 0.5)) !important; }
+/* ---------- lights & TV ---------- */
+.light-switch { position: absolute; top: 6px; right: 6px; z-index: 300; width: 40px; height: 40px; padding: 0; font-size: 20px; line-height: 1;
+  background: #fff8c2; border: 3px solid var(--ink); border-radius: 8px; box-shadow: 0 3px 0 rgba(43,33,64,.4); cursor: pointer; transform: scale(var(--inv, 1)); transform-origin: top right; }
+.light-switch.off { background: #3a3f5c; filter: grayscale(.6); }
+.room-dark { position: absolute; inset: 0; z-index: 240; pointer-events: none; background: rgba(8, 10, 40, 0); transition: background .35s; }
+.room.lights-off .room-bg { filter: brightness(.36) saturate(.7) hue-rotate(10deg); }
+.room.lights-off .decor canvas { filter: brightness(.42) saturate(.7); }
+.room.lights-off .decor[data-power]:not(.off) canvas { filter: none; }
+.room.lights-off .kitten-canvas { filter: brightness(.62) saturate(.85); }
+.lamp-glow { position: absolute; z-index: 1; width: 300px; height: 300px; transform: translate(-50%, -50%); pointer-events: none; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 226, 130, .55) 0, rgba(255, 210, 100, .22) 35%, transparent 68%); mix-blend-mode: screen; }
+.lamp-glow.tv { width: 260px; height: 200px; background: radial-gradient(ellipse, rgba(150, 210, 255, .45) 0, rgba(120, 190, 255, .15) 40%, transparent 70%); }
+.house .decor[data-power] { pointer-events: auto; cursor: pointer; }
+.house .decor[data-power="light"].off canvas { filter: brightness(.7) saturate(.5); }
+.decor .tv-screen { position: absolute; left: 12.5%; top: 15%; width: 75%; height: 50%; pointer-events: none; background: rgba(255,255,255,.07); animation: tvflick 1.6s steps(2) infinite; }
+.decor.off .tv-screen { background: #22242e; animation: none; box-shadow: inset 6px 6px 0 rgba(255,255,255,.08); }
+@keyframes tvflick { 50% { background: rgba(255,255,255,0); } }
+/* ---------- emoji faces beside the chat box ---------- */
+.house-chat .emote-wrap { position: relative; flex: none; }
+.house-chat .emote-btn { font-size: 20px; padding: 4px 8px; min-height: 0; }
+.emote-pick { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 60; display: grid; grid-template-columns: repeat(6, 44px); gap: 4px; padding: 6px;
+  background: #fff; border: 3px solid var(--ink); border-radius: 10px; box-shadow: 0 4px 0 rgba(43,33,64,.35); }
+.emote-pick button { width: 44px; height: 44px; font-size: 26px; padding: 0; background: #fff8ec; border: 2px solid var(--ink); border-radius: 8px; cursor: pointer; }
+.emote-pick button:active { transform: translateY(2px); }
+@media (max-width: 600px) { .emote-pick { grid-template-columns: repeat(6, 38px); } .emote-pick button { width: 38px; height: 38px; font-size: 22px; } }
