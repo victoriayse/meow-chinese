@@ -33,4 +33,7 @@ export const CHANGES = [
     'Messages from friends now pop up straight away — no need to refresh.',
     'Parents can turn on Hanyu Pinyin for the sentence builder (Parent area → Practice).',
   ] },
+  { v: 60, items: [
+    'Spelling: the green Next button is now right above the writing boxes — no scrolling on phones.',
+  ] },
 ];

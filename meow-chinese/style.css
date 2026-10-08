@@ -1095,3 +1095,5 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .gift-friends { display: flex; flex-wrap: wrap; gap: 8px; }
 .gift-friends .friend-pick.on { background: #ffd6e7; outline: 3px solid #e2557c; }
 .gift-pick .gp-price { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.next-top { display: flex; justify-content: center; margin: 10px 0 0; }
+.next-top .btn { min-width: 220px; }

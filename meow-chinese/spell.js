@@ -211,6 +211,13 @@ export function spellingScreen({ mode = 'list', go }) {
     setTimeout(() => sayWord(item), 450);
   }
 
+  // the green Next button, placed at the top of the writing boxes (scrolled into view if needed)
+  function nextBar(label) {
+    const bar = html`<div class="next-top"><button class="btn big green" id="nx">${label}</button></div>`;
+    setTimeout(() => { const r = bar.getBoundingClientRect(); if (r.top < 0 || r.bottom > window.innerHeight) bar.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 50);
+    return bar;
+  }
+
   function onCorrect(item, charState) {
     const result = item.attempt === 0 ? 'first' : 'retry';
     status[item.i] = result;
@@ -227,8 +234,9 @@ export function spellingScreen({ mode = 'list', go }) {
         <div class="big-msg good">${praise} <span class="en">${result === 'first' ? 'Correct!' : 'You remembered it!'}</span></div>
         <div class="answer"><div class="py">${esc(pinyinOf(item.w))}</div></div>
         ${coins || gotXp ? `<div class="row" style="justify-content:center"><span class="price" style="font-size:22px">${coins ? `+${coins} ${coinI(22)}` : ''}${coins && gotXp ? ' · ' : ''}${gotXp ? `+${gotXp} XP` : ''}</span></div>` : ''}
-        <button class="btn big green" id="nx">${queue.length ? '下一个 Next ➜' : '完成 Finish ★'}</button>
       </div>`);
+    // Next sits right above the writing boxes, so it's on screen on a phone without scrolling
+    $('.boxes', main).before(nextBar(queue.length ? '下一个 Next ➜' : '完成 Finish ★'));
     hydrateIcons(main);
     if (coins) burst($('.boxes', main), 'coin', 3, '50%', '40%');
     const nx = $('#nx', main);
@@ -310,9 +318,9 @@ export function spellingScreen({ mode = 'list', go }) {
       tact.innerHTML = `<div class="feedback">
           <div class="big-msg good">描得好！<span class="en">Nice tracing!</span></div>
           <div class="sub">${willRetry ? '记住它，等一下我再考你一次 · Remember it — I\'ll ask you again soon!' : '它会留在错词本里，明天再练 · It stays in your Mistakes book to practise again.'}</div>
-          <button class="btn big green" id="nx">${queue.length || willRetry ? '下一个 Next ➜' : '完成 Finish ★'}</button>
         </div>`;
-      $('#nx', tact).onclick = () => {
+      tboxes.before(nextBar(queue.length || willRetry ? '下一个 Next ➜' : '完成 Finish ★'));
+      $('#nx', lesson).onclick = () => {
         if (willRetry) {
           const back = { ...item, attempt: 1 };
           // put it a couple of words later so it's from memory, not copying
