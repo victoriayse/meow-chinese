@@ -420,7 +420,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .house .room { position: relative; flex: 1; box-sizing: border-box; border: 6px solid #7a4a2a; border-top-width: 4px; background: #fbe8d3; overflow: hidden; }
 /* buttons and speech stay the normal size on screen however much the house is scaled */
 .house .dpad { transform: scale(var(--inv, 1)); transform-origin: bottom right; }
-.house .arrange-btn { transform: scale(var(--inv, 1)); transform-origin: top left; }
+.house .arrange-bar { transform: scale(var(--inv, 1)); transform-origin: top left; }
 .house .kitten-wrap .bubble, .house .emo-pop { zoom: var(--inv, 1); }
 .house .room-bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .house .room .ground { position: absolute; left: 50%; bottom: 3%; transform: translateX(-50%); z-index: 5; }
@@ -587,10 +587,23 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .kflip { display: block; }
 .kflip.left { transform: scaleX(-1); }
 .kitten-canvas.walking { animation: bob .3s steps(2) infinite; }
-.arrange-btn { position: absolute; top: 6px; left: 6px; z-index: 300; font: inherit; font-weight: 800; font-size: 14px; padding: 5px 10px;
+.arrange-bar { position: absolute; top: 6px; left: 6px; z-index: 300; display: flex; gap: 6px; }
+.arrange-btn { position: relative; font: inherit; font-weight: 800; font-size: 14px; padding: 5px 10px;
   background: #fff; color: var(--ink); border: 3px solid var(--ink); border-radius: 6px; box-shadow: 0 3px 0 rgba(43,33,64,.4); }
 .arrange-btn .zh { font-family: var(--zh); }
-.room.arranging .arrange-btn { background: #9be27a; }
+.room.arranging .arrange-btn#b-arrange { background: #9be27a; }
+.store-btn { display: none; } .room.arranging .store-btn { display: inline-block; background: #ffe9a8; }
+.store-btn b { display: inline-block; min-width: 18px; margin-left: 2px; font-size: 12px; color: #fff; background: var(--pink-d); border-radius: 999px; padding: 0 5px; }
+.store-btn b:empty { display: none; }
+/* 📦 put-away button on each piece while moving furniture */
+.decor .put-away { display: none; position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; padding: 0; font-size: 16px; line-height: 1;
+  background: #fff; border: 2px solid var(--ink); border-radius: 50%; cursor: pointer; z-index: 2; box-shadow: 0 2px 0 rgba(43,33,64,.4);
+  transform: scale(var(--inv, 1)); transform-origin: top right; }
+.room.arranging .decor .put-away { display: grid; place-items: center; pointer-events: auto; }
+.store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; max-height: 50vh; overflow: auto; }
+.store-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; font: inherit; background: #fff8ec; border: 3px solid var(--ink); border-radius: 8px; cursor: pointer; }
+.store-item .art { min-height: 60px; display: grid; place-items: end center; }
+.store-item .zh { font-family: var(--zh); font-weight: 700; } .store-item small { font-size: 11px; color: var(--ink-2); }
 .room.arranging .decor.movable { pointer-events: auto; cursor: grab; touch-action: none; outline: 3px dashed rgba(43,33,64,.55); outline-offset: 2px; border-radius: 4px; }
 .room.arranging .decor.movable:hover { outline-color: #ff6f9c; }
 .room.arranging .decor.dragging { cursor: grabbing; outline-color: #ff6f9c; filter: drop-shadow(0 10px 0 rgba(60,30,20,.3)); }
@@ -608,6 +621,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .dpad { grid-template: repeat(2, 36px) / repeat(3, 36px); right: 4px; bottom: 4px; }
   .dpad button { width: 36px; height: 36px; font-size: 15px; }
   .arrange-btn { font-size: 12px; padding: 3px 7px; }
+  .decor .put-away { width: 24px; height: 24px; font-size: 13px; }
 }
 /* XP */
 .xp-bar > b { position: absolute; inset: 0; display: grid; place-items: center; font: 800 11px/1 var(--px); color: var(--ink); text-shadow: 0 0 2px #fff, 0 0 2px #fff; z-index: 1; }

@@ -452,6 +452,7 @@ export function buy(id) {
   if (usedUp) state.pantry[id] = (state.pantry[id] || 0) + 1;
   else state.owned.push(id);
   if (it.cat === 'wear') state.kitten.equipped[it.slot] = id;
+  if (it.cat === 'decor') storeDecorQuiet(id);      // new furniture waits in storage until she places it
   save();
   return true;
 }
@@ -474,6 +475,18 @@ export function setDecorRoom(id, room) {
   state.decorRoom = state.decorRoom || {};
   state.decorRoom[id] = room;
   delete state.decorPos[id];                // start in its usual spot in the new room
+  save();
+}
+// furniture storage: owned furniture that isn't standing in any room (decorHidden)
+function storeDecorQuiet(id) { if (!state.decorHidden.includes(id)) state.decorHidden.push(id); }
+export const storedDecor = () => state.owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && state.decorHidden.includes(id));
+export function storeDecor(id) { storeDecorQuiet(id); save(); }
+// take it out of storage and stand it in this room (in its usual spot)
+export function placeDecor(id, room) {
+  state.decorHidden = state.decorHidden.filter((x) => x !== id);
+  state.decorRoom = state.decorRoom || {};
+  if (room) state.decorRoom[id] = room;
+  delete state.decorPos[id];
   save();
 }
 export function toggleDecor(id) {
@@ -911,7 +924,7 @@ export function openGift(id) {
   let result = 'added';
   if (it.cat === 'food' || it.cat === 'toiletry') state.pantry[g.item] = (state.pantry[g.item] || 0) + 1;
   else if (state.owned.includes(g.item)) { state.coins += price(g.item); result = 'coins'; }   // already has it: turn it into coins
-  else state.owned.push(g.item);
+  else { state.owned.push(g.item); if (it.cat === 'decor') storeDecorQuiet(g.item); }
   save();
   return { gift: g, result, coins: result === 'coins' ? price(g.item) : 0 };
 }

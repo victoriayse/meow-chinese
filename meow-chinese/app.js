@@ -483,7 +483,7 @@ function homeScreen(params = {}) {
           <canvas class="room-bg" id="roombg"></canvas>
 
           <div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>
-          <button class="arrange-btn" id="b-arrange"><span class="zh">🪑 摆家具</span> Move furniture</button>
+          <div class="arrange-bar"><button class="arrange-btn" id="b-arrange"><span class="zh">🪑 摆家具</span> Move furniture</button><button class="arrange-btn store-btn" id="b-store">📦 <span class="zh">收纳箱</span> Storage <b id="store-n"></b></button></div>
           <div class="dpad" id="dpad">
             <button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button>
           </div>
@@ -606,6 +606,9 @@ function homeScreen(params = {}) {
       decorEls.push(wrap);
     }
     wrap.appendChild(c);
+    const pa = document.createElement('button');
+    pa.className = 'put-away'; pa.type = 'button'; pa.title = 'Put away'; pa.textContent = '📦';
+    wrap.appendChild(pa);
     room.appendChild(wrap);
   });
   }
@@ -696,15 +699,54 @@ function homeScreen(params = {}) {
 
     // ----- move furniture: tap the button, then drag things around -----
     let arranging = false;
-    const ab = $('#b-arrange', n);
-    if (!decorEls.length) ab.style.display = 'none';
-    ab.onclick = () => {
-      arranging = !arranging;
+    const ab = $('#b-arrange', n), sb = $('#b-store', n);
+    const hasFurniture = s.owned.some((id) => ITEMS[id] && ITEMS[id].cat === 'decor');
+    if (!hasFurniture) ab.parentElement.style.display = 'none';
+    const countStore = () => { const c = S.storedDecor().length; $('#store-n', n).textContent = c ? c : ''; };
+    countStore();
+    const setArranging = (on, quiet) => {
+      arranging = on;
       room.classList.toggle('arranging', arranging);
       ab.innerHTML = arranging ? '<span class="zh">✅ 摆好了</span> Done' : '<span class="zh">🪑 摆家具</span> Move furniture';
-      if (arranging) { sfx.click(); toast('<span class="zh">按住家具拖一拖！</span> Drag the furniture to move it'); }
-      else { S.save(); sfx.coin(); }
+      if (arranging) { if (!quiet) { sfx.click(); toast('<span class="zh">按住家具拖一拖！点 📦 收起来。</span> Drag furniture to move it · tap 📦 to put it away'); } }
+      else { S.save(); if (!quiet) sfx.coin(); }
     };
+    ab.onclick = () => setArranging(!arranging);
+    if (currentParams.arrange) setArranging(true, true);                 // came back after placing / putting away
+    const redrawArranging = () => { setHomeBusy(false); go('home', { ...currentParams, view: 'house', room: roomKey, arrange: true }, { replace: true }); };
+    const leaveArrange = () => { if (currentParams.arrange) { delete currentParams.arrange; } };
+    ab.addEventListener('click', () => { if (!arranging) leaveArrange(); });
+    // 📦 storage box: furniture she owns that isn't in a room — tap one to stand it in this room
+    sb.onclick = () => {
+      const ids = S.storedDecor();
+      const ri = S.roomInfo(roomKey);
+      const box = html`<div class="card stack">
+          <div class="h-title"><span class="zh">📦 收纳箱</span><span class="en">Storage box</span></div>
+          <p class="help" style="margin:0">点一件家具，放进${ri.zh}。<br>Tap a piece to put it in the ${ri.en.toLowerCase()}.</p>
+          <div class="store-grid">${ids.length ? ids.map((id) => `<button class="store-item" data-id="${id}"><span class="art"></span><span class="zh">${ITEMS[id].name}</span><small>${esc(ITEMS[id].en)}</small></button>`).join('')
+            : '<p class="help">收纳箱是空的。去商店买家具吧！<br>Storage is empty — buy furniture in the shop.</p>'}</div>
+          <button class="btn white" id="c">关闭 Close</button>
+        </div>`;
+      box.querySelectorAll('.store-item').forEach((b) => b.querySelector('.art').appendChild(spriteCanvas(b.dataset.id, 56)));
+      box.querySelectorAll('.store-item').forEach((b) => { b.onclick = () => {
+        S.placeDecor(b.dataset.id, roomKey); sfx.coin(); closeModal();
+        toast(`<span class="zh">${ITEMS[b.dataset.id].name}放进${ri.zh}了！</span> Drag it where you like`);
+        redrawArranging();
+      }; });
+      $('#c', box).onclick = closeModal;
+      openModal(box);
+    };
+    // 📦 on a piece of furniture: put it back in storage
+    room.querySelectorAll('.decor .put-away').forEach((b) => {
+      b.addEventListener('pointerdown', (e) => e.stopPropagation());
+      b.onclick = (e) => {
+        e.stopPropagation();
+        const id = b.closest('.decor').dataset.id;
+        S.storeDecor(id); sfx.click();
+        toast(`📦 <span class="zh">${ITEMS[id].name}收进收纳箱了</span> Put away`);
+        redrawArranging();
+      };
+    });
     decorEls.forEach((el) => {
       el.addEventListener('pointerdown', (e) => {
         if (!arranging) return;

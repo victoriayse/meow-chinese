@@ -50,4 +50,9 @@ export const CHANGES = [
     'The shop and My items now stay on the same aisle after you buy something.',
     'Simpler ◀ ▶ room arrows, placed just outside the house.',
   ] },
+  { v: 64, items: [
+    'New furniture now goes into your 📦 storage box instead of straight into a room.',
+    'At home, tap 🪑 Move furniture, then 📦 Storage to place a piece in the room you are in.',
+    'While moving furniture, tap the 📦 on any piece to put it back in storage.',
+  ] },
 ];

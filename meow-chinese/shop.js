@@ -141,7 +141,7 @@ export function shopScreen({ go, tab = 'food' }) {
     toast(it.cat === 'special' ? `❄️ <span class="zh">有${S.get().streak.freezes}张冰冻卡了！</span> Streak freeze ready`
       : it.cat === 'food' || it.cat === 'toiletry' ? `<span class="zh">买了${it.name}！</span> Find it in 🎒 My items`
       : it.cat === 'wear' ? `<span class="zh">穿上${it.name}！</span>`
-      : `<span class="zh">${it.name}放进家里了！</span> Added to your home`);
+      : `📦 <span class="zh">${it.name}放进收纳箱了！</span> In your storage box — place it in your home with 🪑 Move furniture`);
     render();
   }
   $('#tabs', n).onclick = (e) => { const t = e.target.closest('[data-tab]'); if (t) { tab = t.dataset.tab; render(); } };
@@ -195,7 +195,7 @@ export function wardrobeScreen({ go, tab }) {
     $('#my-note', n).innerHTML = def.use === 'feed' ? '点食物喂小猫！<br>Tap food to feed your kitten.'
       : def.use === 'groom' ? '点洗发水或梳子帮小猫洗澡！<br>Tap to bath or brush your kitten.'
       : def.use === 'play' ? '点玩具一起玩！<br>Tap a toy to play together.'
-      : def.key === 'decor' ? '点家具放进家里或收起来。<br>Tap to show or hide it at home.'
+      : def.key === 'decor' ? '点家具放进房间或收进收纳箱。<br>Tap to put it in a room or back in storage.'
       : '点一下穿上或脱下。每类一件。<br>Tap to wear or take off — one of each.';
     const list = $('#list', n);
     list.innerHTML = '';
@@ -217,7 +217,7 @@ export function wardrobeScreen({ go, tab }) {
       const on = def.key === 'decor' ? !s.decorHidden.includes(id) : it.cat === 'wear' ? s.kitten.equipped[it.slot] === id : false;
       const eff = counted ? itemEffect(it) : def.use === 'play' ? '+6 ❤' : '';
       const action = def.use === 'feed' ? (it.water && !it.hunger ? '💧 喝 Drink' : '🍽️ 喂 Feed') : def.use === 'groom' ? '🛁 用 Use' : def.use === 'play' ? '🎾 玩 Play'
-        : def.key === 'decor' ? (on ? '👁 摆着 Shown' : '🙈 收起 Hidden') : (on ? '✓ 穿着 Wearing' : '穿上 Wear');
+        : def.key === 'decor' ? (on ? '🏠 摆着 In a room' : '📦 收纳中 In storage') : (on ? '✓ 穿着 Wearing' : '穿上 Wear');
       const card = html`<button type="button" class="product ${on ? 'sel' : ''}">
           ${counted ? `<span class="count">×${s.pantry[id]}</span>` : ''}
           <div class="art"></div><div class="shelf-board"></div>
