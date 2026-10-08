@@ -1136,3 +1136,34 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .room-nav { width: 24px; height: 48px; font-size: 14px; border-width: 2px; border-radius: 8px; }
   .room-nav.left { left: calc(var(--gap, 28px) - 27px); } .room-nav.right { right: calc(var(--gap, 28px) - 27px); }
 }
+/* ---------- live visits & house chat ---------- */
+.stage.in-house .house { bottom: 62px; }
+.house-chat-wrap { position: absolute; left: 4%; right: 4%; bottom: 8px; z-index: 35; }
+.house-chat { display: flex; gap: 8px; align-items: center; max-width: 560px; margin: 0 auto; }
+.house-chat input { flex: 1; min-width: 0; font: inherit; font-family: var(--zh); font-size: 17px; padding: 9px 12px; border: 3px solid var(--ink); border-radius: 999px; background: #fff; }
+.house-chat .btn { flex: none; }
+.house .bubble.chat-bubble { left: 50%; top: -24px; transform: translateX(-50%); white-space: normal; width: max-content; max-width: 380px; text-align: center; animation: none; font-size: 22px; }
+.house .bubble.chat-bubble::after { left: calc(50% - 7px); }
+.house .vcat .bubble.chat-bubble { zoom: var(--inv, 1); }
+.house .kitten-wrap .bubble.chat-bubble { zoom: var(--inv, 1); font-size: 16px; max-width: 220px; }
+.vcat { position: absolute; transform: translateX(-50%); pointer-events: none; transition: left .14s linear, bottom .14s linear; }
+.vcat.me { transition: none; }
+.vcat .nametag { zoom: max(1, calc(var(--inv, 1) * 0.65)); }
+.visit-home { height: 100%; display: grid; grid-template-rows: auto 1fr auto; }
+.visit-home .visit-top { display: flex; align-items: center; gap: 12px; padding: 10px 14px 0; }
+.visit-home .visit-title { color: #fff; font-weight: 800; font-size: 18px; text-shadow: 0 2px 0 rgba(0,0,0,.35); display: flex; flex-direction: column; }
+.visit-home .visit-title .zh { font-family: var(--zh); font-size: 22px; }
+.visit-home .visit-title small { font-size: 13px; font-weight: 700; opacity: .95; }
+.visit-home .stage.in-house .house { bottom: 4%; }
+.visit-home .visit-chat { padding: 6px 14px calc(12px + var(--safe-b, 0px)); }
+.visit-home .dpad { display: grid; }
+.visit-home { grid-template-columns: minmax(0, 1fr); overflow: hidden; }
+.visit-home .visit-title { min-width: 0; }
+.visit-home .visit-title .zh { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.house .nametag { white-space: nowrap; }
+@media (max-width: 600px) {
+  .visit-home .visit-title .zh { font-size: 17px; }
+  .stage.in-house .house { top: 58px; }          /* clear of the 📱 📅 🛍️ 🎒 buttons */
+  .visit-home .stage.in-house .house { top: 2%; }
+  .house-chat input { font-size: 16px; padding: 7px 10px; }
+}

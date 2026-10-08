@@ -14,6 +14,8 @@ let pendingNotes = null, notesDismissed = false;   // a newer version is waiting
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say } from './house.js';
+import * as Visit from './visit.js';
 import { randomJoke } from './jokes.js';
 import { practiceListScreen, practiceScreen, KINDS } from './practice.js';
 
@@ -58,6 +60,7 @@ const screens = {
   spell: (p) => spellingScreen({ ...p, go }),
   shop: (p) => shopScreen({ go, ...p }),
   wardrobe: (p) => wardrobeScreen({ ...p, go }),
+  visit: (p) => Visit.visitScreen({ ...p, go }),
   parent: (p) => { p.go = go; return parentScreen(p); },
   grave: graveScreen,
   essay: (p) => essayScreen({ ...p, go }),
@@ -276,44 +279,13 @@ function setupScreen() {
 }
 
 // ---------- home ----------
-// the house is laid out at this one size on every device, then scaled to fit the screen,
-// so furniture placed on a computer sits in exactly the same spot on a phone
-const HOUSE = { w: 720, roof: 48, room: 600, kitten: 7, decor: 5 };
-const ROOM_ARROW = 40;   // screen px kept free on each side for the ◀ ▶ room arrows
-let houseK = 1;
-function fitHouse(n) {
-  const box = $('#house', n), unit = $('#hunit', n); if (!box || !unit) return;
-  const side = box.querySelector('.room-nav') ? (window.innerWidth <= 600 ? 28 : ROOM_ARROW) : 0;            // leave space for the room arrows outside the house
-  const k = Math.min((box.clientWidth - 2 * side) / HOUSE.w, box.clientHeight / (HOUSE.roof + HOUSE.room)) || 1;
-  houseK = k;
-  unit.style.setProperty('--k', k); unit.style.setProperty('--inv', 1 / k);
-  box.style.setProperty('--gap', `${Math.max(0, (box.clientWidth - HOUSE.w * k) / 2)}px`);   // the arrows hug the house's sides
-}
 // while she walks the kitten (or drags furniture), redraws of the home page wait until she lets go
-let homeBusy = false, homeRedrawLater = false;
+let homeBusy = false, homeRedrawLater = false, hostRoomNow = 'living';
 function homeRedrawWaits() { if (homeBusy && current === 'home') { homeRedrawLater = true; return true; } return false; }
 function setHomeBusy(b) {
   homeBusy = b;
   if (!b && homeRedrawLater) { homeRedrawLater = false; setTimeout(() => { if (!homeBusy && current === 'home') go('home', currentParams, { replace: true }); }, 50); }
 }
-// where each home item sits inside the room (percent of the room box)
-const DECOR_POS = {
-  ceiling: 'left:27%;top:0',
-  'wall-left': 'left:5%;top:9%',
-  'wall-right': 'right:7%;top:5%',
-  shelf: 'right:5%;top:24%',
-  curtain: 'curtain',
-  'back-left': 'left:2%;bottom:30%',
-  'back-mid-left': 'left:21%;bottom:31%',
-  'back-mid-right': 'right:25%;bottom:31%',
-  'back-right': 'right:2%;bottom:29%',
-  'front-left': 'left:2%;bottom:3%',
-  plant: 'left:21%;bottom:3%',
-  'toy-left': 'left:32%;bottom:2%',
-  'toy-right': 'right:32%;bottom:2%',
-  house: 'right:17%;bottom:3%',
-  'front-right': 'right:2%;bottom:3%',
-};
 
 // ----- first visit of the day: greeting, check-in rewards; jokes now and then -----
 let greet = null, greetUntil = 0, checkinShown = false;
@@ -488,7 +460,7 @@ function homeScreen(params = {}) {
             <button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button>
           </div>
         </div>
-      </div>${roomArrow(-1)}${roomArrow(1)}</div>` : `<div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>`}
+      </div>${roomArrow(-1)}${roomArrow(1)}</div><div class="house-chat-wrap" id="hchat"></div>` : `<div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>`}
     </div>
     <div class="side">
       <div id="alert"></div>
@@ -524,6 +496,7 @@ function homeScreen(params = {}) {
   kwrap.appendChild(kflip);
   kwrap.appendChild(html`<div class="nametag">${esc(k.name)}<span class="lv">Lv${S.level()}</span></div>`);
   if (md.face === 'faint') { kv.canvas.classList.add('fainted'); kwrap.appendChild(html`<div class="zzz" style="left:60%;top:30%">@ @ @</div>`); }
+  else if (inHouse) { /* in the house she only talks when you type something to say */ }
   else if (greetNow()) { const g = greetNow(); kwrap.appendChild(html`<div class="bubble greet">${g.icon} ${esc(g.zh)}<br><small>${esc(g.en)}</small></div>`); }
   else if (md.face === 'dizzy') kwrap.appendChild(html`<div class="bubble sad">😵‍💫 ${esc(md.text)}</div>`);
   else if (md.face === 'cough') kwrap.appendChild(html`<div class="bubble sad">🤒 ${esc(md.text)}</div>`);
@@ -582,33 +555,9 @@ function homeScreen(params = {}) {
   const room = $('#room', n);
   const decorEls = [];
   if (room) {
-  const dscale = HOUSE.decor;
-  s.decorPos = s.decorPos || {};
-  s.owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && !s.decorHidden.includes(id) && S.roomOf(id) === roomKey).forEach((id) => {
-    const it = ITEMS[id];
-    const c = document.createElement('canvas');
-    drawGrid(c, artGrid(it.art, it.pal), dscale);
-    const wrap = document.createElement('div');
-    wrap.className = 'decor';
-    wrap.dataset.id = id;
-    const pos = DECOR_POS[it.spot] || 'left:10%;bottom:10%';
-    const saved = s.decorPos[id];
-    if (pos === 'curtain') {
-      // the curtains hang on the window and are sized to it
-      wrap.classList.add('curtain');
-      wrap.style.cssText = `left:${(ROOM_WINDOW.x0 + ROOM_WINDOW.x1) * 50}%;top:${ROOM_WINDOW.y0 * 100 - 4}%;width:${(ROOM_WINDOW.x1 - ROOM_WINDOW.x0) * 100 + 12}%;transform:translateX(-50%);z-index:1`;
-    } else {
-      wrap.classList.add('movable');
-      if (saved) wrap.style.cssText = `left:${saved.x}%;top:${saved.y}%`;
-      else if (it.spot === 'rug' || it.spot === 'under') wrap.style.cssText = `left:50%;bottom:${it.spot === 'rug' ? 2 : 3}%;transform:translateX(-50%)`;
-      else wrap.style.cssText = pos;
-      if (it.spot === 'rug' || it.spot === 'under') wrap.classList.add('flat');
-      decorEls.push(wrap);
-    }
-    wrap.appendChild(c);
-    const pa = document.createElement('button');
-    pa.className = 'put-away'; pa.type = 'button'; pa.title = 'Put away'; pa.textContent = '📦';
-    wrap.appendChild(pa);
+  roomLayout(s, roomKey, S.roomOf).forEach((e) => {
+    const wrap = decorEl(e, { putAway: true }); if (!wrap) return;
+    if (e.kind !== 'curtain') decorEls.push(wrap);
     room.appendChild(wrap);
   });
   }
@@ -640,6 +589,7 @@ function homeScreen(params = {}) {
     ground.style.bottom = cat.y + '%';
     ground.style.zIndex = 2 + Math.round(100 - cat.y);
   };
+  const hostPos = () => ({ x: +cat.x.toFixed(1), y: +cat.y.toFixed(1), room: roomKey, left: !!kv.left });
   const held = new Set();
   let raf = 0, lastT = 0;
   const walk = (t) => {
@@ -652,8 +602,9 @@ function homeScreen(params = {}) {
     if (dx) kv.setFacing(dx < 0);
     placeCat();
     S.get().catPos = { x: +cat.x.toFixed(1), y: +cat.y.toFixed(1) };   // remembered as she goes (saved when she stops)
+    Visit.hostMove(hostPos());
     if (held.size) raf = requestAnimationFrame(walk);
-    else { raf = 0; lastT = 0; kv.canvas.classList.remove('walking'); S.save(); setHomeBusy(false); }
+    else { raf = 0; lastT = 0; kv.canvas.classList.remove('walking'); S.save(); setHomeBusy(false); Visit.hostMove(hostPos()); }
   };
   const press = (d) => {
     if (md.face === 'faint') return;          // a fainted kitten can't walk
@@ -833,10 +784,17 @@ function homeScreen(params = {}) {
   }
   $('#b-friends', n).onclick = () => go('friends');
   if (inHouse) {
-    const refit = () => { if (!n.isConnected) return window.removeEventListener('resize', refit); fitHouse(n); };
+    const refit = () => { if (!n.isConnected) return window.removeEventListener('resize', refit); fitHouseBox($('#house', n), $('#hunit', n)); };
     window.addEventListener('resize', refit);
   }
-  n._mounted = () => { if (inHouse) { fitHouse(n); drawRoom($('#roombg', n), isNight(), roomKey); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
+  if (inHouse) {
+    hostRoomNow = roomKey;
+    $('#hchat', n).appendChild(chatBar((text) => {
+      say(kwrap, text); sfx.click();
+      Visit.hostSay(text);
+    }));
+  } else hostRoomNow = 'living';
+  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
   return n;
 }
 
@@ -1036,7 +994,7 @@ setInterval(() => S.tick(), 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { S.tick(); if (current === 'home') refreshHome(); } });
 // the kitten tells a joke now and then while she's on the home page
 setInterval(() => {
-  if (current !== 'home' || document.hidden || !$('#modal').classList.contains('hidden') || Math.random() < 0.4) return;
+  if (current !== 'home' || currentParams.view === 'house' || document.hidden || !$('#modal').classList.contains('hidden') || Math.random() < 0.4) return;
   const kw = $('#kwrap'); if (!kw || kw.querySelector('.bubble.joke-pop')) return;
   const old = [...kw.querySelectorAll('.bubble')]; old.forEach((b) => { b.style.visibility = 'hidden'; });
   const j = html`<div class="bubble joke joke-pop">😹 ${esc(randomJoke())}</div>`;
@@ -1051,6 +1009,21 @@ Friends.startFriends((news) => {
     if (x.kind === 'gift') toast(`🎁 <span class="zh">${esc(x.fromName)}送你礼物！</span> You got a gift`, { ms: 3500 });
   }, i * 900));
   if (current === 'home') setTimeout(refreshHome, 400);
+});
+// live visits: friends' kittens can walk into my house while the app is open
+Visit.startHosting({
+  house: () => {
+    const st = S.get(), rooms = {}, open = S.ROOMS.filter((r) => S.roomOpen(r.key) && S.unlocked('decor')).map((r) => r.key);
+    (open.length ? open : ['living']).forEach((k) => { rooms[k] = roomLayout(st, k, S.roomOf); });
+    return { rooms, open: open.length ? open : ['living'] };
+  },
+  myPos: () => { const p = S.get().catPos || {}; return { x: p.x ?? 50, y: p.y ?? 3, room: hostRoomNow, left: false }; },
+  arrived: (id, look) => {
+    const inHouseNow = current === 'home' && currentParams.view === 'house';
+    toast(`🏠 <span class="zh">${esc(look.name || '朋友')}来你家玩了！</span> ${inHouseNow ? 'Say hi!' : 'A friend is visiting — go to your 🏠 house to say hi'}`, { ms: 4500 });
+  },
+  left: (id, look) => toast(`👋 <span class="zh">${esc(look.name || '朋友')}回家了</span> Your friend went home`, { ms: 2500 }),
+  chat: (id, text, look, seen) => { if (!seen) toast(`💬 ${esc(look.name || '朋友')}：${esc(text)}`, { ms: 4000 }); },
 });
 let lastReq = 0;
 Friends.onFriends(() => { const r = Friends.incomingRequests().length; if (r !== lastReq) { lastReq = r; if (current === 'home') refreshHome(); } });

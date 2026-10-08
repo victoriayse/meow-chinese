@@ -244,6 +244,8 @@ export function friendScreen({ go, id }) {
             <button class="btn blue" id="v-letter">✉️ <span class="zh">写信</span> Letter</button>
             <button class="btn pink" id="v-gift">🎁 <span class="zh">送礼物</span> Gift</button>
           </div>
+          <button class="btn green big" id="v-home" ${isOnline(f) ? '' : 'disabled'}>🏠 <span class="zh">去串门</span> Visit their house</button>
+          ${isOnline(f) ? '' : '<p class="help" style="margin:0">朋友在线的时候才可以去串门。 You can visit when your friend is online.</p>'}
         </div>
       </div>`;
     const kv = f.card ? friendKitten(c, Math.max(4, Math.min(8, Math.floor(window.innerHeight * 0.32 / 38)))) : null;
@@ -251,6 +253,7 @@ export function friendScreen({ go, id }) {
     $('#v-feed', v).onclick = () => feedFriend(f, kv, $('#fx', v), draw);
     $('#v-letter', v).onclick = () => writeLetter(f);
     $('#v-gift', v).onclick = () => sendGift(f);
+    $('#v-home', v).onclick = () => go('visit', { id: f.other, name: friendName(f) });
     root.appendChild(v);
     hydrateIcons(root);
   };

@@ -1,0 +1,198 @@
+// Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
+// Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
+//   knock  visitor -> house   { id, look, x, y, room, left }      "I'm here" (the owner answers with the house)
+//   house  owner -> visitors  { to?, house, host: { id, look, x, y, room, left } }
+//   pos    anyone            { id, look, x, y, room, left }       moves (a few times a second while walking)
+//   chat   anyone            { id, text }
+//   bye    visitor           { id }
+import * as S from './state.js';
+import * as Auth from './auth.js';
+import { managing } from './cloud.js';
+import { Channel } from './rt.js';
+import { drawRoom, drawRoof } from './pixel.js';
+import { $, html, esc, toast, KittenView, hydrateIcons } from './ui.js';
+import { sfx } from './audio.js';
+import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD } from './house.js';
+
+const isNight = () => { const h = new Date().getHours(); return h >= 18 || h < 5; };
+export function myLook() {
+  const s = S.get(), k = s.kitten;
+  return { name: s.childName ? `${s.childName}的${k.name}` : k.name, level: S.level(), fur: k.fur, equipped: { ...(k.equipped || {}) } };
+}
+const clampPos = (p) => ({ ...p, x: Math.max(6, Math.min(94, p.x)), y: Math.max(1, Math.min(30, p.y)) });
+// send at most ~8 moves a second, and always the last one
+function throttle(fn, ms = 120) {
+  let last = 0, t = null, pending = null;
+  return (arg) => {
+    pending = arg; const now = Date.now();
+    if (now - last >= ms) { last = now; fn(pending); pending = null; }
+    else if (!t) t = setTimeout(() => { t = null; last = Date.now(); if (pending) fn(pending); pending = null; }, ms - (now - last));
+  };
+}
+
+// =====================================================================
+// HOST: my own house is open to friends whenever the app is open
+// =====================================================================
+export const visitors = new OtherCats();      // friends' kittens in my house
+let hostCh = null, hostUser = null, api = null;
+export function startHosting(hooks) {
+  api = hooks;
+  const check = () => {
+    const u = Auth.user(), want = u && Auth.session() && !managing() && !document.hidden;
+    if (want && hostCh && hostUser === u.id) return;
+    if (hostCh) { hostCh.close(); hostCh = null; hostUser = null; visitors.ids().forEach((id) => visitors.remove(id)); api.changed && api.changed(); }
+    if (!want) return;
+    hostUser = u.id;
+    hostCh = new Channel(`house:${u.id}`, {
+      presenceKey: u.id,
+      onStatus: (st) => { if (st === 'joined') hostCh.track({ id: u.id, host: true }); },
+      onBroadcast: (ev, p) => {
+        if (!p || !p.id || p.id === hostUser) return;
+        if (ev === 'knock') {
+          const fresh = !visitors.has(p.id);
+          visitors.upsert(p.id, { look: p.look, ...clampPos(p) });
+          sendHouse(p.id);
+          if (fresh) { sfx.coin(); api.arrived && api.arrived(p.id, p.look || {}); }
+          api.changed && api.changed();
+        } else if (ev === 'pos') {
+          visitors.upsert(p.id, { ...(p.look ? { look: p.look } : {}), ...clampPos(p) });
+        } else if (ev === 'chat') {
+          const c = visitors.m.get(p.id);
+          visitors.say(p.id, p.text);
+          api.chat && api.chat(p.id, String(p.text || '').slice(0, 60), (c && c.look) || {}, !!(c && c.el));
+        } else if (ev === 'bye') {
+          if (visitors.has(p.id)) { const c = visitors.m.get(p.id); visitors.remove(p.id); api.left && api.left(p.id, (c && c.look) || {}); api.changed && api.changed(); }
+        }
+      },
+      onPresence: (present, joins, leaves) => {
+        leaves.forEach((id) => { if (id !== hostUser && visitors.has(id)) { const c = visitors.m.get(id); visitors.remove(id); api.left && api.left(id, (c && c.look) || {}); } });
+        if (leaves.length) api.changed && api.changed();
+      },
+    });
+    hostCh.open();
+  };
+  check();
+  setInterval(check, 5000);
+  document.addEventListener('visibilitychange', check);
+}
+function sendHouse(to) {
+  if (!hostCh || !api) return;
+  hostCh.send('house', { to, house: api.house(), host: { id: hostUser, look: myLook(), ...api.myPos() } });
+}
+export const hostResendHouse = () => { if (visitors.ids().length) sendHouse(null); };
+export const hostMove = throttle((pos) => { if (hostCh && visitors.ids().length) hostCh.send('pos', { id: hostUser, ...pos }); });
+export function hostSay(text) { if (hostCh && visitors.ids().length) hostCh.send('chat', { id: hostUser, text }); }
+export const visitorCount = () => visitors.ids().length;
+
+// =====================================================================
+// VISITOR: walk around a friend's house
+// =====================================================================
+export function visitScreen({ go, id: hostId, name = '' }) {
+  const me = (Auth.user() || {}).id;
+  const n = html`<section class="visit-home">
+      <div class="visit-top"><button class="btn white small" id="leave">← <span class="zh">回家</span> Leave</button>
+        <div class="visit-title"><span class="zh">🏠 ${esc(name || '朋友')}的家</span><small id="vt-sub">敲门中… Knocking…</small></div></div>
+      <div class="stage in-house"><div class="house" id="house"></div></div>
+      <div class="visit-chat" id="vchat"></div>
+    </section>`;
+  const box = $('#house', n), sub = $('#vt-sub', n);
+  const others = new OtherCats();
+  let house = null, host = null, roomKey = 'living', mine = { x: 30, y: 6, room: 'living', left: false };
+  let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false;
+
+  const ch = new Channel(`house:${hostId}`, {
+    presenceKey: me,
+    onStatus: (st, info) => {
+      if (st === 'joined') { ch.track({ id: me }); knock(); }
+      if (st === 'denied') { sub.textContent = '不能进去 · Can\'t visit this house'; }
+    },
+    onBroadcast: (ev, p) => {
+      if (!p || p.id === me) return;
+      if (ev === 'house' && (!p.to || p.to === me)) {
+        house = p.house || { rooms: {}, open: ['living'] };
+        if (p.host) { host = p.host; others.upsert(host.id, { look: host.look, ...clampPos(host) }); }
+        hostHere = true;
+        if (!gotHouse) { gotHouse = true; roomKey = (p.host && p.host.room) || 'living'; mine.room = roomKey; sfx.coin(); }
+        sub.textContent = '';
+        render();
+      } else if (ev === 'pos' || ev === 'knock') {
+        others.upsert(p.id, { ...(p.look ? { look: p.look } : {}), ...clampPos(p) });
+        if (ev === 'knock' && gotHouse) sendMine();          // a new visitor: let them see me
+      } else if (ev === 'chat') {
+        others.say(p.id, p.text);
+        const c = others.m.get(p.id);
+        if (!(c && c.el)) toast(`💬 ${esc((c && c.look && c.look.name) || '朋友')}：${esc(String(p.text).slice(0, 60))}`, { ms: 3500 });
+      } else if (ev === 'bye') others.remove(p.id);
+    },
+    onPresence: (present, joins, leaves) => {
+      leaves.forEach((id) => {
+        if (id === hostId) { hostHere = false; others.remove(id); sub.textContent = '朋友离开了 · Your friend left'; }
+        else others.remove(id);
+      });
+      if (joins.includes(hostId) && gotHouse && !hostHere) knock();
+    },
+  });
+  const knock = () => ch.send('knock', { id: me, look: myLook(), ...mine });
+  const sendMine = () => ch.send('pos', { id: me, look: myLook(), ...mine });
+  const sendMove = throttle(() => ch.send('pos', { id: me, ...mine }));
+  ch.open();
+  // keep knocking until the friend answers; if nobody is home, say so
+  let tries = 0;
+  const kt = setInterval(() => {
+    if (!n.isConnected) return clearInterval(kt);
+    if (gotHouse) return clearInterval(kt);
+    tries++; knock();
+    if (tries >= 4) { sub.innerHTML = '朋友现在不在家 · Your friend isn\'t home right now<br><small>朋友要打开喵喵中文才可以串门 · They need to have the app open</small>'; }
+  }, 3000);
+
+  function render() {
+    const info = S.roomInfo(roomKey), open = house.open || ['living'];
+    const idx = S.ROOMS.findIndex((r) => r.key === roomKey);
+    const arrow = (d) => { const r = S.ROOMS[idx + d]; if (!r || !open.includes(r.key)) return ''; return `<button class="room-nav ${d < 0 ? 'left' : 'right'}" data-room="${r.key}" aria-label="${r.en}">${d < 0 ? '◀' : '▶'}</button>`; };
+    box.innerHTML = `<div class="house-unit" id="hunit"><canvas class="roof" id="roof"></canvas>
+        <div class="room-name">${info.icon} <span class="zh">${info.zh}</span> ${info.en}</div>
+        <div class="room" id="room" data-room="${roomKey}"><canvas class="room-bg" id="roombg"></canvas>${DPAD}</div>
+      </div>${arrow(-1)}${arrow(1)}`;
+    const unit = $('#hunit', box), room = $('#room', box);
+    (house.rooms[roomKey] || []).forEach((e) => { const el = decorEl(e); if (el) room.appendChild(el); });
+    // my kitten
+    myEl = html`<div class="vcat me"><div class="kitten-wrap"><div class="kflip"></div><div class="nametag">${esc(S.get().kitten.name)}<span class="lv">Lv${S.level()}</span></div></div></div>`;
+    myKv = new KittenView({ scale: HOUSE.kitten }); myKv.setMood('happy'); myKv.setFacing(mine.left);
+    myEl.querySelector('.kflip').appendChild(myKv.canvas);
+    myWrap = myEl.querySelector('.kitten-wrap');
+    room.appendChild(myEl);
+    others.attach(room, roomKey);
+    fitHouse(box, unit);
+    drawRoom($('#roombg', box), isNight(), roomKey); drawRoof($('#roof', box));
+    room.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, room); });
+    place();
+    box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { roomKey = b.dataset.room; mine.room = roomKey; sfx.click(); render(); sendMine(); }; });
+    walker($('.dpad', room), {
+      isAlive: () => myEl && myEl.isConnected,
+      onStep: (dx, dy, dt) => {
+        mine.x += dx * 32 * dt; mine.y += dy * 22 * dt;
+        if (dx) { mine.left = dx < 0; myKv.setFacing(mine.left); }
+        myKv.canvas.classList.add('walking');
+        place(); sendMove();
+      },
+      onStop: () => { if (myKv) myKv.canvas.classList.remove('walking'); sendMine(); },
+    });
+    hydrateIcons(box);
+  }
+  function place() {
+    Object.assign(mine, clampPos(mine));
+    myEl.style.left = `${mine.x}%`; myEl.style.bottom = `${mine.y}%`; myEl.style.zIndex = 2 + Math.round(100 - mine.y);
+  }
+  // chat
+  $('#vchat', n).appendChild(chatBar((text) => {
+    if (myWrap) say(myWrap, text);
+    ch.send('chat', { id: me, text }); sfx.click();
+  }));
+  const refit = () => { if (!n.isConnected) { window.removeEventListener('resize', refit); return; } fitHouse(box, $('#hunit', box)); };
+  window.addEventListener('resize', refit);
+  // leaving: say goodbye and close the line
+  const leave = () => { clearInterval(kt); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
+  $('#leave', n).onclick = () => { leave(); go('friend', { id: hostId }); };
+  const gone = setInterval(() => { if (!n.isConnected) { clearInterval(gone); leave(); } }, 1000);
+  return n;
+}
