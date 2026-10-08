@@ -12,7 +12,7 @@ import { Channel } from './rt.js';
 import { drawRoom, drawRoof } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons } from './ui.js';
 import { sfx } from './audio.js';
-import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD } from './house.js';
+import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable } from './house.js';
 
 const isNight = () => { const h = new Date().getHours(); return h >= 18 || h < 5; };
 export function myLook() {
@@ -93,7 +93,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
       <div class="visit-top"><button class="btn white small" id="leave">← <span class="zh">回家</span> Leave</button>
         <div class="visit-title"><span class="zh">🏠 ${esc(name || '朋友')}的家</span><small id="vt-sub">敲门中… Knocking…</small></div></div>
       <div class="stage in-house"><div class="house" id="house"></div></div>
-      <div class="visit-log" id="vlog"><div class="vl-empty">💬 聊天记录会出现在这里 · Chat shows up here</div></div>
+      <div class="visit-log" id="vlog"></div>
       <div class="visit-chat" id="vchat"></div>
     </section>`;
   const box = $('#house', n), sub = $('#vt-sub', n);
@@ -133,15 +133,10 @@ export function visitScreen({ go, id: hostId, name = '' }) {
       if (joins.includes(hostId) && gotHouse && !hostHere) knock();
     },
   });
-  // this visit's chat, newest at the bottom (it is only kept while you are in the house)
-  const log = $('#vlog', n);
-  function logLine(who, text, mineLine) {
-    const e = log.querySelector('.vl-empty'); if (e) e.remove();
-    const t = new Date(), hm = `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
-    log.appendChild(html`<div class="vl-line ${mineLine ? 'mine' : ''}"><b>${esc(who)}</b><span class="zh">${esc(String(text).slice(0, 60))}</span><small>${hm}</small></div>`);
-    while (log.children.length > 100) log.firstElementChild.remove();
-    log.scrollTop = log.scrollHeight;
-  }
+  // this visit's chat, newest at the bottom (only kept while you are in the house)
+  const vlog = chatLog([]);
+  $('#vlog', n).appendChild(vlog.el);
+  const logLine = (who, text, mine) => vlog.add(who, text, mine);
   const knock = () => ch.send('knock', { id: me, look: myLook(), ...mine });
   const sendMine = () => ch.send('pos', { id: me, look: myLook(), ...mine });
   const sendMove = throttle((p) => ch.send('pos', p));
@@ -165,6 +160,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
       </div>${arrow(-1)}${arrow(1)}`;
     const unit = $('#hunit', box), room = $('#room', box);
     (house.rooms[roomKey] || []).forEach((e) => { const el = decorEl(e); if (el) room.appendChild(el); });
+    wirePlayable(room);
     // my kitten
     myEl = html`<div class="vcat me"><div class="kitten-wrap"><div class="kflip"></div><div class="nametag">${esc(S.get().kitten.name)}<span class="lv">Lv${S.level()}</span></div></div></div>`;
     myKv = new KittenView({ scale: HOUSE.kitten }); myKv.setMood('happy'); myKv.setFacing(mine.left);

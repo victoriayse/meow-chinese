@@ -14,7 +14,7 @@ let pendingNotes = null, notesDismissed = false;   // a newer version is waiting
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say } from './house.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable } from './house.js';
 import * as Visit from './visit.js';
 import { randomJoke } from './jokes.js';
 import { practiceListScreen, practiceScreen, KINDS } from './practice.js';
@@ -84,6 +84,7 @@ export function go(name, params = {}, opts = {}) {
     else if (!same) { stack.push({ name: current, params: currentParams }); if (stack.length > 20) stack.shift(); }
   }
   if (NO_HISTORY.includes(name)) stack.length = 0;
+  if (!(name === 'home' && params.view === 'house')) houseChat.length = 0;   // left the house: its chat history goes
   current = name; currentParams = params;
   Friends.setActivity({ spell: 'spelling', essay: 'essay', tasks: 'practice', practice: 'practice', practiceList: 'practice', shop: 'shop', wardrobe: 'wardrobe', friends: 'friends', friend: 'friends' }[name] || (name === 'home' && params.view === 'house' ? 'house' : 'online'));
   app.innerHTML = '';
@@ -281,6 +282,8 @@ function setupScreen() {
 // ---------- home ----------
 // while she walks the kitten (or drags furniture), redraws of the home page wait until she lets go
 let homeBusy = false, homeRedrawLater = false, hostRoomNow = 'living';
+// chat in my own house: kept while I stay in the house (redraws keep it), cleared when I leave
+const houseChat = []; let houseLog = null;
 function homeRedrawWaits() { if (homeBusy && current === 'home') { homeRedrawLater = true; return true; } return false; }
 function setHomeBusy(b) {
   homeBusy = b;
@@ -446,7 +449,7 @@ function homeScreen(params = {}) {
       <span class="reward">+${coins}${coinI(18)}<i class="go">›</i></span>
     </button>`;
 
-  const n = html`<section class="home">
+  const n = html`<section class="home ${inHouse ? 'house-view' : ''}">
     <div class="stage ${inHouse ? 'in-house' : ''}" id="stage">
       ${inHouse ? `<div class="house" id="house"><div class="house-unit" id="hunit">
         <canvas class="roof" id="roof"></canvas>
@@ -460,7 +463,7 @@ function homeScreen(params = {}) {
             <button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button>
           </div>
         </div>
-      </div>${roomArrow(-1)}${roomArrow(1)}</div><div class="house-chat-wrap" id="hchat"></div>` : `<div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>`}
+      </div>${roomArrow(-1)}${roomArrow(1)}</div><div class="house-log-wrap" id="hlog"></div><div class="house-chat-wrap" id="hchat"></div>` : `<div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>`}
     </div>
     <div class="side">
       <div id="alert"></div>
@@ -789,8 +792,12 @@ function homeScreen(params = {}) {
   }
   if (inHouse) {
     hostRoomNow = roomKey;
+    houseLog = chatLog(houseChat);
+    $('#hlog', n).appendChild(houseLog.el);
+    wirePlayable(room);
     $('#hchat', n).appendChild(chatBar((text) => {
       say(kwrap, text); sfx.click();
+      houseLog.add(k.name, text, true);
       Visit.hostSay(text);
     }));
   } else hostRoomNow = 'living';
@@ -1023,7 +1030,11 @@ Visit.startHosting({
     toast(`🏠 <span class="zh">${esc(look.name || '朋友')}来你家玩了！</span> ${inHouseNow ? 'Say hi!' : 'A friend is visiting — go to your 🏠 house to say hi'}`, { ms: 4500 });
   },
   left: (id, look) => toast(`👋 <span class="zh">${esc(look.name || '朋友')}回家了</span> Your friend went home`, { ms: 2500 }),
-  chat: (id, text, look, seen) => { if (!seen) toast(`💬 ${esc(look.name || '朋友')}：${esc(text)}`, { ms: 4000 }); },
+  chat: (id, text, look, seen) => {
+    const inHouseNow = current === 'home' && currentParams.view === 'house';
+    if (inHouseNow && houseLog && houseLog.el.isConnected) houseLog.add(look.name || '朋友', text, false);
+    if (!seen && !inHouseNow) toast(`💬 ${esc(look.name || '朋友')}：${esc(text)}`, { ms: 4000 });
+  },
 });
 let lastReq = 0;
 Friends.onFriends(() => { const r = Friends.incomingRequests().length; if (r !== lastReq) { lastReq = r; if (current === 'home') refreshHome(); } });

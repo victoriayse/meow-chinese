@@ -2,6 +2,7 @@
 // one fixed layout size, the furniture, the cats walking around, speech bubbles and the chat bar.
 import { ITEMS, drawGrid, artGrid, ROOM_WINDOW } from './pixel.js';
 import { KittenView, esc, html } from './ui.js';
+import { sfx } from './audio.js';
 
 export const HOUSE = { w: 720, roof: 48, room: 600, kitten: 7, decor: 5 };
 const ROOM_ARROW = 40;   // screen px kept free on each side for the ◀ ▶ room arrows
@@ -58,6 +59,7 @@ export function decorEl({ id, css, kind }, { putAway = false } = {}) {
   wrap.style.cssText = css;
   if (kind === 'curtain') wrap.classList.add('curtain');
   else { wrap.classList.add('movable'); if (kind === 'flat') wrap.classList.add('flat'); }
+  if (it.playable) wrap.classList.add('playable');
   wrap.appendChild(c);
   if (putAway) { const pa = document.createElement('button'); pa.className = 'put-away'; pa.type = 'button'; pa.title = 'Put away'; pa.textContent = '📦'; wrap.appendChild(pa); }
   return wrap;
@@ -191,3 +193,40 @@ export function walker(dpad, { onStep, onStop, canWalk = () => true, isAlive }) 
   return { held };
 }
 export const DPAD = `<div class="dpad"><button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button></div>`;
+
+// furniture you can play (the piano): tap it for a random note — not while moving furniture
+export function wirePlayable(roomEl, onPlay) {
+  roomEl.addEventListener('click', (e) => {
+    const d = e.target.closest('.decor.playable');
+    if (!d || roomEl.classList.contains('arranging')) return;
+    const name = sfx.piano();
+    const n = document.createElement('div');
+    n.className = 'music-note'; n.textContent = `♪ ${name}`;
+    n.style.left = `${d.offsetLeft + d.offsetWidth * (0.25 + Math.random() * 0.5)}px`; n.style.top = `${d.offsetTop}px`;
+    roomEl.appendChild(n); setTimeout(() => n.remove(), 1400);
+    d.classList.remove('bounce'); void d.offsetWidth; d.classList.add('bounce');
+    if (onPlay) onPlay(name);
+  });
+}
+
+// ---------- chat history: who said what while you are in the house ----------
+export function chatLog(entries) {
+  const el = html`<div class="chat-log"></div>`;
+  const line = ({ who, text, mine, at }) => {
+    const t = new Date(at), hm = `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
+    return html`<div class="vl-line ${mine ? 'mine' : ''}"><b>${esc(who)}</b><span class="zh">${esc(String(text).slice(0, CHAT_MAX))}</span><small>${hm}</small></div>`;
+  };
+  const empty = () => { if (!entries.length) el.innerHTML = '<div class="vl-empty">💬 聊天记录会出现在这里 · Chat shows up here</div>'; };
+  entries.forEach((e) => el.appendChild(line(e))); empty();
+  setTimeout(() => { el.scrollTop = el.scrollHeight; }, 0);
+  return {
+    el,
+    add(who, text, mine) {
+      const e = { who, text, mine, at: Date.now() };
+      entries.push(e); while (entries.length > 100) entries.shift();
+      const ph = el.querySelector('.vl-empty'); if (ph) ph.remove();
+      el.appendChild(line(e)); while (el.children.length > 100) el.firstElementChild.remove();
+      el.scrollTop = el.scrollHeight;
+    },
+  };
+}

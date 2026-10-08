@@ -1169,9 +1169,10 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 }
 /* visit: chat history between the house and the chat bar */
 .visit-home { grid-template-rows: auto minmax(0, 1fr) auto auto; }
-.visit-log { margin: 4px 14px 0; max-height: 26vh; min-height: 84px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;
-  padding: 8px 10px; background: rgba(255,255,255,.9); border: 3px solid var(--ink); border-radius: 10px; }
-.visit-log .vl-empty { margin: auto; color: var(--ink-2); font-size: 14px; font-family: var(--zh); }
+.chat-log { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; background: rgba(255,255,255,.9); border: 3px solid var(--ink); border-radius: 10px; box-sizing: border-box; }
+.visit-log { margin: 4px 14px 0; display: flex; min-height: 0; }
+.visit-log .chat-log { flex: 1; max-height: 26vh; min-height: 84px; }
+.chat-log .vl-empty { margin: auto; color: var(--ink-2); font-size: 14px; font-family: var(--zh); }
 .vl-line { display: flex; align-items: baseline; gap: 8px; font-size: 15px; line-height: 1.35; }
 .vl-line b { flex: none; color: #c94f7c; font-family: var(--zh); }
 .vl-line.mine b { color: #2f8f5b; }
@@ -1181,5 +1182,24 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 @media (max-width: 900px) {
   .visit-home { grid-template-rows: auto auto minmax(0, 1fr) auto; }
   .visit-home .stage.in-house { height: auto; aspect-ratio: 780 / 690; max-height: 58vh; }
-  .visit-home .visit-log { max-height: none; min-height: 70px; }
+  .visit-home .visit-log .chat-log { max-height: none; min-height: 70px; }
 }
+
+/* home house: chat history between the house and the chat bar */
+.stage.in-house .house { bottom: 140px; }
+.house-log-wrap { position: absolute; left: 4%; right: 4%; bottom: 60px; height: 74px; z-index: 35; display: flex; }
+.house-log-wrap .chat-log { flex: 1; max-width: 560px; margin: 0 auto; padding: 4px 10px; }
+.house-log-wrap .vl-line { font-size: 14px; }
+@media (max-width: 600px) {
+  .home.house-view { grid-template-rows: 64% 36%; }
+  .stage.in-house .house { bottom: 124px; }
+  .house-log-wrap { left: 2%; right: 2%; bottom: 54px; height: 64px; }
+  .house-chat-wrap { left: 2%; right: 2%; bottom: 6px; }
+}
+/* the piano and other playable furniture */
+.house .decor.playable { pointer-events: auto; cursor: pointer; }
+.house .decor.bounce { animation: playbounce .25s steps(2); }
+@keyframes playbounce { 50% { transform: translateY(-3px); } }
+.music-note { position: absolute; z-index: 400; pointer-events: none; font-weight: 800; font-size: 26px; color: #6b3a2a; text-shadow: 0 2px 0 #fff;
+  animation: notefloat 1.4s ease-out forwards; }
+@keyframes notefloat { to { transform: translateY(-70px); opacity: 0; } }

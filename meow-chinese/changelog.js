@@ -69,4 +69,8 @@ export const CHANGES = [
   { v: 68, items: [
     'When visiting a friend, the chat history now shows under the house (it clears when you leave).',
   ] },
+  { v: 69, items: [
+    'Chat history now shows in your own house too (it clears when you leave the house).',
+    'New furniture: a 🎹 piano! Tap it to play a note.',
+  ] },
 ];
