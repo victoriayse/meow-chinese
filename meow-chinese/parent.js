@@ -196,9 +196,11 @@ function practiceView(rerender) {
   const n = html`<div class="stack">
       <div class="seg">${Object.entries(KINDS).map(([k, v]) => `<button type="button" data-k="${k}" class="${k === kind ? 'on' : ''}">${v.icon} ${v.zh} ${v.en}</button>`).join('')}</div>
       <p class="help" style="margin:0">${K.how} Sets work like spelling lists: each has a date (she sees it from that day), and you can hide, edit or delete it. Ready-made sets are included; you can edit them, hide them, or write your own. She earns 1 coin and XP for each question right first time (once a day per set).</p>
+      <div class="toggle"><span>🔤 显示拼音 Show Hanyu Pinyin above the words</span><button class="switch ${S.showPinyin(kind) ? 'on' : ''}" id="py"></button></div>
       <div class="row"><button class="btn green" id="new">＋ New set</button><button class="btn white" id="restore">↺ Restore ready-made sets</button></div>
       <div class="stack" id="rows"></div>
     </div>`;
+  $('#py', n).onclick = (e) => { const b = e.currentTarget, on = !b.classList.contains('on'); S.setPinyin(kind, on); b.classList.toggle('on', on); toast(on ? 'Pinyin on ✓' : 'Pinyin off ✓'); };
   n.querySelector('.seg').onclick = (e) => { const b = e.target.closest('[data-k]'); if (b) { practiceKind = b.dataset.k; rerender(); } };
   const rows = $('#rows', n);
   if (!sets.length) rows.innerHTML = '<p class="help">No sets yet.</p>';

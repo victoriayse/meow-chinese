@@ -206,7 +206,7 @@ export function practiceScreen({ go, kind, id }) {
     $('#check', ui).onclick = () => {
       if (bank.querySelector('.ord-chip')) { msg.innerHTML = '还有词语没用上哦！ Use all the words.'; sfx.miss(); return; }
       if (it.answers.includes(current())) {
-        line.classList.add('right'); msg.innerHTML = `✅ 对了！ <span class="zh">${esc(current())}</span>`;
+        line.classList.add('right'); msg.innerHTML = `✅ 对了！ <span class="zh">${esc(current())}</span>${S.showPinyin('order') ? `<br><small class="py">${esc(pinyinOf(current()))}</small>` : ''}`;
         chips().forEach((c) => { c.classList.add('locked'); });
         $('#check', ui).disabled = true; $('#reset', ui).disabled = true;
         good(next, speak(current()));
@@ -215,7 +215,7 @@ export function practiceScreen({ go, kind, id }) {
         const sh = $('#show', ui); if (sh) sh.onclick = () => {
           // put the words in the right order (no point for this one)
           it.chunks.forEach((w, k) => { const c = chips().find((x) => +x.dataset.k === k); line.appendChild(c); });
-          ph(); line.classList.add('right'); msg.innerHTML = `<span class="zh">${esc(it.answers[0])}</span>`;
+          ph(); line.classList.add('right'); msg.innerHTML = `<span class="zh">${esc(it.answers[0])}</span>${S.showPinyin('order') ? `<br><small class="py">${esc(pinyinOf(it.answers[0]))}</small>` : ''}`;
           tries = 9; sh.disabled = true; $('#check', ui).disabled = true;
           Promise.all([speak(it.answers[0]).catch(() => {}), wait(2000)]).then(() => wait(400)).then(() => { if (n.isConnected) next(); });
         };

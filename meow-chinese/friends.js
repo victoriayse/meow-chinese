@@ -72,9 +72,14 @@ const doingHTML = (f) => { const c = f.card || {}, d = DOING[c.doing] || DOING.o
 
 // ---------- things friends send me ----------
 let polling = false, onNews = () => {};
+// screens that want to know straight away when something arrives (e.g. the open phone)
+const inboxListeners = new Set();
+export const onInbox = (fn) => { inboxListeners.add(fn); return () => inboxListeners.delete(fn); };
+let pollAgain = false;
 export async function pollInbox() {
-  if (polling || !Auth.session() || !Auth.user() || managing()) return;   // her own letters and gifts wait until she's back on her account
-  polling = true;
+  if (polling) { pollAgain = true; return; }                                  // look again as soon as this one ends
+  if (!Auth.session() || !Auth.user() || managing()) return;   // her own letters and gifts wait until she's back on her account
+  polling = true; pollAgain = false;
   try {
     const me = Auth.user().id;
     const evs = await rest(`friend_events?select=*&to_user=eq.${me}&done=eq.false&order=id.asc&limit=50`);
@@ -87,9 +92,49 @@ export async function pollInbox() {
         if (out) got.push(out);
       }
       await rpc('mark_events_done', { p_ids: evs.map((e) => e.id) });
-      if (got.length) onNews(got);
+      if (got.length) { onNews(got); inboxListeners.forEach((fn) => { try { fn(got); } catch (x) { console.warn(x); } }); }
     }
-  } catch (e) { /* offline: try later */ } finally { polling = false; }
+  } catch (e) { /* offline: try later */ } finally { polling = false; if (pollAgain) setTimeout(pollInbox, 0); }
+}
+
+// ---------- live: the server tells this phone the moment a friend sends something ----------
+// (Supabase Realtime over a WebSocket; the 8-second check stays as a backup)
+let ws = null, wsUser = null, wsBeat = null, wsRef = 0, wsRetry = 0, wsTimer = null;
+const wsSend = (sock, topic, event, payload) => { if (sock && sock.readyState === 1) sock.send(JSON.stringify({ topic, event, payload, ref: String(++wsRef) })); };
+function stopLive() {
+  clearInterval(wsBeat); wsBeat = null; clearTimeout(wsTimer); wsTimer = null;
+  const old = ws; ws = null; wsUser = null;
+  if (old) { old.onclose = null; try { old.close(); } catch {} }
+}
+async function startLive() {
+  const u = Auth.user();
+  if (!u || !Auth.session() || managing() || document.hidden || typeof WebSocket === 'undefined') { stopLive(); return; }
+  if (ws && wsUser === u.id && ws.readyState <= 1) return;                   // already listening
+  stopLive();
+  const t = await Auth.token().catch(() => null); if (!t) return;
+  const topic = `realtime:inbox-${u.id}`;
+  const sock = new WebSocket(`${Auth.API.replace(/^http/, 'ws')}/realtime/v1/websocket?apikey=${encodeURIComponent(Auth.KEY)}&vsn=1.0.0`);
+  ws = sock; wsUser = u.id;
+  sock.onopen = () => {
+    wsSend(sock, topic, 'phx_join', { config: { broadcast: { self: false }, presence: { key: '' },
+      postgres_changes: [{ event: 'INSERT', schema: 'public', table: 'friend_events', filter: `to_user=eq.${u.id}` }] }, access_token: t });
+    clearInterval(wsBeat);
+    wsBeat = setInterval(async () => {
+      wsSend(sock, 'phoenix', 'heartbeat', {});
+      const nt = await Auth.token().catch(() => null); if (nt) wsSend(sock, topic, 'access_token', { access_token: nt });   // keep the login fresh
+    }, 25000);
+    pollInbox();                                                             // anything that came while we were away
+  };
+  sock.onmessage = (e) => {
+    let m; try { m = JSON.parse(e.data); } catch { return; }
+    if (m.event === 'postgres_changes') { wsRetry = 0; pollInbox(); }
+    else if (m.event === 'phx_reply' && m.payload && m.payload.status === 'ok') wsRetry = 0;
+  };
+  sock.onclose = () => {
+    if (ws !== sock) return;
+    clearInterval(wsBeat); wsBeat = null; ws = null; wsUser = null;
+    wsTimer = setTimeout(startLive, Math.min(60000, 2000 * 2 ** wsRetry++));   // try again, a bit slower each time
+  };
 }
 async function sendEvent(to, kind, payload) {
   const r = await rpc('send_friend_event', { p_to: to, p_kind: kind, p_payload: { ...payload, senderName: myName() } });
@@ -102,11 +147,12 @@ export function startFriends(newsCallback) {
   onNews = newsCallback || onNews;
   if (started) return; started = true;
   S.onChange(() => publishCard());
-  setInterval(() => { if (!document.hidden) pollInbox(); }, 8000);
+  setInterval(() => { if (!document.hidden) { pollInbox(); startLive(); } }, 8000);   // (startLive does nothing if already connected)
   setInterval(() => { if (!document.hidden) refreshFriends(); }, 30000);
   setInterval(() => { if (!document.hidden) publishCard(true); }, 40000);      // heartbeat
-  document.addEventListener('visibilitychange', () => { publishCard(true); if (!document.hidden) { pollInbox(); refreshFriends(); } });
-  setTimeout(() => { refreshFriends(); pollInbox(); publishCard(true); }, 1500);
+  document.addEventListener('visibilitychange', () => { publishCard(true); if (!document.hidden) { pollInbox(); refreshFriends(); startLive(); } else stopLive(); });
+  window.addEventListener('online', () => startLive());
+  setTimeout(() => { refreshFriends(); pollInbox(); publishCard(true); startLive(); }, 1500);
 }
 
 // ---------- shared bits ----------

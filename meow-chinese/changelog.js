@@ -29,4 +29,8 @@ export const CHANGES = [
   { v: 58, items: [
     'Buy something in the shop as a gift for a friend — tap 🎁 送朋友 under any item.',
   ] },
+  { v: 59, items: [
+    'Messages from friends now pop up straight away — no need to refresh.',
+    'Parents can turn on Hanyu Pinyin for the sentence builder (Parent area → Practice).',
+  ] },
 ];

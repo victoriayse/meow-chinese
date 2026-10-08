@@ -3,7 +3,7 @@ import * as S from './state.js';
 import { ITEMS, spriteCanvas } from './pixel.js';
 import { $, html, esc, toast, openModal, closeModal, confetti, coinI, hydrateIcons } from './ui.js';
 import { sfx, speak } from './audio.js';
-import { acceptedFriends, refreshFriends, sendLetter, errorText, LETTER_MAX, setActivity, isOnline, doingText, lastSeen, friendName } from './friends.js';
+import { acceptedFriends, refreshFriends, sendLetter, onInbox, errorText, LETTER_MAX, setActivity, isOnline, doingText, lastSeen, friendName } from './friends.js';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const when = (t) => new Date(t).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
@@ -82,6 +82,20 @@ export function openPhone({ start = 'home', after } = {}) {
   const clock = () => { const d = new Date(); $('#ph-time', n).textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
   clock();
   const tick = setInterval(() => { if (!n.isConnected) return clearInterval(tick); clock(); }, 1000);
+  // a friend's message arrives while the phone is open: show it straight away
+  const offInbox = onInbox((got) => {
+    if (!n.isConnected) return offInbox();
+    if (!got.some((x) => x.kind === 'letter')) return;
+    if (!pop.classList.contains('hidden')) return;                         // a question is open: don't pull it away
+    const [view, args] = history[history.length - 1] || [];
+    if (view === 'home' || view === 'mail') show(view);
+    else if (view === 'chat' && got.some((x) => x.kind === 'letter' && x.from === args[0])) {
+      const tx = body.querySelector('#tx'), draft = tx ? tx.value : '', typing = tx && document.activeElement === tx;
+      show('chat', args[0]);
+      const t2 = body.querySelector('#tx'); if (t2) { t2.value = draft; if (typing) t2.focus(); }
+      sfx.coin();
+    }
+  });
 
   function show(view, ...args) {
     closePop();
