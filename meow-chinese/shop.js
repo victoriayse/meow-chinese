@@ -1,7 +1,7 @@
 // 喵喵商店 storefront (spend coins) and the wardrobe (dress up / home).
 import * as S from './state.js';
 import { ITEMS, spriteCanvas, itemEffect, WEAR_SLOTS } from './pixel.js';
-import { $, html, esc, coinI, hydrateIcons, KittenView, toast, burst } from './ui.js';
+import { $, html, esc, coinI, hydrateIcons, KittenView, toast, burst, confirmBox } from './ui.js';
 import { sfx } from './audio.js';
 import * as Auth from './auth.js';
 import { managing } from './cloud.js';
@@ -35,24 +35,21 @@ export function shopScreen({ go, tab = 'food' }) {
   // try-on: one item per slot, so hair + clothes + shoes can all be tried together
   let tryOn = { ...S.get().kitten.equipped };
   const tryingSomething = () => Object.keys(tryOn).some((k) => tryOn[k] !== S.get().kitten.equipped[k]);
-  const n = html`<section class="screen"><div class="store">
-      <div class="storefront">
-        <div class="awning"></div>
-        <div class="signboard"><span class="zh">喵喵商店</span><small>MEOW MART</small></div>
-        <div class="front-row">
-          <div class="shopwindow">
-            <div class="window-label">试衣间 · Fitting room</div>
-            <div class="stage-mini" id="mini"><div class="fx-layer" id="fx"></div></div>
-            <button class="btn white small reset-try hidden" id="reset">↺ <span class="zh">换回</span> Reset</button>
-          </div>
-          <div class="counter">
-            <div class="wallet">${coinI(26)}<span id="wallet">${S.get().coins}</span><small>你的金币 Your coins</small></div>
-            <p class="help" id="pv-note">点衣服、鞋子、头饰可以一起试穿！<br>Tap clothes, shoes and hair things to try them on together.</p>
-            <button class="btn white block" id="home">← <span class="zh">回家</span> Home</button>
+  // the top (kitten + coins + aisles) stays pinned while the shelves scroll, so try-ons are always in view
+  const n = html`<section class="screen"><div class="store compact">
+      <div class="store-top">
+        <div class="storefront">
+          <div class="awning"></div>
+          <div class="front-row">
+            <div class="shopwindow">
+              <div class="stage-mini" id="mini"><div class="fx-layer" id="fx"></div></div>
+            </div>
+            <div class="counter"><div class="wallet">${coinI(26)}<span id="wallet">${S.get().coins}</span></div>
+              <button class="btn white small reset-try hidden" id="reset">↺ <span class="zh">换回</span> Reset</button></div>
           </div>
         </div>
+        <div class="aisles" id="tabs"></div>
       </div>
-      <div class="aisles" id="tabs"></div>
       <div class="shelves" id="list"></div>
     </div></section>`;
   const mini = $('#mini', n);
@@ -111,7 +108,7 @@ export function shopScreen({ go, tab = 'food' }) {
         </div>`;
       $('.art', card).appendChild(spriteCanvas(id, it.cat === 'decor' ? 76 : 60));
       card.addEventListener('click', (e) => {
-        if (e.target.closest('[data-buy]')) return buy(id);
+        if (e.target.closest('[data-buy]')) return askBuy(id);
         if (e.target.closest('[data-gift]')) return import('./friends.js').then((F) => F.giftFromShop(id, render));
         if (it.cat === 'wear') {
           const eq = S.get().kitten.equipped;
@@ -122,6 +119,17 @@ export function shopScreen({ go, tab = 'food' }) {
       list.appendChild(card);
     });
     hydrateIcons(n);
+  }
+  // always ask first, so nothing is bought by a stray tap
+  async function askBuy(id) {
+    const it = ITEMS[id], cost = S.price(id), left = S.get().coins - cost;
+    sfx.click();
+    const asking = confirmBox(`买${esc(it.name)}吗？ Buy ${esc(it.en)}?`,
+      `<span class="buy-ask"><span class="art"></span><span><span class="nowrap">${coinI(18)} <b>${cost}</b> 金币 coins</span><br><small>买了以后还剩 ${left} · You'll have ${left} left</small></span></span>`,
+      '🛒 买 Buy', '取消 Cancel');
+    const art = document.querySelector('#modal .buy-ask .art'); if (art) art.appendChild(spriteCanvas(id, 56));
+    hydrateIcons(document.querySelector('#modal'));
+    if (await asking) buy(id);
   }
   function buy(id) {
     const it = ITEMS[id];
@@ -146,7 +154,6 @@ export function shopScreen({ go, tab = 'food' }) {
   }
   $('#tabs', n).onclick = (e) => { const t = e.target.closest('[data-tab]'); if (t) { tab = t.dataset.tab; render(); } };
   $('#reset', n).onclick = () => { tryOn = { ...S.get().kitten.equipped }; drawKitten(); render(); };
-  $('#home', n).onclick = () => go('home');
   n._mounted = () => { drawKitten(); render(); };
   n._refresh = () => { const y = window.scrollY; render(); window.scrollTo(0, y); };   // new data arrived: redraw in place, same aisle
   return n;

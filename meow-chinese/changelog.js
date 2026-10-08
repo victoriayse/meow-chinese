@@ -73,4 +73,8 @@ export const CHANGES = [
     'Chat history now shows in your own house too (it clears when you leave the house).',
     'New furniture: a 🎹 piano! Tap it to play a note.',
   ] },
+  { v: 70, items: [
+    'Smaller shop top: just your kitten and your coins, and it stays put while you scroll — easy to try on clothes.',
+    'The shop now asks "Buy this?" before spending coins.',
+  ] },
 ];
