@@ -55,11 +55,6 @@ export const CHANGES = [
     'At home, tap 🪑 Move furniture, then 📦 Storage to place a piece in the room you are in.',
     'While moving furniture, tap the 📦 on any piece to put it back in storage.',
   ] },
-  { v: 64, items: [
-    'New furniture now goes into your 📦 storage box instead of straight into a room.',
-    'At home, tap 🪑 Move furniture, then 📦 Storage to place a piece in the room you are in.',
-    'While moving furniture, tap the 📦 on any piece to put it back in storage.',
-  ] },
   { v: 65, items: [
     'Visit your friends! Open a friend and tap 🏠 Visit their house — walk around together, live.',
     'Chat with speech bubbles: type at the bottom of the house and your kitten says it.',
