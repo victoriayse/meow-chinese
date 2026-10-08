@@ -40,4 +40,10 @@ export const CHANGES = [
     'Your home now looks the same on phone and computer — furniture stays in the same place.',
     'Fixed: holding an arrow button no longer makes your kitten jump back.',
   ] },
+  { v: 62, items: [
+    'Your house has more rooms! Tap the ◀ ▶ arrows beside the house to walk between them.',
+    'Bedroom (right) opens at Lv35, kitchen (left) at Lv45.',
+    '12 new pieces of furniture: bed, wardrobe, bedside table, dresser, star night light, teddy bear, fridge, stove, sink, spice shelf, dining table and kitty bowl.',
+    'In 🎒 My items → Home, tap 📍 to move furniture to another room.',
+  ] },
 ];

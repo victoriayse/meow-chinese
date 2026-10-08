@@ -53,6 +53,7 @@ function fresh() {
     owned: [],
     decorHidden: [],
     decorPos: {},
+    decorRoom: {},     // furniture id -> 'living' | 'bedroom' | 'kitchen' (when moved from its usual room)
     letters: [],       // letters from friends: { id, from, fromName, text, at, read }
     gifts: [],         // gifts from friends: { id, from, fromName, item, message, at, opened }
     friendNews: [],    // e.g. a friend fed her kitten: { id, fromName, item, at, seen }
@@ -459,6 +460,22 @@ export function toggleWear(id) {
   eq[it.slot] = eq[it.slot] === id ? null : id;
   save();
 }
+// the rooms of the house, left to right; the living room is the middle one
+export const ROOMS = [
+  { key: 'kitchen', zh: '厨房', en: 'Kitchen', icon: '🍳', lock: 'kitchen' },
+  { key: 'living', zh: '客厅', en: 'Living room', icon: '🛋️' },
+  { key: 'bedroom', zh: '卧室', en: 'Bedroom', icon: '🛏️', lock: 'bedroom' },
+];
+export const roomInfo = (key) => ROOMS.find((r) => r.key === key) || ROOMS[1];
+export const roomOpen = (key) => { const r = roomInfo(key); return !r.lock || unlocked(r.lock); };
+// which room a piece of furniture stands in (she can move it to another open room)
+export const roomOf = (id) => (state.decorRoom || {})[id] || (ITEMS[id] && ITEMS[id].room) || 'living';
+export function setDecorRoom(id, room) {
+  state.decorRoom = state.decorRoom || {};
+  state.decorRoom[id] = room;
+  delete state.decorPos[id];                // start in its usual spot in the new room
+  save();
+}
 export function toggleDecor(id) {
   const h = state.decorHidden;
   const i = h.indexOf(id);
@@ -577,8 +594,8 @@ export function finishPlay(first, total) {
 }
 
 // ---------- level unlocks ----------
-export const UNLOCKS = { head: 5, feet: 10, acc: 15, body: 20, decor: 25 };
-export const UNLOCK_NAMES = { head: '头饰 Hair accessories', feet: '鞋子 Shoes', acc: '配饰 Extras', body: '衣服 Clothes', decor: '我的家 Home & furniture' };
+export const UNLOCKS = { head: 5, feet: 10, acc: 15, body: 20, decor: 25, bedroom: 35, kitchen: 45 };
+export const UNLOCK_NAMES = { head: '头饰 Hair accessories', feet: '鞋子 Shoes', acc: '配饰 Extras', body: '衣服 Clothes', decor: '我的家 Home & furniture', bedroom: '卧室 Bedroom (right room)', kitchen: '厨房 Kitchen (left room)' };
 export const unlocked = (key) => !(key in UNLOCKS) || !!state.settings.unlockAll || level() >= UNLOCKS[key];
 export function nextUnlock() {
   const lv = level();

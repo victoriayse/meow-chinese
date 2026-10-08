@@ -8,6 +8,7 @@ import { managing } from './cloud.js';
 
 // things she can buy for a friend (not medicine); needs her own logged-in account
 const giftable = (it) => ['food', 'toiletry', 'wear', 'decor'].includes(it.cat) && !it.special && Auth.session() && !managing();
+const openRooms = () => S.ROOMS.filter((r) => S.roomOpen(r.key)).map((r) => r.key);
 const isWear = (slots) => (it) => it.cat === 'wear' && !it.special && slots.includes(it.slot);
 export const TABS = [
   { key: 'food', zh: '食物', en: 'Food', icon: '🐟', test: (it) => it.cat === 'food' },
@@ -91,11 +92,13 @@ export function shopScreen({ go, tab = 'food' }) {
       const full = special && have >= S.MAX_FREEZES;
       const pharm = it.cat === 'pharmacy';
       const needed = !pharm || S.health() === it.cures;
-      const can = s.coins >= cost && !full && needed;
+      const roomShut = it.cat === 'decor' && it.room && !S.roomOpen(it.room);
+      const can = s.coins >= cost && !full && needed && !roomShut;
       const eff = it.cat === 'food' || it.cat === 'toiletry' ? itemEffect(it) : it.toy ? '可以一起玩 Toy'
         : special ? `漏了一天也不会断连胜 · Keeps your streak if you miss a day${full ? ` (max ${S.MAX_FREEZES})` : ''}`
         : pharm ? (needed ? `治好${it.cures === 'cough' ? '咳嗽' : '头晕'}！Cures ${it.cures === 'cough' ? 'a cough' : 'dizziness'}` : `小猫${it.cures === 'cough' ? '咳嗽' : '头晕'}时才需要 · Only when your kitten ${it.cures === 'cough' ? 'coughs' : 'is dizzy'}`)
-        : it.cat === 'wear' ? `${SLOT_NAME[it.slot] || ''}` : '';
+        : it.cat === 'wear' ? `${SLOT_NAME[it.slot] || ''}`
+        : it.cat === 'decor' ? `${S.roomInfo(it.room || 'living').icon} ${S.roomInfo(it.room || 'living').zh} ${S.roomInfo(it.room || 'living').en}${roomShut ? ` · 🔒 Lv${S.UNLOCKS[it.room]}` : ''}` : '';
       const trying = it.cat === 'wear' && tryOn[it.slot] === id && S.get().kitten.equipped[it.slot] !== id;
       const card = html`<div class="product ${trying ? 'sel' : ''} ${owned ? 'is-owned' : ''}">
           ${owned ? '<span class="owned">已有 Owned</span>' : have ? `<span class="count">×${have}</span>` : ''}
@@ -220,8 +223,17 @@ export function wardrobeScreen({ go, tab }) {
           <div class="nm">${it.name}</div><div class="nm-en">${it.en}</div>
           ${eff ? `<div class="eff">${eff}</div>` : ''}
           <span class="tag ${on ? 'done' : ''}">${action}</span>
+          ${def.key === 'decor' && openRooms().length > 1 ? `<span class="room-pick" role="button" tabindex="0" title="Which room it goes in">📍 ${S.roomInfo(S.roomOf(id)).icon} <span class="zh">${S.roomInfo(S.roomOf(id)).zh}</span> ⇄</span>` : ''}
         </button>`;
       $('.art', card).appendChild(spriteCanvas(id, it.cat === 'decor' ? 76 : 60));
+      const rp = $('.room-pick', card);
+      if (rp) rp.onclick = (e) => {      // move it to the next open room
+        e.stopPropagation();
+        const rooms = openRooms(), i = rooms.indexOf(S.roomOf(id)), to = rooms[(i + 1) % rooms.length];
+        S.setDecorRoom(id, to); sfx.click();
+        toast(`${it.name} → ${S.roomInfo(to).icon} <span class="zh">${S.roomInfo(to).zh}</span> ${S.roomInfo(to).en}`);
+        render();
+      };
       card.onclick = () => {
         sfx.click();
         // eating, bathing and playing happen at home, so she can watch her kitten

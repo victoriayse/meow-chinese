@@ -285,6 +285,7 @@ function fitHouse(n) {
   const k = Math.min(box.clientWidth / HOUSE.w, box.clientHeight / (HOUSE.roof + HOUSE.room)) || 1;
   houseK = k;
   unit.style.setProperty('--k', k); unit.style.setProperty('--inv', 1 / k);
+  box.style.setProperty('--gap', `${Math.max(0, (box.clientWidth - HOUSE.w * k) / 2)}px`);   // the arrows hug the house's sides
 }
 // while she walks the kitten (or drags furniture), redraws of the home page wait until she lets go
 let homeBusy = false, homeRedrawLater = false;
@@ -443,6 +444,15 @@ function homeScreen(params = {}) {
   S.essayNotifications();
   S.purgeOldMessages();
   const inHouse = params.view === 'house' && S.unlocked('decor');
+  const roomKey = inHouse && S.roomOpen(params.room) ? S.roomInfo(params.room).key : 'living';
+  const roomIdx = S.ROOMS.findIndex((r) => r.key === roomKey);
+  const sideRoom = (d) => S.ROOMS[roomIdx + d] || null;
+  const roomArrow = (d) => {
+    const r = sideRoom(d); if (!r) return '';
+    const open = S.roomOpen(r.key), lv = r.lock ? S.UNLOCKS[r.lock] : 0;
+    return `<button class="room-nav ${d < 0 ? 'left' : 'right'} ${open ? '' : 'locked'}" data-room="${r.key}" aria-label="${r.en}">
+      <span class="ar">${d < 0 ? '◀' : '▶'}</span><span class="ic">${open ? r.icon : '🔒'}</span><small>${open ? r.zh : `Lv${lv}`}</small></button>`;
+  };
   if (S.health() === 'dead') return graveScreen();
   if (S.get().needsSetup) return setupScreen();
   S.maybeBored();
@@ -467,15 +477,17 @@ function homeScreen(params = {}) {
     <div class="stage ${inHouse ? 'in-house' : ''}" id="stage">
       ${inHouse ? `<div class="house" id="house"><div class="house-unit" id="hunit">
         <canvas class="roof" id="roof"></canvas>
-        <div class="room" id="room">
+        <div class="room-name">${S.roomInfo(roomKey).icon} <span class="zh">${S.roomInfo(roomKey).zh}</span> ${S.roomInfo(roomKey).en}</div>
+        <div class="room" id="room" data-room="${roomKey}">
           <canvas class="room-bg" id="roombg"></canvas>
+
           <div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>
           <button class="arrange-btn" id="b-arrange"><span class="zh">🪑 摆家具</span> Move furniture</button>
           <div class="dpad" id="dpad">
             <button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button>
           </div>
         </div>
-      </div></div>` : `<div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>`}
+      </div>${roomArrow(-1)}${roomArrow(1)}</div>` : `<div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>`}
     </div>
     <div class="side">
       <div id="alert"></div>
@@ -571,7 +583,7 @@ function homeScreen(params = {}) {
   if (room) {
   const dscale = HOUSE.decor;
   s.decorPos = s.decorPos || {};
-  s.owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && !s.decorHidden.includes(id)).forEach((id) => {
+  s.owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && !s.decorHidden.includes(id) && S.roomOf(id) === roomKey).forEach((id) => {
     const it = ITEMS[id];
     const c = document.createElement('canvas');
     drawGrid(c, artGrid(it.art, it.pal), dscale);
@@ -614,7 +626,7 @@ function homeScreen(params = {}) {
 
   // ----- the kitten walks around the house (arrow keys or the on-screen arrows) -----
   const ground = $('#ground', n);
-  let cat = { x: 50, y: (s.owned.includes('rug') && !s.decorHidden.includes('rug')) ? 4 : 3, ...(s.catPos || {}) };
+  let cat = { x: 50, y: (s.owned.includes('rug') && !s.decorHidden.includes('rug') && S.roomOf('rug') === roomKey) ? 4 : 3, ...(s.catPos || {}) };
   const placeCat = () => {
     if (!room) return;
     const halfW = room.clientWidth ? (kflip.offsetWidth / 2 / room.clientWidth) * 100 : 10;
@@ -669,6 +681,16 @@ function homeScreen(params = {}) {
       b.addEventListener('pointercancel', (e) => { if (e.pointerType !== 'touch') up(); });
       b.addEventListener('lostpointercapture', (e) => { if (e.pointerType !== 'touch') up(); });
       b.addEventListener('contextmenu', (e) => e.preventDefault());
+    });
+
+    // ----- next room: the arrows beside the house -----
+    n.querySelectorAll('.room-nav').forEach((b) => {
+      b.onclick = () => {
+        const r = S.roomInfo(b.dataset.room);
+        if (!S.roomOpen(r.key)) { sfx.miss(); return toast(`🔒 <span class="zh">${r.zh}要到 Lv${S.UNLOCKS[r.lock]} 才解锁</span> The ${r.en.toLowerCase()} opens at level ${S.UNLOCKS[r.lock]}`, { ms: 3000 }); }
+        sfx.click();
+        go('home', { ...currentParams, view: 'house', room: r.key }, { replace: true });
+      };
     });
 
     // ----- move furniture: tap the button, then drag things around -----
@@ -771,7 +793,7 @@ function homeScreen(params = {}) {
     const refit = () => { if (!n.isConnected) return window.removeEventListener('resize', refit); fitHouse(n); };
     window.addEventListener('resize', refit);
   }
-  n._mounted = () => { if (inHouse) { fitHouse(n); drawRoom($('#roombg', n), isNight()); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
+  n._mounted = () => { if (inHouse) { fitHouse(n); drawRoom($('#roombg', n), isNight(), roomKey); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
   return n;
 }
 
