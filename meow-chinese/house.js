@@ -143,6 +143,7 @@ export class OtherCats {
     c.el.style.left = `${c.dx}%`; c.el.style.bottom = `${c.dy}%`;
     c.el.style.zIndex = spot ? spot.z : 2 + Math.round(100 - c.dy);
     c.el.classList.toggle('lying', !!(spot && spot.lie)); c.el.classList.toggle('seated', !!spot);
+    if (c.kv) c.kv.setPose(spot && spot.lie ? 'lie' : null);
     if (c.bedShown && c.bedShown !== (spot && spot.lie && c.seat)) { blanket(this.roomEl, c.bedShown, false); c.bedShown = null; }
     if (spot && spot.lie) { blanket(this.roomEl, c.seat, true); c.bedShown = c.seat; }
   }

@@ -1283,7 +1283,8 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .house .decor.seat { pointer-events: auto; cursor: pointer; }
 .room.arranging .decor.seat { cursor: grab; }
 .blanket { position: absolute; pointer-events: none; image-rendering: pixelated; }
-.lying .kflip { transform: rotate(-90deg) translateX(-24%) scale(.85); transform-origin: 50% 70%; }
+.lying .kflip { transform: scale(.62); transform-origin: 50% 100%; }
+.lying .kitten-canvas { animation: none !important; }
 .lying .nametag { display: none; }
 /* ---------- cat-face emoji buttons ---------- */
 .cat-face { image-rendering: pixelated; display: block; }

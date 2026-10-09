@@ -1,5 +1,5 @@
 // Small UI helpers shared by all screens.
-import { kittenGrid, drawGrid, artGrid, COIN, HEART, FISHBONE } from './pixel.js';
+import { kittenGrid, kittenLyingGrid, drawGrid, artGrid, COIN, HEART, FISHBONE } from './pixel.js';
 import { get } from './state.js';
 import { sfx } from './audio.js';
 
@@ -47,6 +47,7 @@ export class KittenView {
   get fur() { return this.furOverride || get().kitten.fur; }
   get equipped() { return this.equippedOverride || get().kitten.equipped; }
   setMood(m) { this.mood = m; this.draw(); }
+  setPose(p) { if (this.pose !== p) { this.pose = p; this.draw(); } }
   // face left or right (the picture is mirrored, but fur patches stay where they are)
   setFacing(left) { if (this.left !== !!left) { this.left = !!left; this.draw(); } }
   flash(m, ms = 1200) { this.temp = m; this.draw(); clearTimeout(this.tt); this.tt = setTimeout(() => { this.temp = null; this.draw(); }, ms); }
@@ -61,6 +62,11 @@ export class KittenView {
     // parent setting "always smiling": her own kitten keeps a happy face (a fainted kitten still lies down)
     const s = get();
     if (!this.furOverride && s && s.settings && s.settings.alwaysSmile && !['faint', 'love', 'happy'].includes(m) && !String(m).startsWith('e-')) m = 'happy';
+    if (this.pose === 'lie') {   // lying in bed: eyes closed unless she's making a face
+      const lm = this.temp || (['happy', 'love'].includes(this.mood) ? this.mood : 'sleepy');
+      drawGrid(this.canvas, kittenLyingGrid(this.fur, lm, this.equipped, Math.floor(this.frame / 3)), this.scale);
+      return;
+    }
     let g = kittenGrid(this.fur, m, this.equipped, Math.floor(this.frame / 3), !!this.left);
     if (this.left) g = g.map((row) => [...row].reverse());
     drawGrid(this.canvas, g, this.scale);

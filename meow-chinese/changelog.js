@@ -91,4 +91,7 @@ export const CHANGES = [
     'The face button now shows your own kitten, with 6 kitten faces to pick.',
     'Tap the sofa, a dining chair or the piano bench to sit — or the bed to lie down! Use the arrows to get up.',
   ] },
+  { v: 73, items: [
+    'Your kitten now lies down properly in bed — head on the pillow, tucked under the blanket, tail curled out.',
+  ] },
 ];

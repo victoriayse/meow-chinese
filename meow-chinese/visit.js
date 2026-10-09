@@ -208,6 +208,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
   function place() {
     const room = $('#room', box), spot = mine.seat && seatSpot(room, mine.seat);
     myEl.classList.toggle('lying', !!(spot && spot.lie)); myEl.classList.toggle('seated', !!spot);
+    if (myKv) myKv.setPose(spot && spot.lie ? 'lie' : null);
     if (room) room.querySelectorAll('.decor.seat').forEach((d) => { if (!others.ids().some((id) => (others.m.get(id) || {}).seat === d.dataset.id)) blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === mine.seat)); });
     if (spot) { mine.x = spot.x; mine.y = spot.y; myEl.style.left = `${spot.x}%`; myEl.style.bottom = `${spot.y}%`; myEl.style.zIndex = spot.z; return; }
     Object.assign(mine, clampPos(mine));

@@ -28,7 +28,7 @@ function inTri(px, py, a, b, c) {
 
 // ---------- kitten ----------
 // mood: 'normal' | 'happy' | 'sleepy' | 'blink' | 'eat'
-export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame = 0, mirrorPatch = false) {
+export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame = 0, mirrorPatch = false, headOnly = false) {
   const P = FURS[fur] || FURS.ginger;
   const g = grid(KW, KH), region = grid(KW, KH);
   const set = (x, y, c, r) => { if (x >= 0 && y >= 0 && x < KW && y < KH) { g[y][x] = c; if (r) region[y][x] = r; } };
@@ -37,18 +37,20 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
   const tailSway = frame % 2 === 0 ? 0 : 1;
 
   // tail (behind body)
-  for (let t = 0; t <= 1; t += 0.02) {
+  if (!headOnly) for (let t = 0; t <= 1; t += 0.02) {
     const x0 = 22, y0 = Y(28), cx = 30 + tailSway, cy = Y(26), x1 = 27 + tailSway, y1 = Y(17);
     const bx = (1 - t) ** 2 * x0 + 2 * (1 - t) * t * cx + t * t * x1;
     const by = (1 - t) ** 2 * y0 + 2 * (1 - t) * t * cy + t * t * y1;
     fillShape((x, y) => inEllipse(x, y, bx, by, 1.7, 1.7), t > 0.82 ? P.s : P.f, 'tail');
   }
   // body
-  fillShape((x, y) => inEllipse(x, y, 16, Y(24.5), 7.6, 6.6), P.f, 'body');
-  fillShape((x, y) => inEllipse(x, y, 16, Y(25.5), 4.2, 4.6), P.w, 'body');
-  // paws
-  fillShape((x, y) => inEllipse(x, y, 12.2, Y(30.2), 2.6, 1.7), P.w, 'paw');
-  fillShape((x, y) => inEllipse(x, y, 19.8, Y(30.2), 2.6, 1.7), P.w, 'paw');
+  if (!headOnly) {
+    fillShape((x, y) => inEllipse(x, y, 16, Y(24.5), 7.6, 6.6), P.f, 'body');
+    fillShape((x, y) => inEllipse(x, y, 16, Y(25.5), 4.2, 4.6), P.w, 'body');
+    // paws
+    fillShape((x, y) => inEllipse(x, y, 12.2, Y(30.2), 2.6, 1.7), P.w, 'paw');
+    fillShape((x, y) => inEllipse(x, y, 19.8, Y(30.2), 2.6, 1.7), P.w, 'paw');
+  }
   // ears
   const earL = [[5, Y(10)], [7.5, Y(0.5)], [14, Y(5)]], earR = [[27, Y(10)], [24.5, Y(0.5)], [18, Y(5)]];
   fillShape((x, y) => inTri(x, y, ...earL), P.f, 'head');
@@ -1746,6 +1748,42 @@ Object.assign(ITEMS, {
     ] },
 });
 
+// ---------- a kitten lying down (in bed): head resting on the left, body stretched out, tail curled ----------
+export function kittenLyingGrid(fur = 'ginger', mood = 'sleepy', equipped = {}, frame = 0) {
+  const P = FURS[fur] || FURS.ginger;
+  const LW = 54, LH = 30;
+  const g = Array.from({ length: LH }, () => Array(LW).fill(null)), part = Array.from({ length: LH }, () => Array(LW).fill(null));
+  const fill = (test, c, r) => { for (let y = 0; y < LH; y++) for (let x = 0; x < LW; x++) if (test(x, y)) { g[y][x] = c; part[y][x] = r; } };
+  const sway = frame % 2;
+  // tail curling up at the far end
+  for (let t = 0; t <= 1; t += 0.02) {
+    const bx = (1 - t) ** 2 * 46 + 2 * (1 - t) * t * (53 - sway) + t * t * (49 + sway), by = (1 - t) ** 2 * 24 + 2 * (1 - t) * t * 22 + t * t * 12;
+    fill((x, y) => (x + 0.5 - bx) ** 2 + (y + 0.5 - by) ** 2 <= 2.6, t > 0.8 ? P.s : P.f, 'tail');
+  }
+  // long body, lighter tummy, back paw, front paws tucked under the chin
+  fill((x, y) => ((x + 0.5 - 34) / 15) ** 2 + ((y + 0.5 - 21.5) / 6.2) ** 2 <= 1, P.f, 'body');
+  fill((x, y) => ((x + 0.5 - 33) / 11) ** 2 + ((y + 0.5 - 25) / 2.6) ** 2 <= 1, P.w, 'body');
+  if (P.patch) fill((x, y) => part[y][x] === 'body' && ((x + 0.5 - 38) / 5) ** 2 + ((y + 0.5 - 18) / 3) ** 2 <= 1, P.patch, 'body');
+  else [[30, 16], [34, 16], [38, 16], [42, 17]].forEach(([x, y]) => { for (let k = 0; k < 3; k++) if (g[y + k] && part[y + k][x] === 'body') g[y + k][x] = P.s; });
+  fill((x, y) => ((x + 0.5 - 45) / 3.2) ** 2 + ((y + 0.5 - 26.5) / 1.8) ** 2 <= 1, P.w, 'paw');
+  fill((x, y) => ((x + 0.5 - 21) / 3.4) ** 2 + ((y + 0.5 - 27) / 1.8) ** 2 <= 1, P.w, 'paw');
+  // outline round the body
+  const out = g.map((r) => r.slice());
+  for (let y = 0; y < LH; y++) for (let x = 0; x < LW; x++) {
+    if (g[y][x]) continue;
+    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => g[y + dy] && g[y + dy][x + dx])) out[y][x] = P.o;
+  }
+  // the head (same face and hat as when she sits), resting on the left
+  const head = kittenGrid(fur, mood, { ...equipped, body: null, feet: null }, frame, false, true);
+  const top = 0, rows = 28;
+  for (let y = 0; y < Math.min(rows, head.length); y++) for (let x = 0; x < 32; x++) {
+    const c = head[y][x]; if (!c) continue;
+    const ty = y + top - 2, tx = x;
+    if (ty >= 0 && ty < LH && tx < LW) out[ty][tx] = c;
+  }
+  return out;
+}
+
 // ---------- renovations: wallpapers and floors (drawn by pattern, x/y in room pixels) ----------
 const WALLPAT = {
   mint: (x, y) => (x % 8 < 4 ? '#cdeedd' : '#e3f6ec'),
@@ -1803,7 +1841,7 @@ Object.assign(ITEMS, {
 ITEMS.sofa.seat = { x: 0.5, y: 0.78 };
 if (ITEMS.diningtable) ITEMS.diningtable.seat = { x: 0.13, y: 0.66 };
 if (ITEMS.pianobench) ITEMS.pianobench.seat = { x: 0.5, y: 0.45 };
-if (ITEMS.bed) ITEMS.bed.seat = { x: 0.5, y: 0.62, lie: true, blanket: [6, 14, 13, 32] };   // blanket rows 6-13, columns 13-31
+if (ITEMS.bed) ITEMS.bed.seat = { x: 0.52, y: 0.63, lie: true, blanket: [6, 14, 16, 32] };   // blanket rows 6-13, columns 13-31
 
 // furniture you can switch on and off at home
 ITEMS.tv.power = 'tv';

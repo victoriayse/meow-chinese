@@ -592,6 +592,7 @@ function homeScreen(params = {}) {
     // sitting on the sofa / a chair, or lying in bed
     const st = seatNow(), spot = st && seatSpot(room, st.id);
     ground.classList.toggle('lying', !!(spot && spot.lie)); ground.classList.toggle('seated', !!spot);
+    kv.setPose(spot && spot.lie ? 'lie' : null);
     room.querySelectorAll('.decor.seat').forEach((d) => blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === st.id)));
     if (spot) {
       cat.x = spot.x; cat.y = spot.y;
@@ -616,7 +617,7 @@ function homeScreen(params = {}) {
     if (!seatNow()) return;
     S.get().catSeat = null;
     cat.y = Math.min(cat.y, 28);
-    ground.classList.remove('lying', 'seated');
+    ground.classList.remove('lying', 'seated'); kv.setPose(null);
     room.querySelectorAll('.blanket').forEach((b) => b.remove());
   };
   const held = new Set();
