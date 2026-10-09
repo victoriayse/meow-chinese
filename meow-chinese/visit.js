@@ -12,7 +12,7 @@ import { Channel } from './rt.js';
 import { drawRoom, drawRoof } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons } from './ui.js';
 import { sfx } from './audio.js';
-import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket } from './house.js';
+import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot } from './house.js';
 
 const isNight = () => { const h = new Date().getHours(); return h >= 18 || h < 5; };
 export function myLook() {
@@ -151,7 +151,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     isAlive: () => n.isConnected,
     canWalk: () => !!(myEl && myEl.isConnected),
     onStep: (dx, dy, dt) => {
-      if (mine.seat) { mine.seat = null; mine.y = Math.min(mine.y, 28); }   // the arrows make her hop off
+      if (mine.seat) { mine.seat = null; mine.slot = 0; mine.y = Math.min(mine.y, 28); }   // the arrows make her hop off
       mine.x += dx * 32 * dt; mine.y += dy * 22 * dt;
       if (dx) { mine.left = dx < 0; myKv.setFacing(mine.left); }
       myKv.canvas.classList.add('walking');
@@ -187,7 +187,11 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     wirePlayable(room);
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.seat'); if (!d) return;
-      mine.seat = d.dataset.id; place(); myKv.jump(); sfx.click(); sendMine();
+      if (mine.seat === d.dataset.id) return;
+      const taken = others.ids().map((id) => others.m.get(id)).filter((c) => c && c.room === roomKey);
+      const slot = freeSlot(d.dataset.id, taken);
+      if (slot < 0) { sfx.miss(); return toast('<span class="zh">坐满了！</span> No room — someone is already there'); }
+      mine.seat = d.dataset.id; mine.slot = slot; place(); myKv.jump(); sfx.click(); sendMine();
     });
     // my kitten
     myEl = html`<div class="vcat me"><div class="kitten-wrap"><div class="kflip"></div><div class="nametag">${esc(S.get().kitten.name)}<span class="lv">Lv${S.level()}</span></div></div></div>`;
@@ -206,9 +210,9 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     hydrateIcons(box);
   }
   function place() {
-    const room = $('#room', box), spot = mine.seat && seatSpot(room, mine.seat);
+    const room = $('#room', box), spot = mine.seat && seatSpot(room, mine.seat, mine.slot);
     myEl.classList.toggle('lying', !!(spot && spot.lie)); myEl.classList.toggle('seated', !!spot);
-    if (myKv) myKv.setPose(spot && spot.lie ? 'lie' : null);
+    if (myKv) myKv.setPose(spot ? spot.pose : null);
     if (room) room.querySelectorAll('.decor.seat').forEach((d) => { if (!others.ids().some((id) => (others.m.get(id) || {}).seat === d.dataset.id)) blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === mine.seat)); });
     if (spot) { mine.x = spot.x; mine.y = spot.y; myEl.style.left = `${spot.x}%`; myEl.style.bottom = `${spot.y}%`; myEl.style.zIndex = spot.z; return; }
     Object.assign(mine, clampPos(mine));

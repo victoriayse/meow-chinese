@@ -35,18 +35,21 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
   const fillShape = (test, c, r) => { for (let y = 0; y < KH; y++) for (let x = 0; x < KW; x++) if (test(x, y)) set(x, y, c, r); };
   const Y = (v) => v + OY;
   const tailSway = frame % 2 === 0 ? 0 : 1;
+  const back = mood === 'back';   // seen from behind (sitting at the piano)
 
-  // tail (behind body)
-  if (!headOnly) for (let t = 0; t <= 1; t += 0.02) {
+  // tail (behind body; in front of it when we see her from behind)
+  const drawTail = () => { for (let t = 0; t <= 1; t += 0.02) {
     const x0 = 22, y0 = Y(28), cx = 30 + tailSway, cy = Y(26), x1 = 27 + tailSway, y1 = Y(17);
     const bx = (1 - t) ** 2 * x0 + 2 * (1 - t) * t * cx + t * t * x1;
     const by = (1 - t) ** 2 * y0 + 2 * (1 - t) * t * cy + t * t * y1;
     fillShape((x, y) => inEllipse(x, y, bx, by, 1.7, 1.7), t > 0.82 ? P.s : P.f, 'tail');
-  }
+  } };
+  if (!headOnly && !back) drawTail();
   // body
   if (!headOnly) {
     fillShape((x, y) => inEllipse(x, y, 16, Y(24.5), 7.6, 6.6), P.f, 'body');
-    fillShape((x, y) => inEllipse(x, y, 16, Y(25.5), 4.2, 4.6), P.w, 'body');
+    if (!back) fillShape((x, y) => inEllipse(x, y, 16, Y(25.5), 4.2, 4.6), P.w, 'body');
+    else for (let y = Y(19); y <= Y(28); y++) set(16, y, P.s);   // a stripe down her back
     // paws
     fillShape((x, y) => inEllipse(x, y, 12.2, Y(30.2), 2.6, 1.7), P.w, 'paw');
     fillShape((x, y) => inEllipse(x, y, 19.8, Y(30.2), 2.6, 1.7), P.w, 'paw');
@@ -55,8 +58,10 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
   const earL = [[5, Y(10)], [7.5, Y(0.5)], [14, Y(5)]], earR = [[27, Y(10)], [24.5, Y(0.5)], [18, Y(5)]];
   fillShape((x, y) => inTri(x, y, ...earL), P.f, 'head');
   fillShape((x, y) => inTri(x, y, ...earR), P.f, 'head');
-  fillShape((x, y) => inTri(x, y, [7.6, Y(8)], [8.3, Y(3)], [12, Y(6)]), PINK, 'head');
-  fillShape((x, y) => inTri(x, y, [24.4, Y(8)], [23.7, Y(3)], [20, Y(6)]), PINK, 'head');
+  if (!back) {
+    fillShape((x, y) => inTri(x, y, [7.6, Y(8)], [8.3, Y(3)], [12, Y(6)]), PINK, 'head');
+    fillShape((x, y) => inTri(x, y, [24.4, Y(8)], [23.7, Y(3)], [20, Y(6)]), PINK, 'head');
+  }
   // head
   fillShape((x, y) => inEllipse(x, y, 16, Y(11.5), 11.2, 8.4), P.f, 'head');
   if (P.patch) {
@@ -71,6 +76,7 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
     [[13, 4], [16, 4], [19, 4]].forEach(([x, y]) => { set(x, Y(y), P.s); set(x, Y(y + 1), P.s); });
     set(16, Y(6), P.s);
   }
+  if (!back) {   // the face (not seen from behind)
   // muzzle
   fillShape((x, y) => inEllipse(x, y, 16, Y(15.2), 4.6, 2.9), P.w, 'head');
   // cheeks blush (rosier when she is smitten)
@@ -191,6 +197,8 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
   eyes(10); eyes(20);
   // whiskers
   [[3, 13], [4, 13], [3, 15], [4, 15], [27, 13], [28, 13], [27, 15], [28, 15]].forEach(([x, y]) => { if (!g[Y(y)][x]) set(x, Y(y), P.o); });
+  }
+  if (back && !headOnly) drawTail();
 
   // outline pass
   const out = g.map((r) => r.slice());
@@ -1838,9 +1846,9 @@ Object.assign(ITEMS, {
     ...coverArt(24, 12, (x, y, W, H) => { if (y < 4) return (y === 0 || x === 0 || x === W - 1) ? '#3a2a35' : (y === 1 ? '#a25b78' : '#8a4766'); if (y === 4) return '#3a2a35'; if (y === 5) return x === 0 || x === W - 1 ? '#3a2a35' : '#6b3a2a'; return (x >= 1 && x <= 3) || (x >= W - 4 && x <= W - 2) ? (x === 1 || x === W - 2 ? '#3a2a35' : '#4a271c') : null; }) },
 });
 // where a kitten sits on furniture (fraction of the piece: x across, y down to where her paws rest)
-ITEMS.sofa.seat = { x: 0.5, y: 0.78 };
+ITEMS.sofa.seat = { x: 0.5, y: 0.78, spots: [0.2, 0.8] };          // room for two kittens side by side
 if (ITEMS.diningtable) ITEMS.diningtable.seat = { x: 0.13, y: 0.66 };
-if (ITEMS.pianobench) ITEMS.pianobench.seat = { x: 0.5, y: 0.45 };
+if (ITEMS.pianobench) ITEMS.pianobench.seat = { x: 0.5, y: 0.45, back: true };   // facing the piano
 if (ITEMS.bed) ITEMS.bed.seat = { x: 0.52, y: 0.63, lie: true, blanket: [6, 14, 16, 32] };   // blanket rows 6-13, columns 13-31
 
 // furniture you can switch on and off at home

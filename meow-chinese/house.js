@@ -138,12 +138,12 @@ export class OtherCats {
   }
   place(c) {
     if (!c.el) return;
-    const spot = c.seat && seatSpot(this.roomEl, c.seat);
+    const spot = c.seat && seatSpot(this.roomEl, c.seat, c.slot);
     if (spot) { c.x = c.dx = spot.x; c.y = c.dy = spot.y; }
     c.el.style.left = `${c.dx}%`; c.el.style.bottom = `${c.dy}%`;
     c.el.style.zIndex = spot ? spot.z : 2 + Math.round(100 - c.dy);
     c.el.classList.toggle('lying', !!(spot && spot.lie)); c.el.classList.toggle('seated', !!spot);
-    if (c.kv) c.kv.setPose(spot && spot.lie ? 'lie' : null);
+    if (c.kv) c.kv.setPose(spot ? spot.pose : null);
     if (c.bedShown && c.bedShown !== (spot && spot.lie && c.seat)) { blanket(this.roomEl, c.bedShown, false); c.bedShown = null; }
     if (spot && spot.lie) { blanket(this.roomEl, c.seat, true); c.bedShown = c.seat; }
   }
@@ -304,12 +304,14 @@ export function wirePower(roomEl, onToggle) {
 
 // ---------- sitting on furniture ----------
 // the spot (in room %) where a kitten sits on this piece, and the layer just in front of it
-export function seatSpot(roomEl, id) {
+export function seatSpot(roomEl, id, slot = 0) {
   const el = roomEl && roomEl.querySelector(`.decor.seat[data-id="${id}"]`), seat = ITEMS[id] && ITEMS[id].seat;
   if (!el || !seat) return null;
   const W = roomEl.clientWidth, H = roomEl.clientHeight;
+  const sx = seat.spots ? seat.spots[Math.min(slot || 0, seat.spots.length - 1)] : seat.x;
   return {
-    x: ((el.offsetLeft + el.offsetWidth * seat.x) / W) * 100,
+    back: !!seat.back, pose: seat.lie ? 'lie' : seat.back ? 'back' : null,
+    x: ((el.offsetLeft + el.offsetWidth * sx) / W) * 100,
     y: ((H - (el.offsetTop + el.offsetHeight * seat.y)) / H) * 100,
     z: (parseInt(el.style.zIndex, 10) || 50) + 1, lie: !!seat.lie, el,
   };
@@ -329,4 +331,11 @@ export function blanket(roomEl, id, on) {
   // laid over the bed, one layer above the kitten in it
   b.style.left = `${el.offsetLeft}px`; b.style.top = `${el.offsetTop}px`;
   b.style.zIndex = (parseInt(el.style.zIndex, 10) || 50) + 2;
+}
+
+// the first free place on a piece of furniture (a sofa has two); taken = [{ seat, slot }]
+export function freeSlot(id, taken) {
+  const seat = ITEMS[id] && ITEMS[id].seat; const n = seat && seat.spots ? seat.spots.length : 1;
+  for (let i = 0; i < n; i++) if (!taken.some((t) => t && t.seat === id && (t.slot || 0) === i)) return i;
+  return -1;   // full
 }

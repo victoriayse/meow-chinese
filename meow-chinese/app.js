@@ -14,7 +14,7 @@ let pendingNotes = null, notesDismissed = false;   // a newer version is waiting
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace } from './house.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot } from './house.js';
 import * as Visit from './visit.js';
 import { randomJoke } from './jokes.js';
 import { practiceListScreen, practiceScreen, KINDS } from './practice.js';
@@ -590,9 +590,9 @@ function homeScreen(params = {}) {
   const placeCat = () => {
     if (!room) return;
     // sitting on the sofa / a chair, or lying in bed
-    const st = seatNow(), spot = st && seatSpot(room, st.id);
+    const st = seatNow(), spot = st && seatSpot(room, st.id, st.slot);
     ground.classList.toggle('lying', !!(spot && spot.lie)); ground.classList.toggle('seated', !!spot);
-    kv.setPose(spot && spot.lie ? 'lie' : null);
+    kv.setPose(spot ? spot.pose : null);
     room.querySelectorAll('.decor.seat').forEach((d) => blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === st.id)));
     if (spot) {
       cat.x = spot.x; cat.y = spot.y;
@@ -606,10 +606,16 @@ function homeScreen(params = {}) {
     ground.style.bottom = cat.y + '%';
     ground.style.zIndex = 2 + Math.round(100 - cat.y);
   };
-  const hostPos = () => ({ x: +cat.x.toFixed(1), y: +cat.y.toFixed(1), room: roomKey, left: !!kv.left, seat: (seatNow() || {}).id || null });
+  const hostPos = () => ({ x: +cat.x.toFixed(1), y: +cat.y.toFixed(1), room: roomKey, left: !!kv.left, seat: (seatNow() || {}).id || null, slot: (seatNow() || {}).slot || 0 });
   // tap the sofa, a chair, the piano bench or the bed: she hops on (the arrows make her hop off)
   const sitOn = (id) => {
-    S.get().catSeat = { id, room: roomKey }; S.save();
+    // a free place: friends visiting may already be sitting there
+    const taken = Visit.visitors.ids().map((v) => Visit.visitors.m.get(v)).filter((c) => c && c.room === roomKey);
+    const mineNow = seatNow();
+    if (mineNow && mineNow.id === id) return;
+    const slot = freeSlot(id, taken);
+    if (slot < 0) { sfx.miss(); return toast('<span class="zh">坐满了！</span> No room — someone is already there'); }
+    S.get().catSeat = { id, room: roomKey, slot }; S.save();
     placeCat(); kv.jump(); sfx.click(); Visit.hostMove(hostPos());
     if (ITEMS[id].seat.lie) kv.flash('sleepy', 2500);
   };

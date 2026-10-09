@@ -67,6 +67,7 @@ export class KittenView {
       drawGrid(this.canvas, kittenLyingGrid(this.fur, lm, this.equipped, Math.floor(this.frame / 3)), this.scale);
       return;
     }
+    if (this.pose === 'back') { drawGrid(this.canvas, kittenGrid(this.fur, 'back', this.equipped, Math.floor(this.frame / 3)), this.scale); return; }
     let g = kittenGrid(this.fur, m, this.equipped, Math.floor(this.frame / 3), !!this.left);
     if (this.left) g = g.map((row) => [...row].reverse());
     drawGrid(this.canvas, g, this.scale);

@@ -94,4 +94,9 @@ export const CHANGES = [
   { v: 73, items: [
     'Your kitten now lies down properly in bed — head on the pillow, tucked under the blanket, tail curled out.',
   ] },
+  { v: 74, items: [
+    'Visiting on a computer: the house is much bigger now, with the chat on the right.',
+    'At the piano bench your kitten sits with her back to you, facing the piano.',
+    'Two kittens can sit side by side on the sofa.',
+  ] },
 ];
