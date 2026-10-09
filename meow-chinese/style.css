@@ -1478,3 +1478,8 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .subcat small { font-weight: 600; opacity: .7; }
 .subcat .zh { font-family: var(--zh); }
 .subcat.on { background: #ffd23f; }
+/* pop-ups you can tap, with buttons (friend online, invites) */
+.toast.tappable { pointer-events: auto; cursor: pointer; flex-wrap: wrap; justify-content: center; }
+.toast-actions { display: flex; gap: 8px; flex-basis: 100%; justify-content: center; }
+.toast-actions button { font: inherit; font-size: 15px; padding: 5px 12px; border: 2px solid var(--ink); border-radius: 999px; background: #ffd23f; cursor: pointer; }
+.toast-actions button:last-child:not(:first-child) { background: #fff; }

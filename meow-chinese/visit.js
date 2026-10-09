@@ -6,6 +6,7 @@
 //   chat   anyone            { id, text }
 //   pets   owner -> visitors  { id, pets: [...] }                where the owner's pets are (pets.js snapshot)
 //   radio  owner -> visitors  { id, radio: { on, path, startedAt } }  the owner's radio (friends hear it too)
+//   invite friend -> my house  { id, name }                   "come to my house!" (sent to MY house channel)
 //   bye    visitor           { id }
 import * as S from './state.js';
 import * as Auth from './auth.js';
@@ -73,6 +74,8 @@ export function startHosting(hooks) {
           visitors.emote(p.id, p.mood);
           const c = visitors.m.get(p.id);
           api.chat && api.chat(p.id, emoteIcon(p.mood), (c && c.look) || {}, true);
+        } else if (ev === 'invite') {
+          api.invited && api.invited(p.id, String(p.name || '').slice(0, 40));
         } else if (ev === 'bye') {
           if (visitors.has(p.id)) { const c = visitors.m.get(p.id); visitors.remove(p.id); api.left && api.left(p.id, (c && c.look) || {}); api.changed && api.changed(); }
         }
@@ -112,6 +115,13 @@ export function typingTo(friendId) {
   }
   clearTimeout(line.timer); line.timer = setTimeout(() => { line.ch.close(); typingLines.delete(friendId); }, 20000);
   if (Date.now() - lastTyping > 2000) { lastTyping = Date.now(); line.ch.send('typing', { id: me }); }
+}
+// invite a friend over: knock on their house channel with an 'invite' (they get a pop-up to come to mine)
+export function inviteFriend(friendId) {
+  const me = (Auth.user() || {}).id; if (!me || !friendId || managing()) return false;
+  const ch = new Channel(`house:${friendId}`, { presenceKey: `${me}-invite`, onStatus: (st) => { if (st === 'joined') { ch.send('invite', { id: me, name: myLook().name }); setTimeout(() => ch.close(), 1500); } } });
+  ch.open(); setTimeout(() => ch.close(), 8000);
+  return true;
 }
 export function doneTyping(friendId) {
   const me = (Auth.user() || {}).id, line = typingLines.get(friendId);

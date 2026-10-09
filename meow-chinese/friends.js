@@ -251,6 +251,7 @@ export function friendScreen({ go, id }) {
             <button class="btn pink" id="v-gift">🎁 <span class="zh">送礼物</span> Gift</button>
           </div>
           <button class="btn green big" id="v-home" ${isOnline(f) ? '' : 'disabled'}>🏠 <span class="zh">去串门</span> Visit their house</button>
+          <button class="btn blue" id="v-invite" ${isOnline(f) ? '' : 'disabled'}>📨 <span class="zh">邀请来我家</span> Invite to my house</button>
           ${isOnline(f) ? '' : '<p class="help" style="margin:0">朋友在线的时候才可以去串门。 You can visit when your friend is online.</p>'}
         </div>
       </div>`;
@@ -260,6 +261,7 @@ export function friendScreen({ go, id }) {
     $('#v-letter', v).onclick = () => writeLetter(f);
     $('#v-gift', v).onclick = () => sendGift(f);
     $('#v-home', v).onclick = () => go('visit', { id: f.other, name: friendName(f) });
+    const vi = $('#v-invite', v); if (vi) vi.onclick = () => import('./app.js').then((A) => A.inviteOver(f.other, friendName(f)));
     root.appendChild(v);
     hydrateIcons(root);
   };

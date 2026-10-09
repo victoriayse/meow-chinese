@@ -94,10 +94,24 @@ export function burst(layer, kind = 'heart', n = 3, x = '50%', y = '30%') {
   }
 }
 
-export function toast(content, { coins = 0, ms = 2700 } = {}) {
+export function toast(content, { coins = 0, ms = 2700, onClick = null, actions = null } = {}) {
   const t = document.createElement('div');
   t.className = 'toast';
   t.innerHTML = content + (coins ? ` <span class="price">+${coins} ${coinI(20)}</span>` : '');
+  // a pop-up you can tap (or with buttons), e.g. "your friend is online — visit?"
+  if (onClick || actions) {
+    t.classList.add('tappable');
+    if (onClick) t.addEventListener('click', () => { t.remove(); onClick(); });
+    if (actions) {
+      const row = document.createElement('div'); row.className = 'toast-actions';
+      actions.forEach(({ label, fn }) => {
+        const b = document.createElement('button'); b.type = 'button'; b.innerHTML = label;
+        b.addEventListener('click', (e) => { e.stopPropagation(); t.remove(); fn(); });
+        row.appendChild(b);
+      });
+      t.appendChild(row);
+    }
+  }
   hydrateIcons(t);
   t.style.animationDuration = (ms - 100) / 1000 + 's';
   $('#toasts').appendChild(t);

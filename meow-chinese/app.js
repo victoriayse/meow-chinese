@@ -562,6 +562,7 @@ function homeScreen(params = {}) {
           <button class="tool-btn reno-btn" id="b-reno" title="Renovate">🎨</button>
           <button class="tool-btn" id="b-arrange" title="Move furniture">🪑</button>
           <button class="tool-btn light-switch ${S.roomDark(roomKey) ? 'off' : ''}" id="b-light" title="Lights" aria-label="Lights">💡</button>
+          <button class="tool-btn" id="b-invite" title="Invite a friend" aria-label="Invite a friend">📨</button>
         </div><div class="house-log-wrap" id="hlog"><div class="dpad" id="dpad">
             <button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button>
           </div></div><div class="house-chat-wrap" id="hchat"></div>` : `<div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>`}
@@ -823,6 +824,20 @@ function homeScreen(params = {}) {
         redrawArranging();
       }; });
       $('#c', box).onclick = closeModal;
+      openModal(box);
+    };
+    // 📨 invite a friend who is online to come over
+    $('#b-invite', n).onclick = () => {
+      sfx.click();
+      const fr = Friends.acceptedFriends(), on = fr.filter((f) => Friends.isOnline(f));
+      const box = html`<div class="card stack">
+          <div class="h-title"><span class="zh">📨 邀请朋友来我家</span><span class="en">Invite a friend over</span></div>
+          ${on.length ? on.map((f) => `<button class="btn white block invite-row" data-id="${f.other}">🟢 <span class="zh">${esc(Friends.friendName(f))}</span> <small>· 邀请 Invite</small></button>`).join('')
+            : `<p class="help" style="margin:0">${fr.length ? '现在没有朋友在线。朋友上线时会提醒你！<br>No friends are online right now — you\'ll get a pop-up when one comes online.' : '还没有朋友。在 📱 手机里加朋友吧！<br>No friends yet — add one in the 📱 phone.'}</p>`}
+          <button class="btn white" id="ic">关闭 Close</button>
+        </div>`;
+      box.querySelectorAll('.invite-row').forEach((b) => { b.onclick = () => { closeModal(); const f = fr.find((x) => x.other === b.dataset.id); inviteOver(b.dataset.id, Friends.friendName(f)); }; });
+      $('#ic', box).onclick = closeModal;
       openModal(box);
     };
     // 🎨 renovate: pick a wallpaper and a floor for this room from the ones she has bought
@@ -1281,15 +1296,43 @@ Visit.startHosting({
   myPos: () => { const p = S.get().catPos || {}; return { x: p.x ?? 50, y: p.y ?? 3, room: hostRoomNow, left: false }; },
   arrived: (id, look) => {
     const inHouseNow = current === 'home' && currentParams.view === 'house';
-    toast(`🏠 <span class="zh">${esc(look.name || '朋友')}来你家玩了！</span> ${inHouseNow ? 'Say hi!' : 'A friend is visiting — go to your 🏠 house to say hi'}`, { ms: 4500 });
+    if (inHouseNow) return toast(`🏠 <span class="zh">${esc(look.name || '朋友')}来你家玩了！</span> Say hi!`, { ms: 4500 });
+    // tap it to go straight home and say hi
+    toast(`🏠 <span class="zh">${esc(look.name || '朋友')}来你家玩了！</span> A friend is at your house — come and say hi!`, { ms: 9000, onClick: goMyHouse, actions: [{ label: '🏠 <span class="zh">回家</span> Go home', fn: goMyHouse }] });
+  },
+  // a friend invited me to their house
+  invited: (id, name) => {
+    sfx.coin();
+    toast(`📨 <span class="zh">${esc(name || '朋友')}邀请你去TA家玩！</span> ${esc(name || 'A friend')} invited you over`, { ms: 12000,
+      actions: [{ label: '🏠 <span class="zh">去串门</span> Visit', fn: () => go('visit', { id, name }) }, { label: '等一下 Later', fn: () => {} }] });
   },
   left: (id, look) => toast(`👋 <span class="zh">${esc(look.name || '朋友')}回家了</span> Your friend went home`, { ms: 2500 }),
   chat: (id, text, look, seen) => {
     const inHouseNow = current === 'home' && currentParams.view === 'house';
     if (inHouseNow && houseLog && houseLog.el.isConnected) houseLog.add(look.name || '朋友', text, false);
-    if (!seen && !inHouseNow) toast(`💬 ${esc(look.name || '朋友')}：${esc(text)}`, { ms: 4000 });
+    if (!seen && !inHouseNow) toast(`💬 ${esc(look.name || '朋友')}：${esc(text)}`, { ms: 5000, onClick: goMyHouse });
   },
 });
+function goMyHouse() { if (!(current === 'home' && currentParams.view === 'house')) go('home', { view: 'house' }); }
+// 🟢 a friend just came online: pop up (visit them, or invite them to my house)
+let onlineBefore = null;
+Friends.onFriends(() => {
+  const now = new Set(Friends.acceptedFriends().filter((f) => Friends.isOnline(f)).map((f) => f.other));
+  if (onlineBefore) now.forEach((id) => {
+    if (onlineBefore.has(id)) return;
+    const f = Friends.acceptedFriends().find((x) => x.other === id), name = Friends.friendName(f);
+    toast(`🟢 <span class="zh">${esc(name)}上线了！</span> ${esc(name)} is online`, { ms: 9000,
+      actions: [{ label: '🏠 <span class="zh">去串门</span> Visit', fn: () => go('visit', { id, name }) },
+        { label: '📨 <span class="zh">邀请来我家</span> Invite', fn: () => inviteOver(id, name) }] });
+  });
+  onlineBefore = now;
+});
+export function inviteOver(id, name) {
+  if (!Visit.inviteFriend(id)) return toast('要先登录 · Please log in first');
+  sfx.click();
+  toast(`📨 <span class="zh">邀请发出去了！</span> Invite sent to ${esc(name || 'your friend')}`, { ms: 3000 });
+  if (!(current === 'home' && currentParams.view === 'house')) go('home', { view: 'house' });   // wait for them at home
+}
 let lastReq = 0;
 Friends.onFriends(() => { const r = Friends.incomingRequests().length; if (r !== lastReq) { lastReq = r; if (current === 'home') refreshHome(); } });
 // another tab changed the game: show the new state on calm pages

@@ -210,4 +210,9 @@ export const CHANGES = [
   { v: 100, items: [
     'Shop: the green label under each piece of furniture now shows its aisle (Kitchen, Pool & rooftop, Lights…) instead of always saying Living room.',
   ] },
+  { v: 101, items: [
+    '🟢 A pop-up tells you when a friend comes online — visit them or invite them over with one tap.',
+    '📨 Invite friends to your house: the new 📨 button in your house, or "Invite to my house" on a friend\'s page.',
+    'When a friend is at your house, tap the pop-up to go straight home and say hi.',
+  ] },
 ];
