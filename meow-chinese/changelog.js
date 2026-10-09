@@ -156,4 +156,9 @@ export const CHANGES = [
     'New ❄️ air-con (tap to switch on — cool air comes out) and a coffee table.',
     'Turn the study chair and laptop round: tap 🪑 Move furniture, then 🔄.',
   ] },
+  { v: 88, items: [
+    'Your radio song is now saved to your account — it plays on all your devices.',
+    'Friends visiting your house hear your radio too (the same part of the song)!',
+    'Radio songs can be up to 10 MB.',
+  ] },
 ];

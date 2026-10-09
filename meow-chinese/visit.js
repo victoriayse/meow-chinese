@@ -5,6 +5,7 @@
 //   pos    anyone            { id, look, x, y, room, left }       moves (a few times a second while walking)
 //   chat   anyone            { id, text }
 //   pets   owner -> visitors  { id, pets: [...] }                where the owner's pets are (pets.js snapshot)
+//   radio  owner -> visitors  { id, radio: { on, path, startedAt } }  the owner's radio (friends hear it too)
 //   bye    visitor           { id }
 import * as S from './state.js';
 import * as Auth from './auth.js';
@@ -14,6 +15,7 @@ import { drawRoom, drawRoof } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal } from './ui.js';
 import { sfx } from './audio.js';
 import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote, PetLayer } from './house.js';
+import * as Radio from './radio.js';
 
 const isNight = () => { const h = new Date().getHours(); return h >= 18 || h < 5; };
 export function myLook() {
@@ -116,6 +118,7 @@ export function doneTyping(friendId) {
   if (line && me) line.ch.send('typing-stop', { id: me });
   lastTyping = 0;
 }
+export function hostRadio(radio) { if (hostCh && visitors.ids().length) hostCh.send('radio', { id: hostUser, radio }); }
 export function hostPets(pets) { if (hostCh && visitors.ids().length) hostCh.send('pets', { id: hostUser, pets }); }
 export function hostNote(i) { if (hostCh && visitors.ids().length) hostCh.send('note', { id: hostUser, i }); }
 export function hostEmote(mood) { if (hostCh && visitors.ids().length) hostCh.send('emote', { id: hostUser, mood }); }
@@ -153,7 +156,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
         hostHere = true;
         if (!gotHouse) { gotHouse = true; roomKey = (p.host && p.host.room) || 'living'; mine.room = roomKey; sfx.coin(); }
         sub.textContent = '';
-        render();
+        render(); hearRadio();
       } else if (ev === 'pos' || ev === 'knock') {
         others.upsert(p.id, { ...(p.look ? { look: p.look } : {}), ...clampPos(p) });
         if (ev === 'knock' && gotHouse) sendMine();          // a new visitor: let them see me
@@ -161,6 +164,9 @@ export function visitScreen({ go, id: hostId, name = '' }) {
         others.say(p.id, p.text);
         const c = others.m.get(p.id);
         logLine((c && c.look && c.look.name) || '朋友', p.text, false);
+      } else if (ev === 'radio') {
+        if (house) house.radio = p.radio || { on: false };
+        hearRadio();
       } else if (ev === 'pets') {
         if (house) house.pets = p.pets || [];
         if (petLayer) petLayer.update(house ? house.pets : []);
@@ -174,7 +180,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     },
     onPresence: (present, joins, leaves) => {
       leaves.forEach((id) => {
-        if (id === hostId) { hostHere = false; others.remove(id); sub.textContent = '朋友离开了 · Your friend left'; }
+        if (id === hostId) { hostHere = false; others.remove(id); sub.textContent = '朋友离开了 · Your friend left'; Radio.stop(); }
         else others.remove(id);
       });
       if (joins.includes(hostId) && gotHouse && !hostHere) knock();
@@ -253,8 +259,15 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     // the friend's pets wandering around
     petLayer = new PetLayer(room, roomKey, { onClick: (kind) => { const p = (house.pets || []).find((x) => x.kind === kind); if (p) { sfx.coin(); toast(`🤍 <span class="zh">${esc(p.name)}</span>`, { ms: 1500 }); } } });
     petLayer.update(house.pets || []);
+    room.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', !!(house.radio || {}).on));
     box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { roomKey = b.dataset.room; mine.room = roomKey; mine.seat = null; sfx.click(); render(); sendMine(); }; });
     hydrateIcons(box);
+  }
+  // the friend's radio: play it here too (same song, same part of it)
+  function hearRadio() {
+    const r = (house && house.radio) || { on: false };
+    Radio.listen(r);
+    box.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', !!r.on));
   }
   function place() {
     const room = $('#room', box), spot = mine.seat && seatSpot(room, mine.seat, mine.slot);
@@ -278,7 +291,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
   const refit = () => { if (!n.isConnected) { window.removeEventListener('resize', refit); return; } fitHouse(box, $('#hunit', box)); };
   window.addEventListener('resize', refit);
   // leaving: say goodbye and close the line
-  const leave = () => { clearInterval(kt); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
+  const leave = () => { Radio.stop(); clearInterval(kt); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
   $('#leave', n).onclick = () => { leave(); go('friend', { id: hostId }); };
   const gone = setInterval(() => { if (!n.isConnected) { clearInterval(gone); leave(); } }, 1000);
   return n;

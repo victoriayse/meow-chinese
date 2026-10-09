@@ -448,25 +448,26 @@ function petMenu(kind) {
 }
 // 📻 the radio's song: choose an mp3 from this device (kept on this device only)
 async function radioMenu() {
-  const song = await Radio.getSong();
+  await Radio.moveOldSong();
+  const song = Radio.mySong();
   sfx.click();
   const box = html`<div class="card stack" style="align-items:center;text-align:center">
       <div class="h-title" style="justify-content:center"><span class="zh">📻 收音机</span><span class="en">Radio</span></div>
       <p class="help" style="margin:0" id="rs">${song ? `🎵 <b>${esc(song.name)}</b>` : '还没有歌。选一首你喜欢的歌吧！<br>No song yet — pick one you like.'}</p>
       <label class="btn blue">🎵 <span class="zh">${song ? '换一首歌' : '选一首歌'}</span> ${song ? 'Change song' : 'Choose a song'}<input type="file" accept="audio/*,.mp3" hidden></label>
       <div class="row">${song ? `<button class="btn green" id="rp">${Radio.isPlaying() ? '⏹ <span class="zh">停</span> Stop' : '▶️ <span class="zh">播放</span> Play'}</button><button class="btn white" id="rx">🗑 <span class="zh">删掉</span> Remove</button>` : ''}</div>
-      <p class="help" style="margin:0;font-size:13px">歌只存在这台设备上。点收音机就能开关音乐。<br>The song stays on this device. Tap the radio to switch it on and off.</p>
+      <p class="help" style="margin:0;font-size:13px">最多 10MB。你的所有设备都能放，来串门的朋友也听得到。点收音机就能开关音乐。<br>Up to 10 MB. It plays on all your devices, and friends visiting can hear it. Tap the radio to switch it on and off.</p>
       <button class="btn white" id="rc">关闭 Close</button>
     </div>`;
   const msg = $('#rs', box);
   box.querySelector('input[type=file]').onchange = async (ev) => {
     const f = ev.target.files && ev.target.files[0]; if (!f) return;
-    msg.textContent = '保存中… Saving…';
+    msg.textContent = '上传中… Uploading…';
     try {
       await Radio.setSong(f); await Radio.play(); sfx.coin(); closeModal();
       toast(`📻 <span class="zh">正在播放</span> ${esc(f.name.replace(/\.[^.]+$/, ''))}`, { ms: 2500 });
     } catch (x) {
-      msg.innerHTML = x.message === 'too big' ? '这首歌太大了（最多 25MB）。<br>That song is too big (25 MB at most).' : '这个文件放不了，换一首试试。<br>That file didn\'t work — try another song.';
+      msg.innerHTML = x.message === 'too big' ? '这首歌太大了（最多 10MB）。<br>That song is too big (10 MB at most).' : x.message === 'signed out' ? '要先登录才能放歌。<br>Please log in first.' : '这个文件放不了，换一首试试。<br>That file didn\'t work — try another song.';
     }
   };
   const rp = $('#rp', box); if (rp) rp.onclick = async () => { await Radio.toggle(); closeModal(); };
@@ -1025,7 +1026,8 @@ function homeScreen(params = {}) {
       const d = e.target.closest('.decor.radio');
       if (!d || room.classList.contains('arranging') || e.target.closest('.put-away')) return;
       e.stopPropagation();
-      if (e.target.closest('.radio-song') || !(await Radio.getSong())) { radioMenu(); return; }
+      if (!e.target.closest('.radio-song')) await Radio.moveOldSong();
+      if (e.target.closest('.radio-song') || !Radio.mySong()) { radioMenu(); return; }
       const on = await Radio.toggle(); sfx.click();
       toast(on ? '📻 <span class="zh">音乐响起来啦！</span> Radio on' : '📻 <span class="zh">关掉收音机</span> Radio off', { ms: 1500 });
     });
@@ -1258,13 +1260,14 @@ Friends.startFriends((news) => {
 // pets wander around the house all the time (friends visiting see them too)
 Pets.startPets();
 Pets.onPets((snap) => Visit.hostPets(snap));
+Radio.onRadio(() => Visit.hostRadio(Radio.status()));
 // live visits: friends' kittens can walk into my house while the app is open
 Visit.startHosting({
   inHouse: () => current === 'home' && currentParams.view === 'house',
   house: () => {
     const st = S.get(), rooms = {}, open = S.ROOMS.filter((r) => S.roomOpen(r.key) && S.unlocked('decor')).map((r) => r.key);
     (open.length ? open : ['living']).forEach((k) => { rooms[k] = roomLayout(st, k, S.roomOf); });
-    return { rooms, pets: Pets.snapshot(), open: open.length ? open : ['living'], power: { dark: { ...(st.lightsOff || {}) }, off: { ...(st.powerOff || {}) } }, styles: JSON.parse(JSON.stringify(st.roomStyle || {})) };
+    return { rooms, pets: Pets.snapshot(), radio: Radio.status(), open: open.length ? open : ['living'], power: { dark: { ...(st.lightsOff || {}) }, off: { ...(st.powerOff || {}) } }, styles: JSON.parse(JSON.stringify(st.roomStyle || {})) };
   },
   myPos: () => { const p = S.get().catPos || {}; return { x: p.x ?? 50, y: p.y ?? 3, room: hostRoomNow, left: false }; },
   arrived: (id, look) => {
