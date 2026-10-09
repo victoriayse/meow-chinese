@@ -3637,6 +3637,7 @@ ITEMS.towels.size = 0.5;   // a small stack
 
 // ---------- the puppy: a fluffy white Maltipoo in a strawberry outfit (drawn from a photo of the family dog) ----------
 Object.assign(ITEMS.dog, {
+  scale: 0.8,   // 20% smaller in the house
   pal: { o: O, w: '#ffffff', c: '#ece4d6', e: '#f6eee0', q: '#cfc3ad', n: '#5a5058', k: '#1f1a20', s: '#ffffff', r: '#e8382f', y: '#ffd27a', g: '#3fa84f' },
   art: [
     '.............................',

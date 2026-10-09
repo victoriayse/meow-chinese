@@ -195,4 +195,7 @@ export const CHANGES = [
     'The parrot is now a yellow-and-grey 🐦 cockatiel with a little crest and orange cheeks.',
     'The bird cage and the bird are half the size — no longer bigger than your cat!',
   ] },
+  { v: 97, items: [
+    'Your puppy is a little smaller in the house.',
+  ] },
 ];
