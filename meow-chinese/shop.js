@@ -18,6 +18,7 @@ export const TABS = [
   { key: 'feet', lock: 'feet', zh: '鞋子', en: 'Shoes', icon: '👟', test: isWear(['feet']) },
   { key: 'acc', lock: 'acc', zh: '配饰', en: 'Extras', icon: '👓', test: isWear(['face', 'neck']) },
   { key: 'decor', lock: 'decor', zh: '家具', en: 'Home', icon: '🛋️', test: (it) => it.cat === 'decor' },
+  { key: 'reno', lock: 'decor', zh: '装修', en: 'Renovate', icon: '🎨', test: (it) => it.cat === 'reno', order: 26 },
   { key: 'pharmacy', zh: '药房', en: 'Pharmacy', icon: '💊', test: (it) => it.cat === 'pharmacy', order: 90 },
 ];
 const SLOT_NAME = Object.fromEntries(WEAR_SLOTS.map(([k, zh]) => [k, zh]));
@@ -84,7 +85,7 @@ export function shopScreen({ go, tab = 'food' }) {
     Object.entries(ITEMS).filter(([, it]) => def.test(it)).sort((a, b) => S.price(a[0]) - S.price(b[0])).forEach(([id, it]) => {
       const cost = S.price(id);
       const special = it.cat === 'special';
-      const owned = (it.cat === 'wear' || it.cat === 'decor') && s.owned.includes(id);
+      const owned = (it.cat === 'wear' || it.cat === 'decor' || it.cat === 'reno') && s.owned.includes(id);
       const have = it.cat === 'food' || it.cat === 'toiletry' ? s.pantry[id] || 0 : special ? s.streak.freezes || 0 : 0;
       const full = special && have >= S.MAX_FREEZES;
       const pharm = it.cat === 'pharmacy';
@@ -95,6 +96,7 @@ export function shopScreen({ go, tab = 'food' }) {
         : special ? `漏了一天也不会断连胜 · Keeps your streak if you miss a day${full ? ` (max ${S.MAX_FREEZES})` : ''}`
         : pharm ? (needed ? `治好${it.cures === 'cough' ? '咳嗽' : '头晕'}！Cures ${it.cures === 'cough' ? 'a cough' : 'dizziness'}` : `小猫${it.cures === 'cough' ? '咳嗽' : '头晕'}时才需要 · Only when your kitten ${it.cures === 'cough' ? 'coughs' : 'is dizzy'}`)
         : it.cat === 'wear' ? `${SLOT_NAME[it.slot] || ''}`
+        : it.cat === 'reno' ? (it.kind === 'wall' ? '🧱 墙纸 Wallpaper' : '🟫 地板 Floor')
         : it.cat === 'decor' ? `${S.roomInfo(it.room || 'living').icon} ${S.roomInfo(it.room || 'living').zh} ${S.roomInfo(it.room || 'living').en}${roomShut ? ` · 🔒 Lv${S.UNLOCKS[it.room]}` : ''}` : '';
       const trying = it.cat === 'wear' && tryOn[it.slot] === id && S.get().kitten.equipped[it.slot] !== id;
       const card = html`<div class="product ${trying ? 'sel' : ''} ${owned ? 'is-owned' : ''}">
@@ -149,6 +151,7 @@ export function shopScreen({ go, tab = 'food' }) {
     toast(it.cat === 'special' ? `❄️ <span class="zh">有${S.get().streak.freezes}张冰冻卡了！</span> Streak freeze ready`
       : it.cat === 'food' || it.cat === 'toiletry' ? `<span class="zh">买了${it.name}！</span> Find it in 🎒 My items`
       : it.cat === 'wear' ? `<span class="zh">穿上${it.name}！</span>`
+      : it.cat === 'reno' ? `🎨 <span class="zh">买了${it.name}！</span> At home tap 🪑 then 🎨 to use it`
       : `📦 <span class="zh">${it.name}放进收纳箱了！</span> In your storage box — place it in your home with 🪑 Move furniture`);
     render();
   }

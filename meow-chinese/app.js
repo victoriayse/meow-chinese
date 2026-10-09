@@ -14,7 +14,7 @@ let pendingNotes = null, notesDismissed = false;   // a newer version is waiting
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon } from './house.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace } from './house.js';
 import * as Visit from './visit.js';
 import { randomJoke } from './jokes.js';
 import { practiceListScreen, practiceScreen, KINDS } from './practice.js';
@@ -458,13 +458,15 @@ function homeScreen(params = {}) {
           <canvas class="room-bg" id="roombg"></canvas>
 
           <div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>
-          <div class="arrange-bar"><button class="arrange-btn" id="b-arrange"><span class="zh">🪑 摆家具</span> Move furniture</button><button class="arrange-btn store-btn" id="b-store">📦 <span class="zh">收纳箱</span> Storage <b id="store-n"></b></button></div>
-          <button class="light-switch ${S.roomDark(roomKey) ? 'off' : ''}" id="b-light" aria-label="Lights">💡</button>
-          <div class="dpad" id="dpad">
-            <button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button>
-          </div>
         </div>
-      </div>${roomArrow(-1)}${roomArrow(1)}</div><div class="house-log-wrap" id="hlog"></div><div class="house-chat-wrap" id="hchat"></div>` : `<div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>`}
+      </div>${roomArrow(-1)}${roomArrow(1)}</div><div class="house-tools" id="htools">
+          <button class="tool-btn store-btn" id="b-store" title="Storage">📦<b id="store-n"></b></button>
+          <button class="tool-btn reno-btn" id="b-reno" title="Renovate">🎨</button>
+          <button class="tool-btn" id="b-arrange" title="Move furniture">🪑</button>
+          <button class="tool-btn light-switch ${S.roomDark(roomKey) ? 'off' : ''}" id="b-light" title="Lights" aria-label="Lights">💡</button>
+        </div><div class="house-log-wrap" id="hlog"><div class="dpad" id="dpad">
+            <button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button>
+          </div></div><div class="house-chat-wrap" id="hchat"></div>` : `<div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>`}
     </div>
     <div class="side">
       <div id="alert"></div>
@@ -584,8 +586,18 @@ function homeScreen(params = {}) {
   // ----- the kitten walks around the house (arrow keys or the on-screen arrows) -----
   const ground = $('#ground', n);
   let cat = { x: 50, y: (s.owned.includes('rug') && !s.decorHidden.includes('rug') && S.roomOf('rug') === roomKey) ? 4 : 3, ...(s.catPos || {}) };
+  const seatNow = () => { const st = S.get().catSeat; return st && st.room === roomKey && room && room.querySelector(`.decor.seat[data-id="${st.id}"]`) ? st : null; };
   const placeCat = () => {
     if (!room) return;
+    // sitting on the sofa / a chair, or lying in bed
+    const st = seatNow(), spot = st && seatSpot(room, st.id);
+    ground.classList.toggle('lying', !!(spot && spot.lie)); ground.classList.toggle('seated', !!spot);
+    room.querySelectorAll('.decor.seat').forEach((d) => blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === st.id)));
+    if (spot) {
+      cat.x = spot.x; cat.y = spot.y;
+      ground.style.left = cat.x + '%'; ground.style.bottom = cat.y + '%'; ground.style.zIndex = spot.z;
+      return;
+    }
     const halfW = room.clientWidth ? (kflip.offsetWidth / 2 / room.clientWidth) * 100 : 10;
     cat.x = Math.max(halfW, Math.min(100 - halfW, cat.x));
     cat.y = Math.max(1, Math.min(30, cat.y));
@@ -593,7 +605,20 @@ function homeScreen(params = {}) {
     ground.style.bottom = cat.y + '%';
     ground.style.zIndex = 2 + Math.round(100 - cat.y);
   };
-  const hostPos = () => ({ x: +cat.x.toFixed(1), y: +cat.y.toFixed(1), room: roomKey, left: !!kv.left });
+  const hostPos = () => ({ x: +cat.x.toFixed(1), y: +cat.y.toFixed(1), room: roomKey, left: !!kv.left, seat: (seatNow() || {}).id || null });
+  // tap the sofa, a chair, the piano bench or the bed: she hops on (the arrows make her hop off)
+  const sitOn = (id) => {
+    S.get().catSeat = { id, room: roomKey }; S.save();
+    placeCat(); kv.jump(); sfx.click(); Visit.hostMove(hostPos());
+    if (ITEMS[id].seat.lie) kv.flash('sleepy', 2500);
+  };
+  const standUp = () => {
+    if (!seatNow()) return;
+    S.get().catSeat = null;
+    cat.y = Math.min(cat.y, 28);
+    ground.classList.remove('lying', 'seated');
+    room.querySelectorAll('.blanket').forEach((b) => b.remove());
+  };
   const held = new Set();
   let raf = 0, lastT = 0;
   const walk = (t) => {
@@ -612,6 +637,7 @@ function homeScreen(params = {}) {
   };
   const press = (d) => {
     if (md.face === 'faint') return;          // a fainted kitten can't walk
+    standUp();
     held.add(d); kv.canvas.classList.add('walking'); setHomeBusy(true);
     if (!raf) raf = requestAnimationFrame(walk);
   };
@@ -656,13 +682,14 @@ function homeScreen(params = {}) {
     let arranging = false;
     const ab = $('#b-arrange', n), sb = $('#b-store', n);
     const hasFurniture = s.owned.some((id) => ITEMS[id] && ITEMS[id].cat === 'decor');
-    if (!hasFurniture) ab.parentElement.style.display = 'none';
+    const tools = $('#htools', n);
+    if (!hasFurniture && !S.ownedRenovations().length) { ab.style.display = 'none'; }
     const countStore = () => { const c = S.storedDecor().length; $('#store-n', n).textContent = c ? c : ''; };
     countStore();
     const setArranging = (on, quiet) => {
       arranging = on;
-      room.classList.toggle('arranging', arranging);
-      ab.innerHTML = arranging ? '<span class="zh">✅ 摆好了</span> Done' : '<span class="zh">🪑 摆家具</span> Move furniture';
+      room.classList.toggle('arranging', arranging); tools.classList.toggle('arranging', arranging);
+      ab.innerHTML = arranging ? '✅' : '🪑'; ab.title = arranging ? 'Done' : 'Move furniture';
       if (arranging) { if (!quiet) { sfx.click(); toast('<span class="zh">按住家具拖一拖！点 📦 收起来。</span> Drag furniture to move it · tap 📦 to put it away'); } }
       else { S.save(); if (!quiet) sfx.coin(); }
     };
@@ -690,6 +717,29 @@ function homeScreen(params = {}) {
       }; });
       $('#c', box).onclick = closeModal;
       openModal(box);
+    };
+    // 🎨 renovate: pick a wallpaper and a floor for this room from the ones she has bought
+    $('#b-reno', n).onclick = () => {
+      const ri = S.roomInfo(roomKey), owned = S.ownedRenovations();
+      const draw = () => {
+        const cur = S.roomStyle(roomKey);
+        const opts = (kind) => [`<button class="reno-opt ${!cur[kind] ? 'on' : ''}" data-kind="${kind}" data-id=""><span class="art">↺</span><small>原来的 Original</small></button>`,
+          ...owned.filter((id) => ITEMS[id].kind === kind).map((id) => `<button class="reno-opt ${cur[kind] === id ? 'on' : ''}" data-kind="${kind}" data-id="${id}"><span class="art"></span><small class="zh">${ITEMS[id].name}</small></button>`)].join('');
+        box.innerHTML = `<div class="h-title"><span class="zh">🎨 装修${ri.zh}</span><span class="en">Renovate the ${ri.en.toLowerCase()}</span></div>
+          ${owned.length ? '' : '<p class="help">还没有墙纸或地板。去商店的 🎨 装修 看看吧！<br>No wallpaper or floors yet — find them in the shop\'s 🎨 Renovate aisle.</p>'}
+          <h4>🧱 墙纸 Wallpaper</h4><div class="reno-grid">${opts('wall')}</div>
+          <h4>🟫 地板 Floor</h4><div class="reno-grid">${opts('floor')}</div>
+          <div class="row" style="justify-content:space-between">${owned.length ? '' : '<button class="btn blue" id="r-shop">🛍️ <span class="zh">去商店</span> Shop</button>'}<button class="btn white" id="r-close">好了 Done</button></div>`;
+        box.querySelectorAll('.reno-opt[data-id]:not([data-id=""]) .art').forEach((a) => a.appendChild(spriteCanvas(a.parentElement.dataset.id, 52)));
+        box.querySelectorAll('.reno-opt').forEach((b) => { b.onclick = () => {
+          S.setRoomStyle(roomKey, b.dataset.kind, b.dataset.id || null); sfx.coin();
+          drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); Visit.hostResendHouse(); draw();
+        }; });
+        $('#r-close', box).onclick = closeModal;
+        const rs = $('#r-shop', box); if (rs) rs.onclick = () => { closeModal(); go('shop', { tab: 'reno' }); };
+      };
+      const box = html`<div class="card stack reno-box"></div>`;
+      openModal(box); draw();
     };
     // 📦 on a piece of furniture: put it back in storage
     room.querySelectorAll('.decor .put-away').forEach((b) => {
@@ -794,8 +844,13 @@ function homeScreen(params = {}) {
   if (inHouse) {
     hostRoomNow = roomKey;
     houseLog = chatLog(houseChat);
-    $('#hlog', n).appendChild(houseLog.el);
+    $('#hlog', n).prepend(houseLog.el);
     wirePlayable(room);
+    room.addEventListener('click', (e) => {
+      const d = e.target.closest('.decor.seat');
+      if (!d || room.classList.contains('arranging') || md.face === 'faint') return;
+      sitOn(d.dataset.id);
+    });
     // lights: the 💡 switch darkens the room; lamps and the TV switch on and off when tapped
     const power = () => applyPower(room, { dark: S.roomDark(roomKey), off: S.get().powerOff || {} });
     $('#b-light', n).onclick = () => {
@@ -814,7 +869,7 @@ function homeScreen(params = {}) {
       Visit.hostEmote(mood);
     }));
   } else { hostRoomNow = 'living'; roomPower = null; }
-  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
+  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
   return n;
 }
 
@@ -1035,7 +1090,7 @@ Visit.startHosting({
   house: () => {
     const st = S.get(), rooms = {}, open = S.ROOMS.filter((r) => S.roomOpen(r.key) && S.unlocked('decor')).map((r) => r.key);
     (open.length ? open : ['living']).forEach((k) => { rooms[k] = roomLayout(st, k, S.roomOf); });
-    return { rooms, open: open.length ? open : ['living'], power: { dark: { ...(st.lightsOff || {}) }, off: { ...(st.powerOff || {}) } } };
+    return { rooms, open: open.length ? open : ['living'], power: { dark: { ...(st.lightsOff || {}) }, off: { ...(st.powerOff || {}) } }, styles: JSON.parse(JSON.stringify(st.roomStyle || {})) };
   },
   myPos: () => { const p = S.get().catPos || {}; return { x: p.x ?? 50, y: p.y ?? 3, room: hostRoomNow, left: false }; },
   arrived: (id, look) => {

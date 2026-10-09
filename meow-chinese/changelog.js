@@ -83,4 +83,12 @@ export const CHANGES = [
     'Long messages now grow upwards in the speech bubble, staying inside the house.',
     'Kittens are a little smaller at home, with smaller speech bubbles.',
   ] },
+  { v: 72, items: [
+    'The 🪑 💡 📦 buttons and the arrows are now outside the house, so they never cover your furniture.',
+    'New 🎨 Renovate aisle in the shop: 5 wallpapers and 5 floors. At home tap 🪑 then 🎨 to change a room.',
+    'New window coverings: blinds, roman blind, lace and starry curtains — and curtains now fit the whole window.',
+    'New piano bench.',
+    'The face button now shows your own kitten, with 6 kitten faces to pick.',
+    'Tap the sofa, a dining chair or the piano bench to sit — or the bed to lie down! Use the arrows to get up.',
+  ] },
 ];

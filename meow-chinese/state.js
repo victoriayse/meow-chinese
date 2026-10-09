@@ -56,6 +56,7 @@ function fresh() {
     decorRoom: {},     // furniture id -> 'living' | 'bedroom' | 'kitchen' (when moved from its usual room)
     lightsOff: {},     // room -> true when its ceiling light is switched off (the room goes dark)
     powerOff: {},      // lamp / TV id -> true when switched off
+    roomStyle: {},     // room -> { wall, floor } renovation item ids (missing = the room's own look)
     letters: [],       // letters from friends: { id, from, fromName, text, at, read }
     gifts: [],         // gifts from friends: { id, from, fromName, item, message, at, opened }
     friendNews: [],    // e.g. a friend fed her kitten: { id, fromName, item, at, seen }
@@ -478,6 +479,15 @@ export function setDecorRoom(id, room) {
   state.decorRoom[id] = room;
   delete state.decorPos[id];                // start in its usual spot in the new room
   save();
+}
+// renovations: wallpapers and floors she owns, and which ones each room uses
+export const ownedRenovations = () => (state.owned || []).filter((id) => ITEMS[id] && ITEMS[id].cat === 'reno');
+export const roomStyle = (room) => ({ ...((state.roomStyle || {})[room] || {}) });
+export function setRoomStyle(room, kind, id) {
+  state.roomStyle = state.roomStyle || {};
+  const st = { ...(state.roomStyle[room] || {}) };
+  if (id) st[kind] = id; else delete st[kind];
+  state.roomStyle[room] = st; save();
 }
 // lights and TV at home
 export const roomDark = (room) => !!(state.lightsOff || {})[room];

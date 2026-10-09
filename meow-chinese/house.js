@@ -1,6 +1,7 @@
 // The kitten's house, shared by her own home page and by visits to a friend's house:
 // one fixed layout size, the furniture, the cats walking around, speech bubbles and the chat bar.
-import { ITEMS, drawGrid, artGrid, ROOM_WINDOW } from './pixel.js';
+import { ITEMS, drawGrid, artGrid, ROOM_WINDOW, kittenGrid } from './pixel.js';
+import { get as getState } from './state.js';
 import { KittenView, esc, html } from './ui.js';
 import { sfx } from './audio.js';
 
@@ -35,6 +36,7 @@ export const DECOR_POS = {
   'toy-right': 'right:32%;bottom:2%',
   house: 'right:17%;bottom:3%',
   'front-right': 'right:2%;bottom:3%',
+  bench: 'left:9%;bottom:25%',
 };
 
 // the furniture standing in one room: [{ id, css, kind: 'curtain' | 'flat' | 'stand' }]
@@ -42,7 +44,8 @@ export function roomLayout(s, roomKey, roomOf) {
   const pos = s.decorPos || {};
   return (s.owned || []).filter((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && !(s.decorHidden || []).includes(id) && roomOf(id) === roomKey).map((id) => {
     const it = ITEMS[id], spot = DECOR_POS[it.spot] || 'left:10%;bottom:10%', saved = pos[id];
-    if (spot === 'curtain') return { id, kind: 'curtain', css: `left:${(ROOM_WINDOW.x0 + ROOM_WINDOW.x1) * 50}%;top:${ROOM_WINDOW.y0 * 100 - 4}%;width:${(ROOM_WINDOW.x1 - ROOM_WINDOW.x0) * 100 + 12}%;transform:translateX(-50%);z-index:1` };
+    // window coverings hang from just above the window to just below it, as wide as the window plus a little
+    if (spot === 'curtain') return { id, kind: 'curtain', css: `left:${(ROOM_WINDOW.x0 + ROOM_WINDOW.x1) * 50}%;top:${ROOM_WINDOW.y0 * 100 - 4}%;width:${(ROOM_WINDOW.x1 - ROOM_WINDOW.x0) * 100 + 12}%;height:${(ROOM_WINDOW.y1 - ROOM_WINDOW.y0) * 100 + 7}%;transform:translateX(-50%);z-index:1` };
     const flat = it.spot === 'rug' || it.spot === 'under';
     const css = saved ? `left:${saved.x}%;top:${saved.y}%` : flat ? `left:50%;bottom:${it.spot === 'rug' ? 2 : 3}%;transform:translateX(-50%)` : spot;
     return { id, kind: flat ? 'flat' : 'stand', css };
@@ -60,6 +63,7 @@ export function decorEl({ id, css, kind }, { putAway = false } = {}) {
   if (kind === 'curtain') wrap.classList.add('curtain');
   else { wrap.classList.add('movable'); if (kind === 'flat') wrap.classList.add('flat'); }
   if (it.playable) wrap.classList.add('playable');
+  if (it.seat) wrap.classList.add('seat');
   if (it.power) { wrap.dataset.power = it.power; if (it.power === 'tv') wrap.appendChild(Object.assign(document.createElement('i'), { className: 'tv-screen' })); }
   wrap.appendChild(c);
   if (putAway) { const pa = document.createElement('button'); pa.className = 'put-away'; pa.type = 'button'; pa.title = 'Put away'; pa.textContent = '📦'; wrap.appendChild(pa); }
@@ -105,7 +109,7 @@ export class OtherCats {
     const c = this.m.get(id) || { x: 30, y: 6, room: 'living' };
     const roomChanged = data.room && data.room !== c.room;
     Object.assign(c, data);
-    if (c.dx == null || roomChanged || Math.hypot(c.x - c.dx, (c.y - c.dy) * 1.5) > 25) { c.dx = c.x; c.dy = c.y; }   // first sight, new room or a big jump: just appear there
+    if (c.dx == null || roomChanged || c.seat || Math.hypot(c.x - c.dx, (c.y - c.dy) * 1.5) > 25) { c.dx = c.x; c.dy = c.y; }   // first sight, new room or a big jump: just appear there
     this.m.set(id, c); this.draw(id); this.go(); return c;
   }
   remove(id) { const c = this.m.get(id); if (c && c.el) c.el.remove(); this.m.delete(id); }
@@ -134,8 +138,13 @@ export class OtherCats {
   }
   place(c) {
     if (!c.el) return;
+    const spot = c.seat && seatSpot(this.roomEl, c.seat);
+    if (spot) { c.x = c.dx = spot.x; c.y = c.dy = spot.y; }
     c.el.style.left = `${c.dx}%`; c.el.style.bottom = `${c.dy}%`;
-    c.el.style.zIndex = 2 + Math.round(100 - c.dy);
+    c.el.style.zIndex = spot ? spot.z : 2 + Math.round(100 - c.dy);
+    c.el.classList.toggle('lying', !!(spot && spot.lie)); c.el.classList.toggle('seated', !!spot);
+    if (c.bedShown && c.bedShown !== (spot && spot.lie && c.seat)) { blanket(this.roomEl, c.bedShown, false); c.bedShown = null; }
+    if (spot && spot.lie) { blanket(this.roomEl, c.seat, true); c.bedShown = c.seat; }
   }
   draw(id) {
     const c = this.m.get(id); if (!c) return;
@@ -158,10 +167,18 @@ const $w = (el) => el.querySelector('.kitten-wrap');
 // six faces she can send with the emoji button
 export const EMOTES = [['e-laugh', '😆'], ['e-wow', '😮'], ['e-angry', '😠'], ['e-wink', '😉'], ['e-shy', '☺️'], ['e-cool', '😎']];
 export const emoteIcon = (m) => (EMOTES.find((e) => e[0] === m) || [0, ''])[1];
+// a kitten's head with an expression (her own fur and hat), as a little picture
+export function catFace(mood, px = 4) {
+  const k = (getState() || {}).kitten || {};
+  const g = kittenGrid(k.fur || 'ginger', mood, k.equipped || {}, 0).slice(5, 25).map((r) => r.slice(2, 31));   // just the head
+  const c = document.createElement('canvas'); c.className = 'cat-face';
+  drawGrid(c, g, px);
+  return c;
+}
 export function chatBar(onSend, onEmote) {
   const bar = html`<form class="house-chat" autocomplete="off">
-      ${onEmote ? `<div class="emote-wrap"><button type="button" class="btn white small emote-btn" aria-label="Faces">😊</button>
-        <div class="emote-pick hidden">${EMOTES.map(([k, e]) => `<button type="button" data-emote="${k}">${e}</button>`).join('')}</div></div>` : ''}
+      ${onEmote ? `<div class="emote-wrap"><button type="button" class="btn white small emote-btn" aria-label="Faces"></button>
+        <div class="emote-pick hidden">${EMOTES.map(([k, e]) => `<button type="button" data-emote="${k}" aria-label="${e}"></button>`).join('')}</div></div>` : ''}
       <input type="text" maxlength="${CHAT_MAX}" placeholder="说点什么… Say something" enterkeyhint="send">
       <button type="submit" class="btn green small">➤ <span class="zh">说</span></button>
     </form>`;
@@ -169,6 +186,8 @@ export function chatBar(onSend, onEmote) {
   bar.onsubmit = (e) => { e.preventDefault(); const t = inp.value.trim(); if (!t) return; inp.value = ''; onSend(t); };
   if (onEmote) {
     const pick = bar.querySelector('.emote-pick');
+    bar.querySelector('.emote-btn').appendChild(catFace('happy', 1));
+    pick.querySelectorAll('[data-emote]').forEach((b) => b.appendChild(catFace(b.dataset.emote, 1)));
     bar.querySelector('.emote-btn').onclick = () => pick.classList.toggle('hidden');
     pick.addEventListener('click', (e) => { const b = e.target.closest('[data-emote]'); if (!b) return; pick.classList.add('hidden'); onEmote(b.dataset.emote); });
   }
@@ -280,4 +299,33 @@ export function wirePower(roomEl, onToggle) {
     if (!d || roomEl.classList.contains('arranging')) return;
     sfx.click(); onToggle(d.dataset.id);
   });
+}
+
+// ---------- sitting on furniture ----------
+// the spot (in room %) where a kitten sits on this piece, and the layer just in front of it
+export function seatSpot(roomEl, id) {
+  const el = roomEl && roomEl.querySelector(`.decor.seat[data-id="${id}"]`), seat = ITEMS[id] && ITEMS[id].seat;
+  if (!el || !seat) return null;
+  const W = roomEl.clientWidth, H = roomEl.clientHeight;
+  return {
+    x: ((el.offsetLeft + el.offsetWidth * seat.x) / W) * 100,
+    y: ((H - (el.offsetTop + el.offsetHeight * seat.y)) / H) * 100,
+    z: (parseInt(el.style.zIndex, 10) || 50) + 1, lie: !!seat.lie, el,
+  };
+}
+// the bed's blanket drawn over a kitten lying in it
+export function blanket(roomEl, id, on) {
+  const el = roomEl && roomEl.querySelector(`.decor.seat[data-id="${id}"]`), seat = ITEMS[id] && ITEMS[id].seat;
+  let b = roomEl && roomEl.querySelector(`.blanket[data-for="${id}"]`);
+  if (!on || !el || !seat || !seat.blanket) { if (b) b.remove(); return; }
+  if (!b) {
+    const [r0, r1, c0, c1] = seat.blanket, it = ITEMS[id];
+    const g = artGrid(it.art, it.pal).map((row, y) => row.map((c, x) => (y >= r0 && y < r1 && x >= c0 && x < c1 ? c : null)));
+    b = document.createElement('canvas'); b.className = 'blanket'; b.dataset.for = id;
+    drawGrid(b, g, HOUSE.decor);
+    roomEl.appendChild(b);
+  }
+  // laid over the bed, one layer above the kitten in it
+  b.style.left = `${el.offsetLeft}px`; b.style.top = `${el.offsetTop}px`;
+  b.style.zIndex = (parseInt(el.style.zIndex, 10) || 50) + 2;
 }

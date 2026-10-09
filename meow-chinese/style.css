@@ -1258,3 +1258,62 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .emote-pick button { width: 44px; height: 44px; font-size: 26px; padding: 0; background: #fff8ec; border: 2px solid var(--ink); border-radius: 8px; cursor: pointer; }
 .emote-pick button:active { transform: translateY(2px); }
 @media (max-width: 600px) { .emote-pick { grid-template-columns: repeat(6, 38px); } .emote-pick button { width: 38px; height: 38px; font-size: 22px; } }
+/* ---------- house buttons: outside the house, top-right of the stage ---------- */
+.house-tools { position: absolute; top: 10px; right: 10px; z-index: 30; display: flex; gap: 8px; }
+.tool-btn { position: relative; width: 52px; height: 52px; padding: 0; font-size: 26px; line-height: 1; background: #fff; border: 3px solid var(--ink); border-radius: 10px;
+  box-shadow: 0 4px 0 rgba(43,33,64,.35); display: grid; place-items: center; cursor: pointer; }
+.tool-btn:active { transform: translateY(2px); }
+.house-tools .store-btn, .house-tools .reno-btn { display: none; }
+.house-tools.arranging .store-btn, .house-tools.arranging .reno-btn { display: grid; background: #ffe9a8; }
+.house-tools.arranging .light-switch { display: none; }
+.house-tools.arranging #b-arrange { background: #9be27a; }
+.house-tools .store-btn b { position: absolute; top: -8px; right: -8px; min-width: 20px; font-size: 12px; color: #fff; background: var(--pink-d); border-radius: 999px; padding: 1px 5px; }
+.house-tools .store-btn b:empty { display: none; }
+.house-tools .light-switch { position: relative; top: auto; right: auto; transform: none; width: 52px; height: 52px; border-radius: 10px; background: #fff8c2; }
+.house-tools .light-switch.off { background: #3a3f5c; }
+.stage.in-house .house { top: 74px; }
+@media (max-width: 600px) {
+  .house-tools { top: 10px; right: 8px; gap: 6px; }
+  .tool-btn, .house-tools .light-switch { width: 42px; height: 42px; font-size: 21px; }
+  .stage.in-house .house { top: 62px; }
+}
+/* ---------- window coverings fill the window top to bottom ---------- */
+.house .decor.curtain canvas { width: 100% !important; height: 100% !important; }
+/* ---------- sitting / lying on furniture ---------- */
+.house .decor.seat { pointer-events: auto; cursor: pointer; }
+.room.arranging .decor.seat { cursor: grab; }
+.blanket { position: absolute; pointer-events: none; image-rendering: pixelated; }
+.lying .kflip { transform: rotate(-90deg) translateX(-24%) scale(.85); transform-origin: 50% 70%; }
+.lying .nametag { display: none; }
+/* ---------- cat-face emoji buttons ---------- */
+.cat-face { image-rendering: pixelated; display: block; }
+.house-chat .emote-btn { padding: 2px 6px; display: grid; place-items: center; }
+.house-chat .emote-btn .cat-face { width: 34px !important; height: auto !important; }
+.emote-pick button { display: grid; place-items: center; }
+.emote-pick .cat-face { width: 36px !important; height: auto !important; }
+@media (max-width: 600px) { .emote-pick .cat-face { width: 30px !important; } .house-chat .emote-btn .cat-face { width: 28px !important; } }
+/* ---------- renovate picker ---------- */
+.reno-box h4 { margin: 4px 0 0; font-family: var(--zh); }
+.reno-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.reno-opt { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; font: inherit; background: #fff8ec; border: 3px solid var(--ink); border-radius: 8px; cursor: pointer; }
+.reno-opt.on { background: #ffe9a8; outline: 3px solid #e2a400; }
+.reno-opt .art { min-height: 40px; display: grid; place-items: center; font-size: 26px; }
+.reno-opt small { font-size: 11px; text-align: center; }
+/* ---------- the arrows sit beside the chat history, not on top of the house ---------- */
+.house-log-wrap, .visit-log { gap: 8px; align-items: stretch; }
+.house-log-wrap { height: 80px; }
+.stage.in-house .house { bottom: 146px; }
+.house-log-wrap .dpad, .visit-log .dpad { position: static; flex: none; align-self: center; transform: none; grid-template: repeat(2, 36px) / repeat(3, 36px); gap: 3px; }
+.house-log-wrap .dpad button, .visit-log .dpad button { width: 36px; height: 36px; font-size: 15px; }
+.house-log-wrap .chat-log { min-width: 0; }
+@media (max-width: 600px) {
+  .house-log-wrap { height: 80px; bottom: 54px; }
+  .stage.in-house .house { bottom: 140px; }
+  .house-log-wrap .dpad, .visit-log .dpad { grid-template: repeat(2, 36px) / repeat(3, 36px); }
+}
+.seated .nametag { display: none; }
+.house-chat .emote-btn .cat-face { width: 36px !important; }
+.emote-pick { grid-template-columns: repeat(6, 50px); }
+.emote-pick button { width: 50px; height: 46px; }
+.emote-pick .cat-face { width: 44px !important; }
+@media (max-width: 600px) { .emote-pick { grid-template-columns: repeat(6, 46px); gap: 3px; padding: 5px; } .emote-pick button { width: 46px; height: 42px; } .emote-pick .cat-face { width: 40px !important; } .house-chat .emote-btn .cat-face { width: 30px !important; } }

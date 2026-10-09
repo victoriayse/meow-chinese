@@ -1746,13 +1746,72 @@ Object.assign(ITEMS, {
     ] },
 });
 
+// ---------- renovations: wallpapers and floors (drawn by pattern, x/y in room pixels) ----------
+const WALLPAT = {
+  mint: (x, y) => (x % 8 < 4 ? '#cdeedd' : '#e3f6ec'),
+  sky: (x, y) => { const cx = (x + 40) % 40, cy = y % 26; const cloud = (cx > 6 && cx < 18 && cy > 6 && cy < 10) || (cx > 9 && cx < 15 && cy === 5); return cloud ? '#ffffff' : '#cfe8fb'; },
+  dots: (x, y) => ((x % 6 === 2 && y % 6 === 2) || (x % 6 === 5 && y % 6 === 5) ? '#ffc94a' : '#fff1b8'),
+  hearts: (x, y) => { const hx = x % 10, hy = y % 10; const H = [[1, 1], [3, 1], [0, 2], [1, 2], [2, 2], [3, 2], [4, 2], [1, 3], [2, 3], [3, 3], [2, 4]]; return H.some(([a, b]) => a === hx && b === hy) ? '#ff8fb1' : '#ffe0ea'; },
+  brick: (x, y) => { const row = Math.floor(y / 4); if (y % 4 === 3) return '#f0d6c4'; return ((x + (row % 2) * 5) % 10 === 9) ? '#f0d6c4' : (row % 3 ? '#d9825b' : '#cf7650'); },
+};
+const FLOORPAT = {
+  oak: (x, y) => { const row = Math.floor(y / 4); if (y % 4 === 3) return '#c49a62'; return (x + row * 13) % 24 === 0 ? '#c49a62' : (row % 2 ? '#e8c48e' : '#dcb47c'); },
+  tile: (x, y) => ((Math.floor(x / 6) + Math.floor(y / 4)) % 2 ? '#7fd0c8' : '#f4fbff'),
+  carpet: (x, y) => (((x * 7 + y * 13) % 17) === 0 ? '#ffd0df' : '#f5a9c2'),
+  marble: (x, y) => { if (x % 12 === 0 || y % 8 === 0) return '#c9cdd6'; return ((x * 3 + y * 5) % 23) === 0 ? '#d9dde6' : '#f2f3f7'; },
+  walnut: (x, y) => { const row = Math.floor(y / 4); if (y % 4 === 3) return '#4e2c18'; return (x + row * 9) % 20 === 0 ? '#4e2c18' : (row % 2 ? '#7a4a2a' : '#6b3e22'); },
+};
+// a little square swatch picture of a pattern, for the shop
+function swatchArt(fn, floorish) {
+  const W = 16, H = 12, pal = { o: O }, map = new Map(); let n = 0;
+  const code = (c) => { if (!map.has(c)) { const k = 'abcdefghijklmnpqrstuvwxyz'[n++]; map.set(c, k); pal[k] = c; } return map.get(c); };
+  const art = [];
+  for (let y = 0; y < H; y++) { let row = ''; for (let x = 0; x < W; x++) row += (x === 0 || y === 0 || x === W - 1 || y === H - 1) ? 'o' : code(fn(x * (floorish ? 1 : 2), y * (floorish ? 1 : 2))); art.push(row); }
+  return { art, pal };
+}
+[['wall-mint', '薄荷条纹墙纸', 'Mint stripes wallpaper', 'mint', 80], ['wall-sky', '蓝天白云墙纸', 'Sky & clouds wallpaper', 'sky', 100], ['wall-dots', '黄色圆点墙纸', 'Yellow dots wallpaper', 'dots', 80],
+  ['wall-hearts', '粉色爱心墙纸', 'Pink hearts wallpaper', 'hearts', 100], ['wall-brick', '红砖墙', 'Red brick wall', 'brick', 120]].forEach(([id, name, en, pat, price]) => {
+  ITEMS[id] = { cat: 'reno', kind: 'wall', name, en, price, pat, ...swatchArt(WALLPAT[pat]) };
+});
+[['floor-oak', '浅色木地板', 'Light oak floor', 'oak', 90], ['floor-tile', '蓝绿格子地砖', 'Teal check tiles', 'tile', 90], ['floor-carpet', '粉色地毯', 'Pink carpet', 'carpet', 100],
+  ['floor-marble', '大理石地砖', 'Marble tiles', 'marble', 130], ['floor-walnut', '深色木地板', 'Dark walnut floor', 'walnut', 110]].forEach(([id, name, en, pat, price]) => {
+  ITEMS[id] = { cat: 'reno', kind: 'floor', name, en, price, pat, ...swatchArt(FLOORPAT[pat], true) };
+});
+
+// ---------- more window coverings (stretched to fit the window, top to bottom) ----------
+function coverArt(W, H, fn) {
+  const pal = { o: O }, map = new Map(); let n = 0;
+  const code = (c) => { if (!c) return '.'; if (!map.has(c)) { const k = 'abcdefghijklmnpqrstuvwxyz'[n++]; map.set(c, k); pal[k] = c; } return map.get(c); };
+  const art = [];
+  for (let y = 0; y < H; y++) { let row = ''; for (let x = 0; x < W; x++) row += code(fn(x, y, W, H)); art.push(row); }
+  return { art, pal };
+}
+const ROD = (x, y) => (y < 2 ? (y === 0 ? '#8a5a32' : '#b07a48') : null);
+Object.assign(ITEMS, {
+  blinds: { cat: 'decor', name: '百叶窗', en: 'Window blinds', price: 70, spot: 'curtain',
+    ...coverArt(36, 28, (x, y, W) => ROD(x, y) || (x > 1 && x < W - 2 && y < 18 ? (y % 3 === 2 ? '#c9ced8' : '#f4f6fa') : (y < 18 ? '#3a2a35' : (x === 30 && y < 24 ? '#c9ced8' : (x === 30 && y === 24 ? '#ffd23f' : null))))) },
+  roman: { cat: 'decor', name: '罗马帘', en: 'Roman blind', price: 75, spot: 'curtain',
+    ...coverArt(36, 28, (x, y, W) => ROD(x, y) || (x > 1 && x < W - 2 && y < 13 ? (y % 4 === 3 ? '#6f9e72' : (x === 2 || x === W - 3 ? '#6f9e72' : '#9cc79f')) : (x > 1 && x < W - 2 && y === 13 ? '#3a2a35' : null))) },
+  lace: { cat: 'decor', name: '蕾丝纱帘', en: 'Lace curtains', price: 65, spot: 'curtain',
+    ...coverArt(36, 28, (x, y, W) => ROD(x, y) || ((x < 12 || x >= W - 12) ? (((x + y) % 4 === 0) ? 'rgba(255,255,255,.95)' : 'rgba(255,255,255,.6)') : null)) },
+  starcurtain: { cat: 'decor', name: '星星窗帘', en: 'Starry curtains', price: 80, spot: 'curtain',
+    ...coverArt(36, 28, (x, y, W) => { if (ROD(x, y)) return ROD(x, y); const side = x < 11 || x >= W - 11; if (!side) return null; if ((x === 0 || x === 10 || x === W - 11 || x === W - 1)) return '#3a2a35'; const sx = x % 6, sy = y % 6; return (sx === 3 && sy === 3) || (sx === 3 && (sy === 2 || sy === 4)) || (sy === 3 && (sx === 2 || sx === 4)) ? '#ffd23f' : '#2e3f7a'; }) },
+  pianobench: { cat: 'decor', name: '钢琴椅', en: 'Piano bench', price: 60, spot: 'bench',
+    ...coverArt(24, 12, (x, y, W, H) => { if (y < 4) return (y === 0 || x === 0 || x === W - 1) ? '#3a2a35' : (y === 1 ? '#a25b78' : '#8a4766'); if (y === 4) return '#3a2a35'; if (y === 5) return x === 0 || x === W - 1 ? '#3a2a35' : '#6b3a2a'; return (x >= 1 && x <= 3) || (x >= W - 4 && x <= W - 2) ? (x === 1 || x === W - 2 ? '#3a2a35' : '#4a271c') : null; }) },
+});
+// where a kitten sits on furniture (fraction of the piece: x across, y down to where her paws rest)
+ITEMS.sofa.seat = { x: 0.5, y: 0.78 };
+if (ITEMS.diningtable) ITEMS.diningtable.seat = { x: 0.13, y: 0.66 };
+if (ITEMS.pianobench) ITEMS.pianobench.seat = { x: 0.5, y: 0.45 };
+if (ITEMS.bed) ITEMS.bed.seat = { x: 0.5, y: 0.62, lie: true, blanket: [6, 14, 13, 32] };   // blanket rows 6-13, columns 13-31
+
 // furniture you can switch on and off at home
 ITEMS.tv.power = 'tv';
 ['lamp', 'lantern', 'starlight', 'nightstand'].forEach((id) => { if (ITEMS[id]) ITEMS[id].power = 'light'; });
 
 export const ROOM_WINDOW = { x0: 0.39, x1: 0.61, y0: 0.08, y1: 0.42 };
 // kind: 'living' (cream & pink, wooden floor) · 'bedroom' (lilac with stars, soft carpet) · 'kitchen' (tiles, chequered floor)
-export function drawRoom(canvas, night = false, kind = 'living') {
+export function drawRoom(canvas, night = false, kind = 'living', style = null) {
   const cssW = canvas.clientWidth || 300, cssH = canvas.clientHeight || 200;
   const W = 120, H = Math.max(40, Math.round(W * cssH / cssW));
   lowres(canvas, W, H, (R) => {
@@ -1791,6 +1850,14 @@ export function drawRoom(canvas, night = false, kind = 'living') {
         for (let x = (row * 13) % 24; x < W; x += 24) R(x, y, 1, 3, '#b07a48');
       }
     }
+    // renovations: a new wallpaper and/or floor for this room
+    const wall = style && ITEMS[style.wall] && WALLPAT[ITEMS[style.wall].pat];
+    const floor = style && ITEMS[style.floor] && FLOORPAT[ITEMS[style.floor].pat];
+    if (wall) {
+      for (let y = 0; y < floorY - 3; y++) for (let x = 0; x < W; x++) R(x, y, 1, 1, wall(x, y));
+      R(0, floorY - 3, W, 3, '#b07a48'); R(0, floorY - 3, W, 1, '#c9905a');
+    }
+    if (floor) for (let y = floorY; y < H; y++) for (let x = 0; x < W; x++) R(x, y, 1, 1, floor(x, y - floorY));
     // window with the sky outside
     const wx0 = Math.round(W * ROOM_WINDOW.x0), wx1 = Math.round(W * ROOM_WINDOW.x1), wy0 = Math.round(H * ROOM_WINDOW.y0), wy1 = Math.round(H * ROOM_WINDOW.y1);
     R(wx0 - 2, wy0 - 2, wx1 - wx0 + 4, wy1 - wy0 + 4, '#ffffff');
