@@ -116,7 +116,7 @@ export function decorEl({ id, css, kind, photo, closed, cage }, { putAway = fals
       const t = ITEMS[tid]; if (!t || !t.inCage) return;
       const tc = document.createElement('canvas'); tc.className = 'cage-thing';
       drawGrid(tc, artGrid(t.art, t.pal), HOUSE.decor);
-      tc.style.cssText = `left:${((1 + t.inCage.x * (inner - 2 - t.art[0].length)) / W) * 100}%;bottom:${t.inCage.y * 100}%;z-index:${t.inCage.z}`;
+      Object.assign(tc.style, { left: `${((1 + t.inCage.x * (inner - 2 - t.art[0].length)) / W) * 100}%`, bottom: `${t.inCage.y * 100}%`, zIndex: t.inCage.z });   // keep the size drawGrid set (sharp screens draw at 2×)
       wrap.appendChild(tc);
     });
     wrap.dataset.inner = (inner / W).toFixed(3);

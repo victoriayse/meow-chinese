@@ -124,4 +124,7 @@ export const CHANGES = [
     'Your puppy runs around the house and hops onto sofas, chairs, beds and mats.',
     'Hamsters and guinea pigs live in their cage. Tap the cage to open the door and they explore every room — tap them to put them back.',
   ] },
+  { v: 80, items: [
+    'Fixed: the hamster wheel and other things inside pet cages were drawn too big on some screens.',
+  ] },
 ];
