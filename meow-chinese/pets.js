@@ -50,7 +50,7 @@ function walkTo(l, kind, x, y) {
   l.until = Date.now() + l.dur * 1000;
 }
 // the house screen tells us where a sitting pet really is (on the sofa…), so it walks off from there
-export function noteSpot(kind, x, y) { const l = live.get(kind); if (l && (l.mode === 'sit' || l.fromCage)) { l.x = x; l.y = y; } }
+export function noteSpot(kind, x, y, down = false) { const l = live.get(kind); if (l && (l.mode === 'sit' || l.fromCage || (down && l.mode === 'idle'))) { l.x = x; l.y = y; } }
 function step(p, l, now) {
   l.jump = false; l.fromCage = null;
   const kind = p.kind, rooms = openRooms();
@@ -73,7 +73,7 @@ function step(p, l, now) {
   }
   if (kind === 'dog' && r < 0.42) {                    // hop onto something comfy for a while
     const spots = sitSpots(l.room);
-    if (spots.length) { const sp = spots[Math.floor(Math.random() * spots.length)]; l.mode = 'sit'; l.seat = sp; l.dur = 0.8; l.until = now + rnd(7000, 14000); return; }
+    if (spots.length) { const sp = spots[Math.floor(Math.random() * spots.length)]; l.mode = 'sit'; l.seat = sp; l.dur = 0.8; l.until = now + rnd(10000, 18000); return; }
   }
   if (r < 0.8) { walkTo(l, kind, rnd(8, 92), rnd(1, 26)); return; }
   l.mode = 'idle'; l.dur = 0; l.until = now + rnd(2000, 5000);

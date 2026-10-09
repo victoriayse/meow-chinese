@@ -132,4 +132,7 @@ export const CHANGES = [
     'Pets walk out of the side of the room when they go to the next room.',
     'Hamsters with a wheel hop on and run in it every now and then!',
   ] },
+  { v: 82, items: [
+    'Your puppy now walks over to the sofa or bed, jumps up, and jumps back down when it\'s done — no more floating!',
+  ] },
 ];

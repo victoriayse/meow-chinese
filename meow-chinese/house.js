@@ -448,6 +448,7 @@ function petCanvas(kind, frame) {
   drawGrid(c, artGrid(art, it.pal), HOUSE.decor);
   return c;
 }
+const perch = new Map();   // pet kind -> { up: floor spot in front of the seat, at: the seat } while it sits up on furniture
 export class PetLayer {
   constructor(roomEl, roomKey, { onClick, onSpot } = {}) { this.roomEl = roomEl; this.roomKey = roomKey; this.onClick = onClick; this.onSpot = onSpot; this.els = new Map(); }
   el(p) {
@@ -485,43 +486,89 @@ export class PetLayer {
         return;
       }
       const fresh = el.dataset.fresh === '1' || el.parentElement !== room;
-      let jump = p.jump;
+      const pc = perch.get(p.kind) || {};      // perched up on a sofa / bed right now?
       if (el.parentElement !== room) room.appendChild(el);
       el.classList.remove('in-cage'); delete el.dataset.fresh;
-      let x = p.x, y = p.y, z = null, sit = false;
-      // where it is drawn right now (to work out how long the trip to the new spot takes)
-      const curX = parseFloat(el.style.left), curY = parseFloat(el.style.bottom);
-      if (jump && p.fromCage) {          // just let out: it hops out of the cage door
-        const cw = room.querySelector(`.decor[data-id="${p.fromCage}"]`);
-        if (cw) { x = ((cw.offsetLeft + cw.offsetWidth * 0.75) / W) * 100; y = ((H - cw.offsetTop - cw.offsetHeight) / H) * 100; }
-      }
+      let x = p.x, y = p.y, z = null, sit = false, up = null;
       if (p.mode === 'sit' && p.seat) {
-        if (!p.seat.flat) { const sp = seatSpot(room, p.seat.id, p.seat.slot); if (sp) { x = sp.x; y = sp.y; z = sp.z; sit = true; } }
-        else { const d = room.querySelector(`.decor[data-id="${p.seat.id}"]`); if (d) { x = ((d.offsetLeft + d.offsetWidth / 2) / W) * 100; y = ((H - d.offsetTop - d.offsetHeight * 0.6) / H) * 100; z = (parseInt(d.style.zIndex, 10) || 1) + 1; sit = true; } }
+        if (!p.seat.flat) {
+          const sp = seatSpot(room, p.seat.id, p.seat.slot);
+          if (sp) {
+            x = sp.x; y = sp.y; z = sp.z; sit = true;
+            // a raised seat (sofa, bed, chair): walk to the floor in front of it, then jump up
+            const floorY = Math.max(1, Math.min(30, ((H - sp.el.offsetTop - sp.el.offsetHeight) / H) * 100 + 1));
+            if (y - floorY > 1) up = { x, y: Math.min(floorY, y - 2) };
+          }
+        } else { const d = room.querySelector(`.decor[data-id="${p.seat.id}"]`); if (d) { x = ((d.offsetLeft + d.offsetWidth / 2) / W) * 100; y = ((H - d.offsetTop - d.offsetHeight * 0.6) / H) * 100; z = (parseInt(d.style.zIndex, 10) || 1) + 1; sit = true; } }
+      }
+      // done sitting on a sofa / bed: it jumps down to the floor in front of it and stands there
+      if (!sit && pc.up && pc.at && Math.abs(x - pc.at.x) < 1 && Math.abs(y - pc.at.y) < 1) {
+        x = pc.up.x; y = pc.up.y; if (this.onSpot) this.onSpot(p.kind, x, y, true);
+      }
+      let start = null;
+      if (p.jump && p.fromCage) {          // just let out: it hops out of the cage door
+        const cw = room.querySelector(`.decor[data-id="${p.fromCage}"]`);
+        if (cw) { x = ((cw.offsetLeft + cw.offsetWidth * 0.75) / W) * 100; y = Math.max(1, ((H - cw.offsetTop - cw.offsetHeight) / H) * 100); if (this.onSpot) this.onSpot(p.kind, x, y); }
       }
       if (sit && this.onSpot) this.onSpot(p.kind, x, y);
-      let dur = p.dur;
-      if (fresh && !jump) {
-        // the screen was just drawn: put it where it is now (half-way through a walk), then carry on
-        jump = true;
-        if (p.mode === 'walk' && p.age != null && p.age < p.dur * 1000) {
-          const f = p.age / (p.dur * 1000), left = p.dur - p.age / 1000;
-          el.style.transition = 'none';
-          el.style.left = `${p.x0 + (x - p.x0) * f}%`; el.style.bottom = `${p.y0 + (y - p.y0) * f}%`;
-          void el.offsetWidth;            // let it settle there before the walk carries on
-          jump = false; dur = left;
+      // the same plan as last time (another pet moved): leave this one alone
+      const goal = [p.mode, x.toFixed(1), y.toFixed(1), p.seat ? `${p.seat.id}/${p.seat.slot || 0}` : ''].join('|');
+      if (!fresh && !p.jump && el._goal === goal) return;
+      el._goal = goal;
+      if (fresh || p.jump) {
+        // just drawn (or popped into this room): start where it is now — half-way through a walk if it's walking
+        el.getAnimations().forEach((an) => an.cancel()); el._tok = null;
+        if (!p.jump && p.mode === 'walk' && p.age != null && p.age < p.dur * 1000) {
+          const f = p.age / (p.dur * 1000); start = { x: p.x0 + (x - p.x0) * f, y: p.y0 + (y - p.y0) * f };
+        } else {
+          el.style.left = `${x}%`; el.style.bottom = `${y}%`;
+          el.style.zIndex = z != null ? z : 2 + Math.round(100 - y);
+          el.classList.remove('walking'); el.classList.toggle('sitting', sit); perch.set(el.dataset.kind, sit && up ? { up, at: { x, y } } : {});
+          el.classList.toggle('left', !!p.left);
+          return;
         }
-      } else if (!jump && Number.isFinite(curX) && (Math.abs(curX - x) > 0.5 || Math.abs(curY - y) > 0.5) && p.mode !== 'walk') {
-        // hopping onto a sofa or back down: a short trip at walking speed (never a jump)
-        dur = Math.max(0.5, Math.hypot(x - curX, (y - curY) * 1.4) / 11);
+      } else {
+        // where it is on screen right now (even half-way through a step)
+        const cs = getComputedStyle(el);
+        start = { x: (parseFloat(cs.left) / W) * 100, y: (parseFloat(cs.bottom) / H) * 100 };
+        el.getAnimations().forEach((an) => an.cancel());
       }
-      if (!jump && !(dur > 0)) dur = 0.4;
-      el.style.transition = jump ? 'none' : `left ${dur}s linear, bottom ${dur}s linear`;
-      el.style.left = `${x}%`; el.style.bottom = `${y}%`;
-      el.style.zIndex = z != null ? z : 2 + Math.round(100 - y);
-      el.classList.toggle('walking', p.mode === 'walk');
-      el.classList.toggle('sitting', sit);
-      el.classList.toggle('left', !!p.left);
+      // the route: jump down from where it's sitting, walk, and jump up onto the new seat
+      const segs = [];
+      const sameSeat = pc.up && up && Math.abs(pc.up.x - up.x) < 0.5 && Math.abs(pc.up.y - up.y) < 0.5;
+      if (pc.up && !sameSeat) segs.push({ x: pc.up.x, y: pc.up.y, hop: true });
+      if (up && !sameSeat) { segs.push({ x: up.x, y: up.y }); segs.push({ x, y, hop: true, z }); }
+      else segs.push({ x, y });
+      this.run(el, start, segs, { sit, up, z, kind: p.kind });
+      if (!segs.length) el.classList.toggle('left', !!p.left);
     });
+  }
+  // walk / jump along the route, one piece after another (a newer plan cancels this one)
+  async run(el, start, segs, { sit, up, z, kind }) {
+    const tok = {}; el._tok = tok;
+    const speed = { dog: 11, guineapig: 6, hamster: 7 }[kind] || 9;
+    let cur = start;
+    el.classList.remove('sitting');
+    for (const sg of segs) {
+      if (el._tok !== tok) return;
+      const dist = Math.hypot(sg.x - cur.x, (sg.y - cur.y) * 1.4);
+      if (dist < 0.3 && !sg.hop) { cur = sg; continue; }
+      if (sg.x < cur.x - 0.2) el.classList.add('left'); else if (sg.x > cur.x + 0.2) el.classList.remove('left');
+      el.classList.toggle('walking', !sg.hop);
+      if (sg.hop) { perch.set(el.dataset.kind, {}); el.style.zIndex = sg.z != null ? sg.z : 2 + Math.round(100 - sg.y); }
+      else el.style.zIndex = 2 + Math.round(100 - Math.min(cur.y, sg.y));
+      const P = (q) => ({ left: `${q.x}%`, bottom: `${q.y}%` });
+      const frames = sg.hop
+        ? [P(cur), { left: `${(cur.x + sg.x) / 2}%`, bottom: `${Math.max(cur.y, sg.y) + 7}%`, offset: 0.45 }, P(sg)]
+        : [P(cur), P(sg)];
+      el.style.left = `${sg.x}%`; el.style.bottom = `${sg.y}%`;      // where it ends up
+      const an = el.animate(frames, { duration: sg.hop ? 420 : Math.max(250, (dist / speed) * 1000), easing: sg.hop ? 'ease-in-out' : 'linear' });
+      cur = sg;
+      try { await an.finished; } catch { return; }
+    }
+    if (el._tok !== tok) return;
+    el.classList.remove('walking'); el.classList.toggle('sitting', !!sit);
+    if (z != null) el.style.zIndex = z; else el.style.zIndex = 2 + Math.round(100 - cur.y);
+    perch.set(el.dataset.kind, sit && up ? { up, at: { x: cur.x, y: cur.y } } : {});
   }
 }
