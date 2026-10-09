@@ -198,4 +198,7 @@ export const CHANGES = [
   { v: 97, items: [
     'Your puppy is a little smaller in the house.',
   ] },
+  { v: 98, items: [
+    'Moving furniture: whatever you drag last now sits in front of things it overlaps (e.g. the bird cage in front of the fence).',
+  ] },
 ];

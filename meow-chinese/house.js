@@ -106,7 +106,8 @@ export function roomLayout(s, roomKey, roomOf) {
     // a pet cage shows the water bottle, wheel… she bought for that pet, and an open door while the pet is out
     const cage = it.cage ? { things: (s.owned || []).filter((x) => ITEMS[x] && ITEMS[x].cat === 'petacc' && (ITEMS[x].cageFor || []).includes(it.cage) && !(s.cageOff || []).includes(x)), open: !!((s.pets || []).find((p) => p.kind === it.cage) || {}).out } : null;
     const back = it.frames && it.frames.back && (s.facing || {})[id] === 'back';   // turned round to face the back
-    return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : {}) };
+    const layer = (s.decorLayer || {})[id] || 0;   // dragged on top of something: stays in front of it
+    return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : {}), ...(layer ? { layer } : {}) };
   }).filter(Boolean).concat(((s.roomStyle || {})[roomKey] || {}).pool ? [(() => {
     // the swimming pool (from 🎨 Renovate): she can move it like furniture
     const id = `@pool-${roomKey}`, saved = pos[id];
@@ -136,7 +137,7 @@ export function closedCurtain(g) {
   return out;
 }
 // one piece of furniture as a page element
-export function decorEl({ id, css, kind, photo, closed, cage, facing }, { putAway = false } = {}) {
+export function decorEl({ id, css, kind, photo, closed, cage, facing, layer }, { putAway = false } = {}) {
   if (kind === 'pool') return poolEl({ id, css });
   const it = ITEMS[id]; if (!it) return null;
   const c = document.createElement('canvas');
@@ -209,6 +210,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing }, { putAwa
     wrap.dataset.floor = ((7 / H) * 100).toFixed(1);
   }
   if (facing === 'back') wrap.dataset.facing = 'back';
+  if (layer) wrap.dataset.layer = layer;
   if (it.radio) wrap.classList.add('radio');
   if (it.garland) wrap.classList.add('garland');
   if (putAway && it.frames && it.frames.back) {      // 🔄 turn it round (shown while moving furniture)
@@ -219,6 +221,24 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing }, { putAwa
   }
   if (putAway) { const pa = document.createElement('button'); pa.className = 'put-away'; pa.type = 'button'; pa.title = 'Put away'; pa.textContent = '📦'; wrap.appendChild(pa); }
   return wrap;
+}
+// furniture she dragged on top of other furniture stays in front of it (the one moved last wins)
+export function stackDecor(roomEl) {
+  const els = [...roomEl.querySelectorAll('.decor:not(.curtain):not(.flat)')];
+  const box = (el) => ({ l: el.offsetLeft, t: el.offsetTop, r: el.offsetLeft + el.offsetWidth, b: el.offsetTop + el.offsetHeight });
+  const overlap = (a, b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
+  const lay = (el) => +el.dataset.layer || 0;
+  for (let pass = 0; pass < 3; pass++) {
+    els.forEach((a) => {
+      if (!lay(a)) return;
+      const A = box(a);
+      els.forEach((b) => {
+        if (a === b || lay(b) >= lay(a) || !overlap(A, box(b))) return;
+        const za = +a.style.zIndex || 0, zb = +b.style.zIndex || 0;
+        if (za <= zb) a.style.zIndex = zb + 1;
+      });
+    });
+  }
 }
 // things lower down the room stand in front of things further back
 export function depthOf(el, room) {
