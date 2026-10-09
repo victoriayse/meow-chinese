@@ -5,7 +5,7 @@ import { get as getState, roomNeighbors, UNLOCKS, roomInfo } from './state.js';
 import { KittenView, esc, html } from './ui.js';
 import { sfx } from './audio.js';
 
-export const HOUSE = { w: 720, roof: 48, room: 600, kitten: 5, decor: 5 };   // kitten 30% smaller than before (was 7)
+export const HOUSE = { w: 720, roof: 48, room: 600, kitten: 4, decor: 5 };   // kitten: was 7, then 5, now 4 (20% smaller again)
 const ROOM_ARROW = 40;   // screen px kept free on each side for the ◀ ▶ room arrows
 export let houseK = 1;
 

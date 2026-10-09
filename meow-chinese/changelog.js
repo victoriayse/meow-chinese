@@ -188,4 +188,7 @@ export const CHANGES = [
   { v: 94, items: [
     'New clothes: 👙 polka-dot bikinis in pink, blue and purple — perfect for the pool!',
   ] },
+  { v: 95, items: [
+    'Cats in the house are a little smaller, so there\'s more room to play.',
+  ] },
 ];
