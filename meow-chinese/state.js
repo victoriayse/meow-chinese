@@ -59,6 +59,7 @@ function fresh() {
     roomStyle: {},     // room -> { wall, floor } renovation item ids (missing = the room's own look)
     framePhotos: {},   // photo frame id -> small JPEG (data URL, at most 50 KB)
     curtainClosed: {},   // curtain id -> true while it is drawn shut
+    facing: {},        // furniture id -> 'back' when she turned it round (study chair, laptop)
     pets: [],          // adopted pets: { kind: 'dog' | 'guineapig' | 'hamster', name, out } (out: a hamster / guinea pig let out of its cage)
     letters: [],       // letters from friends: { id, from, fromName, text, at, read }
     gifts: [],         // gifts from friends: { id, from, fromName, item, message, at, opened }
@@ -526,6 +527,7 @@ export function setRoomStyle(room, kind, id) {
 export function setFramePhoto(id, dataUrl) { state.framePhotos = state.framePhotos || {}; if (dataUrl) state.framePhotos[id] = dataUrl; else delete state.framePhotos[id]; save(); }
 // lights and TV at home
 export const roomDark = (room) => !!(state.lightsOff || {})[room];
+export function toggleFacing(id) { state.facing = state.facing || {}; if (state.facing[id] === 'back') delete state.facing[id]; else state.facing[id] = 'back'; save(); return state.facing[id] || 'front'; }
 export function toggleCurtain(id) { state.curtainClosed = state.curtainClosed || {}; if (state.curtainClosed[id]) delete state.curtainClosed[id]; else state.curtainClosed[id] = true; save(); return !!state.curtainClosed[id]; }
 export function toggleRoomLight(room) { state.lightsOff = state.lightsOff || {}; state.lightsOff[room] = !state.lightsOff[room]; save(); return !state.lightsOff[room]; }
 export function togglePower(id) { state.powerOff = state.powerOff || {}; state.powerOff[id] = !state.powerOff[id]; save(); return !state.powerOff[id]; }

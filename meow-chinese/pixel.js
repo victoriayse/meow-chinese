@@ -3057,6 +3057,101 @@ Object.assign(ITEMS, {
     ] },
 });
 
+// ---------- radio (plays her own song), air-con, coffee table ----------
+Object.assign(ITEMS, {
+  radio: { cat: 'decor', name: '收音机', en: 'Radio', price: 90, spot: 'toy-right', radio: true,
+    pal: { o: O, r: '#7ec3e8', l: '#c2e7fb', k: '#3a3f4a', s: '#9fb3c8', y: '#fff3a8', w: '#ffffff' },
+    art: [
+      '..............oo....',
+      '..............o.....',
+      '..............o.....',
+      'oooooooooooooooooooo',
+      'ollllllllllllllllllo',
+      'orrrrrrrrrrrrrrrrrro',
+      'orooooooooorooooooro',
+      'orosksksksoroyoyyoro',
+      'orokkkkkkkorooooooro',
+      'orosksksksorrrrrrrro',
+      'orokkkkkkkoroorrooro',
+      'orosksksksoroorrooro',
+      'orooooooooorrrrrrrro',
+      'orrrrrrrrrrrrrrrrrro',
+      'oooooooooooooooooooo',
+    ] },
+  aircon: { cat: 'decor', name: '冷气机', en: 'Air-con', price: 150, spot: 'wall-mid', power: 'aircon',
+    pal: { o: O, w: '#ffffff', l: '#eef2f6', s: '#c9d3de', g: '#7cbd52', b: '#7ec3e8' },
+    art: [
+      'oooooooooooooooooooooooooooooooo',
+      'ollllllllllllllllllllllllllllllo',
+      'owwwwwwwwwwwwwwwwwwwwwwwwwwwwwwo',
+      'owwsssssssswwwwwwwwwwwwwwbwgwwwo',
+      'owwwwwwwwwwwwwwwwwwwwwwwwwwwwwwo',
+      'owwwwwwwwwwwwwwwwwwwwwwwwwwwwwwo',
+      'owsssssssssssssssssssssssssssswo',
+      'owwwwwwwwwwwwwwwwwwwwwwwwwwwwwwo',
+      'owsssssssssssssssssssssssssssswo',
+      'oooooooooooooooooooooooooooooooo',
+      '................................',
+    ] },
+  coffeetable: { cat: 'decor', name: '咖啡桌', en: 'Coffee table', price: 85, spot: 'plant',
+    pal: { o: O, t: '#c2e7fb', u: '#ffffff', w: '#a8743f', l: '#c98f58', d: '#8a5a32' },
+    art: [
+      'oooooooooooooooooooooooooooooo',
+      'ouuuuuuuuuuuuuuuuuuuuuuuuuuuuo',
+      'oooooooooooooooooooooooooooooo',
+      '.ollllllllllllllllllllllllllo.',
+      '.owwwwwwwwwwwwwwwwwwwwwwwwwwo.',
+      '.oooooooooooooooooooooooooooo.',
+      '..owwo..................owwo..',
+      '..owwo..................owwo..',
+      '..owwoooooooooooooooooooowwo..',
+      '..owwoddddddddddddddddddowwo..',
+      '..owwo..................owwo..',
+      '..oooo..................oooo..',
+    ] },
+});
+// things she can turn to face the front or the back (the back view is drawn in the same colours)
+ITEMS.studychair.frames = { back: [
+    '..oooooooooo..',
+    '..obbbbbbbbo..',
+    '..oddddddddo..',
+    '..odeeeeeedo..',
+    '..odeeeeeedo..',
+    '..odeeeeeedo..',
+    '..odeeeeeedo..',
+    '..odeeeeeedo..',
+    '..odeeeeeedo..',
+    '..odeeeeeedo..',
+    'oooddddddddooo',
+    'oboooooooooobo',
+    'obbbbbosobbbbo',
+    'ooooooosoooooo',
+    '......oso.....',
+    '......oso.....',
+    '......oso.....',
+    '......oso.....',
+    '.oooooooooooo.',
+    'oo....oo....oo',
+    'oo....oo....oo',
+    '..............',
+  ] };
+Object.assign(ITEMS.studychair.pal, { d: '#4f8fd4', e: '#5f9fe0' });
+ITEMS.studychair.seat = { x: 0.5, y: 0.55 };      // she faces the same way as the chair
+ITEMS.laptop.frames = { back: [
+    '.oooooooooooooo.',
+    '.ollllllllllllo.',
+    '.osssssssssssso.',
+    '.ossssppsppssso.',
+    '.osssspppppssso.',
+    '.ossssspppsssso.',
+    '.osssssspssssso.',
+    '.osssssssssssso.',
+    '.oooooooooooooo.',
+    'oddddddddddddddo',
+    'oooooooooooooooo',
+  ] };
+Object.assign(ITEMS.laptop.pal, { p: '#ff9ec4', d: '#9fb3c8' });
+
 // furniture you can switch on and off at home
 ITEMS.tv.power = 'tv';
 ['lamp', 'lantern', 'starlight', 'nightstand'].forEach((id) => { if (ITEMS[id]) ITEMS[id].power = 'light'; });

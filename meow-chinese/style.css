@@ -1402,3 +1402,23 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .decor[data-power="fan"]:not(.off) .spin-head { animation: fanturn 5s ease-in-out infinite alternate; }
 .decor[data-power="fan"]:not(.off) .spin-ring { animation: wheelspin .35s steps(6) infinite; }
 @keyframes fanturn { 0% { transform: scaleX(1); } 50% { transform: scaleX(.72); } 100% { transform: scaleX(1); } }
+/* 📻 radio: tap to play; little notes float up while it plays */
+.home .house .decor.radio { pointer-events: auto; cursor: pointer; }
+.decor.radio.playing { animation: radiobop .5s steps(2) infinite; }
+@keyframes radiobop { 50% { transform: translateY(-2px); } }
+.decor.radio.playing::before, .decor.radio.playing::after { content: '♪'; position: absolute; top: -6px; left: 30%; font-size: 26px; color: #e0628c; animation: notefloat 1.6s ease-out infinite; pointer-events: none; }
+.decor.radio.playing::after { content: '♫'; left: 60%; color: #3f7fc0; animation-delay: .8s; }
+@keyframes notefloat { 0% { opacity: 0; transform: translateY(0); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-40px); } }
+.decor .radio-song { position: absolute; bottom: -4px; right: -4px; width: 16px; height: 16px; padding: 0; font-size: 9px; line-height: 1; display: grid; place-items: center;
+  background: #fff; border: 1px solid var(--ink); border-radius: 50%; cursor: pointer; pointer-events: auto; transform: scale(var(--inv, 1)); transform-origin: bottom right; }
+.room.arranging .decor .radio-song { display: none; }
+/* 🔄 turn a study chair / laptop round (while moving furniture) */
+.decor .turn-btn { display: none; position: absolute; top: -5px; left: -5px; width: 15px; height: 15px; padding: 0; font-size: 8px; line-height: 1; background: #fff; border: 1px solid var(--ink); border-radius: 50%; cursor: pointer; z-index: 2; transform: scale(var(--inv, 1)); transform-origin: top left; }
+.room.arranging .decor .turn-btn { display: grid; place-items: center; pointer-events: auto; }
+@media (max-width: 600px) { .decor .turn-btn { width: 12px; height: 12px; font-size: 7px; } }
+.decor[data-facing="back"] .tv-screen { display: none; }
+/* ❄️ air-con: cool air drifts down while it's on */
+.decor[data-power="aircon"]::after { content: ''; position: absolute; left: 10%; right: 10%; top: 100%; height: 60px; pointer-events: none;
+  background: repeating-linear-gradient(90deg, rgba(160, 215, 255, .55) 0 3px, transparent 3px 14px); animation: coolair 1.4s linear infinite; mask-image: linear-gradient(#000, transparent); -webkit-mask-image: linear-gradient(#000, transparent); }
+.decor[data-power="aircon"].off::after { display: none; }
+@keyframes coolair { 0% { opacity: .2; transform: translateY(-6px); } 50% { opacity: .9; } 100% { opacity: .2; transform: translateY(10px); } }

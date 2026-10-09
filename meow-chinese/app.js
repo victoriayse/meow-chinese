@@ -16,6 +16,7 @@ import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
 import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, compressPhoto, PetLayer } from './house.js';
 import * as Pets from './pets.js';
+import * as Radio from './radio.js';
 import * as Visit from './visit.js';
 import { randomJoke } from './jokes.js';
 import { practiceListScreen, practiceScreen, KINDS } from './practice.js';
@@ -77,6 +78,7 @@ let currentParams = {};
 const NO_HISTORY = ['welcome', 'setup', 'grave', 'login'];
 export function go(name, params = {}, opts = {}) {
   if (window.speechSynthesis) speechSynthesis.cancel();
+  if (!(name === 'home' && params.view === 'house')) Radio.stop();   // the radio plays only while she's in her house
   // leaving the parent area while looking after a child's account: switch back to her own account first
   if (Cloud.managing() && name !== 'parent') { app.style.opacity = '.5'; Cloud.stopManaging().finally(() => { app.style.opacity = ''; go(name, params, opts); }); return; }
   if (!opts.back && !opts.replace && current && !NO_HISTORY.includes(current)) {
@@ -442,6 +444,34 @@ function petMenu(kind) {
   if (back) back.onclick = () => { Pets.putBack(kind); closeModal(); toast(`🏠 <span class="zh">${esc(p.name)}回到笼子里了</span> Back in the cage`); refreshHome(); Visit.hostResendHouse(); };
   $('#ren', box).onclick = () => { closeModal(); askPetName(kind, p.name).then((nm) => { if (nm) { S.renamePet(kind, nm); Pets.refreshPets(); toast(`✏️ ${esc(nm)}`); } }); };
   $('#pc', box).onclick = closeModal;
+  openModal(box);
+}
+// 📻 the radio's song: choose an mp3 from this device (kept on this device only)
+async function radioMenu() {
+  const song = await Radio.getSong();
+  sfx.click();
+  const box = html`<div class="card stack" style="align-items:center;text-align:center">
+      <div class="h-title" style="justify-content:center"><span class="zh">📻 收音机</span><span class="en">Radio</span></div>
+      <p class="help" style="margin:0" id="rs">${song ? `🎵 <b>${esc(song.name)}</b>` : '还没有歌。选一首你喜欢的歌吧！<br>No song yet — pick one you like.'}</p>
+      <label class="btn blue">🎵 <span class="zh">${song ? '换一首歌' : '选一首歌'}</span> ${song ? 'Change song' : 'Choose a song'}<input type="file" accept="audio/*,.mp3" hidden></label>
+      <div class="row">${song ? `<button class="btn green" id="rp">${Radio.isPlaying() ? '⏹ <span class="zh">停</span> Stop' : '▶️ <span class="zh">播放</span> Play'}</button><button class="btn white" id="rx">🗑 <span class="zh">删掉</span> Remove</button>` : ''}</div>
+      <p class="help" style="margin:0;font-size:13px">歌只存在这台设备上。点收音机就能开关音乐。<br>The song stays on this device. Tap the radio to switch it on and off.</p>
+      <button class="btn white" id="rc">关闭 Close</button>
+    </div>`;
+  const msg = $('#rs', box);
+  box.querySelector('input[type=file]').onchange = async (ev) => {
+    const f = ev.target.files && ev.target.files[0]; if (!f) return;
+    msg.textContent = '保存中… Saving…';
+    try {
+      await Radio.setSong(f); await Radio.play(); sfx.coin(); closeModal();
+      toast(`📻 <span class="zh">正在播放</span> ${esc(f.name.replace(/\.[^.]+$/, ''))}`, { ms: 2500 });
+    } catch (x) {
+      msg.innerHTML = x.message === 'too big' ? '这首歌太大了（最多 25MB）。<br>That song is too big (25 MB at most).' : '这个文件放不了，换一首试试。<br>That file didn\'t work — try another song.';
+    }
+  };
+  const rp = $('#rp', box); if (rp) rp.onclick = async () => { await Radio.toggle(); closeModal(); };
+  const rx = $('#rx', box); if (rx) rx.onclick = async () => { await Radio.removeSong(); closeModal(); toast('🗑 <span class="zh">歌删掉了</span> Song removed'); };
+  $('#rc', box).onclick = closeModal;
   openModal(box);
 }
 function cageMenu(kind) {
@@ -813,6 +843,16 @@ function homeScreen(params = {}) {
       const box = html`<div class="card stack reno-box"></div>`;
       openModal(box); draw();
     };
+    // 🔄 on the study chair / laptop: turn it to face the front or the back
+    room.querySelectorAll('.decor .turn-btn').forEach((b) => {
+      b.addEventListener('pointerdown', (e) => e.stopPropagation());
+      b.onclick = (e) => {
+        e.stopPropagation();
+        const id = b.closest('.decor').dataset.id, way = S.toggleFacing(id); sfx.click();
+        toast(`🔄 <span class="zh">${ITEMS[id].name}${way === 'back' ? '转向后面' : '转向前面'}</span> ${way === 'back' ? 'Facing the back' : 'Facing the front'}`);
+        Visit.hostResendHouse(); redrawArranging();
+      };
+    });
     // 📦 on a piece of furniture: put it back in storage
     room.querySelectorAll('.decor .put-away').forEach((b) => {
       b.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -977,6 +1017,18 @@ function homeScreen(params = {}) {
       houseLog.add(k.name, emoteIcon(mood), true);
       Visit.hostEmote(mood);
     }));
+    // ----- the radio: tap to play / stop her song (🎵 picks the song) -----
+    const markRadio = () => room.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', Radio.isPlaying()));
+    const unRadio = Radio.onRadio(() => { if (!room.isConnected) { unRadio(); return; } markRadio(); });
+    markRadio();
+    room.addEventListener('click', async (e) => {
+      const d = e.target.closest('.decor.radio');
+      if (!d || room.classList.contains('arranging') || e.target.closest('.put-away')) return;
+      e.stopPropagation();
+      if (e.target.closest('.radio-song') || !(await Radio.getSong())) { radioMenu(); return; }
+      const on = await Radio.toggle(); sfx.click();
+      toast(on ? '📻 <span class="zh">音乐响起来啦！</span> Radio on' : '📻 <span class="zh">关掉收音机</span> Radio off', { ms: 1500 });
+    });
     // ----- pets: the puppy roams, the hamster / guinea pig live in their cage until she opens the door -----
     const petLayer = new PetLayer(room, roomKey, { onClick: (kind, el) => petMenu(kind, el), onSpot: Pets.noteSpot });
     const unPets = Pets.onPets((snap) => { if (!room.isConnected) { unPets(); return; } petLayer.update(snap); });
@@ -986,7 +1038,7 @@ function homeScreen(params = {}) {
       if (!d || room.classList.contains('arranging') || e.target.closest('.put-away') || e.target.closest('.pet:not(.in-cage)')) return;
       cageMenu(d.dataset.cage);
     });
-  } else { hostRoomNow = 'living'; roomPower = null; homePets = null; }
+  } else { hostRoomNow = 'living'; roomPower = null; homePets = null; Radio.stop(); }
   n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); if (homePets) homePets(); } };
   return n;
 }

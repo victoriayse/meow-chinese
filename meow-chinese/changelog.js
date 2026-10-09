@@ -151,4 +151,9 @@ export const CHANGES = [
     'New clothes: a pink apron 👩‍🍳',
     'Fixed: the kitchen Kitty bowl is back (the hamster cage food bowl had taken its place).',
   ] },
+  { v: 87, items: [
+    'New 📻 radio: tap 🎵 to choose your own song, then tap the radio to switch the music on and off. The game music goes quiet while it plays.',
+    'New ❄️ air-con (tap to switch on — cool air comes out) and a coffee table.',
+    'Turn the study chair and laptop round: tap 🪑 Move furniture, then 🔄.',
+  ] },
 ];

@@ -60,7 +60,8 @@ export function roomLayout(s, roomKey, roomOf) {
     const photo = it.frame ? (s.framePhotos || {})[id] || null : null;   // a photo she put in a frame
     // a pet cage shows the water bottle, wheel… she bought for that pet, and an open door while the pet is out
     const cage = it.cage ? { things: (s.owned || []).filter((x) => ITEMS[x] && ITEMS[x].cat === 'petacc' && (ITEMS[x].cageFor || []).includes(it.cage)), open: !!((s.pets || []).find((p) => p.kind === it.cage) || {}).out } : null;
-    return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}) };
+    const back = it.frames && it.frames.back && (s.facing || {})[id] === 'back';   // turned round to face the back
+    return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : {}) };
   }).filter(Boolean);
 }
 // a window covering drawn shut: side curtains meet in the middle, blinds come all the way down
@@ -86,10 +87,11 @@ export function closedCurtain(g) {
   return out;
 }
 // one piece of furniture as a page element
-export function decorEl({ id, css, kind, photo, closed, cage }, { putAway = false } = {}) {
+export function decorEl({ id, css, kind, photo, closed, cage, facing }, { putAway = false } = {}) {
   const it = ITEMS[id]; if (!it) return null;
   const c = document.createElement('canvas');
-  const g = artGrid(cage && cage.open && it.frames && it.frames.open ? it.frames.open : it.art, it.pal);
+  const art = cage && cage.open && it.frames && it.frames.open ? it.frames.open : facing === 'back' && it.frames && it.frames.back ? it.frames.back : it.art;
+  const g = artGrid(art, it.pal);
   drawGrid(c, kind === 'curtain' && closed ? closedCurtain(g) : g, HOUSE.decor);
   const wrap = document.createElement('div');
   wrap.className = 'decor';
@@ -150,6 +152,14 @@ export function decorEl({ id, css, kind, photo, closed, cage }, { putAway = fals
     });
     wrap.dataset.inner = (inner / W).toFixed(3);
     wrap.dataset.floor = ((7 / H) * 100).toFixed(1);
+  }
+  if (facing === 'back') wrap.dataset.facing = 'back';
+  if (it.radio) wrap.classList.add('radio');
+  if (putAway && it.frames && it.frames.back) {      // 🔄 turn it round (shown while moving furniture)
+    const tb = document.createElement('button'); tb.className = 'turn-btn'; tb.type = 'button'; tb.title = 'Turn around'; tb.textContent = '🔄'; wrap.appendChild(tb);
+  }
+  if (putAway && it.radio) {                          // 🎵 pick the radio's song
+    const sb = document.createElement('button'); sb.className = 'radio-song'; sb.type = 'button'; sb.title = 'Choose a song'; sb.textContent = '🎵'; wrap.appendChild(sb);
   }
   if (putAway) { const pa = document.createElement('button'); pa.className = 'put-away'; pa.type = 'button'; pa.title = 'Put away'; pa.textContent = '📦'; wrap.appendChild(pa); }
   return wrap;
@@ -405,7 +415,7 @@ export function seatSpot(roomEl, id, slot = 0) {
   const W = roomEl.clientWidth, H = roomEl.clientHeight;
   const sx = seat.spots ? seat.spots[Math.min(slot || 0, seat.spots.length - 1)] : seat.x;
   return {
-    back: !!seat.back, pose: seat.lie ? 'lie' : seat.back ? 'back' : seat.side ? ((slot || 0) === 0 ? 'side-r' : 'side-l') : null,
+    back: !!seat.back || el.dataset.facing === 'back', pose: seat.lie ? 'lie' : (seat.back || el.dataset.facing === 'back') ? 'back' : seat.side ? ((slot || 0) === 0 ? 'side-r' : 'side-l') : null,
     x: ((el.offsetLeft + el.offsetWidth * sx) / W) * 100,
     y: ((H - (el.offsetTop + el.offsetHeight * seat.y)) / H) * 100,
     z: (parseInt(el.style.zIndex, 10) || 50) + 1, lie: !!seat.lie, el,

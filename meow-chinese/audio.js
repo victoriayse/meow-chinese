@@ -254,8 +254,11 @@ export function setTrack(i) {
 export function musicOn() { return get().settings.music !== false; }
 let gestured = false, pendingMusic = false;
 window.addEventListener('pointerdown', () => { gestured = true; if (pendingMusic) { pendingMusic = false; startMusic(); } }, { capture: true });
+// the radio at home is playing her own song: keep the game's music quiet until it stops
+let hushed = false;
+export function hushMusic(on) { hushed = !!on; if (on) stopMusic(); else if (musicOn()) startMusic(); }
 export function startMusic() {
-  if (!musicOn() || music.playing) return;
+  if (!musicOn() || music.playing || hushed) return;
   if (!gestured) { pendingMusic = true; return; }   // browsers block sound until the first tap
   const a = ac(); if (!a) return;
   if (!music.gain) {
