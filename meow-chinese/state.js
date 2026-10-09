@@ -60,6 +60,7 @@ function fresh() {
     framePhotos: {},   // photo frame id -> small JPEG (data URL, at most 50 KB)
     curtainClosed: {},   // curtain id -> true while it is drawn shut
     facing: {},        // furniture id -> 'back' when she turned it round (study chair, laptop)
+    cageOff: [],       // cage things (wheel, bowl…) she took out of the cage
     pets: [],          // adopted pets: { kind: 'dog' | 'guineapig' | 'hamster', name, out } (out: a hamster / guinea pig let out of its cage)
     letters: [],       // letters from friends: { id, from, fromName, text, at, read }
     gifts: [],         // gifts from friends: { id, from, fromName, item, message, at, opened }
@@ -481,7 +482,28 @@ export const petOf = (kind) => pets().find((p) => p.kind === kind) || null;
 export const petCage = (kind) => state.owned.find((id) => ITEMS[id] && ITEMS[id].cage === kind && ITEMS[id].cat === 'decor' && !state.decorHidden.includes(id)) || null;
 export const ownsCage = (kind) => state.owned.some((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && ITEMS[id].cage === kind);
 // the things in a cage for this kind of pet (water bottle, wheel…)
-export const cageThings = (kind) => state.owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'petacc' && (ITEMS[id].cageFor || []).includes(kind));
+export const cageThings = (kind) => state.owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'petacc' && (ITEMS[id].cageFor || []).includes(kind) && !(state.cageOff || []).includes(id));
+export const inCage = (id) => !(state.cageOff || []).includes(id);
+export function toggleCageThing(id) { state.cageOff = state.cageOff || []; const i = state.cageOff.indexOf(id); if (i >= 0) state.cageOff.splice(i, 1); else state.cageOff.push(id); save(); return i >= 0; }
+// ---------- selling things back to the shop (30% of the price) ----------
+export const SELL_RATE = 0.3;
+export const sellPrice = (id) => Math.max(1, Math.floor(price(baseId(id)) * SELL_RATE));
+export function sellItem(id) {
+  const it = ITEMS[id];
+  if (!it || !state.owned.includes(id) || it.special || it.cat === 'pet') return 0;
+  const got = sellPrice(id);
+  state.owned = state.owned.filter((x) => x !== id);
+  state.coins += got;
+  // tidy up everything that remembered this piece
+  state.decorHidden = (state.decorHidden || []).filter((x) => x !== id);
+  ['decorPos', 'decorRoom', 'powerOff', 'curtainClosed', 'framePhotos', 'facing'].forEach((k) => { if (state[k]) delete state[k][id]; });
+  state.cageOff = (state.cageOff || []).filter((x) => x !== id);
+  Object.keys(state.kitten.equipped || {}).forEach((slot) => { if (state.kitten.equipped[slot] === id) state.kitten.equipped[slot] = null; });
+  Object.values(state.roomStyle || {}).forEach((st) => { if (st.wall === id) delete st.wall; if (st.floor === id) delete st.floor; });
+  if (state.catSeat && state.catSeat.id === id) state.catSeat = null;
+  save();
+  return got;
+}
 export function adoptPet(kind, name) {
   const it = ITEMS[kind], cost = price(kind);
   if (!it || it.cat !== 'pet' || petOf(kind) || state.coins < cost) return false;

@@ -1422,3 +1422,11 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   background: repeating-linear-gradient(90deg, rgba(160, 215, 255, .55) 0 3px, transparent 3px 14px); animation: coolair 1.4s linear infinite; mask-image: linear-gradient(#000, transparent); -webkit-mask-image: linear-gradient(#000, transparent); }
 .decor[data-power="aircon"].off::after { display: none; }
 @keyframes coolair { 0% { opacity: .2; transform: translateY(-6px); } 50% { opacity: .9; } 100% { opacity: .2; transform: translateY(10px); } }
+.decor.cage .cage-front { position: absolute; left: 0; top: 0; z-index: 6; pointer-events: none; image-rendering: pixelated; }
+/* 💰 sell it back to the shop (My items) */
+.product .sell-tag { position: absolute; top: 6px; left: 6px; z-index: 2; font-size: 12px; line-height: 1; padding: 4px 7px; border-radius: 999px; background: #fff3c4; border: 2px solid var(--ink); cursor: pointer; display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+.product .sell-tag:hover { background: #ffe58a; }
+.cage-things { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.cage-chip { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 8px; border: 2px solid var(--ink); border-radius: 8px; background: #eef2f6; opacity: .6; cursor: pointer; }
+.cage-chip.on { background: #e6f7dd; opacity: 1; }
+.cage-chip small { font-family: var(--zh); font-size: 12px; }

@@ -477,19 +477,28 @@ async function radioMenu() {
 }
 function cageMenu(kind) {
   const p = S.petOf(kind), it = ITEMS[kind];
+  const things = S.get().owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'petacc' && (ITEMS[id].cageFor || []).includes(kind));
   sfx.click();
   const box = html`<div class="card stack pet-card" style="align-items:center;text-align:center">
       <div class="h-title" style="justify-content:center"><span class="zh">${PET_ICON[kind]} ${p ? esc(p.name) : '空笼子'}</span><span class="en">${p ? (p.out ? 'Out exploring the house' : 'In the cage') : 'An empty cage'}</span></div>
       ${p ? (p.out ? '<button class="btn blue" id="back">🏠 <span class="zh">放回笼子</span> Put back in cage</button>'
         : '<button class="btn green" id="open">🚪 <span class="zh">打开笼门</span> Open the door</button>')
         : `<p class="help" style="margin:0">去商店领养一只${it.name}吧！<br>Adopt a ${it.en.toLowerCase()} in the shop to live here.</p><button class="btn blue" id="adopt">🛍️ <span class="zh">去领养</span> Adopt a pet</button>`}
+      ${things.length ? `<div class="cage-things"><div class="help" style="margin:0">笼子里的东西 · Things in the cage (tap to take out / put in)</div>
+        <div class="row" style="flex-wrap:wrap;justify-content:center">${things.map((id) => `<button class="cage-chip ${S.inCage(id) ? 'on' : ''}" data-id="${id}"><span class="art"></span><small>${ITEMS[id].name}</small><b>${S.inCage(id) ? '✓' : '—'}</b></button>`).join('')}</div></div>` : ''}
       <button class="btn white" id="pc">关闭 Close</button>
     </div>`;
+  box.querySelectorAll('.cage-chip').forEach((c) => {
+    c.querySelector('.art').appendChild(spriteCanvas(c.dataset.id, 36));
+    c.onclick = () => { const now = S.toggleCageThing(c.dataset.id); sfx.click(); c.classList.toggle('on', now); c.querySelector('b').textContent = now ? '✓' : '—'; changedThings = true; };
+  });
+  let changedThings = false;
+  const done = () => { closeModal(); if (changedThings) { refreshHome(); Visit.hostResendHouse(); } };
   const o = $('#open', box), b = $('#back', box), a = $('#adopt', box);
   if (o) o.onclick = () => { Pets.letOut(kind); sfx.coin(); closeModal(); toast(`🚪 <span class="zh">${esc(p.name)}跑出来玩了！</span> Tap it to put it back`, { ms: 3000 }); refreshHome(); Visit.hostResendHouse(); };
   if (b) b.onclick = () => { Pets.putBack(kind); closeModal(); refreshHome(); Visit.hostResendHouse(); };
   if (a) a.onclick = () => { closeModal(); go('shop', { tab: 'pets' }); };
-  $('#pc', box).onclick = closeModal;
+  $('#pc', box).onclick = done;
   openModal(box);
 }
 // type a name for a pet (resolves to the name, or null)

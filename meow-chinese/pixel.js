@@ -2538,7 +2538,7 @@ Object.assign(ITEMS, {
       'oooooooooooooooooooooooooooooooooooooooooooooooo.......',
       ],
     } },
-  hamsterwheel: { cat: 'petacc', cageFor: ['hamster'], inCage: { x: 0.04, y: 0.25, z: 1 }, name: '仓鼠跑轮', en: 'Hamster wheel', price: 40,
+  hamsterwheel: { cat: 'petacc', cageFor: ['hamster'], inCage: { x: 0.04, y: 0.25, z: 1, s: 0.8 }, name: '仓鼠跑轮', en: 'Hamster wheel', price: 40,
     pal: { o: O, w: '#ff9ec4', i: '#fff1f5', s: '#e0628c' },
     art: [
       '.....ooooo.....',
@@ -2558,7 +2558,7 @@ Object.assign(ITEMS, {
       '....ossssso....',
       '....ooooooo....',
     ] },
-  waterbottle: { cat: 'petacc', cageFor: ['hamster', 'guineapig'], inCage: { x: 0.5, y: 0.48, z: 2 }, name: '饮水瓶', en: 'Water bottle', price: 25,
+  waterbottle: { cat: 'petacc', cageFor: ['hamster', 'guineapig'], inCage: { x: 0.5, y: 0.48, z: 2, s: 0.7 }, name: '饮水瓶', en: 'Water bottle', price: 25,
     pal: { o: O, b: '#ffffff', u: '#e8f7ff', w: '#7ec3e8', s: '#9fb3c8', k: '#6fb8f2' },
     art: [
       'oooooo',
@@ -2576,7 +2576,7 @@ Object.assign(ITEMS, {
       '..ss..',
       '..oo..',
     ] },
-  cagebowl: { cat: 'petacc', cageFor: ['hamster', 'guineapig'], inCage: { x: 0.36, y: 0.23, z: 3 }, name: '小食盆', en: 'Food bowl', price: 20,
+  cagebowl: { cat: 'petacc', cageFor: ['hamster', 'guineapig'], inCage: { x: 0.36, y: 0.23, z: 3, s: 0.5 }, name: '小食盆', en: 'Food bowl', price: 20,
     pal: { o: O, b: '#ffb03a', h: '#ffd27a', f: '#e8c26a', g: '#7cbd52', r: '#d9734a' },
     art: [
       '..oofgoo..',
@@ -2585,7 +2585,7 @@ Object.assign(ITEMS, {
       'obbbbbbbbo',
       'oooooooooo',
     ] },
-  peetray: { cat: 'petacc', cageFor: ['hamster', 'guineapig'], inCage: { x: 0.62, y: 0.21, z: 3 }, name: '尿盆', en: 'Pee tray', price: 25,
+  peetray: { cat: 'petacc', cageFor: ['hamster', 'guineapig'], inCage: { x: 0.62, y: 0.21, z: 3, s: 0.6 }, name: '尿盆', en: 'Pee tray', price: 25,
     pal: { o: O, t: '#7fc8a9', u: '#a6e3c8', s: '#f4ead2' },
     art: [
       '...s...s....',
@@ -2594,7 +2594,7 @@ Object.assign(ITEMS, {
       'otttttttttto',
       'oooooooooooo',
     ] },
-  hidehouse: { cat: 'petacc', cageFor: ['hamster', 'guineapig'], inCage: { x: 0.58, y: 0.3, z: 1 }, name: '小木屋', en: 'Hide house', price: 45,
+  hidehouse: { cat: 'petacc', cageFor: ['hamster', 'guineapig'], inCage: { x: 0.58, y: 0.3, z: 1, s: 0.7 }, name: '小木屋', en: 'Hide house', price: 45,
     pal: { o: O, w: '#d29c64', r: '#e8576b', k: '#5a3a22' },
     art: [
       '.....oo.....',
@@ -2607,7 +2607,7 @@ Object.assign(ITEMS, {
       '.owwokkowwo.',
       '.ooookkoooo.',
     ] },
-  hayrack: { cat: 'petacc', cageFor: ['guineapig'], inCage: { x: 0.3, y: 0.45, z: 1 }, name: '干草架', en: 'Hay rack', price: 30,
+  hayrack: { cat: 'petacc', cageFor: ['guineapig'], inCage: { x: 0.3, y: 0.45, z: 1, s: 0.7 }, name: '干草架', en: 'Hay rack', price: 30,
     pal: { o: O, h: '#e8d08a', g: '#c9b26a', s: '#8a9aa8' },
     art: [
       'oooooooooooo',
@@ -2689,6 +2689,7 @@ Object.assign(ITEMS, {
     ] },
 });
 // cages: how wide the inside is (art pixels), so the things inside line up
+ITEMS.hamster.scale = 0.8;   // a little smaller than the other pets
 ITEMS.hamstercage.cageW = 36; ITEMS.guineacage.cageW = 48;
 ITEMS.hamsterwheel.wheel = { cx: 7, cy: 7, r: 7.4 };   // the ring that spins (the stand stays still)
 

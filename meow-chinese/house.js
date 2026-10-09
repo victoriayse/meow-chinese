@@ -59,7 +59,7 @@ export function roomLayout(s, roomKey, roomOf) {
     }
     const photo = it.frame ? (s.framePhotos || {})[id] || null : null;   // a photo she put in a frame
     // a pet cage shows the water bottle, wheel… she bought for that pet, and an open door while the pet is out
-    const cage = it.cage ? { things: (s.owned || []).filter((x) => ITEMS[x] && ITEMS[x].cat === 'petacc' && (ITEMS[x].cageFor || []).includes(it.cage)), open: !!((s.pets || []).find((p) => p.kind === it.cage) || {}).out } : null;
+    const cage = it.cage ? { things: (s.owned || []).filter((x) => ITEMS[x] && ITEMS[x].cat === 'petacc' && (ITEMS[x].cageFor || []).includes(it.cage) && !(s.cageOff || []).includes(x)), open: !!((s.pets || []).find((p) => p.kind === it.cage) || {}).out } : null;
     const back = it.frames && it.frames.back && (s.facing || {})[id] === 'back';   // turned round to face the back
     return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : {}) };
   }).filter(Boolean);
@@ -137,19 +137,24 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing }, { putAwa
         const g = artGrid(t.art, t.pal), w = t.wheel;
         const inRing = (x, y) => Math.hypot(x - w.cx, y - w.cy) <= w.r;
         const ring = document.createElement('canvas'); ring.className = 'wheel-ring';
-        drawGrid(ring, g.slice(0, w.cy * 2 + 1).map((row, y) => row.slice(0, w.cx * 2 + 1).map((c, x) => (inRing(x, y) ? c : null))), HOUSE.decor);
+        drawGrid(ring, g.slice(0, w.cy * 2 + 1).map((row, y) => row.slice(0, w.cx * 2 + 1).map((c, x) => (inRing(x, y) ? c : null))), HOUSE.decor * (t.inCage.s || 1));
         const stand = document.createElement('canvas'); stand.className = 'wheel-stand';
-        drawGrid(stand, g.map((row, y) => row.map((c, x) => (inRing(x, y) ? null : c))), HOUSE.decor);
+        drawGrid(stand, g.map((row, y) => row.map((c, x) => (inRing(x, y) ? null : c))), HOUSE.decor * (t.inCage.s || 1));
         tc = document.createElement('div'); tc.className = 'cage-thing wheel'; tc.dataset.id = tid;
         tc.style.width = stand.style.width; tc.style.height = stand.style.height;
         tc.append(stand, ring);
       } else {
         tc = document.createElement('canvas'); tc.className = 'cage-thing';
-        drawGrid(tc, artGrid(t.art, t.pal), HOUSE.decor);
+        drawGrid(tc, artGrid(t.art, t.pal), HOUSE.decor * (t.inCage.s || 1));   // things in a cage are drawn a bit smaller
       }
-      Object.assign(tc.style, { left: `${((1 + t.inCage.x * (inner - 2 - t.art[0].length)) / W) * 100}%`, bottom: `${t.inCage.y * 100}%`, zIndex: t.inCage.z });   // keep the size drawGrid set (sharp screens draw at 2×)
+      Object.assign(tc.style, { left: `${((1 + t.inCage.x * (inner - 2 - t.art[0].length * (t.inCage.s || 1))) / W) * 100}%`, bottom: `${t.inCage.y * 100}%`, zIndex: t.inCage.z });   // keep the size drawGrid set (sharp screens draw at 2×)
       wrap.appendChild(tc);
     });
+    // the cage's bars in front of everything inside it (only the bedding stays behind)
+    const back = new Set([it.pal.z, it.pal.y].filter(Boolean));
+    const front = document.createElement('canvas'); front.className = 'cage-front';
+    drawGrid(front, g.map((row) => row.map((v) => (back.has(v) ? null : v))), HOUSE.decor);
+    wrap.appendChild(front);
     wrap.dataset.inner = (inner / W).toFixed(3);
     wrap.dataset.floor = ((7 / H) * 100).toFixed(1);
   }
@@ -470,7 +475,7 @@ export async function compressPhoto(file, maxBytes = 50 * 1024) {
 function petCanvas(kind, frame) {
   const it = ITEMS[kind]; const art = frame ? (it.frames || {})[frame] : it.art; if (!art) return null;
   const c = document.createElement('canvas'); c.className = `pf pf-${frame || 'stand'}`;
-  drawGrid(c, artGrid(art, it.pal), HOUSE.decor);
+  drawGrid(c, artGrid(art, it.pal), HOUSE.decor * (it.scale || 1));
   return c;
 }
 const perch = new Map();   // pet kind -> { up: floor spot in front of the seat, at: the seat } while it sits up on furniture

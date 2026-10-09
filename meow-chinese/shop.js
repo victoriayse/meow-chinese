@@ -199,7 +199,9 @@ const MY_TABS = [
   { key: 'body', lock: 'body', zh: '衣服', en: 'Clothes', icon: '👕', shop: 'body', test: (it) => it.cat === 'wear' && it.slot === 'body' },
   { key: 'feet', lock: 'feet', zh: '鞋子', en: 'Shoes', icon: '👟', shop: 'feet', test: (it) => it.cat === 'wear' && it.slot === 'feet' },
   { key: 'acc', lock: 'acc', zh: '配饰', en: 'Extras', icon: '👓', shop: 'acc', test: (it) => it.cat === 'wear' && ['face', 'neck'].includes(it.slot) },
-  { key: 'decor', lock: 'decor', zh: '家具', en: 'Home', icon: '🛋️', shop: 'decor', test: (it) => it.cat === 'decor' },
+  { key: 'decor', lock: 'decor', zh: '家具', en: 'Home', icon: '🛋️', shop: 'decor', test: (it) => it.cat === 'decor' && !it.petacc },
+  { key: 'petacc', lock: 'decor', zh: '宠物用品', en: 'Pet things', icon: '🦴', shop: 'petacc', test: (it) => it.cat === 'petacc' || !!it.petacc, order: 28 },
+  { key: 'reno', lock: 'decor', zh: '装修', en: 'Renovate', icon: '🎨', shop: 'reno', test: (it) => it.cat === 'reno', order: 26 },
 ];
 export function wardrobeScreen({ go, tab }) {
   const tabs = orderTabs(MY_TABS);
@@ -233,7 +235,9 @@ export function wardrobeScreen({ go, tab }) {
     $('#my-note', n).innerHTML = def.use === 'feed' ? '点食物喂小猫！<br>Tap food to feed your kitten.'
       : def.use === 'groom' ? '点洗发水或梳子帮小猫洗澡！<br>Tap to bath or brush your kitten.'
       : def.use === 'play' ? '点玩具一起玩！<br>Tap a toy to play together.'
-      : def.key === 'decor' ? '点家具放进房间或收进收纳箱。<br>Tap to put it in a room or back in storage.'
+      : def.key === 'decor' ? '点家具放进房间或收进收纳箱。点 💰 卖回商店。<br>Tap to put it in a room or in storage · 💰 sells it back.'
+      : def.key === 'petacc' ? '点一下放进笼子或拿出来。<br>Tap to put it in the cage or take it out.'
+      : def.key === 'reno' ? '你买的墙纸和地板。点 💰 卖回商店。<br>Your wallpapers and floors · 💰 sells one back.'
       : '点一下穿上或脱下。每类一件。<br>Tap to wear or take off — one of each.';
     const list = $('#list', n);
     list.innerHTML = '';
@@ -252,17 +256,22 @@ export function wardrobeScreen({ go, tab }) {
     }
     ids.forEach((id) => {
       const it = ITEMS[id];
-      const on = def.key === 'decor' ? !s.decorHidden.includes(id) : it.cat === 'wear' ? s.kitten.equipped[it.slot] === id : false;
+      const cageThing = it.cat === 'petacc', placeable = it.cat === 'decor';
+      const on = cageThing ? S.inCage(id) : placeable ? !s.decorHidden.includes(id) : it.cat === 'wear' ? s.kitten.equipped[it.slot] === id : false;
+      const sellable = !counted && !it.special && s.owned.includes(id);
       const eff = counted ? itemEffect(it) : def.use === 'play' ? '+6 ❤' : '';
       const action = def.use === 'feed' ? (it.water && !it.hunger ? '💧 喝 Drink' : '🍽️ 喂 Feed') : def.use === 'groom' ? '🛁 用 Use' : def.use === 'play' ? '🎾 玩 Play'
-        : def.key === 'decor' ? (on ? '🏠 摆着 In a room' : '📦 收纳中 In storage') : (on ? '✓ 穿着 Wearing' : '穿上 Wear');
+        : cageThing ? (on ? '✓ 笼子里 In cage' : '📦 拿出来 Out')
+        : placeable ? (on ? '🏠 摆着 In a room' : '📦 收纳中 In storage')
+        : it.cat === 'reno' ? '🎨 装修用 For renovating' : (on ? '✓ 穿着 Wearing' : '穿上 Wear');
       const card = html`<button type="button" class="product ${on ? 'sel' : ''}">
           ${counted ? `<span class="count">×${s.pantry[id]}</span>` : ''}
           <div class="art"></div><div class="shelf-board"></div>
           <div class="nm">${it.name}${id.includes('#') ? ` ${id.split('#')[1]}` : ''}</div><div class="nm-en">${it.en}</div>
           ${eff ? `<div class="eff">${eff}</div>` : ''}
           <span class="tag ${on ? 'done' : ''}">${action}</span>
-          ${def.key === 'decor' && openRooms().length > 1 ? `<span class="room-pick" role="button" tabindex="0" title="Which room it goes in">📍 ${S.roomInfo(S.roomOf(id)).icon} <span class="zh">${S.roomInfo(S.roomOf(id)).zh}</span> ⇄</span>` : ''}
+          ${sellable ? `<span class="sell-tag" role="button" tabindex="0" title="Sell it back to the shop">💰 <span class="zh">卖</span> +${S.sellPrice(id)}${coinI(13)}</span>` : ''}
+          ${placeable && openRooms().length > 1 ? `<span class="room-pick" role="button" tabindex="0" title="Which room it goes in">📍 ${S.roomInfo(S.roomOf(id)).icon} <span class="zh">${S.roomInfo(S.roomOf(id)).zh}</span> ⇄</span>` : ''}
         </button>`;
       $('.art', card).appendChild(spriteCanvas(id, it.cat === 'decor' ? 76 : 60));
       const rp = $('.room-pick', card);
@@ -273,11 +282,26 @@ export function wardrobeScreen({ go, tab }) {
         toast(`${it.name} → ${S.roomInfo(to).icon} <span class="zh">${S.roomInfo(to).zh}</span> ${S.roomInfo(to).en}`);
         render();
       };
+      const sell = $('.sell-tag', card);
+      if (sell) sell.onclick = async (e) => {     // sell it back for 30% of the price
+        e.stopPropagation(); sfx.click();
+        const got = S.sellPrice(id);
+        const asking = confirmBox(`卖掉${esc(it.name)}吗？ Sell ${esc(it.en)}?`,
+          `<span class="buy-ask"><span class="art"></span><span>商店会给你 <b>${got}</b> ${coinI(16)}<br><small>That's 30% of the price. It will be gone from your things.</small></span></span>`, '💰 卖 Sell', '取消 Cancel');
+        const art = document.querySelector('#modal .buy-ask .art'); if (art) art.appendChild(spriteCanvas(id, 56));
+        hydrateIcons(document.querySelector('#modal'));
+        if (!(await asking)) return;
+        const n = S.sellItem(id);
+        if (n) { sfx.coin(); toast(`💰 <span class="zh">卖掉${it.name}</span> +${n} coins`); import('./pets.js').then((P) => P.refreshPets()).catch(() => {}); }
+        render();
+      };
       card.onclick = () => {
         sfx.click();
+        if (cageThing) { S.toggleCageThing(id); render(); kv.flash('happy', 900); return; }
+        if (it.cat === 'reno') { toast('🎨 <span class="zh">在家里点 🪑 再点 🎨 来装修</span> At home tap 🪑 then 🎨 to use it'); return; }
         // eating, bathing and playing happen at home, so she can watch her kitten
         if (def.use) { S.setPendingCare({ kind: def.use, id }); go('home'); return; }
-        if (def.key === 'decor') S.toggleDecor(id); else S.toggleWear(id);
+        if (placeable) S.toggleDecor(id); else S.toggleWear(id);
         render(); kv.flash('happy', 900);
       };
       list.appendChild(card);

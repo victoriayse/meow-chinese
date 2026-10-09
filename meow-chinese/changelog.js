@@ -161,4 +161,9 @@ export const CHANGES = [
     'Friends visiting your house hear your radio too (the same part of the song)!',
     'Radio songs can be up to 10 MB.',
   ] },
+  { v: 89, items: [
+    'Sell things back to the shop for 30% of the price: in 🎒 My items, tap 💰 on anything you own.',
+    'Take things out of the pet cage (or put them back): tap the cage at home, or use 🎒 My items → 🦴 Pet things.',
+    'The hamster and the things in its cage are smaller, and the cage bars are now in front of them.',
+  ] },
 ];
