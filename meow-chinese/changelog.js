@@ -117,4 +117,11 @@ export const CHANGES = [
     'New room at Lv50: the 🚽 Bathroom, left of the kitchen — with a toilet, bathtub, washbasin, towel rack, bath mat and rubber duck.',
     'New outdoor space at Lv40: the 🌳 Garden, right of the bedroom — no roof! Potted plants, flower beds, a garden bench, picket fence, garden lamp, bird bath and an apple tree.',
   ] },
+  { v: 79, items: [
+    'Buy the same furniture more than once — two sofas, three chairs, as many as you like!',
+    'New shop aisle 🐶 Adopt a Pet: a puppy, a guinea pig or a hamster. Give your pet a name!',
+    'New shop aisle 🦴 Pet Accessories: cages, a hamster wheel, water bottle, food bowl, pee tray, hay rack, hide house, dog bed, dog bowl, chew bone and a dog house.',
+    'Your puppy runs around the house and hops onto sofas, chairs, beds and mats.',
+    'Hamsters and guinea pigs live in their cage. Tap the cage to open the door and they explore every room — tap them to put them back.',
+  ] },
 ];

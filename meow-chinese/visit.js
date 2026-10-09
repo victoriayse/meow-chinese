@@ -4,6 +4,7 @@
 //   house  owner -> visitors  { to?, house, host: { id, look, x, y, room, left } }
 //   pos    anyone            { id, look, x, y, room, left }       moves (a few times a second while walking)
 //   chat   anyone            { id, text }
+//   pets   owner -> visitors  { id, pets: [...] }                where the owner's pets are (pets.js snapshot)
 //   bye    visitor           { id }
 import * as S from './state.js';
 import * as Auth from './auth.js';
@@ -12,7 +13,7 @@ import { Channel } from './rt.js';
 import { drawRoom, drawRoof } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal } from './ui.js';
 import { sfx } from './audio.js';
-import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote } from './house.js';
+import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote, PetLayer } from './house.js';
 
 const isNight = () => { const h = new Date().getHours(); return h >= 18 || h < 5; };
 export function myLook() {
@@ -115,6 +116,7 @@ export function doneTyping(friendId) {
   if (line && me) line.ch.send('typing-stop', { id: me });
   lastTyping = 0;
 }
+export function hostPets(pets) { if (hostCh && visitors.ids().length) hostCh.send('pets', { id: hostUser, pets }); }
 export function hostNote(i) { if (hostCh && visitors.ids().length) hostCh.send('note', { id: hostUser, i }); }
 export function hostEmote(mood) { if (hostCh && visitors.ids().length) hostCh.send('emote', { id: hostUser, mood }); }
 export function hostSay(text) { if (hostCh && visitors.ids().length) hostCh.send('chat', { id: hostUser, text }); }
@@ -135,7 +137,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
   const box = $('#house', n), sub = $('#vt-sub', n);
   const others = new OtherCats();
   let house = null, host = null, roomKey = 'living', mine = { x: 30, y: 6, room: 'living', left: false };
-  let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false;
+  let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null;
 
   const ch = new Channel(`house:${hostId}`, {
     presenceKey: me,
@@ -159,6 +161,9 @@ export function visitScreen({ go, id: hostId, name = '' }) {
         others.say(p.id, p.text);
         const c = others.m.get(p.id);
         logLine((c && c.look && c.look.name) || '朋友', p.text, false);
+      } else if (ev === 'pets') {
+        if (house) house.pets = p.pets || [];
+        if (petLayer) petLayer.update(house ? house.pets : []);
       } else if (ev === 'note') {
         hearNote($('#room', box), p.i);
       } else if (ev === 'emote') {
@@ -245,6 +250,9 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     const pw = house.power || {};
     applyPower(room, { dark: !!(pw.dark || {})[roomKey], off: pw.off || {} });
     place();
+    // the friend's pets wandering around
+    petLayer = new PetLayer(room, roomKey, { onClick: (kind) => { const p = (house.pets || []).find((x) => x.kind === kind); if (p) { sfx.coin(); toast(`🤍 <span class="zh">${esc(p.name)}</span>`, { ms: 1500 }); } } });
+    petLayer.update(house.pets || []);
     box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { roomKey = b.dataset.room; mine.room = roomKey; mine.seat = null; sfx.click(); render(); sendMine(); }; });
     hydrateIcons(box);
   }

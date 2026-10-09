@@ -1358,3 +1358,30 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .house-unit.outdoor .roof { visibility: hidden; }
 .house-unit.outdoor .room { border-color: #5e9e4c; border-width: 0 0 6px; border-radius: 18px 18px 6px 6px; }
 .visit-home .house .decor.curtain { cursor: default; pointer-events: none; }
+/* ---------- pets ---------- */
+.house .pet { position: absolute; transform: translateX(-50%); pointer-events: none; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 3px 0 rgba(30, 60, 30, .25)); }
+.house .pet.clickable { pointer-events: auto; cursor: pointer; }
+.room.arranging .pet { pointer-events: none; opacity: .7; }
+.pet .pflip { position: relative; display: grid; }
+.pet .pf { grid-area: 1 / 1; image-rendering: pixelated; }
+.pet .pf-walk, .pet .pf-sit { visibility: hidden; }
+.pet.left .pflip { transform: scaleX(-1); }
+.pet.walking .pf-stand { animation: petstep .36s steps(1) infinite; }
+.pet.walking .pf-walk { visibility: visible; animation: petstep .36s steps(1) infinite reverse; animation-delay: -.18s; }
+@keyframes petstep { 0% { opacity: 1; } 50% { opacity: 0; } }
+.pet.sitting:has(.pf-sit) .pf-stand { visibility: hidden; }
+.pet.sitting .pf-sit { visibility: visible; }
+.pet .pet-tag { font-size: 13px; padding: 0 6px; margin-top: 2px; }
+.house .pet .pet-tag { zoom: max(0.8, calc(var(--inv, 1) * 0.5)); }
+.pet.in-cage { position: absolute; left: 6%; transform: none; animation: cagerun 9s ease-in-out infinite; z-index: 2; filter: none; }
+.pet.in-cage .pet-tag { display: none; }
+.pet.in-cage .pflip { animation: cageflip 9s steps(1) infinite; }
+.pet.in-cage .pf-stand { animation: petstep .36s steps(1) infinite; }
+.pet.in-cage .pf-walk { visibility: visible; animation: petstep .36s steps(1) infinite reverse; animation-delay: -.18s; }
+@keyframes cagerun { 0%, 8% { left: 6%; } 42%, 58% { left: var(--to, 40%); } 92%, 100% { left: 6%; } }
+@keyframes cageflip { 0% { transform: none; } 50% { transform: scaleX(-1); } }
+.decor.cage .cage-thing { position: absolute; image-rendering: pixelated; pointer-events: none; }
+.house .decor.cage { pointer-events: auto; cursor: pointer; }
+.visit-home .house .decor.cage { cursor: default; }
+.pet-card .pet-art { display: flex; justify-content: center; min-height: 70px; align-items: flex-end; }
+.pet-card input { font-size: 18px; text-align: center; }

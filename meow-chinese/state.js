@@ -1,6 +1,6 @@
 // Game state: saved on this iPad (localStorage). Shaped as one JSON blob so it can
 // later be backed up to Supabase as a single row.
-import { ITEMS } from './pixel.js';
+import { ITEMS, baseId } from './pixel.js';
 import { BANKS } from './banks.js';
 
 const OWN_KEY = 'meow-chinese-v1';
@@ -57,8 +57,9 @@ function fresh() {
     lightsOff: {},     // room -> true when its ceiling light is switched off (the room goes dark)
     powerOff: {},      // lamp / TV id -> true when switched off
     roomStyle: {},     // room -> { wall, floor } renovation item ids (missing = the room's own look)
-    framePhotos: {},
-    curtainClosed: {},   // curtain id -> true while it is drawn shut   // photo frame id -> small JPEG (data URL, at most 50 KB)
+    framePhotos: {},   // photo frame id -> small JPEG (data URL, at most 50 KB)
+    curtainClosed: {},   // curtain id -> true while it is drawn shut
+    pets: [],          // adopted pets: { kind: 'dog' | 'guineapig' | 'hamster', name, out } (out: a hamster / guinea pig let out of its cage)
     letters: [],       // letters from friends: { id, from, fromName, text, at, read }
     gifts: [],         // gifts from friends: { id, from, fromName, item, message, at, opened }
     friendNews: [],    // e.g. a friend fed her kitten: { id, fromName, item, at, seen }
@@ -451,16 +452,45 @@ export function buy(id) {
     if ((state.streak.freezes || 0) >= MAX_FREEZES) return false;
     state.coins -= cost; state.streak.freezes = (state.streak.freezes || 0) + 1; save(); return true;
   }
+  if (it.cat === 'pet') return false;          // pets are adopted (adoptPet), not bought
   const usedUp = it.cat === 'food' || it.cat === 'toiletry';
-  if (!usedUp && state.owned.includes(id)) return false;
+  // furniture can be bought again and again (a second sofa is "sofa#2"); clothes and the rest only once
+  if (!usedUp && it.cat !== 'decor' && state.owned.includes(id)) return false;
   state.coins -= cost;
-  if (usedUp) state.pantry[id] = (state.pantry[id] || 0) + 1;
-  else state.owned.push(id);
+  if (usedUp) { state.pantry[id] = (state.pantry[id] || 0) + 1; save(); return true; }
+  const got = it.cat === 'decor' ? newCopyId(id) : id;
+  state.owned.push(got);
   if (it.cat === 'wear') state.kitten.equipped[it.slot] = id;
-  if (it.cat === 'decor') storeDecorQuiet(id);      // new furniture waits in storage until she places it
+  if (it.cat === 'decor') storeDecorQuiet(got);      // new furniture waits in storage until she places it
   save();
-  return true;
+  return got;
 }
+// the next free name for one more of this furniture: "sofa", then "sofa#2", "sofa#3"…
+export function newCopyId(id) {
+  if (!state.owned.includes(id)) return id;
+  let n = 2; while (state.owned.includes(`${id}#${n}`)) n++;
+  return `${id}#${n}`;
+}
+export const ownedCount = (id) => state.owned.filter((x) => baseId(x) === id).length;
+
+// ---------- pets ----------
+export const pets = () => state.pets || (state.pets = []);
+export const petOf = (kind) => pets().find((p) => p.kind === kind) || null;
+// a placed cage for this kind of pet (not in the storage box), or null
+export const petCage = (kind) => state.owned.find((id) => ITEMS[id] && ITEMS[id].cage === kind && ITEMS[id].cat === 'decor' && !state.decorHidden.includes(id)) || null;
+export const ownsCage = (kind) => state.owned.some((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && ITEMS[id].cage === kind);
+// the things in a cage for this kind of pet (water bottle, wheel…)
+export const cageThings = (kind) => state.owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'petacc' && (ITEMS[id].cageFor || []).includes(kind));
+export function adoptPet(kind, name) {
+  const it = ITEMS[kind], cost = price(kind);
+  if (!it || it.cat !== 'pet' || petOf(kind) || state.coins < cost) return false;
+  if (it.cage && !ownsCage(kind)) return false;
+  state.coins -= cost;
+  pets().push({ kind, name: String(name || it.name).trim().slice(0, 12) || it.name, out: false, at: Date.now() });
+  save(); return true;
+}
+export function renamePet(kind, name) { const p = petOf(kind); if (!p) return; p.name = String(name || '').trim().slice(0, 12) || p.name; save(); }
+export function setPetOut(kind, out) { const p = petOf(kind); if (!p) return; p.out = !!out; save(); }
 export function toggleWear(id) {
   const it = ITEMS[id]; const eq = state.kitten.equipped;
   eq[it.slot] = eq[it.slot] === id ? null : id;
@@ -953,8 +983,9 @@ export function openGift(id) {
   g.opened = true; g.openedAt = Date.now();
   let result = 'added';
   if (it.cat === 'food' || it.cat === 'toiletry') state.pantry[g.item] = (state.pantry[g.item] || 0) + 1;
+  else if (it.cat === 'decor') { const got = newCopyId(g.item); state.owned.push(got); storeDecorQuiet(got); }   // furniture: one more of it
   else if (state.owned.includes(g.item)) { state.coins += price(g.item); result = 'coins'; }   // already has it: turn it into coins
-  else { state.owned.push(g.item); if (it.cat === 'decor') storeDecorQuiet(g.item); }
+  else state.owned.push(g.item);
   save();
   return { gift: g, result, coins: result === 'coins' ? price(g.item) : 0 };
 }

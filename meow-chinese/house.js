@@ -49,9 +49,18 @@ export function roomLayout(s, roomKey, roomOf) {
     if (spot === 'curtain' && roomKey === 'garden') return null;   // no window outside
     if (spot === 'curtain') return { id, kind: 'curtain', closed: !!(s.curtainClosed || {})[id], css: `left:${(ROOM_WINDOW.x0 + ROOM_WINDOW.x1) * 50}%;top:${ROOM_WINDOW.y0 * 100 - 4}%;width:${(ROOM_WINDOW.x1 - ROOM_WINDOW.x0) * 100 + 12}%;height:${(ROOM_WINDOW.y1 - ROOM_WINDOW.y0) * 100 + 7}%;transform:translateX(-50%);z-index:1` };
     const flat = it.spot === 'rug' || it.spot === 'under';
-    const css = saved ? `left:${saved.x}%;top:${saved.y}%` : flat ? `left:50%;bottom:${it.spot === 'rug' ? 2 : 3}%;transform:translateX(-50%)` : spot;
+    let css = saved ? `left:${saved.x}%;top:${saved.y}%` : flat ? `left:50%;bottom:${it.spot === 'rug' ? 2 : 3}%;transform:translateX(-50%)` : spot;
+    // a second or third copy that hasn't been dragged anywhere yet: nudge it so it doesn't hide the first one
+    const copy = !saved && id.includes('#') ? (parseInt(id.split('#')[1], 10) || 2) - 1 : 0;
+    if (copy) {
+      const dx = (copy % 2 ? 1 : -1) * 6 * Math.ceil(copy / 2);
+      css = css.replace(/(left|right):(-?[\d.]+)%/, (m, side, v) => `${side}:${Math.max(0, Math.min(80, +v + (side === 'left' ? dx : -dx)))}%`)
+        .replace(/(bottom):(-?[\d.]+)%/, (m, side, v) => `bottom:${+v + 2 * copy}%`);
+    }
     const photo = it.frame ? (s.framePhotos || {})[id] || null : null;   // a photo she put in a frame
-    return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}) };
+    // a pet cage shows the water bottle, wheel… she bought for that pet, and an open door while the pet is out
+    const cage = it.cage ? { things: (s.owned || []).filter((x) => ITEMS[x] && ITEMS[x].cat === 'petacc' && (ITEMS[x].cageFor || []).includes(it.cage)), open: !!((s.pets || []).find((p) => p.kind === it.cage) || {}).out } : null;
+    return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}) };
   }).filter(Boolean);
 }
 // a window covering drawn shut: side curtains meet in the middle, blinds come all the way down
@@ -77,10 +86,10 @@ export function closedCurtain(g) {
   return out;
 }
 // one piece of furniture as a page element
-export function decorEl({ id, css, kind, photo, closed }, { putAway = false } = {}) {
+export function decorEl({ id, css, kind, photo, closed, cage }, { putAway = false } = {}) {
   const it = ITEMS[id]; if (!it) return null;
   const c = document.createElement('canvas');
-  const g = artGrid(it.art, it.pal);
+  const g = artGrid(cage && cage.open && it.frames && it.frames.open ? it.frames.open : it.art, it.pal);
   drawGrid(c, kind === 'curtain' && closed ? closedCurtain(g) : g, HOUSE.decor);
   const wrap = document.createElement('div');
   wrap.className = 'decor';
@@ -100,6 +109,19 @@ export function decorEl({ id, css, kind, photo, closed }, { putAway = false } = 
   }
   if (it.power) { wrap.dataset.power = it.power; if (it.power === 'tv') wrap.appendChild(Object.assign(document.createElement('i'), { className: 'tv-screen' })); }
   wrap.appendChild(c);
+  if (cage) {
+    wrap.classList.add('cage'); wrap.dataset.cage = it.cage; if (cage.open) wrap.classList.add('door-open');
+    const W = artGrid(it.art, it.pal)[0].length, H = it.art.length, inner = it.cageW || W;
+    cage.things.forEach((tid) => {
+      const t = ITEMS[tid]; if (!t || !t.inCage) return;
+      const tc = document.createElement('canvas'); tc.className = 'cage-thing';
+      drawGrid(tc, artGrid(t.art, t.pal), HOUSE.decor);
+      tc.style.cssText = `left:${((1 + t.inCage.x * (inner - 2 - t.art[0].length)) / W) * 100}%;bottom:${t.inCage.y * 100}%;z-index:${t.inCage.z}`;
+      wrap.appendChild(tc);
+    });
+    wrap.dataset.inner = (inner / W).toFixed(3);
+    wrap.dataset.floor = ((7 / H) * 100).toFixed(1);
+  }
   if (putAway) { const pa = document.createElement('button'); pa.className = 'put-away'; pa.type = 'button'; pa.title = 'Put away'; pa.textContent = '📦'; wrap.appendChild(pa); }
   return wrap;
 }
@@ -403,4 +425,63 @@ export async function compressPhoto(file, maxBytes = 50 * 1024) {
     }
     throw new Error('too big');
   } finally { URL.revokeObjectURL(url); }
+}
+
+// ---------- pets walking around the house (drawn from the pets' snapshot; see pets.js) ----------
+function petCanvas(kind, frame) {
+  const it = ITEMS[kind]; const art = frame ? (it.frames || {})[frame] : it.art; if (!art) return null;
+  const c = document.createElement('canvas'); c.className = `pf pf-${frame || 'stand'}`;
+  drawGrid(c, artGrid(art, it.pal), HOUSE.decor);
+  return c;
+}
+export class PetLayer {
+  constructor(roomEl, roomKey, { onClick } = {}) { this.roomEl = roomEl; this.roomKey = roomKey; this.onClick = onClick; this.els = new Map(); }
+  el(p) {
+    let el = this.els.get(p.kind);
+    if (el) { el.querySelector('.pet-tag').textContent = p.name; return el; }
+    el = document.createElement('div'); el.className = 'pet'; el.dataset.kind = p.kind;
+    const flip = document.createElement('div'); flip.className = 'pflip';
+    ['', 'walk', 'sit'].forEach((f) => { const c = petCanvas(p.kind, f); if (c) flip.appendChild(c); });
+    el.appendChild(flip);
+    const tag = document.createElement('div'); tag.className = 'nametag pet-tag'; tag.textContent = p.name; el.appendChild(tag);
+    if (this.onClick) { el.classList.add('clickable'); el.addEventListener('click', (e) => { e.stopPropagation(); if (!this.roomEl.classList.contains('arranging')) this.onClick(p.kind, el); }); }
+    el.dataset.fresh = '1';
+    this.els.set(p.kind, el);
+    return el;
+  }
+  update(list) {
+    const room = this.roomEl; if (!room || !room.isConnected) return;
+    const here = (list || []).filter((p) => p.room === this.roomKey);
+    for (const [k, el] of this.els) if (!here.some((p) => p.kind === k)) { el.remove(); this.els.delete(k); }
+    const W = room.clientWidth || 1, H = room.clientHeight || 1;
+    here.forEach((p) => {
+      const el = this.el(p);
+      if (p.mode === 'cage') {
+        const cw = room.querySelector(`.decor.cage[data-id="${p.cage}"]`);
+        if (!cw) { el.remove(); return; }
+        if (el.parentElement !== cw) cw.appendChild(el);
+        el.className = `pet in-cage${this.onClick ? ' clickable' : ''}`;
+        el.style.cssText = `bottom:${cw.dataset.floor}%;--to:${Math.max(10, (+cw.dataset.inner || 0.8) * 100 - 38)}%`;
+        return;
+      }
+      let jump = p.jump || el.dataset.fresh === '1' || el.parentElement !== room;
+      if (el.parentElement !== room) room.appendChild(el);
+      el.classList.remove('in-cage'); delete el.dataset.fresh;
+      let x = p.x, y = p.y, z = null, sit = false;
+      if (jump && p.fromCage) {          // just let out: it hops out of the cage door
+        const cw = room.querySelector(`.decor[data-id="${p.fromCage}"]`);
+        if (cw) { x = ((cw.offsetLeft + cw.offsetWidth * 0.75) / W) * 100; y = ((H - cw.offsetTop - cw.offsetHeight) / H) * 100; }
+      }
+      if (p.mode === 'sit' && p.seat) {
+        if (!p.seat.flat) { const sp = seatSpot(room, p.seat.id, p.seat.slot); if (sp) { x = sp.x; y = sp.y; z = sp.z; sit = true; } }
+        else { const d = room.querySelector(`.decor[data-id="${p.seat.id}"]`); if (d) { x = ((d.offsetLeft + d.offsetWidth / 2) / W) * 100; y = ((H - d.offsetTop - d.offsetHeight * 0.6) / H) * 100; z = (parseInt(d.style.zIndex, 10) || 1) + 1; sit = true; } }
+      }
+      el.style.transition = jump ? 'none' : `left ${p.dur}s linear, bottom ${p.dur}s linear`;
+      el.style.left = `${x}%`; el.style.bottom = `${y}%`;
+      el.style.zIndex = z != null ? z : 2 + Math.round(100 - y);
+      el.classList.toggle('walking', p.mode === 'walk');
+      el.classList.toggle('sitting', sit);
+      el.classList.toggle('left', !!p.left);
+    });
+  }
 }

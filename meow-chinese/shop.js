@@ -17,7 +17,9 @@ export const TABS = [
   { key: 'body', lock: 'body', zh: '衣服', en: 'Clothes', icon: '👕', test: isWear(['body']) },
   { key: 'feet', lock: 'feet', zh: '鞋子', en: 'Shoes', icon: '👟', test: isWear(['feet']) },
   { key: 'acc', lock: 'acc', zh: '配饰', en: 'Extras', icon: '👓', test: isWear(['face', 'neck']) },
-  { key: 'decor', lock: 'decor', zh: '家具', en: 'Home', icon: '🛋️', test: (it) => it.cat === 'decor' },
+  { key: 'decor', lock: 'decor', zh: '家具', en: 'Home', icon: '🛋️', test: (it) => it.cat === 'decor' && !it.petacc },
+  { key: 'pets', lock: 'decor', zh: '领养宠物', en: 'Adopt a Pet', icon: '🐶', test: (it) => it.cat === 'pet', order: 27 },
+  { key: 'petacc', lock: 'decor', zh: '宠物用品', en: 'Pet Accessories', icon: '🦴', test: (it) => it.petacc || it.cat === 'petacc', order: 28 },
   { key: 'reno', lock: 'decor', zh: '装修', en: 'Renovate', icon: '🎨', test: (it) => it.cat === 'reno', order: 26 },
   { key: 'pharmacy', zh: '药房', en: 'Pharmacy', icon: '💊', test: (it) => it.cat === 'pharmacy', order: 90 },
 ];
@@ -85,14 +87,20 @@ export function shopScreen({ go, tab = 'food' }) {
     Object.entries(ITEMS).filter(([, it]) => def.test(it)).sort((a, b) => S.price(a[0]) - S.price(b[0])).forEach(([id, it]) => {
       const cost = S.price(id);
       const special = it.cat === 'special';
-      const owned = (it.cat === 'wear' || it.cat === 'decor' || it.cat === 'reno') && s.owned.includes(id);
-      const have = it.cat === 'food' || it.cat === 'toiletry' ? s.pantry[id] || 0 : special ? s.streak.freezes || 0 : 0;
+      const isPet = it.cat === 'pet', adopted = isPet && S.petOf(id);
+      const needCage = isPet && it.cage && !S.ownsCage(id);
+      const owned = (it.cat === 'wear' || it.cat === 'reno' || it.cat === 'petacc') && s.owned.includes(id) || !!adopted;
+      const have = it.cat === 'food' || it.cat === 'toiletry' ? s.pantry[id] || 0 : special ? s.streak.freezes || 0 : it.cat === 'decor' ? S.ownedCount(id) : 0;
       const full = special && have >= S.MAX_FREEZES;
       const pharm = it.cat === 'pharmacy';
       const needed = !pharm || S.health() === it.cures;
       const roomShut = it.cat === 'decor' && it.room && !S.roomOpen(it.room);
-      const can = s.coins >= cost && !full && needed && !roomShut;
-      const eff = it.cat === 'food' || it.cat === 'toiletry' ? itemEffect(it) : it.toy ? '可以一起玩 Toy'
+      const can = s.coins >= cost && !full && needed && !roomShut && !needCage;
+      const cageOf = (k) => ({ hamster: '🐹 仓鼠 hamster', guineapig: '🐾 豚鼠 guinea pig' }[k] || k);
+      const eff = isPet ? (adopted ? `💕 ${esc(adopted.name)}` : needCage ? '要先买笼子 · Buy its cage first (🦴 Pet Accessories)' : it.roam ? '在家里到处跑 · Roams around the house' : '住在笼子里 · Lives in its cage')
+        : it.cat === 'petacc' ? `放在笼子里 · Goes in the cage: ${(it.cageFor || []).map(cageOf).join(' / ')}`
+        : it.cage ? `${cageOf(it.cage)} 的家 · A home for a ${it.cage === 'hamster' ? 'hamster' : 'guinea pig'}`
+        : it.cat === 'food' || it.cat === 'toiletry' ? itemEffect(it) : it.toy ? '可以一起玩 Toy'
         : special ? `漏了一天也不会断连胜 · Keeps your streak if you miss a day${full ? ` (max ${S.MAX_FREEZES})` : ''}`
         : pharm ? (needed ? `治好${it.cures === 'cough' ? '咳嗽' : '头晕'}！Cures ${it.cures === 'cough' ? 'a cough' : 'dizziness'}` : `小猫${it.cures === 'cough' ? '咳嗽' : '头晕'}时才需要 · Only when your kitten ${it.cures === 'cough' ? 'coughs' : 'is dizzy'}`)
         : it.cat === 'wear' ? `${SLOT_NAME[it.slot] || ''}`
@@ -100,17 +108,17 @@ export function shopScreen({ go, tab = 'food' }) {
         : it.cat === 'decor' ? `${S.roomInfo(it.room || 'living').icon} ${S.roomInfo(it.room || 'living').zh} ${S.roomInfo(it.room || 'living').en}${roomShut ? ` · 🔒 Lv${S.UNLOCKS[it.room]}` : ''}` : '';
       const trying = it.cat === 'wear' && tryOn[it.slot] === id && S.get().kitten.equipped[it.slot] !== id;
       const card = html`<div class="product ${trying ? 'sel' : ''} ${owned ? 'is-owned' : ''}">
-          ${owned ? '<span class="owned">已有 Owned</span>' : have ? `<span class="count">×${have}</span>` : ''}
+          ${owned ? `<span class="owned">${isPet ? '已领养 Adopted' : '已有 Owned'}</span>` : have ? `<span class="count">×${have}</span>` : ''}
           <div class="art"></div>
           <div class="shelf-board"></div>
           <div class="nm">${it.name}</div><div class="nm-en">${it.en}</div>
           ${eff ? `<div class="eff">${eff}</div>` : ''}
-          ${owned ? '<span class="tag done">✓ 已买</span>' : `<button class="tag ${can ? '' : 'off'}" ${can ? '' : 'disabled'} data-buy="${id}"><span class="price">${cost}${coinI(16)}</span></button>`}
+          ${owned ? `<span class="tag done">✓ ${isPet ? '我的 Mine' : '已买'}</span>` : `<button class="tag ${can ? '' : 'off'}" ${can ? '' : 'disabled'} data-buy="${id}">${isPet ? '<span class="zh">领养</span> ' : ''}<span class="price">${cost}${coinI(16)}</span></button>`}
           ${giftable(it) ? `<button class="gift-tag" data-gift="${id}" ${s.coins >= cost ? '' : 'disabled'} title="Buy as a gift for a friend">🎁 <span class="zh">送朋友</span></button>` : ''}
         </div>`;
-      $('.art', card).appendChild(spriteCanvas(id, it.cat === 'decor' ? 76 : 60));
+      $('.art', card).appendChild(spriteCanvas(id, it.cat === 'decor' || isPet ? 76 : 60));
       card.addEventListener('click', (e) => {
-        if (e.target.closest('[data-buy]')) return askBuy(id);
+        if (e.target.closest('[data-buy]')) return isPet ? adopt(id) : askBuy(id);
         if (e.target.closest('[data-gift]')) return import('./friends.js').then((F) => F.giftFromShop(id, render));
         if (it.cat === 'wear') {
           const eq = S.get().kitten.equipped;
@@ -133,6 +141,25 @@ export function shopScreen({ go, tab = 'food' }) {
     hydrateIcons(document.querySelector('#modal'));
     if (await asking) buy(id);
   }
+  // adopting a pet: say yes, then give it a name
+  async function adopt(id) {
+    const it = ITEMS[id], cost = S.price(id), left = S.get().coins - cost;
+    sfx.click();
+    const asking = confirmBox(`领养${esc(it.name)}吗？ Adopt a ${esc(it.en.toLowerCase())}?`,
+      `<span class="buy-ask"><span class="art"></span><span><span class="nowrap">${coinI(18)} <b>${cost}</b> 金币 coins</span><br><small>领养以后还剩 ${left} · You'll have ${left} left</small></span></span>`,
+      '🐾 领养 Adopt', '取消 Cancel');
+    const art = document.querySelector('#modal .buy-ask .art'); if (art) art.appendChild(spriteCanvas(id, 56));
+    hydrateIcons(document.querySelector('#modal'));
+    if (!(await asking)) return;
+    const A = await import('./app.js');
+    const name = await A.askPetName(id, '');
+    if (!name) return;
+    if (!S.adoptPet(id, name)) { toast('金币不够 · Not enough coins'); return; }
+    sfx.fanfare(); kv.flash('happy', 1800); kv.jump(); burst($('#fx', n), 'heart', 5, '50%', '20%');
+    toast(`🏠 <span class="zh">${esc(name)}来到你家了！</span> ${it.cage ? 'It\'s in its cage — tap the cage at home to open the door' : 'Go home to see it run around'}`, { ms: 4500 });
+    import('./pets.js').then((P) => P.refreshPets());
+    render();
+  }
   function buy(id) {
     const it = ITEMS[id];
     if (it.cat === 'pharmacy') {
@@ -152,6 +179,7 @@ export function shopScreen({ go, tab = 'food' }) {
       : it.cat === 'food' || it.cat === 'toiletry' ? `<span class="zh">买了${it.name}！</span> Find it in 🎒 My items`
       : it.cat === 'wear' ? `<span class="zh">穿上${it.name}！</span>`
       : it.cat === 'reno' ? `🎨 <span class="zh">买了${it.name}！</span> At home tap 🪑 then 🎨 to use it`
+      : it.cat === 'petacc' ? `🐾 <span class="zh">${it.name}放进笼子里了！</span> It's in the cage now`
       : `📦 <span class="zh">${it.name}放进收纳箱了！</span> In your storage box — place it in your home with 🪑 Move furniture`);
     render();
   }
@@ -231,7 +259,7 @@ export function wardrobeScreen({ go, tab }) {
       const card = html`<button type="button" class="product ${on ? 'sel' : ''}">
           ${counted ? `<span class="count">×${s.pantry[id]}</span>` : ''}
           <div class="art"></div><div class="shelf-board"></div>
-          <div class="nm">${it.name}</div><div class="nm-en">${it.en}</div>
+          <div class="nm">${it.name}${id.includes('#') ? ` ${id.split('#')[1]}` : ''}</div><div class="nm-en">${it.en}</div>
           ${eff ? `<div class="eff">${eff}</div>` : ''}
           <span class="tag ${on ? 'done' : ''}">${action}</span>
           ${def.key === 'decor' && openRooms().length > 1 ? `<span class="room-pick" role="button" tabindex="0" title="Which room it goes in">📍 ${S.roomInfo(S.roomOf(id)).icon} <span class="zh">${S.roomInfo(S.roomOf(id)).zh}</span> ⇄</span>` : ''}

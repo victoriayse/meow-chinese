@@ -14,7 +14,8 @@ let pendingNotes = null, notesDismissed = false;   // a newer version is waiting
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, compressPhoto } from './house.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, compressPhoto, PetLayer } from './house.js';
+import * as Pets from './pets.js';
 import * as Visit from './visit.js';
 import { randomJoke } from './jokes.js';
 import { practiceListScreen, practiceScreen, KINDS } from './practice.js';
@@ -416,6 +417,69 @@ function menuButton(b, { reviewN, inHouse }) {
     default: return '';
   }
 }
+// ---------- pets: tap a pet or a cage ----------
+let homePets = null;
+const PET_ICON = { dog: '🐶', guineapig: '🐾', hamster: '🐹' };
+export function petArtCanvas(kind, scale = 5) { const c = document.createElement('canvas'); drawGrid(c, artGrid(ITEMS[kind].art, ITEMS[kind].pal), scale); return c; }
+function petMenu(kind) {
+  const p = S.petOf(kind); if (!p) return;
+  const it = ITEMS[kind], caged = !!it.cage, cage = caged && S.petCage(kind);
+  sfx.click();
+  const box = html`<div class="card stack pet-card" style="align-items:center;text-align:center">
+      <div class="h-title" style="justify-content:center"><span class="zh">${PET_ICON[kind]} ${esc(p.name)}</span><span class="en">${esc(it.en)}</span></div>
+      <div class="pet-art" id="pa"><div class="fx-layer" id="pfx"></div></div>
+      <div class="row" style="flex-wrap:wrap;justify-content:center">
+        <button class="btn pink" id="pat">🤍 <span class="zh">摸摸</span> Pat</button>
+        ${caged && cage ? '<button class="btn blue" id="back">🏠 <span class="zh">放回笼子</span> Put back in cage</button>' : ''}
+        <button class="btn white" id="ren">✏️ <span class="zh">改名字</span> Rename</button>
+      </div>
+      ${caged && !cage ? '<p class="help" style="margin:0">把笼子摆进房间，就可以把它放回去。<br>Put its cage in a room to keep it in there.</p>' : ''}
+      <button class="btn white" id="pc">关闭 Close</button>
+    </div>`;
+  $('#pa', box).appendChild(petArtCanvas(kind, 6));
+  $('#pat', box).onclick = () => { sfx.coin(); burst($('#pfx', box), 'heart', 3, '50%', '30%'); };
+  const back = $('#back', box);
+  if (back) back.onclick = () => { Pets.putBack(kind); closeModal(); toast(`🏠 <span class="zh">${esc(p.name)}回到笼子里了</span> Back in the cage`); refreshHome(); Visit.hostResendHouse(); };
+  $('#ren', box).onclick = () => { closeModal(); askPetName(kind, p.name).then((nm) => { if (nm) { S.renamePet(kind, nm); Pets.refreshPets(); toast(`✏️ ${esc(nm)}`); } }); };
+  $('#pc', box).onclick = closeModal;
+  openModal(box);
+}
+function cageMenu(kind) {
+  const p = S.petOf(kind), it = ITEMS[kind];
+  sfx.click();
+  const box = html`<div class="card stack pet-card" style="align-items:center;text-align:center">
+      <div class="h-title" style="justify-content:center"><span class="zh">${PET_ICON[kind]} ${p ? esc(p.name) : '空笼子'}</span><span class="en">${p ? (p.out ? 'Out exploring the house' : 'In the cage') : 'An empty cage'}</span></div>
+      ${p ? (p.out ? '<button class="btn blue" id="back">🏠 <span class="zh">放回笼子</span> Put back in cage</button>'
+        : '<button class="btn green" id="open">🚪 <span class="zh">打开笼门</span> Open the door</button>')
+        : `<p class="help" style="margin:0">去商店领养一只${it.name}吧！<br>Adopt a ${it.en.toLowerCase()} in the shop to live here.</p><button class="btn blue" id="adopt">🛍️ <span class="zh">去领养</span> Adopt a pet</button>`}
+      <button class="btn white" id="pc">关闭 Close</button>
+    </div>`;
+  const o = $('#open', box), b = $('#back', box), a = $('#adopt', box);
+  if (o) o.onclick = () => { Pets.letOut(kind); sfx.coin(); closeModal(); toast(`🚪 <span class="zh">${esc(p.name)}跑出来玩了！</span> Tap it to put it back`, { ms: 3000 }); refreshHome(); Visit.hostResendHouse(); };
+  if (b) b.onclick = () => { Pets.putBack(kind); closeModal(); refreshHome(); Visit.hostResendHouse(); };
+  if (a) a.onclick = () => { closeModal(); go('shop', { tab: 'pets' }); };
+  $('#pc', box).onclick = closeModal;
+  openModal(box);
+}
+// type a name for a pet (resolves to the name, or null)
+export function askPetName(kind, current = '') {
+  return new Promise((resolve) => {
+    const it = ITEMS[kind];
+    const box = html`<form class="card stack pet-card" style="align-items:center;text-align:center">
+        <div class="h-title" style="justify-content:center"><span class="zh">${PET_ICON[kind]} 给${it.name}取个名字</span><span class="en">Name your ${it.en.toLowerCase()}</span></div>
+        <div class="pet-art" id="pa"></div>
+        <label class="field" style="width:100%;max-width:280px"><span><span class="zh">名字</span> · Name</span><input id="pn" maxlength="12" placeholder="${it.name}" value="${esc(current)}" autocomplete="off"></label>
+        <div class="row"><button class="btn white" type="button" id="pc">取消 Cancel</button><button class="btn green" type="submit">✓ <span class="zh">好了</span> OK</button></div>
+      </form>`;
+    $('#pa', box).appendChild(petArtCanvas(kind, 6));
+    let done = false;
+    const finish = (v) => { if (done) return; done = true; closeModal(); resolve(v); };
+    box.onsubmit = (e) => { e.preventDefault(); const v = $('#pn', box).value.trim(); finish(v || current || it.name); };
+    $('#pc', box).onclick = () => finish(null);
+    openModal(box);
+    setTimeout(() => { const i = $('#pn', box); if (i) i.focus(); }, 50);
+  });
+}
 function homeScreen(params = {}) {
   S.tick();
   S.essayNotifications();
@@ -610,7 +674,7 @@ function homeScreen(params = {}) {
   // tap the sofa, a chair, the piano bench or the bed: she hops on (the arrows make her hop off)
   const sitOn = (id) => {
     // a free place: friends visiting may already be sitting there
-    const taken = Visit.visitors.ids().map((v) => Visit.visitors.m.get(v)).filter((c) => c && c.room === roomKey);
+    const taken = Visit.visitors.ids().map((v) => Visit.visitors.m.get(v)).filter((c) => c && c.room === roomKey).concat(Pets.seatedIn(roomKey));
     const mineNow = seatNow();
     if (mineNow && mineNow.id === id) return;
     const slot = freeSlot(id, taken);
@@ -913,8 +977,17 @@ function homeScreen(params = {}) {
       houseLog.add(k.name, emoteIcon(mood), true);
       Visit.hostEmote(mood);
     }));
-  } else { hostRoomNow = 'living'; roomPower = null; }
-  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); } };
+    // ----- pets: the puppy roams, the hamster / guinea pig live in their cage until she opens the door -----
+    const petLayer = new PetLayer(room, roomKey, { onClick: (kind, el) => petMenu(kind, el) });
+    const unPets = Pets.onPets((snap) => { if (!room.isConnected) { unPets(); return; } petLayer.update(snap); });
+    homePets = () => petLayer.update(Pets.snapshot());
+    room.addEventListener('click', (e) => {
+      const d = e.target.closest('.decor.cage');
+      if (!d || room.classList.contains('arranging') || e.target.closest('.put-away') || e.target.closest('.pet:not(.in-cage)')) return;
+      cageMenu(d.dataset.cage);
+    });
+  } else { hostRoomNow = 'living'; roomPower = null; homePets = null; }
+  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); if (homePets) homePets(); } };
   return n;
 }
 
@@ -1130,13 +1203,16 @@ Friends.startFriends((news) => {
   }, i * 900));
   if (current === 'home') setTimeout(refreshHome, 400);
 });
+// pets wander around the house all the time (friends visiting see them too)
+Pets.startPets();
+Pets.onPets((snap) => Visit.hostPets(snap));
 // live visits: friends' kittens can walk into my house while the app is open
 Visit.startHosting({
   inHouse: () => current === 'home' && currentParams.view === 'house',
   house: () => {
     const st = S.get(), rooms = {}, open = S.ROOMS.filter((r) => S.roomOpen(r.key) && S.unlocked('decor')).map((r) => r.key);
     (open.length ? open : ['living']).forEach((k) => { rooms[k] = roomLayout(st, k, S.roomOf); });
-    return { rooms, open: open.length ? open : ['living'], power: { dark: { ...(st.lightsOff || {}) }, off: { ...(st.powerOff || {}) } }, styles: JSON.parse(JSON.stringify(st.roomStyle || {})) };
+    return { rooms, pets: Pets.snapshot(), open: open.length ? open : ['living'], power: { dark: { ...(st.lightsOff || {}) }, off: { ...(st.powerOff || {}) } }, styles: JSON.parse(JSON.stringify(st.roomStyle || {})) };
   },
   myPos: () => { const p = S.get().catPos || {}; return { x: p.x ?? 50, y: p.y ?? 3, room: hostRoomNow, left: false }; },
   arrived: (id, look) => {
