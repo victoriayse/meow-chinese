@@ -135,4 +135,7 @@ export const CHANGES = [
   { v: 82, items: [
     'Your puppy now walks over to the sofa or bed, jumps up, and jumps back down when it\'s done — no more floating!',
   ] },
+  { v: 83, items: [
+    'The 📦 put-away buttons are smaller when moving furniture, so they don\'t cover little things like the ball.',
+  ] },
 ];

@@ -596,8 +596,8 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .store-btn b { display: inline-block; min-width: 18px; margin-left: 2px; font-size: 12px; color: #fff; background: var(--pink-d); border-radius: 999px; padding: 0 5px; }
 .store-btn b:empty { display: none; }
 /* 📦 put-away button on each piece while moving furniture */
-.decor .put-away { display: none; position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; padding: 0; font-size: 16px; line-height: 1;
-  background: #fff; border: 2px solid var(--ink); border-radius: 50%; cursor: pointer; z-index: 2; box-shadow: 0 2px 0 rgba(43,33,64,.4);
+.decor .put-away { display: none; position: absolute; top: -5px; right: -5px; width: 15px; height: 15px; padding: 0; font-size: 8px; line-height: 1;
+  background: #fff; border: 1px solid var(--ink); border-radius: 50%; cursor: pointer; z-index: 2; box-shadow: 0 1px 0 rgba(43,33,64,.4);
   transform: scale(var(--inv, 1)); transform-origin: top right; }
 .room.arranging .decor .put-away { display: grid; place-items: center; pointer-events: auto; }
 .store-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; max-height: 50vh; overflow: auto; }
@@ -621,7 +621,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .dpad { grid-template: repeat(2, 36px) / repeat(3, 36px); right: 4px; bottom: 4px; }
   .dpad button { width: 36px; height: 36px; font-size: 15px; }
   .arrange-btn { font-size: 12px; padding: 3px 7px; }
-  .decor .put-away { width: 24px; height: 24px; font-size: 13px; }
+  .decor .put-away { width: 12px; height: 12px; font-size: 7px; }
 }
 /* XP */
 .xp-bar > b { position: absolute; inset: 0; display: grid; place-items: center; font: 800 11px/1 var(--px); color: var(--ink); text-shadow: 0 0 2px #fff, 0 0 2px #fff; z-index: 1; }
