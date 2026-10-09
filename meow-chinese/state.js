@@ -526,7 +526,19 @@ export const ROOMS = [
   { key: 'living', zh: '客厅', en: 'Living room', icon: '🛋️' },
   { key: 'bedroom', zh: '卧室', en: 'Bedroom', icon: '🛏️', lock: 'bedroom' },
   { key: 'garden', zh: '花园', en: 'Garden', icon: '🌳', lock: 'garden', outdoor: true },
+  // up and down from the living room (▲ ▼ arrows)
+  { key: 'rooftop', zh: '天台', en: 'Rooftop', icon: '☀️', lock: 'rooftop', vert: 'up', outdoor: true },
+  { key: 'basement', zh: '地下室', en: 'Basement', icon: '🔦', lock: 'basement', vert: 'down', bare: true, maxY: 58 },
 ];
+// the rooms next to this one: ◀ ▶ along the row of rooms, ▲ ▼ only from the living room
+export function roomNeighbors(key) {
+  const row = ROOMS.filter((r) => !r.vert), i = row.findIndex((r) => r.key === key), me = roomInfo(key);
+  if (me.vert === 'up') return { down: roomInfo('living') };
+  if (me.vert === 'down') return { up: roomInfo('living') };
+  return { left: row[i - 1] || null, right: row[i + 1] || null, ...(key === 'living' ? { up: roomInfo('rooftop'), down: roomInfo('basement') } : {}) };
+}
+// how far back (up the screen) she can walk: the basement is all floor
+export const roomMaxY = (key) => roomInfo(key).maxY || 30;
 export const roomInfo = (key) => ROOMS.find((r) => r.key === key) || ROOMS.find((r) => r.key === 'living');
 export const roomOpen = (key) => { const r = roomInfo(key); return !r.lock || unlocked(r.lock); };
 // which room a piece of furniture stands in (she can move it to another open room)
@@ -683,8 +695,8 @@ export function finishPlay(first, total) {
 }
 
 // ---------- level unlocks ----------
-export const UNLOCKS = { head: 5, feet: 10, acc: 15, body: 20, decor: 25, bedroom: 35, garden: 40, kitchen: 45, toilet: 50 };
-export const UNLOCK_NAMES = { head: '头饰 Hair accessories', feet: '鞋子 Shoes', acc: '配饰 Extras', body: '衣服 Clothes', decor: '我的家 Home & furniture', bedroom: '卧室 Bedroom (right room)', kitchen: '厨房 Kitchen (left room)', garden: '花园 Garden (outside, right of the bedroom)', toilet: '浴室 Bathroom (left of the kitchen)' };
+export const UNLOCKS = { head: 5, feet: 10, acc: 15, body: 20, decor: 25, bedroom: 35, garden: 40, kitchen: 45, toilet: 50, rooftop: 55, basement: 60 };
+export const UNLOCK_NAMES = { head: '头饰 Hair accessories', feet: '鞋子 Shoes', acc: '配饰 Extras', body: '衣服 Clothes', decor: '我的家 Home & furniture', bedroom: '卧室 Bedroom (right room)', kitchen: '厨房 Kitchen (left room)', garden: '花园 Garden (outside, right of the bedroom)', toilet: '浴室 Bathroom (left of the kitchen)', rooftop: '天台 Rooftop (up from the living room)', basement: '地下室 Basement (down from the living room)' };
 export const unlocked = (key) => !(key in UNLOCKS) || !!state.settings.unlockAll || level() >= UNLOCKS[key];
 export function nextUnlock() {
   const lv = level();

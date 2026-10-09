@@ -1,7 +1,7 @@
 // The kitten's house, shared by her own home page and by visits to a friend's house:
 // one fixed layout size, the furniture, the cats walking around, speech bubbles and the chat bar.
 import { ITEMS, drawGrid, artGrid, ROOM_WINDOW, kittenGrid } from './pixel.js';
-import { get as getState } from './state.js';
+import { get as getState, roomNeighbors, UNLOCKS, roomInfo } from './state.js';
 import { KittenView, esc, html } from './ui.js';
 import { sfx } from './audio.js';
 
@@ -17,6 +17,25 @@ export function fitHouse(box, unit) {
   houseK = k;
   unit.style.setProperty('--k', k); unit.style.setProperty('--inv', 1 / k);
   box.style.setProperty('--gap', `${Math.max(0, (box.clientWidth - HOUSE.w * k) / 2)}px`);
+}
+
+// ◀ ▶ ▲ ▼ buttons to the rooms next to this one (locked ones show greyed, or are left out)
+export function roomArrowsHtml(key, isOpen, { showLocked = true } = {}) {
+  const sym = { left: '◀', right: '▶', up: '▲', down: '▼' };
+  return Object.entries(roomNeighbors(key)).filter(([, r]) => r).map(([d, r]) => {
+    const open = isOpen(r.key); if (!open && !showLocked) return '';
+    return `<button class="room-nav ${d} ${open ? '' : 'locked'}" data-room="${r.key}" aria-label="${r.en}${open ? '' : ` (Lv${UNLOCKS[r.lock]})`}">${sym[d]}</button>`;
+  }).join('');
+}
+// the swimming pool on the floor (percent of the room: x across, y up from the bottom)
+export const POOL = { x0: 18, x1: 82, y0: 2, y1: 24 };
+export const inPool = (x, y) => x > POOL.x0 + 4 && x < POOL.x1 - 4 && y >= POOL.y0 && y <= POOL.y1 - 5;
+export function poolShine(roomEl, on) {
+  let el = roomEl.querySelector('.pool-shine');
+  if (!on) { if (el) el.remove(); roomEl.dataset.pool = ''; return; }
+  roomEl.dataset.pool = '1';
+  if (!el) { el = document.createElement('div'); el.className = 'pool-shine'; roomEl.appendChild(el); }
+  Object.assign(el.style, { left: `${POOL.x0 + 1}%`, width: `${POOL.x1 - POOL.x0 - 2}%`, bottom: `${POOL.y0 + 1}%`, height: `${POOL.y1 - POOL.y0 - 2}%` });
 }
 
 // where each home item sits inside the room (percent of the room box)
@@ -243,6 +262,7 @@ export class OtherCats {
     c.el.style.left = `${c.dx}%`; c.el.style.bottom = `${c.dy}%`;
     c.el.style.zIndex = spot ? spot.z : 2 + Math.round(100 - c.dy);
     c.el.classList.toggle('lying', !!(spot && spot.lie)); c.el.classList.toggle('seated', !!spot);
+    c.el.classList.toggle('swimming', !spot && this.roomEl.dataset.pool === '1' && inPool(c.dx, c.dy));
     if (c.kv) c.kv.setPose(spot ? spot.pose : null); c.el.dataset.pose = (spot && spot.pose) || '';
     if (c.bedShown && c.bedShown !== (spot && spot.lie && c.seat)) { blanket(this.roomEl, c.bedShown, false); c.bedShown = null; }
     if (spot && spot.lie) { blanket(this.roomEl, c.seat, true); c.bedShown = c.seat; }
@@ -480,7 +500,19 @@ function petCanvas(kind, frame) {
 }
 const perch = new Map();   // pet kind -> { up: floor spot in front of the seat, at: the seat } while it sits up on furniture
 export class PetLayer {
-  constructor(roomEl, roomKey, { onClick, onSpot } = {}) { this.roomEl = roomEl; this.roomKey = roomKey; this.onClick = onClick; this.onSpot = onSpot; this.els = new Map(); }
+  constructor(roomEl, roomKey, { onClick, onSpot } = {}) {
+    this.roomEl = roomEl; this.roomKey = roomKey; this.onClick = onClick; this.onSpot = onSpot; this.els = new Map();
+    // pets in the pool swim (checked a few times a second, as they walk)
+    const t = setInterval(() => {
+      if (!roomEl.isConnected) { clearInterval(t); return; }
+      const pool = roomEl.dataset.pool === '1', W = roomEl.clientWidth || 1, H = roomEl.clientHeight || 1;
+      this.els.forEach((el) => {
+        if (el.classList.contains('in-cage') || !el.isConnected) return;
+        const cs = getComputedStyle(el);
+        el.classList.toggle('swimming', pool && !el.classList.contains('sitting') && inPool((parseFloat(cs.left) / W) * 100, (parseFloat(cs.bottom) / H) * 100));
+      });
+    }, 250);
+  }
   el(p) {
     let el = this.els.get(p.kind);
     if (el) { el.querySelector('.pet-tag').textContent = p.name; return el; }
@@ -505,6 +537,11 @@ export class PetLayer {
         const cw = room.querySelector(`.decor.cage[data-id="${p.cage}"]`);
         if (!cw) { el.remove(); return; }
         if (el.parentElement !== cw) cw.appendChild(el);
+        if (ITEMS[p.kind].stayIn) {     // the parrot: always on its perch
+          el.className = `pet in-cage perched${this.onClick ? ' clickable' : ''}`;
+          el.style.cssText = `bottom:${(ITEMS[cw.dataset.id] || {}).perch * 100 || 40}%`;
+          return;
+        }
         const wheel = p.wheel && cw.querySelector('.cage-thing.wheel');
         cw.querySelectorAll('.cage-thing.wheel').forEach((w) => w.classList.toggle('spinning', !!wheel));
         el.className = `pet in-cage${wheel ? ' on-wheel' : ''}${this.onClick ? ' clickable' : ''}`;

@@ -3153,6 +3153,341 @@ ITEMS.laptop.frames = { back: [
   ] };
 Object.assign(ITEMS.laptop.pal, { p: '#ff9ec4', d: '#9fb3c8' });
 
+// ---------- more pets, the dome bird cage, poolside things and the swimming pool ----------
+Object.assign(ITEMS, {
+  dog: { cat: 'pet', kind: 'dog', name: '玛尔泰迪', en: 'Maltipoo puppy', price: 300, roam: true,
+    pal: { o: O, w: '#ffffff', c: '#ece6dc', e: '#f3e5cf', k: '#2a2228', t: '#ff8fa3', p: '#ff7fb0' },
+    art: [
+      '...............opopo.......',
+      '................opoooo.....',
+      '...o...........opopcwwoo...',
+      '..owo..........owwwwwcwwo..',
+      '.owwwo.........owcwwwwwwo..',
+      'owwwwwo.......owwwwwkkwwwo.',
+      '.owwwwo.oooooooeewwwwwwwwo.',
+      '..owwwwowwwwwweeeewwwwwwwo.',
+      '...owwwwcwwwwwceeewwwwwwwko',
+      '....owwwwwwcwweeeewwwwwwwwo',
+      '....owwwwwwwwweeeewwwwwwwo.',
+      '....owcwwwwwwwwecwwwwwoto..',
+      '....owwwwwcwwcwwwwwooo.o...',
+      '....owwwwwwwwwwwwwwo.......',
+      '....owwwwwwwwwwwwwwo.......',
+      '....owwwowwwowwwwwwo.......',
+      '....owwwowwwowwwwwwo.......',
+      '....occcocccocccccco.......',
+      '.....ooo.ooo.oooooo........',
+      '...........................',
+    ], frames: { walk: [
+        '...............opopo.......',
+        '................opoooo.....',
+        '...o...........opopcwwoo...',
+        '..owo..........owwwwwcwwo..',
+        '.owwwo.........owcwwwwwwo..',
+        'owwwwwo.......owwwwwkkwwwo.',
+        '.owwwwo.oooooooeewwwwwwwwo.',
+        '..owwwwowwwwwweeeewwwwwwwo.',
+        '...owwwwcwwwwwceeewwwwwwwko',
+        '....owwwwwwcwweeeewwwwwwwwo',
+        '....owwwwwwwwweeeewwwwwwwo.',
+        '....owcwwwwwwwwecwwwwwoto..',
+        '....owwwwwcwwcwwwwwooo.o...',
+        '...owwwwwwwwwwwwwwwwo......',
+        '...owwwowwwwwwwwowwwo......',
+        '...owwwooowwwwwoowwwo......',
+        '...owwwo.owwwwwoowwwo......',
+        '...occco.occcccooccco......',
+        '....ooo...ooooo..ooo.......',
+        '...........................',
+      ], sit: [
+        '.............opopo.........',
+        '..............opowooo......',
+        '.............opwpwcwwo.....',
+        '............owwwcwwwwwo....',
+        '............owwwwwwwwwo....',
+        '...........oeeewwwkkwwo....',
+        '...........oeeewwwwwwwwo...',
+        '...........oeeewwwwwwwwko..',
+        '........oooeeeeewwwwwwwwo..',
+        '......oowwwweeecwwwwwwwo...',
+        '.....owwwwwweeewwwwwwto....',
+        '....owwwwwwwceewwwwooo.....',
+        '....owwcwwwwwwwwwwwo.......',
+        '...owwwwwwwwwwwwwwwo.......',
+        '...owcwwwwwwwwwwwwwo.......',
+        '..owwwwwwwcwwwwwwwwo.......',
+        '.owwwwwwwwwwwwwwwwo........',
+        '.owwwwwwwwwwwwwwwo.........',
+        '..owwwoowwwwwoccco.........',
+        '...ooo..ooooo.ooo..........',
+      ] } },
+  rabbit: { cat: 'pet', kind: 'rabbit', name: '小兔子', en: 'Bunny', price: 220, roam: true, hops: true,
+    pal: { o: O, g: '#d8c3a5', l: '#f1e4d0', w: '#ffffff', p: '#ff9eb0', k: '#2a2228' },
+    art: [
+      '..........oggogo....',
+      '..........ogpgpgo...',
+      '..........ogpgpgo...',
+      '..........ogpgpgo...',
+      '..........ogggggo...',
+      '.......ooooggggggo..',
+      '....ooogggoggggkgo..',
+      '.ooogggggggggggggpo.',
+      'owwwgggggggggggggo..',
+      'owwwgggggggggggggo..',
+      'owwwggggggggggggo...',
+      '.ooggglllllgggoo....',
+      '..ogggggggggggo.....',
+      '...oggggggggggo.....',
+      '...oggggggggggo.....',
+    ], frames: { walk: [
+        '..........ogopo.....',
+        '..........opgpo.....',
+        '..........opgpooo...',
+        '..........opgggggo..',
+        '.....oooooogggggggo.',
+        '.oooogggggggggggkggo',
+        'owwgggggggggggggggpo',
+        'wwwggggggggggggggggo',
+        'owwgggggggggggggggo.',
+        '.oggggggggggggggggo.',
+        'ogggggllllllggogggo.',
+        'ogggggggggggoo.ooo..',
+        '.ooooooooooo........',
+        '....................',
+        '....................',
+      ] } },
+  parrot: { cat: 'pet', kind: 'parrot', name: '鹦鹉', en: 'Parrot', price: 260, cage: 'parrot', stayIn: true,
+    pal: { o: O, g: '#4caf50', d: '#2e8b3e', u: '#3f7fe0', r: '#e8384f', y: '#ffb020', k: '#2a2228' },
+    art: [
+      '.............',
+      '......oooo...',
+      '.....oggggo..',
+      '....ogggkggo.',
+      '....ogggggyyo',
+      '...oggggrgyyo',
+      '...ogdgggggyo',
+      '..ogdddgggoo.',
+      '..odddddggo..',
+      '..odddddggo..',
+      '..oddyyyggo..',
+      '..odddddggo..',
+      '...ouudggo...',
+      '..ougdgggo...',
+      '..ouukgko....',
+      '..ouuroo.....',
+      '..ouuro......',
+    ], frames: { walk: [
+        '.............',
+        '......oooo...',
+        '.....oggggo..',
+        '...oogggkggo.',
+        '..odddggggyyo',
+        '.ouddddgrgyyo',
+        'ouddddddgggyo',
+        '.odddddgggoo.',
+        '..odddggggo..',
+        '..ogggggggo..',
+        '..oggyyyggo..',
+        '..ogggggggo..',
+        '...ogggggo...',
+        '..ougggggo...',
+        '..ouukgko....',
+        '..ouuroo.....',
+        '..ouuro......',
+      ] } },
+  birdcage: { cat: 'decor', petacc: true, cage: 'parrot', name: '鸟笼', en: 'Bird cage', price: 140, spot: 'back-mid-right', perch: 0.42,
+    pal: { o: O, s: '#e0b94a', z: '#a8743f', b: '#c25e38', l: '#e08a5a' },
+    art: [
+      '............osso............',
+      '..........ooossooo..........',
+      '........oossssssssoo........',
+      '........ssssss.sssss........',
+      '......sss.s..s..s..sss......',
+      '.....sss..s..s..s..s.ss.....',
+      '....ss.s..s..s..s..s..ss....',
+      '...ss..s..s..s..s..s..sss...',
+      '...ss..s..s..s..s..s..sss...',
+      '..sss..s..s..s..s..s..s.ss..',
+      '..s.s..s..s..s..s..s..s..s..',
+      '.ss.s..s..s..s..s..s..s..ss.',
+      '.ss.s..s..s..s..s..s..s..ss.',
+      '.ss.s..s..s..s..s..s..s..ss.',
+      'osoosoosoosoosoosoosoosoosso',
+      'osssssssssssssssssssssssssso',
+      'osoosoosoosoosoosoosoosoosso',
+      '.s..s..s..s..s..s..s..s..ss.',
+      '.s..s..s..s..s..s..s..s..ss.',
+      '.s..s..s..s..s..s..s..s..ss.',
+      '.s..s..s..s..s..s..s..s..ss.',
+      '.s..s..s..s..s..s..s..s..ss.',
+      '.s..zzzzzzzzzzzzzzzzzzzz.ss.',
+      '.s..s..sz.s..s..s..z..s..ss.',
+      '.s..s..sz.s..s..s..z..s..ss.',
+      '.s..s..sz.s..s..s..z..s..ss.',
+      '.s..s..sz.s..s..s..z..s..ss.',
+      '.s..s..sz.s..s..s..z..s..ss.',
+      '.s..s..sz.s..s..s..z..s..ss.',
+      '.s..s..sz.s..s..s..z..s..ss.',
+      'ssssssssssssssssssssssssssss',
+      'bbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      'bllllllllllllllllllllllllllb',
+      'bbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      'bbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      'bbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      'bbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      'oooooooooooooooooooooooooooo',
+    ] },
+  bbq: { cat: 'decor', name: '烧烤炉', en: 'BBQ pit', price: 130, spot: 'back-left',
+    pal: { o: O, b: '#c25e38', m: '#e8a07a', k: '#3a3f4a', f: '#ff7a2a', y: '#ffd23f', s: '#e8576b', d: '#b83a4e' },
+    art: [
+      '........................',
+      '............o...........',
+      '......o....oyo...o......',
+      '.....ofo..o.o...ofo.....',
+      '...oooo.ooyo.ooooooooo..',
+      '..osssdosssdosssdosssdo.',
+      'oofssssfssssfssssfssssoo',
+      'kkkkkkkkkkkkkkkkkkkkkkkk',
+      'kkkkkkkkkkkkkkkkkkkkkkkk',
+      'obbbbbbbbbbbbbbbbbbbbbbo',
+      'ommmmmmmmmmmmmmmmmmmmmmo',
+      'obbbmbbbbbmbbbbbmbbbbbmo',
+      'obbbmbbbbbmbbbbbmbbbbbmo',
+      'ommmmmmmmmmmmmmmmmmmmmmo',
+      'ombbbbbmbbbbbmbbbbbmbbbo',
+      'ombbbbbmbbbbbmbbbbbmbbbo',
+      'ommmmmmmmmmmmmmmmmmmmmmo',
+      'obbbmbbbbbmbbbbbmbbbbbmo',
+      'obbbmbbbbbmbbbbbmbbbbbmo',
+      'ommmmmmmmmmmmmmmmmmmmmmo',
+      'ombbbbbmbbbbbmbbbbbmbbbo',
+      'ombbbbbmbbbbbmbbbbbmbbbo',
+    ] },
+  lounger: { cat: 'decor', name: '躺椅', en: 'Poolside chair', price: 90, spot: 'front-left', seat: { x: 0.6, y: 0.62, lie: true },
+    pal: { o: O, c: '#7ec3e8', w: '#ffffff', f: '#c9d3de' },
+    art: [
+      '..ooo...............................',
+      '.owwwo..............................',
+      '.owccco.............................',
+      '..ocwwwo............................',
+      '...owccco...........................',
+      '....ocwwwo..........................',
+      '.....owcccooooooooooooooooooooooooo.',
+      '......occwwccwwccwwccwwccwwccwwccwwo',
+      '.......ocwwccwwccwwccwwccwwccwwccwwo',
+      '....oooocwwccwwccwwccwwccwwccwwccwwo',
+      '...offffffffffffffffffffffffffffffo.',
+      '....offoooooooooooooooooooooooffoo..',
+      '....offo.....................offo...',
+      '....offo.....................offo...',
+    ] },
+  umbrella: { cat: 'decor', name: '遮阳伞', en: 'Poolside umbrella', price: 80, spot: 'back-right',
+    pal: { o: O, r: '#e8576b', w: '#ffffff', s: '#c9d3de', d: '#8a93a3' },
+    art: [
+      '.............orssro.............',
+      '............orwrwrwo............',
+      '...........orrwrwwrwo...........',
+      '.........oorrwwrwwrrwoo.........',
+      '........orrrwwrrwwwrrwwo........',
+      '.......orrrwwwrrwwwrrrwwo.......',
+      '......orrrwwwrrrwwwrrrwwwo......',
+      '....oorrrrwwwrrrwwwwrrrwwwoo....',
+      '...orrrrwwwwrrrrwwwwrrrrwwwwo...',
+      '..orrrrrwwwwrrrrwwwwwrrrrwwwwo..',
+      '.orrrrrwwwwwrrrrwwwwwrrrrrwwwwo.',
+      'orrrrrwwwwwrrrrrwwwwwrrrrrwwwwwo',
+      'orooooroooorooosroooorooooroooo.',
+      '.o....o....o..osso...o....o.....',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..............osso..............',
+      '..........ooooossooooo..........',
+      '.........oddddddddddddo.........',
+      '.........oddddddddddddo.........',
+      '.........oddddddddddddo.........',
+    ] },
+  cocktails: { cat: 'decor', name: '鸡尾酒', en: 'Cocktails', price: 35, spot: 'toy-right',
+    pal: { o: O, t: '#c98f58', g: '#e8f7ff', a: '#ff9a3c', u: '#3f9fe0', w: '#ffffff', p: '#ff7fb0', k: '#ff5d8a', y: '#ffd23f' },
+    art: [
+      '..okkoo...........',
+      '.okkkkpo..........',
+      '..ookopo.....o....',
+      '..oooopo....opo...',
+      '.oggggpo....opoo..',
+      '.oggwggo..ooopoyo.',
+      '.ogaaago.ogggpgyyo',
+      '.ogaaago.oggggggo.',
+      '.ogaaago.oguuuugo.',
+      '.ogaaago.oguuuugo.',
+      '.ogaaago.oguuuugo.',
+      '.ogaaago.oguuuugo.',
+      'oogaaagoooguuuugoo',
+      'tttttttttttttttttt',
+      'tttttttttttttttttt',
+      'tttttttttttttttttt',
+    ] },
+  towels: { cat: 'decor', name: '一叠毛巾', en: 'Stack of towels', price: 30, spot: 'toy-left',
+    pal: { o: O, p: '#ff9ec4', P: '#e0628c', b: '#7ec3e8', B: '#4f9fd8', y: '#ffd23f', Y: '#e0a524', g: '#7cbd52', G: '#4f9a3a', w: '#ffffff' },
+    art: [
+      'oggggggggggggggggo',
+      'ogggggggggggggwwwo',
+      'ogggggggggggggwwwo',
+      'oGGGGGGGGGGGGGGGGo',
+      'oyyyyyyyyyyyyyyyyo',
+      'oyyyyyyyyyyyyywwwo',
+      'oyyyyyyyyyyyyywwwo',
+      'oYYYYYYYYYYYYYYYYo',
+      'obbbbbbbbbbbbbbbbo',
+      'obbbbbbbbbbbbbwwwo',
+      'obbbbbbbbbbbbbwwwo',
+      'oBBBBBBBBBBBBBBBBo',
+      'oppppppppppppppppo',
+      'opppppppppppppwwwo',
+      'opppppppppppppwwwo',
+      'oPPPPPPPPPPPPPPPPo',
+    ] },
+  pool: { cat: 'reno', kind: 'pool', name: '游泳池', en: 'Swimming pool', price: 400,
+    pal: { o: O, t: '#eef2f6', w: '#4fc3f7', l: '#b3ecff', s: '#c9d3de' },
+    art: [
+      'tttttttttttttttttttttttt',
+      'tttttttttttttttttttststt',
+      'ttwwwwwwwwwwwwwwwwwswstt',
+      'ttwwwwwwwwwwwwwwwwwssstt',
+      'ttwwwwwwwwwwwwwwwwwswstt',
+      'ttwwllllllwwwwwwwwwssstt',
+      'ttwwwwwwwwwwwllllllswstt',
+      'ttwwwwwwwwwwwwwwwwwwwwtt',
+      'ttwwwwwwwwwwwwwwwwwwwwtt',
+      'ttwwllllllwwwwwwwwwwwwtt',
+      'ttwwwwwwwwwwwllllllwwwtt',
+      'ttwwwwwwwwwwwwwwwwwwwwtt',
+      'ttwwwwwwwwwwwwwwwwwwwwtt',
+      'ttwwwwwwwwwwwwwwwwwwwwtt',
+      'tttttttttttttttttttttttt',
+      'tttttttttttttttttttttttt',
+    ] },
+});
 // furniture you can switch on and off at home
 ITEMS.tv.power = 'tv';
 ['lamp', 'lantern', 'starlight', 'nightstand'].forEach((id) => { if (ITEMS[id]) ITEMS[id].power = 'light'; });
@@ -3165,6 +3500,7 @@ export function drawRoom(canvas, night = false, kind = 'living', style = null) {
   const W = 120, H = Math.max(40, Math.round(W * cssH / cssW));
   lowres(canvas, W, H, (R) => {
     const floorY = Math.round(H * 0.64);
+    let open = false;     // garden, rooftop, basement: no window, no wallpaper
     if (kind === 'bedroom') {
       // lilac wallpaper with little stars and moons
       R(0, 0, W, floorY, '#e6dcff');
@@ -3209,7 +3545,28 @@ export function drawRoom(canvas, night = false, kind = 'living', style = null) {
       for (let x = 2; x < W; x += 7) R(x, hy, 2, 2, night ? '#2b5c40' : '#66b566');
       R(0, floorY, W, H - floorY, night ? '#2f6b3c' : '#7ccc63');
       for (let y = floorY + 2; y < H; y += 3) for (let x = (y % 6 ? 2 : 5); x < W; x += 6) { R(x, y, 1, 2, night ? '#3d8049' : '#93dc75'); R(x + 1, y - 1, 1, 1, night ? '#3d8049' : '#93dc75'); }
-      return;   // no window, and wallpaper or floors don't go outside
+      open = true;   // no window, and wallpaper or floors don't go outside
+    } else if (kind === 'rooftop') {
+      // up on the roof: open sky, a low brick wall round the edge, terracotta tiles
+      R(0, 0, W, floorY, night ? '#1d286a' : '#8fd0f7');
+      R(0, 0, W, Math.round(floorY * 0.4), night ? '#10174a' : '#6cbcf0');
+      if (night) [[8, 5], [26, 12], [40, 4], [57, 9], [77, 3], [95, 11], [112, 6], [18, 20], [66, 18]].forEach(([x, y]) => R(x, y, 1, 1, '#ffffff'));
+      else { [[8, 10], [52, 6], [84, 14]].forEach(([x, y]) => { R(x, y, 14, 3, '#ffffff'); R(x + 3, y - 2, 7, 2, '#ffffff'); }); R(100, 4, 9, 9, '#ffe066'); }
+      // other rooftops far away
+      [[0, 10, 18], [16, 6, 14], [30, 12, 20], [80, 8, 16], [96, 13, 24]].forEach(([x, h, w]) => { R(x, floorY - 8 - h, w, h + 8, night ? '#2a3260' : '#b9c7d8'); for (let wy = floorY - 6 - h; wy < floorY - 8; wy += 4) for (let wx = x + 2; wx < x + w - 2; wx += 4) R(wx, wy, 2, 2, night ? '#ffe08a' : '#dfe8f2'); });
+      const wy = floorY - 7;
+      R(0, wy, W, 7, '#c25e38'); R(0, wy, W, 1, '#e08a5a');
+      for (let y = wy + 2; y < floorY; y += 3) for (let x = (y % 2) * 3; x < W; x += 6) R(x, y, 1, 2, '#a84c2c');
+      for (let y = floorY, row = 0; y < H; y += 5, row++) for (let x = 0, col = 0; x < W; x += 8, col++) { R(x, y, 8, 5, (row + col) % 2 ? '#d9825a' : '#e39a74'); R(x, y, 8, 1, '#c4704a'); R(x, y, 1, 5, '#c4704a'); }
+      open = true;
+    } else if (kind === 'basement') {
+      // no walls at all: just a big concrete floor under a dim light
+      R(0, 0, W, H, '#7d7f86');
+      for (let y = 0; y < H; y += 12) R(0, y, W, 1, '#6c6e75');
+      for (let y = 0, row = 0; y < H; y += 12, row++) for (let x = (row % 2) * 10; x < W; x += 20) R(x, y, 1, 12, '#6c6e75');
+      [[14, 20, 6], [70, 44, 8], [100, 12, 5], [40, 70, 7]].forEach(([x, y, r]) => { for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (i * i + j * j <= r * r && y + j < H) R(x + i, y + j, 1, 1, '#777980'); });
+      for (let y = 0; y < H; y++) { const a = Math.min(1, Math.abs(y - H * 0.45) / (H * 0.6)); if (a > 0.5) R(0, y, W, 1, `rgba(20,20,30,${((a - 0.5) * 0.5).toFixed(2)})`); }
+      open = true;
     } else {
       // wallpaper: cream with soft pink stripes and tiny dots
       R(0, 0, W, floorY, '#fbe8d3');
@@ -3225,6 +3582,7 @@ export function drawRoom(canvas, night = false, kind = 'living', style = null) {
         for (let x = (row * 13) % 24; x < W; x += 24) R(x, y, 1, 3, '#b07a48');
       }
     }
+    if (!open) {
     // renovations: a new wallpaper and/or floor for this room
     const wall = style && ITEMS[style.wall] && WALLPAT[ITEMS[style.wall].pat];
     const floor = style && ITEMS[style.floor] && FLOORPAT[ITEMS[style.floor].pat];
@@ -3251,6 +3609,17 @@ export function drawRoom(canvas, night = false, kind = 'living', style = null) {
     const mx = Math.round((wx0 + wx1) / 2), my = Math.round((wy0 + wy1) / 2);
     R(mx, wy0, 1, wy1 - wy0, '#ffffff'); R(wx0, my, wx1 - wx0, 1, '#ffffff');
     R(wx0 - 3, wy1 + 1, wx1 - wx0 + 6, 2, '#e9e1d4');
+    }
+    // a swimming pool on the floor (same place as POOL in house.js)
+    if (style && style.pool && ITEMS[style.pool]) {
+      const px0 = Math.round(W * 0.18), px1 = Math.round(W * 0.82), py0 = Math.round(H * (1 - 0.24)), py1 = Math.round(H * (1 - 0.02));
+      R(px0 - 2, py0 - 2, px1 - px0 + 4, py1 - py0 + 4, '#eef2f6');
+      for (let x = px0 - 2; x < px1 + 2; x += 4) { R(x, py0 - 2, 1, 2, '#c9d3de'); R(x, py1, 1, 2, '#c9d3de'); }
+      R(px0, py0, px1 - px0, py1 - py0, '#3fb4ea');
+      R(px0, py0, px1 - px0, 2, '#2f97cc');
+      for (let y = py0 + 4; y < py1 - 1; y += 4) for (let x = px0 + ((y / 4) % 2) * 6 + 2; x < px1 - 6; x += 12) R(x, y, 5, 1, '#9fe3ff');
+      R(px1 - 6, py0 - 4, 1, 7, '#c9d3de'); R(px1 - 3, py0 - 4, 1, 7, '#c9d3de'); R(px1 - 6, py0 - 1, 4, 1, '#c9d3de'); R(px1 - 6, py0 + 2, 4, 1, '#c9d3de');
+    }
   });
 }
 export function drawRoof(canvas) {

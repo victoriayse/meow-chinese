@@ -96,15 +96,15 @@ export function shopScreen({ go, tab = 'food' }) {
       const needed = !pharm || S.health() === it.cures;
       const roomShut = it.cat === 'decor' && it.room && !S.roomOpen(it.room);
       const can = s.coins >= cost && !full && needed && !roomShut && !needCage;
-      const cageOf = (k) => ({ hamster: '🐹 仓鼠 hamster', guineapig: '🐾 豚鼠 guinea pig' }[k] || k);
-      const eff = isPet ? (adopted ? `💕 ${esc(adopted.name)}` : needCage ? '要先买笼子 · Buy its cage first (🦴 Pet Accessories)' : it.roam ? '在家里到处跑 · Roams around the house' : '住在笼子里 · Lives in its cage')
+      const cageOf = (k) => ({ hamster: '🐹 仓鼠 hamster', guineapig: '🐾 豚鼠 guinea pig', parrot: '🦜 鹦鹉 parrot' }[k] || k);
+      const eff = isPet ? (adopted ? `💕 ${esc(adopted.name)}` : needCage ? '要先买笼子 · Buy its cage first (🦴 Pet Accessories)' : it.hops ? '在家里蹦蹦跳 · Hops around the house' : it.roam ? '在家里到处跑 · Roams around the house' : '住在笼子里 · Lives in its cage')
         : it.cat === 'petacc' ? `放在笼子里 · Goes in the cage: ${(it.cageFor || []).map(cageOf).join(' / ')}`
-        : it.cage ? `${cageOf(it.cage)} 的家 · A home for a ${it.cage === 'hamster' ? 'hamster' : 'guinea pig'}`
+        : it.cage ? `${cageOf(it.cage)} 的家 · A home for a ${{ hamster: 'hamster', guineapig: 'guinea pig', parrot: 'parrot' }[it.cage]}`
         : it.cat === 'food' || it.cat === 'toiletry' ? itemEffect(it) : it.toy ? '可以一起玩 Toy'
         : special ? `漏了一天也不会断连胜 · Keeps your streak if you miss a day${full ? ` (max ${S.MAX_FREEZES})` : ''}`
         : pharm ? (needed ? `治好${it.cures === 'cough' ? '咳嗽' : '头晕'}！Cures ${it.cures === 'cough' ? 'a cough' : 'dizziness'}` : `小猫${it.cures === 'cough' ? '咳嗽' : '头晕'}时才需要 · Only when your kitten ${it.cures === 'cough' ? 'coughs' : 'is dizzy'}`)
         : it.cat === 'wear' ? `${SLOT_NAME[it.slot] || ''}`
-        : it.cat === 'reno' ? (it.kind === 'wall' ? '🧱 墙纸 Wallpaper' : '🟫 地板 Floor')
+        : it.cat === 'reno' ? (it.kind === 'wall' ? '🧱 墙纸 Wallpaper' : it.kind === 'pool' ? '🏊 在家里游泳！Swim at home' : '🟫 地板 Floor')
         : it.cat === 'decor' ? `${S.roomInfo(it.room || 'living').icon} ${S.roomInfo(it.room || 'living').zh} ${S.roomInfo(it.room || 'living').en}${roomShut ? ` · 🔒 Lv${S.UNLOCKS[it.room]}` : ''}` : '';
       const trying = it.cat === 'wear' && tryOn[it.slot] === id && S.get().kitten.equipped[it.slot] !== id;
       const card = html`<div class="product ${trying ? 'sel' : ''} ${owned ? 'is-owned' : ''}">
@@ -156,7 +156,7 @@ export function shopScreen({ go, tab = 'food' }) {
     if (!name) return;
     if (!S.adoptPet(id, name)) { toast('金币不够 · Not enough coins'); return; }
     sfx.fanfare(); kv.flash('happy', 1800); kv.jump(); burst($('#fx', n), 'heart', 5, '50%', '20%');
-    toast(`🏠 <span class="zh">${esc(name)}来到你家了！</span> ${it.cage ? 'It\'s in its cage — tap the cage at home to open the door' : 'Go home to see it run around'}`, { ms: 4500 });
+    toast(`🏠 <span class="zh">${esc(name)}来到你家了！</span> ${it.stayIn ? 'It\'s in its bird cage at home' : it.cage ? 'It\'s in its cage — tap the cage at home to open the door' : 'Go home to see it run around'}`, { ms: 4500 });
     import('./pets.js').then((P) => P.refreshPets());
     render();
   }

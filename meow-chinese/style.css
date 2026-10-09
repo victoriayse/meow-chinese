@@ -1430,3 +1430,32 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .cage-chip { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 8px; border: 2px solid var(--ink); border-radius: 8px; background: #eef2f6; opacity: .6; cursor: pointer; }
 .cage-chip.on { background: #e6f7dd; opacity: 1; }
 .cage-chip small { font-family: var(--zh); font-size: 12px; }
+/* ▲ ▼ to the rooftop and basement (on the right, above and below the ▶ arrow) */
+.room-nav.up, .room-nav.down { top: auto; right: calc(var(--gap, 40px) - 38px); width: 34px; height: 40px; transform: none; }
+.room-nav.up { top: 6%; } .room-nav.down { bottom: 6%; }
+.room-nav.up:active, .room-nav.down:active { transform: translateY(2px); }
+@media (max-width: 600px) { .room-nav.up, .room-nav.down { right: calc(var(--gap, 28px) - 27px); width: 24px; height: 34px; } }
+/* the basement: no roof, no walls — just the floor */
+.house-unit.bare .roof { visibility: hidden; }
+.house-unit.bare .room { border-color: #4a4c55; border-width: 4px; border-radius: 10px; }
+/* 🏊 swimming: only the head and shoulders show above the water, bobbing gently */
+.pool-shine { position: absolute; z-index: 1; pointer-events: none; border-radius: 2px; opacity: .55;
+  background: repeating-linear-gradient(115deg, rgba(255,255,255,0) 0 18px, rgba(255,255,255,.35) 18px 22px, rgba(255,255,255,0) 22px 40px); background-size: 80px 80px; animation: poolshine 3s linear infinite; }
+@keyframes poolshine { to { background-position: 80px 0; } }
+.swimming .kflip, .pet.swimming .pflip { clip-path: inset(0 0 42% 0); translate: 0 42%; animation: swimbob 1.6s ease-in-out infinite;
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, rgba(0,0,0,.45)); mask-image: linear-gradient(to bottom, #000 70%, rgba(0,0,0,.45)); }
+@keyframes swimbob { 0%, 100% { translate: 0 42%; } 50% { translate: 0 36%; } }
+.swimming .kitten-canvas.walking { animation: none; }
+/* 🐰 the bunny hops */
+.pet[data-kind="rabbit"] .pflip { position: relative; }
+.pet[data-kind="rabbit"].walking .pflip { animation: bunnyhop .4s ease-in-out infinite; }
+@keyframes bunnyhop { 0%, 100% { top: 0; } 50% { top: -14px; } }
+/* 🦜 the parrot sits on its perch, bobs, and flaps now and then */
+.pet.in-cage.perched { animation: none; left: 50%; transform: translateX(-50%); }
+.pet.in-cage.perched .pflip { animation: parrotbob 2.4s ease-in-out infinite; }
+.pet.in-cage.perched .pf-stand { animation: parrotA 4s steps(1) infinite; }
+.pet.in-cage.perched .pf-walk { visibility: hidden; animation: parrotB 4s steps(1) infinite; }
+@keyframes parrotbob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -3px; } }
+@keyframes parrotA { 0%, 80% { visibility: visible; } 81%, 99% { visibility: hidden; } }
+@keyframes parrotB { 0%, 80% { visibility: hidden; } 81%, 99% { visibility: visible; } }
+.house-unit.outdoor .room[data-room="rooftop"] { border-color: #a84c2c; }

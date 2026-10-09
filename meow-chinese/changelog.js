@@ -166,4 +166,11 @@ export const CHANGES = [
     'Take things out of the pet cage (or put them back): tap the cage at home, or use 🎒 My items → 🦴 Pet things.',
     'The hamster and the things in its cage are smaller, and the cage bars are now in front of them.',
   ] },
+  { v: 90, items: [
+    'New pets: a 🐰 bunny that hops around the house, and a 🦜 parrot that lives in a dome bird cage.',
+    'Your puppy is now a fluffy white Maltipoo with a pink bow!',
+    'New rooms: ▲ the ☀️ Rooftop (Lv55) and ▼ the 🔦 Basement (Lv60) — use the arrows in the living room.',
+    'New in 🎨 Renovate: a 🏊 swimming pool for any room. Walk into it to swim — friends can swim with you!',
+    'New poolside things: BBQ pit, poolside chair, umbrella, cocktails and a stack of towels.',
+  ] },
 ];

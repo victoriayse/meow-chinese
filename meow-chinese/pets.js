@@ -9,12 +9,13 @@ import { roomLayout } from './house.js';
 const live = new Map();          // kind -> { room, x, y, left, mode: 'walk'|'idle'|'sit'|'cage', seat, until, dur, jump, exit }
 const listeners = new Set();
 export const onPets = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
-const SPEED = { dog: 11, guineapig: 6, hamster: 7 };      // % of the room per second
+const SPEED = { dog: 11, guineapig: 6, hamster: 7, rabbit: 9, parrot: 6 };      // % of the room per second
 const rnd = (a, b) => a + Math.random() * (b - a);
-const openRooms = () => (S.unlocked('decor') ? S.ROOMS.filter((r) => S.roomOpen(r.key)).map((r) => r.key) : ['living']);
+// the row of rooms pets wander along (not up to the rooftop or down to the basement)
+const openRooms = () => (S.unlocked('decor') ? S.ROOMS.filter((r) => !r.vert && S.roomOpen(r.key)).map((r) => r.key) : ['living']);
 
 // is this pet free to wander (dog always; the small ones when let out, or when their cage is put away)
-export const roaming = (p) => !ITEMS[p.kind].cage || p.out || !S.petCage(p.kind);
+export const roaming = (p) => !ITEMS[p.kind].cage || (!ITEMS[p.kind].stayIn && (p.out || !S.petCage(p.kind)));   // the parrot never leaves its cage
 
 function start(p) {
   const rooms = openRooms();
@@ -75,7 +76,7 @@ function step(p, l, now) {
     const spots = sitSpots(l.room);
     if (spots.length) { const sp = spots[Math.floor(Math.random() * spots.length)]; l.mode = 'sit'; l.seat = sp; l.dur = 0.8; l.until = now + rnd(10000, 18000); return; }
   }
-  if (r < 0.8) { walkTo(l, kind, rnd(8, 92), rnd(1, 26)); return; }
+  if (r < 0.8) { walkTo(l, kind, rnd(8, 92), rnd(1, S.roomMaxY(l.room) - 4)); return; }
   l.mode = 'idle'; l.dur = 0; l.until = now + rnd(2000, 5000);
 }
 function tick() {
@@ -85,6 +86,7 @@ function tick() {
     kinds.add(p.kind);
     if (!roaming(p)) {
       const cage = S.petCage(p.kind), l = live.get(p.kind);
+      if (!cage) { if (live.has(p.kind)) { live.delete(p.kind); any = true; } return; }   // the parrot's cage is in storage: no parrot to see
       const room = S.roomOf(cage);
       if (!l || l.mode !== 'cage' || l.cage !== cage || l.room !== room) { live.set(p.kind, { mode: 'cage', cage, room, x: 0, y: 0, wheel: false, until: now + rnd(3000, 8000) }); any = true; return; }
       // a hamster with a wheel hops on for a run now and then

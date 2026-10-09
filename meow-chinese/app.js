@@ -14,7 +14,7 @@ let pendingNotes = null, notesDismissed = false;   // a newer version is waiting
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, compressPhoto, PetLayer } from './house.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, compressPhoto, PetLayer, roomArrowsHtml, poolShine, inPool } from './house.js';
 import * as Pets from './pets.js';
 import * as Radio from './radio.js';
 import * as Visit from './visit.js';
@@ -421,7 +421,7 @@ function menuButton(b, { reviewN, inHouse }) {
 }
 // ---------- pets: tap a pet or a cage ----------
 let homePets = null;
-const PET_ICON = { dog: '🐶', guineapig: '🐾', hamster: '🐹' };
+const PET_ICON = { dog: '🐶', guineapig: '🐾', hamster: '🐹', rabbit: '🐰', parrot: '🦜' };
 export function petArtCanvas(kind, scale = 5) { const c = document.createElement('canvas'); drawGrid(c, artGrid(ITEMS[kind].art, ITEMS[kind].pal), scale); return c; }
 function petMenu(kind) {
   const p = S.petOf(kind); if (!p) return;
@@ -432,7 +432,7 @@ function petMenu(kind) {
       <div class="pet-art" id="pa"><div class="fx-layer" id="pfx"></div></div>
       <div class="row" style="flex-wrap:wrap;justify-content:center">
         <button class="btn pink" id="pat">🤍 <span class="zh">摸摸</span> Pat</button>
-        ${caged && cage ? '<button class="btn blue" id="back">🏠 <span class="zh">放回笼子</span> Put back in cage</button>' : ''}
+        ${caged && cage && !it.stayIn ? '<button class="btn blue" id="back">🏠 <span class="zh">放回笼子</span> Put back in cage</button>' : ''}
         <button class="btn white" id="ren">✏️ <span class="zh">改名字</span> Rename</button>
       </div>
       ${caged && !cage ? '<p class="help" style="margin:0">把笼子摆进房间，就可以把它放回去。<br>Put its cage in a room to keep it in there.</p>' : ''}
@@ -481,7 +481,7 @@ function cageMenu(kind) {
   sfx.click();
   const box = html`<div class="card stack pet-card" style="align-items:center;text-align:center">
       <div class="h-title" style="justify-content:center"><span class="zh">${PET_ICON[kind]} ${p ? esc(p.name) : '空笼子'}</span><span class="en">${p ? (p.out ? 'Out exploring the house' : 'In the cage') : 'An empty cage'}</span></div>
-      ${p ? (p.out ? '<button class="btn blue" id="back">🏠 <span class="zh">放回笼子</span> Put back in cage</button>'
+      ${p && it.stayIn ? '<p class="help" style="margin:0">鹦鹉一直住在笼子里。<br>Parrots stay in their cage.</p>' : p ? (p.out ? '<button class="btn blue" id="back">🏠 <span class="zh">放回笼子</span> Put back in cage</button>'
         : '<button class="btn green" id="open">🚪 <span class="zh">打开笼门</span> Open the door</button>')
         : `<p class="help" style="margin:0">去商店领养一只${it.name}吧！<br>Adopt a ${it.en.toLowerCase()} in the shop to live here.</p><button class="btn blue" id="adopt">🛍️ <span class="zh">去领养</span> Adopt a pet</button>`}
       ${things.length ? `<div class="cage-things"><div class="help" style="margin:0">笼子里的东西 · Things in the cage (tap to take out / put in)</div>
@@ -526,13 +526,7 @@ function homeScreen(params = {}) {
   S.purgeOldMessages();
   const inHouse = params.view === 'house' && S.unlocked('decor');
   const roomKey = inHouse && S.roomOpen(params.room) ? S.roomInfo(params.room).key : 'living';
-  const roomIdx = S.ROOMS.findIndex((r) => r.key === roomKey);
-  const sideRoom = (d) => S.ROOMS[roomIdx + d] || null;
-  const roomArrow = (d) => {
-    const r = sideRoom(d); if (!r) return '';
-    const open = S.roomOpen(r.key), lv = r.lock ? S.UNLOCKS[r.lock] : 0;
-    return `<button class="room-nav ${d < 0 ? 'left' : 'right'} ${open ? '' : 'locked'}" data-room="${r.key}" aria-label="${r.en}${open ? '' : ` (Lv${lv})`}">${d < 0 ? '◀' : '▶'}</button>`;
-  };
+  const roomRI = S.roomInfo(roomKey);
   if (S.health() === 'dead') return graveScreen();
   if (S.get().needsSetup) return setupScreen();
   S.maybeBored();
@@ -555,7 +549,7 @@ function homeScreen(params = {}) {
 
   const n = html`<section class="home ${inHouse ? 'house-view' : ''}">
     <div class="stage ${inHouse ? 'in-house' : ''}" id="stage">
-      ${inHouse ? `<div class="house" id="house"><div class="house-unit ${S.roomInfo(roomKey).outdoor ? 'outdoor' : ''}" id="hunit">
+      ${inHouse ? `<div class="house" id="house"><div class="house-unit ${roomRI.outdoor ? 'outdoor' : ''} ${roomRI.bare ? 'bare' : ''}" id="hunit">
         <canvas class="roof" id="roof"></canvas>
         <div class="room-name">${S.roomInfo(roomKey).icon} <span class="zh">${S.roomInfo(roomKey).zh}</span> ${S.roomInfo(roomKey).en}</div>
         <div class="room" id="room" data-room="${roomKey}">
@@ -563,7 +557,7 @@ function homeScreen(params = {}) {
 
           <div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>
         </div>
-      </div>${roomArrow(-1)}${roomArrow(1)}</div><div class="house-tools" id="htools">
+      </div>${roomArrowsHtml(roomKey, S.roomOpen)}</div><div class="house-tools" id="htools">
           <button class="tool-btn store-btn" id="b-store" title="Storage">📦<b id="store-n"></b></button>
           <button class="tool-btn reno-btn" id="b-reno" title="Renovate">🎨</button>
           <button class="tool-btn" id="b-arrange" title="Move furniture">🪑</button>
@@ -699,13 +693,15 @@ function homeScreen(params = {}) {
     kv.setPose(spot ? spot.pose : null); ground.dataset.pose = (spot && spot.pose) || '';
     room.querySelectorAll('.decor.seat').forEach((d) => blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === st.id)));
     if (spot) {
+      ground.classList.remove('swimming');
       cat.x = spot.x; cat.y = spot.y;
       ground.style.left = cat.x + '%'; ground.style.bottom = cat.y + '%'; ground.style.zIndex = spot.z;
       return;
     }
     const halfW = room.clientWidth ? (kflip.offsetWidth / 2 / room.clientWidth) * 100 : 10;
     cat.x = Math.max(halfW, Math.min(100 - halfW, cat.x));
-    cat.y = Math.max(1, Math.min(30, cat.y));
+    cat.y = Math.max(1, Math.min(S.roomMaxY(roomKey), cat.y));
+    ground.classList.toggle('swimming', !!S.roomStyle(roomKey).pool && inPool(cat.x, cat.y));   // in the pool: she swims
     ground.style.left = cat.x + '%';
     ground.style.bottom = cat.y + '%';
     ground.style.zIndex = 2 + Math.round(100 - cat.y);
@@ -831,21 +827,22 @@ function homeScreen(params = {}) {
     };
     // 🎨 renovate: pick a wallpaper and a floor for this room from the ones she has bought
     $('#b-reno', n).onclick = () => {
-      if (S.roomInfo(roomKey).outdoor) { sfx.miss(); return toast('🌳 <span class="zh">花园在外面，没有墙纸和地板</span> The garden is outdoors — no wallpaper or floors to change', { ms: 2600 }); }
       const ri = S.roomInfo(roomKey), owned = S.ownedRenovations();
+      const plain = !ri.outdoor && !ri.bare;      // only indoor rooms with walls get wallpaper and floors
       const draw = () => {
         const cur = S.roomStyle(roomKey);
-        const opts = (kind) => [`<button class="reno-opt ${!cur[kind] ? 'on' : ''}" data-kind="${kind}" data-id=""><span class="art">↺</span><small>原来的 Original</small></button>`,
+        const opts = (kind) => [`<button class="reno-opt ${!cur[kind] ? 'on' : ''}" data-kind="${kind}" data-id=""><span class="art">${kind === 'pool' ? '✖' : '↺'}</span><small>${kind === 'pool' ? '没有 None' : '原来的 Original'}</small></button>`,
           ...owned.filter((id) => ITEMS[id].kind === kind).map((id) => `<button class="reno-opt ${cur[kind] === id ? 'on' : ''}" data-kind="${kind}" data-id="${id}"><span class="art"></span><small class="zh">${ITEMS[id].name}</small></button>`)].join('');
         box.innerHTML = `<div class="h-title"><span class="zh">🎨 装修${ri.zh}</span><span class="en">Renovate the ${ri.en.toLowerCase()}</span></div>
-          ${owned.length ? '' : '<p class="help">还没有墙纸或地板。去商店的 🎨 装修 看看吧！<br>No wallpaper or floors yet — find them in the shop\'s 🎨 Renovate aisle.</p>'}
-          <h4>🧱 墙纸 Wallpaper</h4><div class="reno-grid">${opts('wall')}</div>
-          <h4>🟫 地板 Floor</h4><div class="reno-grid">${opts('floor')}</div>
+          ${owned.length ? '' : '<p class="help">还没有墙纸或地板。去商店的 🎨 装修 看看吧！<br>Nothing yet — find wallpaper, floors and the pool in the shop\'s 🎨 Renovate aisle.</p>'}
+          ${plain ? `<h4>🧱 墙纸 Wallpaper</h4><div class="reno-grid">${opts('wall')}</div>
+          <h4>🟫 地板 Floor</h4><div class="reno-grid">${opts('floor')}</div>` : ''}
+          <h4>🏊 泳池 Swimming pool</h4><div class="reno-grid">${opts('pool')}</div>
           <div class="row" style="justify-content:space-between">${owned.length ? '' : '<button class="btn blue" id="r-shop">🛍️ <span class="zh">去商店</span> Shop</button>'}<button class="btn white" id="r-close">好了 Done</button></div>`;
         box.querySelectorAll('.reno-opt[data-id]:not([data-id=""]) .art').forEach((a) => a.appendChild(spriteCanvas(a.parentElement.dataset.id, 52)));
         box.querySelectorAll('.reno-opt').forEach((b) => { b.onclick = () => {
           S.setRoomStyle(roomKey, b.dataset.kind, b.dataset.id || null); sfx.coin();
-          drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); Visit.hostResendHouse(); draw();
+          drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); poolShine(room, !!S.roomStyle(roomKey).pool); placeCat(); Visit.hostResendHouse(); draw();
         }; });
         $('#r-close', box).onclick = closeModal;
         const rs = $('#r-shop', box); if (rs) rs.onclick = () => { closeModal(); go('shop', { tab: 'reno' }); };
@@ -1050,7 +1047,7 @@ function homeScreen(params = {}) {
       cageMenu(d.dataset.cage);
     });
   } else { hostRoomNow = 'living'; roomPower = null; homePets = null; Radio.stop(); }
-  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); if (homePets) homePets(); } };
+  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); poolShine(room, !!S.roomStyle(roomKey).pool); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); if (homePets) homePets(); } };
   return n;
 }
 

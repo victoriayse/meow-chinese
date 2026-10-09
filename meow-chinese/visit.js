@@ -14,7 +14,7 @@ import { Channel } from './rt.js';
 import { drawRoom, drawRoof } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal } from './ui.js';
 import { sfx } from './audio.js';
-import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote, PetLayer } from './house.js';
+import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote, PetLayer, roomArrowsHtml, poolShine, inPool } from './house.js';
 import * as Radio from './radio.js';
 
 const isNight = () => { const h = new Date().getHours(); return h >= 18 || h < 5; };
@@ -22,7 +22,7 @@ export function myLook() {
   const s = S.get(), k = s.kitten;
   return { name: s.childName && !String(k.name).includes(s.childName) ? `${s.childName}的${k.name}` : k.name, level: S.level(), fur: k.fur, equipped: { ...(k.equipped || {}) } };
 }
-const clampPos = (p) => ({ ...p, x: Math.max(6, Math.min(94, p.x)), y: Math.max(1, Math.min(30, p.y)) });
+const clampPos = (p) => ({ ...p, x: Math.max(6, Math.min(94, p.x)), y: Math.max(1, Math.min(S.roomMaxY(p.room || 'living'), p.y)) });
 // send at most ~8 moves a second, and always the last one
 function throttle(fn, ms = 120) {
   let last = 0, t = null, pending = null;
@@ -220,12 +220,10 @@ export function visitScreen({ go, id: hostId, name = '' }) {
 
   function render() {
     const info = S.roomInfo(roomKey), open = house.open || ['living'];
-    const idx = S.ROOMS.findIndex((r) => r.key === roomKey);
-    const arrow = (d) => { const r = S.ROOMS[idx + d]; if (!r || !open.includes(r.key)) return ''; return `<button class="room-nav ${d < 0 ? 'left' : 'right'}" data-room="${r.key}" aria-label="${r.en}">${d < 0 ? '◀' : '▶'}</button>`; };
-    box.innerHTML = `<div class="house-unit ${S.roomInfo(roomKey).outdoor ? 'outdoor' : ''}" id="hunit"><canvas class="roof" id="roof"></canvas>
+    box.innerHTML = `<div class="house-unit ${info.outdoor ? 'outdoor' : ''} ${info.bare ? 'bare' : ''}" id="hunit"><canvas class="roof" id="roof"></canvas>
         <div class="room-name">${info.icon} <span class="zh">${info.zh}</span> ${info.en}</div>
         <div class="room" id="room" data-room="${roomKey}"><canvas class="room-bg" id="roombg"></canvas></div>
-      </div>${arrow(-1)}${arrow(1)}`;
+      </div>${roomArrowsHtml(roomKey, (k) => open.includes(k), { showLocked: false })}`;
     const unit = $('#hunit', box), room = $('#room', box);
     (house.rooms[roomKey] || []).forEach((e) => { const el = decorEl(e); if (el) room.appendChild(el); });
     wirePlayable(room, (i) => ch.send('note', { id: me, i }));
@@ -252,6 +250,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     others.attach(room, roomKey);
     fitHouse(box, unit);
     drawRoom($('#roombg', box), isNight(), roomKey, (house.styles || {})[roomKey]); drawRoof($('#roof', box));
+    poolShine(room, !!((house.styles || {})[roomKey] || {}).pool);
     room.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, room); });
     const pw = house.power || {};
     applyPower(room, { dark: !!(pw.dark || {})[roomKey], off: pw.off || {} });
@@ -274,9 +273,10 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     myEl.classList.toggle('lying', !!(spot && spot.lie)); myEl.classList.toggle('seated', !!spot);
     if (myKv) myKv.setPose(spot ? spot.pose : null); myEl.dataset.pose = (spot && spot.pose) || '';
     if (room) room.querySelectorAll('.decor.seat').forEach((d) => { if (!others.ids().some((id) => (others.m.get(id) || {}).seat === d.dataset.id)) blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === mine.seat)); });
-    if (spot) { mine.x = spot.x; mine.y = spot.y; myEl.style.left = `${spot.x}%`; myEl.style.bottom = `${spot.y}%`; myEl.style.zIndex = spot.z; return; }
+    if (spot) { myEl.classList.remove('swimming'); mine.x = spot.x; mine.y = spot.y; myEl.style.left = `${spot.x}%`; myEl.style.bottom = `${spot.y}%`; myEl.style.zIndex = spot.z; return; }
     Object.assign(mine, clampPos(mine));
     myEl.style.left = `${mine.x}%`; myEl.style.bottom = `${mine.y}%`; myEl.style.zIndex = 2 + Math.round(100 - mine.y);
+    myEl.classList.toggle('swimming', !!room && room.dataset.pool === '1' && inPool(mine.x, mine.y));
   }
   // chat
   $('#vchat', n).appendChild(chatBar((text) => {
