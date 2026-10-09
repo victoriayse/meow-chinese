@@ -114,8 +114,22 @@ export function decorEl({ id, css, kind, photo, closed, cage }, { putAway = fals
     const W = artGrid(it.art, it.pal)[0].length, H = it.art.length, inner = it.cageW || W;
     cage.things.forEach((tid) => {
       const t = ITEMS[tid]; if (!t || !t.inCage) return;
-      const tc = document.createElement('canvas'); tc.className = 'cage-thing';
-      drawGrid(tc, artGrid(t.art, t.pal), HOUSE.decor);
+      let tc;
+      if (t.wheel) {
+        // a wheel: the ring (which spins while the hamster runs) and its stand, drawn separately
+        const g = artGrid(t.art, t.pal), w = t.wheel;
+        const inRing = (x, y) => Math.hypot(x - w.cx, y - w.cy) <= w.r;
+        const ring = document.createElement('canvas'); ring.className = 'wheel-ring';
+        drawGrid(ring, g.slice(0, w.cy * 2 + 1).map((row, y) => row.slice(0, w.cx * 2 + 1).map((c, x) => (inRing(x, y) ? c : null))), HOUSE.decor);
+        const stand = document.createElement('canvas'); stand.className = 'wheel-stand';
+        drawGrid(stand, g.map((row, y) => row.map((c, x) => (inRing(x, y) ? null : c))), HOUSE.decor);
+        tc = document.createElement('div'); tc.className = 'cage-thing wheel'; tc.dataset.id = tid;
+        tc.style.width = stand.style.width; tc.style.height = stand.style.height;
+        tc.append(stand, ring);
+      } else {
+        tc = document.createElement('canvas'); tc.className = 'cage-thing';
+        drawGrid(tc, artGrid(t.art, t.pal), HOUSE.decor);
+      }
       Object.assign(tc.style, { left: `${((1 + t.inCage.x * (inner - 2 - t.art[0].length)) / W) * 100}%`, bottom: `${t.inCage.y * 100}%`, zIndex: t.inCage.z });   // keep the size drawGrid set (sharp screens draw at 2×)
       wrap.appendChild(tc);
     });
@@ -435,7 +449,7 @@ function petCanvas(kind, frame) {
   return c;
 }
 export class PetLayer {
-  constructor(roomEl, roomKey, { onClick } = {}) { this.roomEl = roomEl; this.roomKey = roomKey; this.onClick = onClick; this.els = new Map(); }
+  constructor(roomEl, roomKey, { onClick, onSpot } = {}) { this.roomEl = roomEl; this.roomKey = roomKey; this.onClick = onClick; this.onSpot = onSpot; this.els = new Map(); }
   el(p) {
     let el = this.els.get(p.kind);
     if (el) { el.querySelector('.pet-tag').textContent = p.name; return el; }
@@ -460,14 +474,23 @@ export class PetLayer {
         const cw = room.querySelector(`.decor.cage[data-id="${p.cage}"]`);
         if (!cw) { el.remove(); return; }
         if (el.parentElement !== cw) cw.appendChild(el);
-        el.className = `pet in-cage${this.onClick ? ' clickable' : ''}`;
-        el.style.cssText = `bottom:${cw.dataset.floor}%;--to:${Math.max(10, (+cw.dataset.inner || 0.8) * 100 - 38)}%`;
+        const wheel = p.wheel && cw.querySelector('.cage-thing.wheel');
+        cw.querySelectorAll('.cage-thing.wheel').forEach((w) => w.classList.toggle('spinning', !!wheel));
+        el.className = `pet in-cage${wheel ? ' on-wheel' : ''}${this.onClick ? ' clickable' : ''}`;
+        if (wheel) {
+          // running inside the wheel: stand in the middle of the ring
+          const cwW = cw.offsetWidth || 1, cwH = cw.offsetHeight || 1;
+          el.style.cssText = `left:${((wheel.offsetLeft + wheel.offsetWidth / 2 - el.offsetWidth / 2) / cwW) * 100}%;bottom:${((cwH - wheel.offsetTop - wheel.offsetHeight * 0.8) / cwH) * 100}%`;
+        } else el.style.cssText = `bottom:${cw.dataset.floor}%;--to:${Math.max(10, (+cw.dataset.inner || 0.8) * 100 - 38)}%`;
         return;
       }
-      let jump = p.jump || el.dataset.fresh === '1' || el.parentElement !== room;
+      const fresh = el.dataset.fresh === '1' || el.parentElement !== room;
+      let jump = p.jump;
       if (el.parentElement !== room) room.appendChild(el);
       el.classList.remove('in-cage'); delete el.dataset.fresh;
       let x = p.x, y = p.y, z = null, sit = false;
+      // where it is drawn right now (to work out how long the trip to the new spot takes)
+      const curX = parseFloat(el.style.left), curY = parseFloat(el.style.bottom);
       if (jump && p.fromCage) {          // just let out: it hops out of the cage door
         const cw = room.querySelector(`.decor[data-id="${p.fromCage}"]`);
         if (cw) { x = ((cw.offsetLeft + cw.offsetWidth * 0.75) / W) * 100; y = ((H - cw.offsetTop - cw.offsetHeight) / H) * 100; }
@@ -476,7 +499,24 @@ export class PetLayer {
         if (!p.seat.flat) { const sp = seatSpot(room, p.seat.id, p.seat.slot); if (sp) { x = sp.x; y = sp.y; z = sp.z; sit = true; } }
         else { const d = room.querySelector(`.decor[data-id="${p.seat.id}"]`); if (d) { x = ((d.offsetLeft + d.offsetWidth / 2) / W) * 100; y = ((H - d.offsetTop - d.offsetHeight * 0.6) / H) * 100; z = (parseInt(d.style.zIndex, 10) || 1) + 1; sit = true; } }
       }
-      el.style.transition = jump ? 'none' : `left ${p.dur}s linear, bottom ${p.dur}s linear`;
+      if (sit && this.onSpot) this.onSpot(p.kind, x, y);
+      let dur = p.dur;
+      if (fresh && !jump) {
+        // the screen was just drawn: put it where it is now (half-way through a walk), then carry on
+        jump = true;
+        if (p.mode === 'walk' && p.age != null && p.age < p.dur * 1000) {
+          const f = p.age / (p.dur * 1000), left = p.dur - p.age / 1000;
+          el.style.transition = 'none';
+          el.style.left = `${p.x0 + (x - p.x0) * f}%`; el.style.bottom = `${p.y0 + (y - p.y0) * f}%`;
+          void el.offsetWidth;            // let it settle there before the walk carries on
+          jump = false; dur = left;
+        }
+      } else if (!jump && Number.isFinite(curX) && (Math.abs(curX - x) > 0.5 || Math.abs(curY - y) > 0.5) && p.mode !== 'walk') {
+        // hopping onto a sofa or back down: a short trip at walking speed (never a jump)
+        dur = Math.max(0.5, Math.hypot(x - curX, (y - curY) * 1.4) / 11);
+      }
+      if (!jump && !(dur > 0)) dur = 0.4;
+      el.style.transition = jump ? 'none' : `left ${dur}s linear, bottom ${dur}s linear`;
       el.style.left = `${x}%`; el.style.bottom = `${y}%`;
       el.style.zIndex = z != null ? z : 2 + Math.round(100 - y);
       el.classList.toggle('walking', p.mode === 'walk');

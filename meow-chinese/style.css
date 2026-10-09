@@ -1366,9 +1366,11 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .pet .pf { grid-area: 1 / 1; image-rendering: pixelated; }
 .pet .pf-walk, .pet .pf-sit { visibility: hidden; }
 .pet.left .pflip { transform: scaleX(-1); }
-.pet.walking .pf-stand { animation: petstep .36s steps(1) infinite; }
-.pet.walking .pf-walk { visibility: visible; animation: petstep .36s steps(1) infinite reverse; animation-delay: -.18s; }
-@keyframes petstep { 0% { opacity: 1; } 50% { opacity: 0; } }
+/* walking: the two leg pictures take turns — exactly one is showing at any moment */
+.pet.walking .pf-stand { animation: petA .36s steps(1, end) infinite; }
+.pet.walking .pf-walk { animation: petB .36s steps(1, end) infinite; }
+@keyframes petA { 0% { visibility: visible; } 50% { visibility: hidden; } }
+@keyframes petB { 0% { visibility: hidden; } 50% { visibility: visible; } }
 .pet.sitting:has(.pf-sit) .pf-stand { visibility: hidden; }
 .pet.sitting .pf-sit { visibility: visible; }
 .pet .pet-tag { font-size: 13px; padding: 0 6px; margin-top: 2px; }
@@ -1376,8 +1378,8 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .pet.in-cage { position: absolute; left: 6%; transform: none; animation: cagerun 9s ease-in-out infinite; z-index: 2; filter: none; }
 .pet.in-cage .pet-tag { display: none; }
 .pet.in-cage .pflip { animation: cageflip 9s steps(1) infinite; }
-.pet.in-cage .pf-stand { animation: petstep .36s steps(1) infinite; }
-.pet.in-cage .pf-walk { visibility: visible; animation: petstep .36s steps(1) infinite reverse; animation-delay: -.18s; }
+.pet.in-cage .pf-stand { animation: petA .36s steps(1, end) infinite; }
+.pet.in-cage .pf-walk { animation: petB .36s steps(1, end) infinite; }
 @keyframes cagerun { 0%, 8% { left: 6%; } 42%, 58% { left: var(--to, 40%); } 92%, 100% { left: 6%; } }
 @keyframes cageflip { 0% { transform: none; } 50% { transform: scaleX(-1); } }
 .decor.cage .cage-thing { position: absolute; image-rendering: pixelated; pointer-events: none; }
@@ -1385,3 +1387,11 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .visit-home .house .decor.cage { cursor: default; }
 .pet-card .pet-art { display: flex; justify-content: center; min-height: 70px; align-items: flex-end; }
 .pet-card input { font-size: 18px; text-align: center; }
+/* the hamster wheel: the ring spins while the hamster runs in it */
+.cage-thing.wheel .wheel-ring, .cage-thing.wheel .wheel-stand { position: absolute; left: 0; top: 0; image-rendering: pixelated; }
+.cage-thing.wheel.spinning .wheel-ring { animation: wheelspin .7s steps(8) infinite; }
+@keyframes wheelspin { to { transform: rotate(360deg); } }
+.pet.in-cage.on-wheel { animation: none; z-index: 2; }
+.pet.in-cage.on-wheel .pflip { animation: none; transform: none; }
+.pet.in-cage.on-wheel .pf-stand { animation-duration: .18s; }
+.pet.in-cage.on-wheel .pf-walk { animation-duration: .18s; }

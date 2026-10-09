@@ -45,9 +45,12 @@ function sitSpots(room) {
 function walkTo(l, kind, x, y) {
   const d = Math.hypot(x - l.x, (y - l.y) * 1.4);
   l.dur = Math.max(0.6, d / SPEED[kind]);
+  l.x0 = l.x; l.y0 = l.y; l.t0 = Date.now();          // where the walk started (so a redrawn screen can pick it up half-way)
   l.left = x < l.x; l.x = x; l.y = y; l.mode = 'walk'; l.seat = null;
   l.until = Date.now() + l.dur * 1000;
 }
+// the house screen tells us where a sitting pet really is (on the sofa…), so it walks off from there
+export function noteSpot(kind, x, y) { const l = live.get(kind); if (l && (l.mode === 'sit' || l.fromCage)) { l.x = x; l.y = y; } }
 function step(p, l, now) {
   l.jump = false; l.fromCage = null;
   const kind = p.kind, rooms = openRooms();
@@ -55,16 +58,18 @@ function step(p, l, now) {
   // arrived at the edge of the room: pop into the next one
   if (l.exit) {
     const i = rooms.indexOf(l.room), next = rooms[i + (l.exit === 'left' ? -1 : 1)];
-    if (next) { l.room = next; l.x = l.exit === 'left' ? 97 : 3; l.jump = true; l.mode = 'idle'; l.until = now + 300; l.dur = 0; }
+    if (next) { l.room = next; l.x = l.exit === 'left' ? 112 : -12; l.jump = true; l.mode = 'idle'; l.until = now + 120; l.dur = 0; l.enter = l.exit === 'left' ? rnd(70, 88) : rnd(12, 30); }
     l.exit = null; return;
   }
+  // just popped in at the side of the next room: walk in
+  if (l.enter != null) { const x = l.enter; l.enter = null; walkTo(l, kind, x, l.y); return; }
   const r = Math.random();
   const i = rooms.indexOf(l.room);
   const doors = [i > 0 ? 'left' : null, i < rooms.length - 1 ? 'right' : null].filter(Boolean);
   if (l.mode === 'walk' || l.mode === 'sit') { l.mode = 'idle'; l.seat = null; l.dur = 0; l.until = now + rnd(1500, 4500); if (Math.random() < 0.5) return; }
   if (r < 0.16 && doors.length) {                     // wander off to the next room
     const dir = doors[Math.floor(Math.random() * doors.length)];
-    walkTo(l, kind, dir === 'left' ? 1 : 99, l.y); l.exit = dir; return;
+    walkTo(l, kind, dir === 'left' ? -12 : 112, l.y); l.exit = dir; return;
   }
   if (kind === 'dog' && r < 0.42) {                    // hop onto something comfy for a while
     const spots = sitSpots(l.room);
@@ -81,7 +86,14 @@ function tick() {
     if (!roaming(p)) {
       const cage = S.petCage(p.kind), l = live.get(p.kind);
       const room = S.roomOf(cage);
-      if (!l || l.mode !== 'cage' || l.cage !== cage || l.room !== room) { live.set(p.kind, { mode: 'cage', cage, room, x: 0, y: 0 }); any = true; }
+      if (!l || l.mode !== 'cage' || l.cage !== cage || l.room !== room) { live.set(p.kind, { mode: 'cage', cage, room, x: 0, y: 0, wheel: false, until: now + rnd(3000, 8000) }); any = true; return; }
+      // a hamster with a wheel hops on for a run now and then
+      const hasWheel = S.cageThings(p.kind).some((id) => ITEMS[id].wheel);
+      if (!hasWheel && l.wheel) { l.wheel = false; any = true; }
+      if (hasWheel && now >= (l.until || 0)) {
+        l.wheel = !l.wheel && Math.random() < 0.6;
+        l.until = now + (l.wheel ? rnd(4000, 10000) : rnd(5000, 12000)); any = true;
+      }
       return;
     }
     let l = live.get(p.kind);
@@ -96,7 +108,9 @@ function changed() { const snap = snapshot(); listeners.forEach((fn) => { try { 
 export function snapshot() {
   return S.pets().filter((p) => live.has(p.kind)).map((p) => {
     const l = live.get(p.kind);
-    return { kind: p.kind, name: p.name, room: l.room, x: +(+l.x || 0).toFixed(1), y: +(+l.y || 0).toFixed(1), left: !!l.left, mode: l.mode, seat: l.seat || null, dur: +(l.dur || 0).toFixed(2), jump: !!l.jump, cage: l.cage || null, fromCage: l.fromCage || null };
+    const walking = l.mode === 'walk';
+    return { kind: p.kind, name: p.name, room: l.room, x: +(+l.x || 0).toFixed(1), y: +(+l.y || 0).toFixed(1), left: !!l.left, mode: l.mode, seat: l.seat || null, dur: +(l.dur || 0).toFixed(2), jump: !!l.jump, cage: l.cage || null, fromCage: l.fromCage || null, wheel: !!l.wheel,
+      ...(walking ? { x0: +(+l.x0 || 0).toFixed(1), y0: +(+l.y0 || 0).toFixed(1), age: Date.now() - (l.t0 || 0) } : {}) };
   });
 }
 // where pets are sitting in a room (so the kitten doesn't sit on top of the puppy)

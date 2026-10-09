@@ -127,4 +127,9 @@ export const CHANGES = [
   { v: 80, items: [
     'Fixed: the hamster wheel and other things inside pet cages were drawn too big on some screens.',
   ] },
+  { v: 81, items: [
+    'Pets walk smoothly now — no more blinking or jumping around.',
+    'Pets walk out of the side of the room when they go to the next room.',
+    'Hamsters with a wheel hop on and run in it every now and then!',
+  ] },
 ];

@@ -2519,7 +2519,7 @@ Object.assign(ITEMS, {
       'oooooooooooooooooooooooooooooooooooooooooooooooo.......',
       ],
     } },
-  hamsterwheel: { cat: 'petacc', cageFor: ['hamster'], inCage: { x: 0.0, y: 0.25, z: 1 }, name: '仓鼠跑轮', en: 'Hamster wheel', price: 40,
+  hamsterwheel: { cat: 'petacc', cageFor: ['hamster'], inCage: { x: 0.04, y: 0.25, z: 1 }, name: '仓鼠跑轮', en: 'Hamster wheel', price: 40,
     pal: { o: O, w: '#ff9ec4', i: '#fff1f5', s: '#e0628c' },
     art: [
       '.....ooooo.....',
@@ -2539,7 +2539,7 @@ Object.assign(ITEMS, {
       '....ossssso....',
       '....ooooooo....',
     ] },
-  waterbottle: { cat: 'petacc', cageFor: ['hamster', 'guineapig'], inCage: { x: 0.0, y: 0.45, z: 2 }, name: '饮水瓶', en: 'Water bottle', price: 25,
+  waterbottle: { cat: 'petacc', cageFor: ['hamster', 'guineapig'], inCage: { x: 0.5, y: 0.48, z: 2 }, name: '饮水瓶', en: 'Water bottle', price: 25,
     pal: { o: O, b: '#ffffff', u: '#e8f7ff', w: '#7ec3e8', s: '#9fb3c8', k: '#6fb8f2' },
     art: [
       'oooooo',
@@ -2671,6 +2671,7 @@ Object.assign(ITEMS, {
 });
 // cages: how wide the inside is (art pixels), so the things inside line up
 ITEMS.hamstercage.cageW = 36; ITEMS.guineacage.cageW = 48;
+ITEMS.hamsterwheel.wheel = { cx: 7, cy: 7, r: 7.4 };   // the ring that spins (the stand stays still)
 
 // furniture you can switch on and off at home
 ITEMS.tv.power = 'tv';

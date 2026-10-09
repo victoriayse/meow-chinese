@@ -978,7 +978,7 @@ function homeScreen(params = {}) {
       Visit.hostEmote(mood);
     }));
     // ----- pets: the puppy roams, the hamster / guinea pig live in their cage until she opens the door -----
-    const petLayer = new PetLayer(room, roomKey, { onClick: (kind, el) => petMenu(kind, el) });
+    const petLayer = new PetLayer(room, roomKey, { onClick: (kind, el) => petMenu(kind, el), onSpot: Pets.noteSpot });
     const unPets = Pets.onPets((snap) => { if (!room.isConnected) { unPets(); return; } petLayer.update(snap); });
     homePets = () => petLayer.update(Pets.snapshot());
     room.addEventListener('click', (e) => {
