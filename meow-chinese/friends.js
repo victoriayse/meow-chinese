@@ -25,10 +25,10 @@ export async function refreshFriends() {
 export const friendName = (row) => {
   if (!row) return '朋友';
   const c = row.card;
-  if (c && c.name) return c.childName ? `${c.childName}的${c.name}` : c.name;
+  if (c && c.name) return c.childName && !String(c.name).includes(c.childName) ? `${c.childName}的${c.name}` : c.name;
   return row.email || '朋友';
 };
-const myName = () => { const s = S.get(); return s.childName ? `${s.childName}的${s.kitten.name}` : s.kitten.name; };
+const myName = () => { const s = S.get(); return s.childName && !String(s.kitten.name).includes(s.childName) ? `${s.childName}的${s.kitten.name}` : s.kitten.name; };
 
 // ---------- my kitten's card, which friends can see ----------
 function myCard() {

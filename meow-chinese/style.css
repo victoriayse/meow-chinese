@@ -1174,7 +1174,8 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .visit-log .chat-log { flex: 1; max-height: 26vh; min-height: 84px; }
 .chat-log .vl-empty { margin: auto; color: var(--ink-2); font-size: 14px; font-family: var(--zh); }
 .vl-line { display: flex; align-items: baseline; gap: 8px; font-size: 15px; line-height: 1.35; }
-.vl-line b { flex: none; color: #c94f7c; font-family: var(--zh); }
+.vl-line b { flex: 0 1 auto; max-width: 42%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #c94f7c; font-family: var(--zh); }
+.vl-line .zh { flex: 1 1 50%; }
 .vl-line.mine b { color: #2f8f5b; }
 .vl-line .zh { flex: 1; min-width: 0; overflow-wrap: anywhere; font-family: var(--zh); }
 .vl-line small { flex: none; color: var(--ink-2); font-size: 11px; }

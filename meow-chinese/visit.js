@@ -18,7 +18,7 @@ import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, 
 const isNight = () => { const h = new Date().getHours(); return h >= 18 || h < 5; };
 export function myLook() {
   const s = S.get(), k = s.kitten;
-  return { name: s.childName ? `${s.childName}的${k.name}` : k.name, level: S.level(), fur: k.fur, equipped: { ...(k.equipped || {}) } };
+  return { name: s.childName && !String(k.name).includes(s.childName) ? `${s.childName}的${k.name}` : k.name, level: S.level(), fur: k.fur, equipped: { ...(k.equipped || {}) } };
 }
 const clampPos = (p) => ({ ...p, x: Math.max(6, Math.min(94, p.x)), y: Math.max(1, Math.min(30, p.y)) });
 // send at most ~8 moves a second, and always the last one

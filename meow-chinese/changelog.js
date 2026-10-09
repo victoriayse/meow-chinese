@@ -138,4 +138,8 @@ export const CHANGES = [
   { v: 83, items: [
     'The 📦 put-away buttons are smaller when moving furniture, so they don\'t cover little things like the ball.',
   ] },
+  { v: 84, items: [
+    'Chat history: long names no longer squash the message into a thin column.',
+    'Names like "MinMin的MinMin的Kitty" are now just "MinMin的Kitty".',
+  ] },
 ];
