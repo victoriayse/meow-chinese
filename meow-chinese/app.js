@@ -481,7 +481,7 @@ function cageMenu(kind) {
   sfx.click();
   const box = html`<div class="card stack pet-card" style="align-items:center;text-align:center">
       <div class="h-title" style="justify-content:center"><span class="zh">${PET_ICON[kind]} ${p ? esc(p.name) : '空笼子'}</span><span class="en">${p ? (p.out ? 'Out exploring the house' : 'In the cage') : 'An empty cage'}</span></div>
-      ${p && it.stayIn ? '<p class="help" style="margin:0">鹦鹉一直住在笼子里。<br>Parrots stay in their cage.</p>' : p ? (p.out ? '<button class="btn blue" id="back">🏠 <span class="zh">放回笼子</span> Put back in cage</button>'
+      ${p && it.stayIn ? '<p class="help" style="margin:0">小鸟一直住在笼子里。<br>Your bird stays in its cage.</p>' : p ? (p.out ? '<button class="btn blue" id="back">🏠 <span class="zh">放回笼子</span> Put back in cage</button>'
         : '<button class="btn green" id="open">🚪 <span class="zh">打开笼门</span> Open the door</button>')
         : `<p class="help" style="margin:0">去商店领养一只${it.name}吧！<br>Adopt a ${it.en.toLowerCase()} in the shop to live here.</p><button class="btn blue" id="adopt">🛍️ <span class="zh">去领养</span> Adopt a pet</button>`}
       ${things.length ? `<div class="cage-things"><div class="help" style="margin:0">笼子里的东西 · Things in the cage (tap to take out / put in)</div>

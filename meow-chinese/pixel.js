@@ -3711,6 +3711,54 @@ Object.assign(ITEMS.dog, {
     ] },
 });
 
+// ---------- the bird: a yellow-and-grey cockatiel; bird and cage are drawn at half size ----------
+Object.assign(ITEMS.parrot, { name: '玄凤鹦鹉', en: 'Cockatiel', scale: 0.5,
+  pal: { o: O, g: '#9ea3ab', d: '#7c818a', y: '#ffd94a', w: '#f2f2f2', b: '#e8c9a0', k: '#2a2228', r: '#ff8a3d' },
+  art: [
+    '.....oyo......',
+    '....oyyyo.....',
+    '.....oyyo.....',
+    '.....oyyoo....',
+    '.....oyykwo...',
+    '....oyyykkyo..',
+    '....oyyyyybbo.',
+    '...ogyyyrrbbo.',
+    '..ogdddyyroo..',
+    '..ogwwdgggo...',
+    '..odwwddggo...',
+    '..odddddggo...',
+    '..odddddggo...',
+    '..ogdddgggo...',
+    '..oddddggo....',
+    '..oddkgko.....',
+    '..oddgoo......',
+    '..oddgo.......',
+    '..oddgo.......',
+  ],
+  frames: { walk: [
+      '.....oyo......',
+      '....oyyyo.....',
+      '.....oyyo.....',
+      '.....oyyoo....',
+      '.....oyykwo...',
+      '...ooyyykkyo..',
+      '..odddyyyybbo.',
+      '.owwdddyrrbbo.',
+      'odddddddyroo..',
+      '.odddddgggo...',
+      '..odddggggo...',
+      '..ogggggggo...',
+      '..ogggggggo...',
+      '..ogggggggo...',
+      '..odgggggo....',
+      '..oddkgko.....',
+      '..oddgoo......',
+      '..oddgo.......',
+      '..oddgo.......',
+    ] },
+});
+ITEMS.birdcage.size = 0.5;
+
 // furniture you can switch on and off at home
 ITEMS.tv.power = 'tv';
 ['lamp', 'lantern', 'starlight', 'nightstand'].forEach((id) => { if (ITEMS[id]) ITEMS[id].power = 'light'; });

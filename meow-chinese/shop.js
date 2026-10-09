@@ -96,10 +96,10 @@ export function shopScreen({ go, tab = 'food' }) {
       const needed = !pharm || S.health() === it.cures;
       const roomShut = it.cat === 'decor' && it.room && !S.roomOpen(it.room);
       const can = s.coins >= cost && !full && needed && !roomShut && !needCage;
-      const cageOf = (k) => ({ hamster: '🐹 仓鼠 hamster', guineapig: '🐾 豚鼠 guinea pig', parrot: '🦜 鹦鹉 parrot' }[k] || k);
+      const cageOf = (k) => ({ hamster: '🐹 仓鼠 hamster', guineapig: '🐾 豚鼠 guinea pig', parrot: '🐦 玄凤鹦鹉 cockatiel' }[k] || k);
       const eff = isPet ? (adopted ? `💕 ${esc(adopted.name)}` : needCage ? '要先买笼子 · Buy its cage first (🦴 Pet Accessories)' : it.hops ? '在家里蹦蹦跳 · Hops around the house' : it.roam ? '在家里到处跑 · Roams around the house' : '住在笼子里 · Lives in its cage')
         : it.cat === 'petacc' ? `放在笼子里 · Goes in the cage: ${(it.cageFor || []).map(cageOf).join(' / ')}`
-        : it.cage ? `${cageOf(it.cage)} 的家 · A home for a ${{ hamster: 'hamster', guineapig: 'guinea pig', parrot: 'parrot' }[it.cage]}`
+        : it.cage ? `${cageOf(it.cage)} 的家 · A home for a ${{ hamster: 'hamster', guineapig: 'guinea pig', parrot: 'cockatiel' }[it.cage]}`
         : it.cat === 'food' || it.cat === 'toiletry' ? itemEffect(it) : it.toy ? '可以一起玩 Toy'
         : special ? `漏了一天也不会断连胜 · Keeps your streak if you miss a day${full ? ` (max ${S.MAX_FREEZES})` : ''}`
         : pharm ? (needed ? `治好${it.cures === 'cough' ? '咳嗽' : '头晕'}！Cures ${it.cures === 'cough' ? 'a cough' : 'dizziness'}` : `小猫${it.cures === 'cough' ? '咳嗽' : '头晕'}时才需要 · Only when your kitten ${it.cures === 'cough' ? 'coughs' : 'is dizzy'}`)

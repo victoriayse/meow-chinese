@@ -203,7 +203,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing }, { putAwa
     // the cage's bars in front of everything inside it (only the bedding stays behind)
     const back = new Set([it.pal.z, it.pal.y].filter(Boolean));
     const front = document.createElement('canvas'); front.className = 'cage-front';
-    drawGrid(front, g.map((row) => row.map((v) => (back.has(v) ? null : v))), HOUSE.decor);
+    drawGrid(front, g.map((row) => row.map((v) => (back.has(v) ? null : v))), HOUSE.decor * (it.size || 1));
     wrap.appendChild(front);
     wrap.dataset.inner = (inner / W).toFixed(3);
     wrap.dataset.floor = ((7 / H) * 100).toFixed(1);
