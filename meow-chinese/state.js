@@ -849,10 +849,18 @@ export function purgeOldMessages() {
   const a2 = a.filter((x) => x.at >= cut), b2 = b.filter((x) => x.at >= cut), n2 = n.filter((x) => (x.at || 0) >= cut);
   if (a2.length !== a.length || b2.length !== b.length || n2.length !== n.length) { state.letters = a2; state.sentLetters = b2; state.notifications = n2; save(); }
 }
-export function recordSent(to, toName, text) {
-  state.sentLetters = [{ id: uid(), to, toName, text: String(text).slice(0, 300), at: Date.now() }, ...(state.sentLetters || [])].slice(0, 300);
+export function recordSent(to, toName, text, eventId = null) {
+  state.sentLetters = [{ id: uid(), to, toName, text: String(text).slice(0, 300), at: Date.now(), ev: eventId, seen: false }, ...(state.sentLetters || [])].slice(0, 300);
   save();
 }
+// read receipts: my friend has read these sent messages (event ids)
+export function markSentSeen(eventIds) {
+  const ids = new Set(eventIds.map(Number)); let ch = false;
+  (state.sentLetters || []).forEach((l) => { if (l.ev != null && ids.has(Number(l.ev)) && !l.seen) { l.seen = true; ch = true; } });
+  if (ch) save();
+  return ch;
+}
+export const unseenSentIds = () => (state.sentLetters || []).filter((l) => l.ev != null && !l.seen).map((l) => l.ev);
 export function deleteSent(id) { state.sentLetters = (state.sentLetters || []).filter((x) => x.id !== id); save(); }
 export function deleteThread(friendId) {
   state.letters = (state.letters || []).filter((x) => x.from !== friendId);

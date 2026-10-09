@@ -3,7 +3,8 @@ import * as S from './state.js';
 import { ITEMS, spriteCanvas } from './pixel.js';
 import { $, html, esc, toast, openModal, closeModal, confetti, coinI, hydrateIcons } from './ui.js';
 import { sfx, speak } from './audio.js';
-import { acceptedFriends, refreshFriends, sendLetter, onInbox, errorText, LETTER_MAX, setActivity, isOnline, doingText, lastSeen, friendName } from './friends.js';
+import * as Visit from './visit.js';
+import { acceptedFriends, refreshFriends, sendLetter, onInbox, markRead, refreshSeen, onSeen, errorText, LETTER_MAX, setActivity, isOnline, doingText, lastSeen, friendName } from './friends.js';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const when = (t) => new Date(t).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
@@ -82,10 +83,32 @@ export function openPhone({ start = 'home', after } = {}) {
   const clock = () => { const d = new Date(); $('#ph-time', n).textContent = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`; };
   clock();
   const tick = setInterval(() => { if (!n.isConnected) return clearInterval(tick); clock(); }, 1000);
+  // "typing…": under the friend's name and as a little bubble in the chat
+  function showTyping(fid) {
+    const [view, args] = history[history.length - 1] || [];
+    const on = Visit.isTyping(fid);
+    if (view === 'chat' && args[0] === fid) {
+      const sub = body.querySelector('.chat-who small'), tb = body.querySelector('.typing-bubble'), log = body.querySelector('.chat-log');
+      if (sub) { sub.innerHTML = on ? '<b class="typing-txt">正在输入… typing…</b>' : (sub.dataset.normal || ''); }
+      if (tb) { tb.classList.toggle('hidden', !on); if (on && log) { log.appendChild(tb); log.scrollTop = log.scrollHeight; } }
+    }
+    if (view === 'mail') body.querySelectorAll(`[data-fid="${fid}"] .prev`).forEach((p) => { if (!p.dataset.normal) p.dataset.normal = p.innerHTML; p.innerHTML = on ? '<b class="typing-txt">正在输入… typing…</b>' : p.dataset.normal; });
+    if (on) setTimeout(() => { if (n.isConnected && !Visit.isTyping(fid)) showTyping(fid); }, 4200);
+  }
+  const offTyping = Visit.onTyping((fid) => { if (!n.isConnected) return offTyping(); showTyping(fid); });
+  const offSeen = onSeen(() => {
+    if (!n.isConnected) return offSeen();
+    const [view] = history[history.length - 1] || [];
+    if (view !== 'chat') return;
+    // turn ✓ into ✓✓ on the messages that were just read
+    const read = new Set((S.get().sentLetters || []).filter((l) => l.seen && l.ev != null).map((l) => String(l.ev)));
+    body.querySelectorAll('.bubble-msg.mine[data-ev]').forEach((b) => { if (read.has(b.dataset.ev)) { const t = b.querySelector('.tick'); if (t) { t.className = 'tick two'; t.textContent = '✓✓'; t.title = 'Read'; } } });
+  });
   // a friend's message arrives while the phone is open: show it straight away
   const offInbox = onInbox((got) => {
     if (!n.isConnected) return offInbox();
     if (!got.some((x) => x.kind === 'letter')) return;
+    got.forEach((x) => { if (x.kind === 'letter' && x.from) Visit.stopTyping(x.from); });
     if (!pop.classList.contains('hidden')) return;                         // a question is open: don't pull it away
     const [view, args] = history[history.length - 1] || [];
     if (view === 'home' || view === 'mail') show(view);
@@ -159,7 +182,7 @@ export function openPhone({ start = 'home', after } = {}) {
       ts.forEach((t) => {
         const last = t.msgs[t.msgs.length - 1];
         const fr = acceptedFriends().find((x) => x.other === t.id), on = isOnline(fr);
-        const r = html`<button class="ph-item chat-row ${t.unread ? 'unread' : ''}"><span class="avatar">🐱${on ? '<i class="ph-online" title="Online"></i>' : ''}</span><span class="txt"><b class="zh">${esc(t.name || '朋友')}</b><span class="prev zh">${last.mine ? '你: ' : ''}${esc(last.text)}</span></span><span class="meta"><small>${when(t.last)}</small>${t.unread ? `<i class="ph-badge static">${t.unread}</i>` : ''}</span></button>`;
+        const r = html`<button class="ph-item chat-row ${t.unread ? 'unread' : ''}" data-fid="${esc(t.id)}"><span class="avatar">🐱${on ? '<i class="ph-online" title="Online"></i>' : ''}</span><span class="txt"><b class="zh">${esc(t.name || '朋友')}</b><span class="prev zh">${last.mine ? '你: ' : ''}${esc(last.text)}</span></span><span class="meta"><small>${when(t.last)}</small>${t.unread ? `<i class="ph-badge static">${t.unread}</i>` : ''}</span></button>`;
         r.onclick = () => go('chat', t.id);
         list.appendChild(r);
       });
@@ -197,13 +220,16 @@ export function openPhone({ start = 'home', after } = {}) {
       body.classList.add('chat-mode');
       if (!t) { body.appendChild(html`<p class="ph-empty">没有信息。 No messages.</p>`); $('#del-chat', h).remove(); return; }
       if (!t.msgs.length) $('#del-chat', h).remove();
-      S.readThread(fid);
+      S.readThread(fid); markRead(fid); refreshSeen();
+      const sub = h.querySelector('.chat-who small'); if (sub) sub.dataset.normal = sub.innerHTML;
       const log = html`<div class="chat-log"><div class="ph-tip small">⏳ 信息会在 ${S.MESSAGE_DAYS} 天后自动删除 · Messages disappear after ${S.MESSAGE_DAYS} days</div></div>`;
       let lastDay = '';
       t.msgs.forEach((m) => {
         const day = new Date(m.at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short' });
         if (day !== lastDay) { lastDay = day; log.appendChild(html`<div class="chat-day">${day}</div>`); }
-        const b = html`<button class="bubble-msg ${m.mine ? 'mine' : 'theirs'}"><span class="zh">${esc(m.text)}</span><small>${new Date(m.at).toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' })}</small></button>`;
+        // ✓ sent · ✓✓ read (like WhatsApp)
+        const tick = m.mine ? (m.seen ? '<i class="tick two" title="Read">✓✓</i>' : '<i class="tick" title="Sent">✓</i>') : '';
+        const b = html`<button class="bubble-msg ${m.mine ? 'mine' : 'theirs'}" ${m.ev != null ? `data-ev="${m.ev}"` : ''}><span class="zh">${esc(m.text)}</span><small>${new Date(m.at).toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' })}${tick}</small></button>`;
         b.onclick = async () => {
           if (!(await ask('要删除这条信息吗？<br>Delete this message?'))) return;
           if (!(await ask('真的要删除吗？删除了就找不回来了。<br>Are you sure? It can\'t be brought back.', '确定删除 Yes, delete'))) return;
@@ -213,6 +239,8 @@ export function openPhone({ start = 'home', after } = {}) {
         log.appendChild(b);
       });
       body.appendChild(log);
+      log.appendChild(html`<div class="typing-bubble hidden"><i></i><i></i><i></i></div>`);
+      showTyping(fid);
       const canReply = fid !== 'unknown';
       const bar = html`<div class="chat-input">${canReply ? `<textarea id="tx" rows="1" maxlength="${LETTER_MAX}" placeholder="写信息… Message"></textarea><button class="ph-btn green" id="send">➤</button>` : '<small>不能回复 Can\'t reply</small>'}</div>`;
       body.appendChild(bar);
@@ -225,9 +253,11 @@ export function openPhone({ start = 'home', after } = {}) {
       setTimeout(() => { log.scrollTop = log.scrollHeight; }, 0);
       if (!canReply) return;
       const tx = $('#tx', bar);
+      tx.addEventListener('input', () => { if (tx.value.trim()) Visit.typingTo(fid); else Visit.doneTyping(fid); });
       $('#send', bar).onclick = async () => {
         const text = tx.value.trim();
         if (!text) return;
+        Visit.doneTyping(fid);
         if (!acceptedFriends().some((x) => x.other === fid)) await refreshFriends();
         if (!acceptedFriends().some((x) => x.other === fid)) return toast('你们现在不是朋友了，不能回信。 You are no longer friends.');
         $('#send', bar).disabled = true;

@@ -60,6 +60,10 @@ export function startHosting(hooks) {
           const c = visitors.m.get(p.id);
           visitors.say(p.id, p.text);
           api.chat && api.chat(p.id, String(p.text || '').slice(0, 60), (c && c.look) || {}, !!(c && c.el));
+        } else if (ev === 'typing-stop') {
+          stopTyping(p.id);
+        } else if (ev === 'typing') {
+          typingFrom.set(p.id, Date.now()); typingListeners.forEach((fn) => fn(p.id));
         } else if (ev === 'note') {
           if (api.inHouse && api.inHouse()) hearNote(visitors.roomEl, p.i);
         } else if (ev === 'emote') {
@@ -87,6 +91,30 @@ function sendHouse(to) {
 }
 export const hostResendHouse = () => { if (visitors.ids().length) sendHouse(null); };
 export const hostMove = throttle((pos) => { if (hostCh && visitors.ids().length) hostCh.send('pos', { id: hostUser, ...pos }); });
+// ---------- "typing…" in the phone's Messages ----------
+// my friend is typing to me: they send 'typing' to my house channel every couple of seconds
+const typingFrom = new Map(), typingListeners = new Set();
+export const onTyping = (fn) => { typingListeners.add(fn); return () => typingListeners.delete(fn); };
+export const isTyping = (friendId) => Date.now() - (typingFrom.get(friendId) || 0) < 4000;
+export const stopTyping = (friendId) => { typingFrom.delete(friendId); typingListeners.forEach((fn) => fn(friendId)); };
+// I'm typing to a friend: open a line to their house channel (closed again when I go quiet)
+const typingLines = new Map();
+let lastTyping = 0;
+export function typingTo(friendId) {
+  const me = (Auth.user() || {}).id; if (!me || !friendId || managing()) return;
+  let line = typingLines.get(friendId);
+  if (!line) {
+    const ch = new Channel(`house:${friendId}`, { presenceKey: `${me}-typing`, onStatus: (st) => { if (st === 'joined') ch.send('typing', { id: me }); } });
+    line = { ch, timer: null }; typingLines.set(friendId, line); ch.open();
+  }
+  clearTimeout(line.timer); line.timer = setTimeout(() => { line.ch.close(); typingLines.delete(friendId); }, 20000);
+  if (Date.now() - lastTyping > 2000) { lastTyping = Date.now(); line.ch.send('typing', { id: me }); }
+}
+export function doneTyping(friendId) {
+  const me = (Auth.user() || {}).id, line = typingLines.get(friendId);
+  if (line && me) line.ch.send('typing-stop', { id: me });
+  lastTyping = 0;
+}
 export function hostNote(i) { if (hostCh && visitors.ids().length) hostCh.send('note', { id: hostUser, i }); }
 export function hostEmote(mood) { if (hostCh && visitors.ids().length) hostCh.send('emote', { id: hostUser, mood }); }
 export function hostSay(text) { if (hostCh && visitors.ids().length) hostCh.send('chat', { id: hostUser, text }); }

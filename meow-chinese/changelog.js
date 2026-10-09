@@ -108,4 +108,8 @@ export const CHANGES = [
     'Put your own photos in picture frames! Tap the painting or the new 🖼️ photo frame at home and choose a photo.',
     'Photos are made small automatically (under 50 KB). Friends visiting can tap a frame to see the photo bigger.',
   ] },
+  { v: 77, items: [
+    'Phone Messages: see "typing…" when your friend is writing to you.',
+    'Ticks on your messages: ✓ sent, ✓✓ when your friend has read it.',
+  ] },
 ];

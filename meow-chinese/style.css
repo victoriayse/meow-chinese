@@ -1169,7 +1169,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 }
 /* visit: chat history between the house and the chat bar */
 .visit-home { grid-template-rows: auto minmax(0, 1fr) auto auto; }
-.chat-log { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; background: rgba(255,255,255,.9); border: 3px solid var(--ink); border-radius: 10px; box-sizing: border-box; }
+.house-log-wrap .chat-log, .visit-log .chat-log { overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; background: rgba(255,255,255,.9); border: 3px solid var(--ink); border-radius: 10px; box-sizing: border-box; }
 .visit-log { margin: 4px 14px 0; display: flex; min-height: 0; }
 .visit-log .chat-log { flex: 1; max-height: 26vh; min-height: 84px; }
 .chat-log .vl-empty { margin: auto; color: var(--ink-2); font-size: 14px; font-family: var(--zh); }
@@ -1342,3 +1342,12 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .frame-preview img { width: 100%; height: 100%; object-fit: cover; }
 .frame-preview.big { width: min(520px, 86vw); aspect-ratio: auto; }
 .frame-preview.big img { height: auto; max-height: 70vh; object-fit: contain; }
+/* phone Messages: ✓ sent · ✓✓ read, and "typing…" */
+.bubble-msg .tick { font-style: normal; font-weight: 800; color: #2bb24c; margin-left: 4px; letter-spacing: -3px; padding-right: 3px; }
+.bubble-msg .tick.two { color: #1faa48; }
+.typing-txt { color: #2bb24c; font-weight: 800; }
+.typing-bubble { align-self: flex-start; display: inline-flex; gap: 4px; padding: 8px 12px; margin: 4px 0; background: #fff; border: 2px solid #2b2140; border-radius: 12px; }
+.typing-bubble.hidden { display: none; }
+.typing-bubble i { width: 7px; height: 7px; border-radius: 50%; background: #9a8fb0; animation: tydot 1s infinite; }
+.typing-bubble i:nth-child(2) { animation-delay: .15s; } .typing-bubble i:nth-child(3) { animation-delay: .3s; }
+@keyframes tydot { 0%, 60%, 100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-4px); opacity: 1; } }

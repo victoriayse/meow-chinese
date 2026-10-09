@@ -117,7 +117,8 @@ async function startLive() {
   ws = sock; wsUser = u.id;
   sock.onopen = () => {
     wsSend(sock, topic, 'phx_join', { config: { broadcast: { self: false }, presence: { key: '' },
-      postgres_changes: [{ event: 'INSERT', schema: 'public', table: 'friend_events', filter: `to_user=eq.${u.id}` }] }, access_token: t });
+      postgres_changes: [{ event: 'INSERT', schema: 'public', table: 'friend_events', filter: `to_user=eq.${u.id}` },
+        { event: 'UPDATE', schema: 'public', table: 'friend_events', filter: `from_user=eq.${u.id}` }] }, access_token: t });
     clearInterval(wsBeat);
     wsBeat = setInterval(async () => {
       wsSend(sock, 'phoenix', 'heartbeat', {});
@@ -127,7 +128,12 @@ async function startLive() {
   };
   sock.onmessage = (e) => {
     let m; try { m = JSON.parse(e.data); } catch { return; }
-    if (m.event === 'postgres_changes') { wsRetry = 0; pollInbox(); }
+    if (m.event === 'postgres_changes') {
+      wsRetry = 0;
+      const d = (m.payload && (m.payload.data || m.payload)) || {}, rec = d.record || {};
+      if (d.type === 'UPDATE') { if (rec.read_at && rec.id != null && S.markSentSeen([rec.id])) seenChanged(); }   // a friend read my message
+      else pollInbox();
+    }
     else if (m.event === 'phx_reply' && m.payload && m.payload.status === 'ok') wsRetry = 0;
   };
   sock.onclose = () => {
@@ -320,8 +326,26 @@ export async function sendLetter(to, text, toName) {
   const t = String(text).slice(0, LETTER_MAX);
   const r = await sendEvent(to, 'letter', { text: t });
   const row = friends.find((f) => f.other === to);
-  S.recordSent(to, toName || (row ? friendName(row) : '朋友'), t);
+  S.recordSent(to, toName || (row ? friendName(row) : '朋友'), t, r && r.id != null ? r.id : null);
   return r;
+}
+// ---------- read receipts (✓ sent · ✓✓ read) ----------
+const seenListeners = new Set();
+export const onSeen = (fn) => { seenListeners.add(fn); return () => seenListeners.delete(fn); };
+const seenChanged = () => seenListeners.forEach((fn) => { try { fn(); } catch (e) { console.warn(e); } });
+// I opened a chat: tell the server I've read my friend's messages (they get ✓✓)
+export async function markRead(friendId) {
+  if (!Auth.session() || managing() || !friendId || friendId === 'unknown') return;
+  try { await rpc('mark_letters_read', { p_from: friendId }); } catch (e) { /* offline: next time */ }
+}
+// which of my sent messages have been read? (asked when a chat opens; live updates come over the socket)
+export async function refreshSeen() {
+  const ids = S.unseenSentIds().slice(0, 80);
+  if (!ids.length || !Auth.session() || managing()) return;
+  try {
+    const rows = await rest(`friend_events?select=id&id=in.(${ids.join(',')})&read_at=not.is.null`);
+    if (rows && rows.length && S.markSentSeen(rows.map((r) => r.id))) seenChanged();
+  } catch (e) { /* offline */ }
 }
 export const errorText = (code) => ERR[code];
 const GIFT_TABS = TABS.filter((t) => ['food', 'toiletry', 'head', 'body', 'feet', 'acc', 'decor'].includes(t.key));
