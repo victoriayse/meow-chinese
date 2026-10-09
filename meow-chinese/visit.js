@@ -12,7 +12,7 @@ import { Channel } from './rt.js';
 import { drawRoom, drawRoof } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons } from './ui.js';
 import { sfx } from './audio.js';
-import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot } from './house.js';
+import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote } from './house.js';
 
 const isNight = () => { const h = new Date().getHours(); return h >= 18 || h < 5; };
 export function myLook() {
@@ -60,6 +60,8 @@ export function startHosting(hooks) {
           const c = visitors.m.get(p.id);
           visitors.say(p.id, p.text);
           api.chat && api.chat(p.id, String(p.text || '').slice(0, 60), (c && c.look) || {}, !!(c && c.el));
+        } else if (ev === 'note') {
+          if (api.inHouse && api.inHouse()) hearNote(visitors.roomEl, p.i);
         } else if (ev === 'emote') {
           visitors.emote(p.id, p.mood);
           const c = visitors.m.get(p.id);
@@ -85,6 +87,7 @@ function sendHouse(to) {
 }
 export const hostResendHouse = () => { if (visitors.ids().length) sendHouse(null); };
 export const hostMove = throttle((pos) => { if (hostCh && visitors.ids().length) hostCh.send('pos', { id: hostUser, ...pos }); });
+export function hostNote(i) { if (hostCh && visitors.ids().length) hostCh.send('note', { id: hostUser, i }); }
 export function hostEmote(mood) { if (hostCh && visitors.ids().length) hostCh.send('emote', { id: hostUser, mood }); }
 export function hostSay(text) { if (hostCh && visitors.ids().length) hostCh.send('chat', { id: hostUser, text }); }
 export const visitorCount = () => visitors.ids().length;
@@ -128,6 +131,8 @@ export function visitScreen({ go, id: hostId, name = '' }) {
         others.say(p.id, p.text);
         const c = others.m.get(p.id);
         logLine((c && c.look && c.look.name) || '朋友', p.text, false);
+      } else if (ev === 'note') {
+        hearNote($('#room', box), p.i);
       } else if (ev === 'emote') {
         others.emote(p.id, p.mood);
         const c = others.m.get(p.id);
@@ -184,7 +189,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
       </div>${arrow(-1)}${arrow(1)}`;
     const unit = $('#hunit', box), room = $('#room', box);
     (house.rooms[roomKey] || []).forEach((e) => { const el = decorEl(e); if (el) room.appendChild(el); });
-    wirePlayable(room);
+    wirePlayable(room, (i) => ch.send('note', { id: me, i }));
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.seat'); if (!d) return;
       if (mine.seat === d.dataset.id) return;
@@ -212,7 +217,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
   function place() {
     const room = $('#room', box), spot = mine.seat && seatSpot(room, mine.seat, mine.slot);
     myEl.classList.toggle('lying', !!(spot && spot.lie)); myEl.classList.toggle('seated', !!spot);
-    if (myKv) myKv.setPose(spot ? spot.pose : null);
+    if (myKv) myKv.setPose(spot ? spot.pose : null); myEl.dataset.pose = (spot && spot.pose) || '';
     if (room) room.querySelectorAll('.decor.seat').forEach((d) => { if (!others.ids().some((id) => (others.m.get(id) || {}).seat === d.dataset.id)) blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === mine.seat)); });
     if (spot) { mine.x = spot.x; mine.y = spot.y; myEl.style.left = `${spot.x}%`; myEl.style.bottom = `${spot.y}%`; myEl.style.zIndex = spot.z; return; }
     Object.assign(mine, clampPos(mine));

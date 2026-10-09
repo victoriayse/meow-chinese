@@ -1,5 +1,5 @@
 // Small UI helpers shared by all screens.
-import { kittenGrid, kittenLyingGrid, drawGrid, artGrid, COIN, HEART, FISHBONE } from './pixel.js';
+import { kittenGrid, kittenLyingGrid, kittenSideGrid, drawGrid, artGrid, COIN, HEART, FISHBONE } from './pixel.js';
 import { get } from './state.js';
 import { sfx } from './audio.js';
 
@@ -66,6 +66,11 @@ export class KittenView {
       const lm = this.temp || (['happy', 'love'].includes(this.mood) ? this.mood : 'sleepy');
       drawGrid(this.canvas, kittenLyingGrid(this.fur, lm, this.equipped, Math.floor(this.frame / 3)), this.scale);
       return;
+    }
+    if (this.pose === 'side-r' || this.pose === 'side-l') {   // side-on at the dining table
+      let g = kittenSideGrid(this.fur, this.temp || this.mood, Math.floor(this.frame / 3));
+      if (this.pose === 'side-l') g = g.map((row) => [...row].reverse());
+      drawGrid(this.canvas, g, this.scale); return;
     }
     if (this.pose === 'back') { drawGrid(this.canvas, kittenGrid(this.fur, 'back', this.equipped, Math.floor(this.frame / 3)), this.scale); return; }
     let g = kittenGrid(this.fur, m, this.equipped, Math.floor(this.frame / 3), !!this.left);

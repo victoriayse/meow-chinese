@@ -592,7 +592,7 @@ function homeScreen(params = {}) {
     // sitting on the sofa / a chair, or lying in bed
     const st = seatNow(), spot = st && seatSpot(room, st.id, st.slot);
     ground.classList.toggle('lying', !!(spot && spot.lie)); ground.classList.toggle('seated', !!spot);
-    kv.setPose(spot ? spot.pose : null);
+    kv.setPose(spot ? spot.pose : null); ground.dataset.pose = (spot && spot.pose) || '';
     room.querySelectorAll('.decor.seat').forEach((d) => blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === st.id)));
     if (spot) {
       cat.x = spot.x; cat.y = spot.y;
@@ -623,7 +623,7 @@ function homeScreen(params = {}) {
     if (!seatNow()) return;
     S.get().catSeat = null;
     cat.y = Math.min(cat.y, 28);
-    ground.classList.remove('lying', 'seated'); kv.setPose(null);
+    ground.classList.remove('lying', 'seated'); kv.setPose(null); ground.dataset.pose = '';
     room.querySelectorAll('.blanket').forEach((b) => b.remove());
   };
   const held = new Set();
@@ -852,7 +852,7 @@ function homeScreen(params = {}) {
     hostRoomNow = roomKey;
     houseLog = chatLog(houseChat);
     $('#hlog', n).prepend(houseLog.el);
-    wirePlayable(room);
+    wirePlayable(room, (i) => Visit.hostNote(i));
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.seat');
       if (!d || room.classList.contains('arranging') || md.face === 'faint') return;
@@ -1094,6 +1094,7 @@ Friends.startFriends((news) => {
 });
 // live visits: friends' kittens can walk into my house while the app is open
 Visit.startHosting({
+  inHouse: () => current === 'home' && currentParams.view === 'house',
   house: () => {
     const st = S.get(), rooms = {}, open = S.ROOMS.filter((r) => S.roomOpen(r.key) && S.unlocked('decor')).map((r) => r.key);
     (open.length ? open : ['living']).forEach((k) => { rooms[k] = roomLayout(st, k, S.roomOf); });

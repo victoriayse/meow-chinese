@@ -143,7 +143,7 @@ export class OtherCats {
     c.el.style.left = `${c.dx}%`; c.el.style.bottom = `${c.dy}%`;
     c.el.style.zIndex = spot ? spot.z : 2 + Math.round(100 - c.dy);
     c.el.classList.toggle('lying', !!(spot && spot.lie)); c.el.classList.toggle('seated', !!spot);
-    if (c.kv) c.kv.setPose(spot ? spot.pose : null);
+    if (c.kv) c.kv.setPose(spot ? spot.pose : null); c.el.dataset.pose = (spot && spot.pose) || '';
     if (c.bedShown && c.bedShown !== (spot && spot.lie && c.seat)) { blanket(this.roomEl, c.bedShown, false); c.bedShown = null; }
     if (spot && spot.lie) { blanket(this.roomEl, c.seat, true); c.bedShown = c.seat; }
   }
@@ -244,14 +244,24 @@ export function wirePlayable(roomEl, onPlay) {
   roomEl.addEventListener('click', (e) => {
     const d = e.target.closest('.decor.playable');
     if (!d || roomEl.classList.contains('arranging')) return;
-    const name = sfx.piano();
+    const { i, name } = sfx.piano();
     const n = document.createElement('div');
     n.className = 'music-note'; n.textContent = `♪ ${name}`;
     n.style.left = `${d.offsetLeft + d.offsetWidth * (0.25 + Math.random() * 0.5)}px`; n.style.top = `${d.offsetTop}px`;
     roomEl.appendChild(n); setTimeout(() => n.remove(), 1400);
     d.classList.remove('bounce'); void d.offsetWidth; d.classList.add('bounce');
-    if (onPlay) onPlay(name);
+    if (onPlay) onPlay(i, name);
   });
+}
+// a friend played the piano: we hear the same note, and see it float up if the piano is in this room
+export function hearNote(roomEl, i) {
+  const { name } = sfx.piano(i);
+  const d = roomEl && roomEl.isConnected && roomEl.querySelector('.decor.playable');
+  if (!d) return;
+  const n = document.createElement('div');
+  n.className = 'music-note'; n.textContent = `♪ ${name}`;
+  n.style.left = `${d.offsetLeft + d.offsetWidth * (0.25 + Math.random() * 0.5)}px`; n.style.top = `${d.offsetTop}px`;
+  roomEl.appendChild(n); setTimeout(() => n.remove(), 1400);
 }
 
 // ---------- chat history: who said what while you are in the house ----------
@@ -310,7 +320,7 @@ export function seatSpot(roomEl, id, slot = 0) {
   const W = roomEl.clientWidth, H = roomEl.clientHeight;
   const sx = seat.spots ? seat.spots[Math.min(slot || 0, seat.spots.length - 1)] : seat.x;
   return {
-    back: !!seat.back, pose: seat.lie ? 'lie' : seat.back ? 'back' : null,
+    back: !!seat.back, pose: seat.lie ? 'lie' : seat.back ? 'back' : seat.side ? ((slot || 0) === 0 ? 'side-r' : 'side-l') : null,
     x: ((el.offsetLeft + el.offsetWidth * sx) / W) * 100,
     y: ((H - (el.offsetTop + el.offsetHeight * seat.y)) / H) * 100,
     z: (parseInt(el.style.zIndex, 10) || 50) + 1, lie: !!seat.lie, el,

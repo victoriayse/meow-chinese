@@ -1330,3 +1330,8 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .visit-home .visit-chat .house-chat { max-width: none; }
   .visit-home .stage.in-house .house { top: 1%; bottom: 2%; }
 }
+/* computers with a mouse: no on-screen arrows (the keyboard's arrow keys walk the kitten) */
+@media (min-width: 901px) and (hover: hover) and (pointer: fine) {
+  .dpad, .visit-home .dpad, .house-log-wrap .dpad, .visit-log .dpad { display: none !important; }
+}
+[data-pose="side-r"] .kflip, [data-pose="side-l"] .kflip { transform: scale(.8); transform-origin: 50% 100%; }

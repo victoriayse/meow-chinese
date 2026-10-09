@@ -95,12 +95,14 @@ export const sfx = {
   yum() { if (on()) { tone(587, 0, 0.08, 'triangle', 0.07); tone(784, 0.1, 0.12, 'triangle', 0.07); } },
   fanfare() { if (on()) [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.18, 'square', 0.05)); },
   // the toy piano: one random note from a C-major scale, with a soft piano-like fade; returns its name
-  piano() {
+  // pass a note number to play that exact note (a friend's piano), or nothing for a random one; returns { i, name }
+  piano(i) {
     const NOTES = [['Do', 261.63], ['Re', 293.66], ['Mi', 329.63], ['Fa', 349.23], ['Sol', 392.0], ['La', 440.0], ['Ti', 493.88],
       ['Do', 523.25], ['Re', 587.33], ['Mi', 659.25], ['Fa', 698.46], ['Sol', 783.99], ['La', 880.0]];
-    const [name, f] = NOTES[Math.floor(Math.random() * NOTES.length)];
+    if (!(Number.isInteger(i) && NOTES[i])) i = Math.floor(Math.random() * NOTES.length);
+    const [name, f] = NOTES[i];
     if (on()) { tone(f, 0, 1.3, 'triangle', 0.16); tone(f * 2, 0, 0.6, 'sine', 0.05); tone(f * 3, 0, 0.25, 'sine', 0.02); }
-    return name;
+    return { i, name };
   },
   unlock() {
     ac();

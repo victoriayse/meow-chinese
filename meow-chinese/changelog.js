@@ -99,4 +99,9 @@ export const CHANGES = [
     'At the piano bench your kitten sits with her back to you, facing the piano.',
     'Two kittens can sit side by side on the sofa.',
   ] },
+  { v: 75, items: [
+    'When someone plays the piano, everyone in the house hears it — in any room.',
+    'The dining table has a chair each side: two kittens sit side-on, facing each other.',
+    'No more arrow buttons on computers — use the keyboard arrow keys to walk.',
+  ] },
 ];

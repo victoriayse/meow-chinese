@@ -1756,6 +1756,56 @@ Object.assign(ITEMS, {
     ] },
 });
 
+// ---------- a kitten sitting side-on (at the dining table), facing right; mirror it to face left ----------
+export function kittenSideGrid(fur = 'ginger', mood = 'normal', frame = 0) {
+  const P = FURS[fur] || FURS.ginger;
+  const g = grid(KW, KH), part = grid(KW, KH);
+  const Y = (v) => v + OY;
+  const fill = (test, c, r) => { for (let y = 0; y < KH; y++) for (let x = 0; x < KW; x++) if (test(x, y)) { g[y][x] = c; part[y][x] = r; } };
+  const set = (x, y, c) => { if (x >= 0 && y >= 0 && x < KW && y < KH) g[y][x] = c; };
+  const sway = frame % 2;
+  // tail curling up behind her
+  for (let t = 0; t <= 1; t += 0.02) {
+    const bx = (1 - t) ** 2 * 9 + 2 * (1 - t) * t * (1 + sway) + t * t * (3 + sway), by = (1 - t) ** 2 * Y(29) + 2 * (1 - t) * t * Y(28) + t * t * Y(18);
+    fill((x, y) => inEllipse(x, y, bx, by, 1.7, 1.7), t > 0.8 ? P.s : P.f, 'tail');
+  }
+  // sitting body: round haunch at the back, chest at the front
+  fill((x, y) => inEllipse(x, y, 13, Y(24.5), 8, 6.6), P.f, 'body');
+  fill((x, y) => inEllipse(x, y, 19, Y(21.5), 5, 6.4), P.f, 'body');
+  fill((x, y) => inEllipse(x, y, 21, Y(22), 2.6, 4.4), P.w, 'body');                  // white chest
+  if (P.patch) fill((x, y) => part[y][x] === 'body' && inEllipse(x, y, 11, Y(21), 4, 3), P.patch, 'body');
+  else [[9, 19], [12, 18], [15, 18]].forEach(([x, y]) => { for (let k = 0; k < 3; k++) if (part[Y(y + k)] && part[Y(y + k)][x] === 'body') g[Y(y + k)][x] = P.s; });
+  // front leg and paws
+  fill((x, y) => x >= 19 && x <= 21 && y >= Y(24) && y <= Y(30), P.f, 'leg');
+  fill((x, y) => inEllipse(x, y, 21.2, Y(30.4), 2.8, 1.5), P.w, 'paw');
+  fill((x, y) => inEllipse(x, y, 10, Y(30.4), 3.4, 1.5), P.w, 'paw');
+  // ears (the far one peeks out behind)
+  fill((x, y) => inTri(x, y, [12, Y(6)], [13.5, Y(-0.5)], [18, Y(4)]), P.s, 'head');
+  fill((x, y) => inTri(x, y, [16, Y(5)], [19.5, Y(-1)], [23, Y(4.5)]), P.f, 'head');
+  fill((x, y) => inTri(x, y, [17.8, Y(4)], [19.5, Y(1)], [21.5, Y(4)]), PINK, 'head');
+  // head and muzzle
+  fill((x, y) => inEllipse(x, y, 18.5, Y(11), 8.6, 7.8), P.f, 'head');
+  fill((x, y) => inEllipse(x, y, 25, Y(13.6), 3.8, 2.8), P.w, 'head');
+  if (P.patch) fill((x, y) => part[y][x] === 'head' && inEllipse(x, y, 14, Y(7), 4, 3.4), P.patch, 'head');
+  else [[15, 4], [17, 4]].forEach(([x, y]) => { set(x, Y(y), P.s); set(x, Y(y + 1), P.s); });
+  // face
+  set(28, Y(12), NOSE); set(28, Y(13), NOSE);
+  set(26, Y(15), P.o); set(27, Y(15), P.o); set(25, Y(14), P.o);
+  set(23, Y(14), BLUSH); set(22, Y(14), BLUSH);
+  if (mood === 'happy' || mood === 'love') { set(21, Y(11), EYE); set(22, Y(10), EYE); set(23, Y(10), EYE); set(24, Y(11), EYE); }
+  else if (mood === 'sleepy' || mood === 'blink') { for (let x = 21; x <= 24; x++) set(x, Y(11), EYE); }
+  else { for (let yy = 9; yy <= 11; yy++) { set(22, Y(yy), EYE); set(23, Y(yy), EYE); } set(22, Y(9), '#ffffff'); }
+  // outline
+  const out = g.map((r) => r.slice());
+  for (let y = 0; y < KH; y++) for (let x = 0; x < KW; x++) {
+    if (g[y][x]) continue;
+    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => g[y + dy] && g[y + dy][x + dx] && g[y + dy][x + dx] !== P.o)) out[y][x] = P.o;
+  }
+  // whiskers
+  [[29, 13], [30, 12], [29, 15], [30, 15]].forEach(([x, y]) => { if (!out[Y(y)][x]) out[Y(y)][x] = P.o; });
+  return out;
+}
+
 // ---------- a kitten lying down (in bed): head resting on the left, body stretched out, tail curled ----------
 export function kittenLyingGrid(fur = 'ginger', mood = 'sleepy', equipped = {}, frame = 0) {
   const P = FURS[fur] || FURS.ginger;
@@ -1847,7 +1897,7 @@ Object.assign(ITEMS, {
 });
 // where a kitten sits on furniture (fraction of the piece: x across, y down to where her paws rest)
 ITEMS.sofa.seat = { x: 0.5, y: 0.78, spots: [0.2, 0.8] };          // room for two kittens side by side
-if (ITEMS.diningtable) ITEMS.diningtable.seat = { x: 0.13, y: 0.66 };
+if (ITEMS.diningtable) ITEMS.diningtable.seat = { x: 0.06, y: 0.64, spots: [0.04, 0.96], side: true };   // one chair each side, facing each other
 if (ITEMS.pianobench) ITEMS.pianobench.seat = { x: 0.5, y: 0.45, back: true };   // facing the piano
 if (ITEMS.bed) ITEMS.bed.seat = { x: 0.52, y: 0.63, lie: true, blanket: [6, 14, 16, 32] };   // blanket rows 6-13, columns 13-31
 
