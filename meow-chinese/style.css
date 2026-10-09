@@ -1464,3 +1464,6 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 @keyframes twinkle { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.25) drop-shadow(0 0 4px rgba(255, 230, 140, .9)); } }
 .room.lights-off .decor.garland:not(.off) canvas { filter: drop-shadow(0 0 6px rgba(255, 220, 120, .95)); animation: twinkledark 1.8s ease-in-out infinite; }
 @keyframes twinkledark { 0%, 100% { filter: drop-shadow(0 0 4px rgba(255, 220, 120, .7)); } 50% { filter: drop-shadow(0 0 9px rgba(255, 230, 140, 1)) brightness(1.2); } }
+/* light garlands stretch from wall to wall (drag them up or down) */
+.house .decor.garland { left: 0 !important; right: 0; width: 100%; }
+.house .decor.garland canvas { width: 100% !important; height: auto !important; }

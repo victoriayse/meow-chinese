@@ -182,4 +182,7 @@ export const CHANGES = [
     'New ✨ light garlands (warm fairy lights, rainbow and stars) — tap to switch on; they twinkle and glow in the dark.',
     'New lounge sofas (cream or navy) — three cats can sit on one!',
   ] },
+  { v: 93, items: [
+    'Light garlands now stretch all the way across the room. Drag them up or down with 🪑 Move furniture.',
+  ] },
 ];
