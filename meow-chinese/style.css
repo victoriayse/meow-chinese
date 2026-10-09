@@ -1351,3 +1351,10 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .typing-bubble i { width: 7px; height: 7px; border-radius: 50%; background: #9a8fb0; animation: tydot 1s infinite; }
 .typing-bubble i:nth-child(2) { animation-delay: .15s; } .typing-bubble i:nth-child(3) { animation-delay: .3s; }
 @keyframes tydot { 0%, 60%, 100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-4px); opacity: 1; } }
+.house .decor.curtain { pointer-events: auto; cursor: pointer; }
+.room.arranging .decor.curtain { pointer-events: none; }
+.room.arranging .decor.curtain .put-away { pointer-events: auto; }
+/* ---------- the garden: outdoors, no roof or walls ---------- */
+.house-unit.outdoor .roof { visibility: hidden; }
+.house-unit.outdoor .room { border-color: #5e9e4c; border-width: 0 0 6px; border-radius: 18px 18px 6px 6px; }
+.visit-home .house .decor.curtain { cursor: default; pointer-events: none; }

@@ -46,23 +46,47 @@ export function roomLayout(s, roomKey, roomOf) {
   return (s.owned || []).filter((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && !(s.decorHidden || []).includes(id) && roomOf(id) === roomKey).map((id) => {
     const it = ITEMS[id], spot = DECOR_POS[it.spot] || 'left:10%;bottom:10%', saved = pos[id];
     // window coverings hang from just above the window to just below it, as wide as the window plus a little
-    if (spot === 'curtain') return { id, kind: 'curtain', css: `left:${(ROOM_WINDOW.x0 + ROOM_WINDOW.x1) * 50}%;top:${ROOM_WINDOW.y0 * 100 - 4}%;width:${(ROOM_WINDOW.x1 - ROOM_WINDOW.x0) * 100 + 12}%;height:${(ROOM_WINDOW.y1 - ROOM_WINDOW.y0) * 100 + 7}%;transform:translateX(-50%);z-index:1` };
+    if (spot === 'curtain' && roomKey === 'garden') return null;   // no window outside
+    if (spot === 'curtain') return { id, kind: 'curtain', closed: !!(s.curtainClosed || {})[id], css: `left:${(ROOM_WINDOW.x0 + ROOM_WINDOW.x1) * 50}%;top:${ROOM_WINDOW.y0 * 100 - 4}%;width:${(ROOM_WINDOW.x1 - ROOM_WINDOW.x0) * 100 + 12}%;height:${(ROOM_WINDOW.y1 - ROOM_WINDOW.y0) * 100 + 7}%;transform:translateX(-50%);z-index:1` };
     const flat = it.spot === 'rug' || it.spot === 'under';
     const css = saved ? `left:${saved.x}%;top:${saved.y}%` : flat ? `left:50%;bottom:${it.spot === 'rug' ? 2 : 3}%;transform:translateX(-50%)` : spot;
     const photo = it.frame ? (s.framePhotos || {})[id] || null : null;   // a photo she put in a frame
     return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}) };
-  });
+  }).filter(Boolean);
+}
+// a window covering drawn shut: side curtains meet in the middle, blinds come all the way down
+export function closedCurtain(g) {
+  const H = g.length, W = g[0].length, mid = Math.floor(H / 2), cx = Math.floor(W / 2);
+  const out = g.map((r) => r.slice());
+  if (g[mid][0] && !g[mid][cx]) {
+    let pw = 0; while (pw < W && g[mid][pw]) pw++;
+    // each side panel spreads to the middle, repeating its own folds, and the two edges meet there
+    for (let y = 2; y < H; y++) for (let x = pw - 1; x <= W - pw; x++) {
+      if (!g[y][1] && !out[y][x]) continue;
+      const left = x < cx, mx = left ? x : W - 1 - x, src = 1 + ((mx - 1) % Math.max(1, pw - 2));
+      out[y][x] = (x === cx - 1 || x === cx) ? (left ? g[y][pw - 1] : g[y][W - pw]) : (left ? g[y][src] : g[y][W - 1 - src]);
+    }
+    return out;
+  }
+  let B = 2; for (let y = 2; y < H; y++) if (g[y][cx]) B = y;
+  const same = (a, b) => a.join() === b.join();
+  let p = 1; for (let q = 2; q <= 6; q++) if (B - 2 * q >= 2 && same(g[B - 1], g[B - 1 - q]) && same(g[B - 2], g[B - 2 - q])) { p = q; break; }
+  const body = Math.max(2, B - p);
+  for (let y = B; y < H - 1; y++) out[y] = g[body + ((y - B) % p)].slice();
+  out[H - 1] = g[B].slice();
+  return out;
 }
 // one piece of furniture as a page element
-export function decorEl({ id, css, kind, photo }, { putAway = false } = {}) {
+export function decorEl({ id, css, kind, photo, closed }, { putAway = false } = {}) {
   const it = ITEMS[id]; if (!it) return null;
   const c = document.createElement('canvas');
-  drawGrid(c, artGrid(it.art, it.pal), HOUSE.decor);
+  const g = artGrid(it.art, it.pal);
+  drawGrid(c, kind === 'curtain' && closed ? closedCurtain(g) : g, HOUSE.decor);
   const wrap = document.createElement('div');
   wrap.className = 'decor';
   wrap.dataset.id = id;
   wrap.style.cssText = css;
-  if (kind === 'curtain') wrap.classList.add('curtain');
+  if (kind === 'curtain') { wrap.classList.add('curtain'); if (closed) wrap.classList.add('closed'); }
   else { wrap.classList.add('movable'); if (kind === 'flat') wrap.classList.add('flat'); }
   if (it.playable) wrap.classList.add('playable');
   if (it.seat) wrap.classList.add('seat');

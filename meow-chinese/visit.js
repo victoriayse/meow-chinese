@@ -211,7 +211,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     const info = S.roomInfo(roomKey), open = house.open || ['living'];
     const idx = S.ROOMS.findIndex((r) => r.key === roomKey);
     const arrow = (d) => { const r = S.ROOMS[idx + d]; if (!r || !open.includes(r.key)) return ''; return `<button class="room-nav ${d < 0 ? 'left' : 'right'}" data-room="${r.key}" aria-label="${r.en}">${d < 0 ? '◀' : '▶'}</button>`; };
-    box.innerHTML = `<div class="house-unit" id="hunit"><canvas class="roof" id="roof"></canvas>
+    box.innerHTML = `<div class="house-unit ${S.roomInfo(roomKey).outdoor ? 'outdoor' : ''}" id="hunit"><canvas class="roof" id="roof"></canvas>
         <div class="room-name">${info.icon} <span class="zh">${info.zh}</span> ${info.en}</div>
         <div class="room" id="room" data-room="${roomKey}"><canvas class="room-bg" id="roombg"></canvas></div>
       </div>${arrow(-1)}${arrow(1)}`;

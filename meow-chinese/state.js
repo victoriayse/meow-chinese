@@ -57,7 +57,8 @@ function fresh() {
     lightsOff: {},     // room -> true when its ceiling light is switched off (the room goes dark)
     powerOff: {},      // lamp / TV id -> true when switched off
     roomStyle: {},     // room -> { wall, floor } renovation item ids (missing = the room's own look)
-    framePhotos: {},   // photo frame id -> small JPEG (data URL, at most 50 KB)
+    framePhotos: {},
+    curtainClosed: {},   // curtain id -> true while it is drawn shut   // photo frame id -> small JPEG (data URL, at most 50 KB)
     letters: [],       // letters from friends: { id, from, fromName, text, at, read }
     gifts: [],         // gifts from friends: { id, from, fromName, item, message, at, opened }
     friendNews: [],    // e.g. a friend fed her kitten: { id, fromName, item, at, seen }
@@ -467,11 +468,13 @@ export function toggleWear(id) {
 }
 // the rooms of the house, left to right; the living room is the middle one
 export const ROOMS = [
+  { key: 'toilet', zh: '浴室', en: 'Bathroom', icon: '🚽', lock: 'toilet' },
   { key: 'kitchen', zh: '厨房', en: 'Kitchen', icon: '🍳', lock: 'kitchen' },
   { key: 'living', zh: '客厅', en: 'Living room', icon: '🛋️' },
   { key: 'bedroom', zh: '卧室', en: 'Bedroom', icon: '🛏️', lock: 'bedroom' },
+  { key: 'garden', zh: '花园', en: 'Garden', icon: '🌳', lock: 'garden', outdoor: true },
 ];
-export const roomInfo = (key) => ROOMS.find((r) => r.key === key) || ROOMS[1];
+export const roomInfo = (key) => ROOMS.find((r) => r.key === key) || ROOMS.find((r) => r.key === 'living');
 export const roomOpen = (key) => { const r = roomInfo(key); return !r.lock || unlocked(r.lock); };
 // which room a piece of furniture stands in (she can move it to another open room)
 export const roomOf = (id) => (state.decorRoom || {})[id] || (ITEMS[id] && ITEMS[id].room) || 'living';
@@ -493,6 +496,7 @@ export function setRoomStyle(room, kind, id) {
 export function setFramePhoto(id, dataUrl) { state.framePhotos = state.framePhotos || {}; if (dataUrl) state.framePhotos[id] = dataUrl; else delete state.framePhotos[id]; save(); }
 // lights and TV at home
 export const roomDark = (room) => !!(state.lightsOff || {})[room];
+export function toggleCurtain(id) { state.curtainClosed = state.curtainClosed || {}; if (state.curtainClosed[id]) delete state.curtainClosed[id]; else state.curtainClosed[id] = true; save(); return !!state.curtainClosed[id]; }
 export function toggleRoomLight(room) { state.lightsOff = state.lightsOff || {}; state.lightsOff[room] = !state.lightsOff[room]; save(); return !state.lightsOff[room]; }
 export function togglePower(id) { state.powerOff = state.powerOff || {}; state.powerOff[id] = !state.powerOff[id]; save(); return !state.powerOff[id]; }
 // furniture storage: owned furniture that isn't standing in any room (decorHidden)
@@ -625,8 +629,8 @@ export function finishPlay(first, total) {
 }
 
 // ---------- level unlocks ----------
-export const UNLOCKS = { head: 5, feet: 10, acc: 15, body: 20, decor: 25, bedroom: 35, kitchen: 45 };
-export const UNLOCK_NAMES = { head: '头饰 Hair accessories', feet: '鞋子 Shoes', acc: '配饰 Extras', body: '衣服 Clothes', decor: '我的家 Home & furniture', bedroom: '卧室 Bedroom (right room)', kitchen: '厨房 Kitchen (left room)' };
+export const UNLOCKS = { head: 5, feet: 10, acc: 15, body: 20, decor: 25, bedroom: 35, garden: 40, kitchen: 45, toilet: 50 };
+export const UNLOCK_NAMES = { head: '头饰 Hair accessories', feet: '鞋子 Shoes', acc: '配饰 Extras', body: '衣服 Clothes', decor: '我的家 Home & furniture', bedroom: '卧室 Bedroom (right room)', kitchen: '厨房 Kitchen (left room)', garden: '花园 Garden (outside, right of the bedroom)', toilet: '浴室 Bathroom (left of the kitchen)' };
 export const unlocked = (key) => !(key in UNLOCKS) || !!state.settings.unlockAll || level() >= UNLOCKS[key];
 export function nextUnlock() {
   const lv = level();

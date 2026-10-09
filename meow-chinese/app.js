@@ -451,7 +451,7 @@ function homeScreen(params = {}) {
 
   const n = html`<section class="home ${inHouse ? 'house-view' : ''}">
     <div class="stage ${inHouse ? 'in-house' : ''}" id="stage">
-      ${inHouse ? `<div class="house" id="house"><div class="house-unit" id="hunit">
+      ${inHouse ? `<div class="house" id="house"><div class="house-unit ${S.roomInfo(roomKey).outdoor ? 'outdoor' : ''}" id="hunit">
         <canvas class="roof" id="roof"></canvas>
         <div class="room-name">${S.roomInfo(roomKey).icon} <span class="zh">${S.roomInfo(roomKey).zh}</span> ${S.roomInfo(roomKey).en}</div>
         <div class="room" id="room" data-room="${roomKey}">
@@ -727,6 +727,7 @@ function homeScreen(params = {}) {
     };
     // 🎨 renovate: pick a wallpaper and a floor for this room from the ones she has bought
     $('#b-reno', n).onclick = () => {
+      if (S.roomInfo(roomKey).outdoor) { sfx.miss(); return toast('🌳 <span class="zh">花园在外面，没有墙纸和地板</span> The garden is outdoors — no wallpaper or floors to change', { ms: 2600 }); }
       const ri = S.roomInfo(roomKey), owned = S.ownedRenovations();
       const draw = () => {
         const cur = S.roomStyle(roomKey);
@@ -853,6 +854,16 @@ function homeScreen(params = {}) {
     houseLog = chatLog(houseChat);
     $('#hlog', n).prepend(houseLog.el);
     wirePlayable(room, (i) => Visit.hostNote(i));
+    // curtains and blinds: tap to draw them shut, tap again to open
+    room.addEventListener('click', (e) => {
+      const d = e.target.closest('.decor.curtain');
+      if (!d || room.classList.contains('arranging') || e.target.closest('.put-away')) return;
+      const shut = S.toggleCurtain(d.dataset.id); sfx.click();
+      const entry = roomLayout(S.get(), roomKey, S.roomOf).find((x) => x.id === d.dataset.id);
+      const ne = entry && decorEl(entry, { putAway: true }); if (ne) d.replaceWith(ne);
+      toast(shut ? '🌙 <span class="zh">拉上窗帘</span> Curtains closed' : '☀️ <span class="zh">拉开窗帘</span> Curtains open', { ms: 1400 });
+      Visit.hostResendHouse();
+    });
     // photo frames: tap to put a photo in (it is shrunk to 50 KB)
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.frame');

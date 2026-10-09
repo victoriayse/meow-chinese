@@ -112,4 +112,9 @@ export const CHANGES = [
     'Phone Messages: see "typing…" when your friend is writing to you.',
     'Ticks on your messages: ✓ sent, ✓✓ when your friend has read it.',
   ] },
+  { v: 78, items: [
+    'Tap a curtain or blind to close it, tap again to open it.',
+    'New room at Lv50: the 🚽 Bathroom, left of the kitchen — with a toilet, bathtub, washbasin, towel rack, bath mat and rubber duck.',
+    'New outdoor space at Lv40: the 🌳 Garden, right of the bedroom — no roof! Potted plants, flower beds, a garden bench, picket fence, garden lamp, bird bath and an apple tree.',
+  ] },
 ];
