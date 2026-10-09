@@ -104,4 +104,8 @@ export const CHANGES = [
     'The dining table has a chair each side: two kittens sit side-on, facing each other.',
     'No more arrow buttons on computers — use the keyboard arrow keys to walk.',
   ] },
+  { v: 76, items: [
+    'Put your own photos in picture frames! Tap the painting or the new 🖼️ photo frame at home and choose a photo.',
+    'Photos are made small automatically (under 50 KB). Friends visiting can tap a frame to see the photo bigger.',
+  ] },
 ];

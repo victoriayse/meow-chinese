@@ -37,6 +37,7 @@ export const DECOR_POS = {
   house: 'right:17%;bottom:3%',
   'front-right': 'right:2%;bottom:3%',
   bench: 'left:9%;bottom:25%',
+  'wall-mid': 'left:24%;top:10%',
 };
 
 // the furniture standing in one room: [{ id, css, kind: 'curtain' | 'flat' | 'stand' }]
@@ -48,11 +49,12 @@ export function roomLayout(s, roomKey, roomOf) {
     if (spot === 'curtain') return { id, kind: 'curtain', css: `left:${(ROOM_WINDOW.x0 + ROOM_WINDOW.x1) * 50}%;top:${ROOM_WINDOW.y0 * 100 - 4}%;width:${(ROOM_WINDOW.x1 - ROOM_WINDOW.x0) * 100 + 12}%;height:${(ROOM_WINDOW.y1 - ROOM_WINDOW.y0) * 100 + 7}%;transform:translateX(-50%);z-index:1` };
     const flat = it.spot === 'rug' || it.spot === 'under';
     const css = saved ? `left:${saved.x}%;top:${saved.y}%` : flat ? `left:50%;bottom:${it.spot === 'rug' ? 2 : 3}%;transform:translateX(-50%)` : spot;
-    return { id, kind: flat ? 'flat' : 'stand', css };
+    const photo = it.frame ? (s.framePhotos || {})[id] || null : null;   // a photo she put in a frame
+    return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}) };
   });
 }
 // one piece of furniture as a page element
-export function decorEl({ id, css, kind }, { putAway = false } = {}) {
+export function decorEl({ id, css, kind, photo }, { putAway = false } = {}) {
   const it = ITEMS[id]; if (!it) return null;
   const c = document.createElement('canvas');
   drawGrid(c, artGrid(it.art, it.pal), HOUSE.decor);
@@ -64,6 +66,14 @@ export function decorEl({ id, css, kind }, { putAway = false } = {}) {
   else { wrap.classList.add('movable'); if (kind === 'flat') wrap.classList.add('flat'); }
   if (it.playable) wrap.classList.add('playable');
   if (it.seat) wrap.classList.add('seat');
+  if (it.frame) {
+    wrap.classList.add('frame');
+    if (photo) {
+      const img = document.createElement('img'); img.className = 'frame-photo'; img.alt = ''; img.src = photo;
+      const f = it.frame; img.style.cssText = `left:${f.x * 100}%;top:${f.y * 100}%;width:${f.w * 100}%;height:${f.h * 100}%`;
+      wrap.appendChild(img);
+    }
+  }
   if (it.power) { wrap.dataset.power = it.power; if (it.power === 'tv') wrap.appendChild(Object.assign(document.createElement('i'), { className: 'tv-screen' })); }
   wrap.appendChild(c);
   if (putAway) { const pa = document.createElement('button'); pa.className = 'put-away'; pa.type = 'button'; pa.title = 'Put away'; pa.textContent = '📦'; wrap.appendChild(pa); }
@@ -348,4 +358,25 @@ export function freeSlot(id, taken) {
   const seat = ITEMS[id] && ITEMS[id].seat; const n = seat && seat.spots ? seat.spots.length : 1;
   for (let i = 0; i < n; i++) if (!taken.some((t) => t && t.seat === id && (t.slot || 0) === i)) return i;
   return -1;   // full
+}
+
+// ---------- photos for frames: shrink to at most 50 KB ----------
+export async function compressPhoto(file, maxBytes = 50 * 1024) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    let side = 420, q = 0.82;
+    for (let tries = 0; tries < 14; tries++) {
+      const k = Math.min(1, side / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+      const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+      const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', q));
+      if (blob && blob.size <= maxBytes) {
+        return await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
+      }
+      if (q > 0.5) q -= 0.12; else { side = Math.round(side * 0.8); q = 0.75; }   // lower quality first, then smaller
+    }
+    throw new Error('too big');
+  } finally { URL.revokeObjectURL(url); }
 }

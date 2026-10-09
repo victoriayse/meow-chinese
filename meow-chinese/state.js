@@ -57,6 +57,7 @@ function fresh() {
     lightsOff: {},     // room -> true when its ceiling light is switched off (the room goes dark)
     powerOff: {},      // lamp / TV id -> true when switched off
     roomStyle: {},     // room -> { wall, floor } renovation item ids (missing = the room's own look)
+    framePhotos: {},   // photo frame id -> small JPEG (data URL, at most 50 KB)
     letters: [],       // letters from friends: { id, from, fromName, text, at, read }
     gifts: [],         // gifts from friends: { id, from, fromName, item, message, at, opened }
     friendNews: [],    // e.g. a friend fed her kitten: { id, fromName, item, at, seen }
@@ -489,6 +490,7 @@ export function setRoomStyle(room, kind, id) {
   if (id) st[kind] = id; else delete st[kind];
   state.roomStyle[room] = st; save();
 }
+export function setFramePhoto(id, dataUrl) { state.framePhotos = state.framePhotos || {}; if (dataUrl) state.framePhotos[id] = dataUrl; else delete state.framePhotos[id]; save(); }
 // lights and TV at home
 export const roomDark = (room) => !!(state.lightsOff || {})[room];
 export function toggleRoomLight(room) { state.lightsOff = state.lightsOff || {}; state.lightsOff[room] = !state.lightsOff[room]; save(); return !state.lightsOff[room]; }

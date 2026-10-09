@@ -14,7 +14,7 @@ let pendingNotes = null, notesDismissed = false;   // a newer version is waiting
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot } from './house.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, compressPhoto } from './house.js';
 import * as Visit from './visit.js';
 import { randomJoke } from './jokes.js';
 import { practiceListScreen, practiceScreen, KINDS } from './practice.js';
@@ -853,6 +853,33 @@ function homeScreen(params = {}) {
     houseLog = chatLog(houseChat);
     $('#hlog', n).prepend(houseLog.el);
     wirePlayable(room, (i) => Visit.hostNote(i));
+    // photo frames: tap to put a photo in (it is shrunk to 50 KB)
+    room.addEventListener('click', (e) => {
+      const d = e.target.closest('.decor.frame');
+      if (!d || room.classList.contains('arranging')) return;
+      const id = d.dataset.id, it = ITEMS[id], cur = (S.get().framePhotos || {})[id];
+      const box = html`<div class="card stack" style="align-items:center;text-align:center">
+          <div class="h-title" style="justify-content:center"><span class="zh">🖼️ ${it.name}</span><span class="en">${esc(it.en)}</span></div>
+          <div class="frame-preview">${cur ? `<img src="${cur}" alt="">` : '<span class="help">还没有照片 · No photo yet</span>'}</div>
+          <label class="btn blue">📷 <span class="zh">${cur ? '换照片' : '选照片'}</span> ${cur ? 'Change photo' : 'Choose a photo'}<input type="file" accept="image/*" hidden></label>
+          <p class="help" id="pmsg" style="margin:0">照片会缩小到 50KB 以内。来家里玩的朋友也看得到。<br>Photos are made small (under 50 KB). Friends visiting your house can see them.</p>
+          <div class="row">${cur ? '<button class="btn white" id="prm">🗑 <span class="zh">拿掉</span> Remove</button>' : ''}<button class="btn white" id="pc">关闭 Close</button></div>
+        </div>`;
+      const msg = $('#pmsg', box);
+      box.querySelector('input[type=file]').onchange = async (ev) => {
+        const f = ev.target.files && ev.target.files[0]; if (!f) return;
+        msg.textContent = '处理中… Making it small…';
+        try {
+          const url = await compressPhoto(f);
+          S.setFramePhoto(id, url); sfx.coin(); closeModal();
+          toast(`🖼️ <span class="zh">照片放好了！</span> Photo added (${Math.round((url.length * 3) / 4 / 1024)} KB)`);
+          Visit.hostResendHouse(); refreshHome();
+        } catch (x) { msg.textContent = '这张照片用不了，换一张试试。 That photo didn\'t work — try another one.'; }
+      };
+      const rm = $('#prm', box); if (rm) rm.onclick = () => { S.setFramePhoto(id, null); closeModal(); Visit.hostResendHouse(); refreshHome(); };
+      $('#pc', box).onclick = closeModal;
+      openModal(box);
+    });
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.seat');
       if (!d || room.classList.contains('arranging') || md.face === 'faint') return;

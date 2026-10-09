@@ -1895,6 +1895,17 @@ Object.assign(ITEMS, {
   pianobench: { cat: 'decor', name: '钢琴椅', en: 'Piano bench', price: 60, spot: 'bench',
     ...coverArt(24, 12, (x, y, W, H) => { if (y < 4) return (y === 0 || x === 0 || x === W - 1) ? '#3a2a35' : (y === 1 ? '#a25b78' : '#8a4766'); if (y === 4) return '#3a2a35'; if (y === 5) return x === 0 || x === W - 1 ? '#3a2a35' : '#6b3a2a'; return (x >= 1 && x <= 3) || (x >= W - 4 && x <= W - 2) ? (x === 1 || x === W - 2 ? '#3a2a35' : '#4a271c') : null; }) },
 });
+// photo frames: where the photo goes (fraction of the frame picture)
+ITEMS.painting.frame = { x: 3 / 20, y: 3 / 16, w: 14 / 20, h: 10 / 16 };
+ITEMS.photoframe = { cat: 'decor', name: '相框', en: 'Photo frame', price: 50, spot: 'wall-mid', frame: { x: 3 / 18, y: 3 / 22, w: 12 / 18, h: 16 / 22 },
+  ...coverArt(18, 22, (x, y, W, H) => {
+    if ((x === 0 || y === 0 || x === W - 1 || y === H - 1)) return (x === 0 && y === 0) || (x === W - 1 && y === 0) || (x === 0 && y === H - 1) || (x === W - 1 && y === H - 1) ? null : '#3a2a35';
+    if (x < 3 || y < 3 || x >= W - 3 || y >= H - 3) return (x + y) % 4 === 0 ? '#ffd23f' : '#ff9ec4';
+    // an empty frame shows a little heart until a photo goes in
+    const hx = x - 9, hy = y - 11, heart = [[-2, -1], [-1, -2], [1, -2], [2, -1], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [-1, 1], [0, 1], [1, 1], [0, 2], [-1, -1], [1, -1], [0, -1]];
+    return heart.some(([a, b]) => a === hx && b === hy) ? '#ff8fb1' : '#fff1f5';
+  }) };
+
 // where a kitten sits on furniture (fraction of the piece: x across, y down to where her paws rest)
 ITEMS.sofa.seat = { x: 0.5, y: 0.78, spots: [0.2, 0.8] };          // room for two kittens side by side
 if (ITEMS.diningtable) ITEMS.diningtable.seat = { x: 0.06, y: 0.64, spots: [0.04, 0.96], side: true };   // one chair each side, facing each other

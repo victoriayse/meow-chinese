@@ -10,7 +10,7 @@ import * as Auth from './auth.js';
 import { managing } from './cloud.js';
 import { Channel } from './rt.js';
 import { drawRoom, drawRoof } from './pixel.js';
-import { $, html, esc, toast, KittenView, hydrateIcons } from './ui.js';
+import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal } from './ui.js';
 import { sfx } from './audio.js';
 import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote } from './house.js';
 
@@ -190,6 +190,12 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     const unit = $('#hunit', box), room = $('#room', box);
     (house.rooms[roomKey] || []).forEach((e) => { const el = decorEl(e); if (el) room.appendChild(el); });
     wirePlayable(room, (i) => ch.send('note', { id: me, i }));
+    // a friend's photo frame: tap to see the photo bigger
+    room.addEventListener('click', (e) => {
+      const d = e.target.closest('.decor.frame'); const img = d && d.querySelector('.frame-photo'); if (!img) return;
+      const v = html`<div class="card stack" style="align-items:center"><div class="frame-preview big"><img src="${img.src}" alt=""></div><button class="btn white" id="pc">关闭 Close</button></div>`;
+      $('#pc', v).onclick = closeModal; openModal(v);
+    });
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.seat'); if (!d) return;
       if (mine.seat === d.dataset.id) return;
