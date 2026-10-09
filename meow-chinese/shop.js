@@ -42,7 +42,7 @@ export function decorGroup(it) {
   if (POOLSIDE.includes(id)) return 'pool';
   if (it.toy) return 'toys';
   if (it.spot === 'curtain') return 'windows';
-  if (it.garland || it.power === 'light') return 'lights';
+  if (it.garland || (it.power === 'light' && !it.room)) return 'lights';   // room lamps (bedside table, garden lamp) stay with their room
   return it.room || 'living';
 }
 const SLOT_NAME = Object.fromEntries(WEAR_SLOTS.map(([k, zh]) => [k, zh]));
@@ -145,7 +145,7 @@ export function shopScreen({ go, tab = 'food' }) {
         : pharm ? (needed ? `治好${it.cures === 'cough' ? '咳嗽' : '头晕'}！Cures ${it.cures === 'cough' ? 'a cough' : 'dizziness'}` : `小猫${it.cures === 'cough' ? '咳嗽' : '头晕'}时才需要 · Only when your kitten ${it.cures === 'cough' ? 'coughs' : 'is dizzy'}`)
         : it.cat === 'wear' ? `${SLOT_NAME[it.slot] || ''}`
         : it.cat === 'reno' ? (it.kind === 'wall' ? '🧱 墙纸 Wallpaper' : it.kind === 'pool' ? '🏊 在家里游泳！Swim at home' : '🟫 地板 Floor')
-        : it.cat === 'decor' ? `${S.roomInfo(it.room || 'living').icon} ${S.roomInfo(it.room || 'living').zh} ${S.roomInfo(it.room || 'living').en}${roomShut ? ` · 🔒 Lv${S.UNLOCKS[it.room]}` : ''}` : '';
+        : it.cat === 'decor' ? (() => { const g = DECOR_GROUPS.find((x) => x.key === decorGroup(it)) || DECOR_GROUPS[1]; return `${g.icon} ${g.zh} ${g.en}${roomShut ? ` · 🔒 Lv${S.UNLOCKS[it.room]}` : ''}`; })() : '';
       const trying = it.cat === 'wear' && tryOn[it.slot] === id && S.get().kitten.equipped[it.slot] !== id;
       const card = html`<div class="product ${trying ? 'sel' : ''} ${owned ? 'is-owned' : ''}">
           ${owned ? `<span class="owned">${isPet ? '已领养 Adopted' : '已有 Owned'}</span>` : have ? `<span class="count">×${have}</span>` : ''}

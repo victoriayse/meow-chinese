@@ -207,4 +207,7 @@ export const CHANGES = [
     'Shop: furniture is sorted into little aisles — Living room, Bedroom, Kitchen, Bathroom, Garden, Pool, Lights, Curtains and Toys.',
     'Shop: new 🔍 search bar — type a name in Chinese or English to find anything.',
   ] },
+  { v: 100, items: [
+    'Shop: the green label under each piece of furniture now shows its aisle (Kitchen, Pool & rooftop, Lights…) instead of always saying Living room.',
+  ] },
 ];
