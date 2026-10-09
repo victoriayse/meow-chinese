@@ -23,6 +23,28 @@ export const TABS = [
   { key: 'reno', lock: 'decor', zh: '装修', en: 'Renovate', icon: '🎨', test: (it) => it.cat === 'reno', order: 26 },
   { key: 'pharmacy', zh: '药房', en: 'Pharmacy', icon: '💊', test: (it) => it.cat === 'pharmacy', order: 90 },
 ];
+// the furniture aisle's sub-aisles
+const DECOR_GROUPS = [
+  { key: 'all', icon: '✨', zh: '全部', en: 'All' },
+  { key: 'living', icon: '🛋️', zh: '客厅', en: 'Living room' },
+  { key: 'bedroom', icon: '🛏️', zh: '卧室', en: 'Bedroom' },
+  { key: 'kitchen', icon: '🍳', zh: '厨房', en: 'Kitchen' },
+  { key: 'toilet', icon: '🚽', zh: '浴室', en: 'Bathroom' },
+  { key: 'garden', icon: '🌳', zh: '花园', en: 'Garden' },
+  { key: 'pool', icon: '🏊', zh: '泳池天台', en: 'Pool & rooftop' },
+  { key: 'lights', icon: '💡', zh: '灯', en: 'Lights' },
+  { key: 'windows', icon: '🪟', zh: '窗帘', en: 'Curtains' },
+  { key: 'toys', icon: '🧶', zh: '玩具', en: 'Toys' },
+];
+const POOLSIDE = ['bbq', 'lounger', 'umbrella', 'cocktails', 'towels', 'loungesofa', 'loungesofanavy'];
+export function decorGroup(it) {
+  const id = Object.keys(ITEMS).find((k) => ITEMS[k] === it);
+  if (POOLSIDE.includes(id)) return 'pool';
+  if (it.toy) return 'toys';
+  if (it.spot === 'curtain') return 'windows';
+  if (it.garland || it.power === 'light') return 'lights';
+  return it.room || 'living';
+}
 const SLOT_NAME = Object.fromEntries(WEAR_SLOTS.map(([k, zh]) => [k, zh]));
 // tab order: everyday things first (food, toiletries), then what she has unlocked (by level), locked ones last
 export function orderTabs(tabs) {
@@ -52,9 +74,11 @@ export function shopScreen({ go, tab = 'food' }) {
           </div>
         </div>
         <div class="aisles" id="tabs"></div>
+        <div class="shop-find"><input type="search" id="q" placeholder="🔍 搜索 Search the shop…" autocomplete="off"><div class="subcats" id="subcats"></div></div>
       </div>
       <div class="shelves" id="list"></div>
     </div></section>`;
+  let subcat = 'all';
   const mini = $('#mini', n);
   mini.style.position = 'relative';
   let kv;
@@ -76,6 +100,18 @@ export function shopScreen({ go, tab = 'food' }) {
     const def = TABS.find((t) => t.key === tab) || TABS[0];
     const list = $('#list', n);
     list.innerHTML = '';
+    const query = ($('#q', n).value || '').trim().toLowerCase();
+    // furniture aisle: little sub-aisles by room (living room, bedroom, kitchen…)
+    const subs = !query && def.key === 'decor' ? DECOR_GROUPS.filter((g) => g.key === 'all' || Object.values(ITEMS).some((it) => def.test(it) && decorGroup(it) === g.key)) : [];
+    $('#subcats', n).innerHTML = subs.map((g) => `<button class="subcat ${g.key === subcat ? 'on' : ''}" data-sub="${g.key}">${g.icon} <span class="zh">${g.zh}</span> <small>${g.en}</small></button>`).join('');
+    if (query) {
+      // searching: everything in the shop she can buy (any aisle that's open), matching the Chinese or English name
+      const found = Object.entries(ITEMS).filter(([, it]) => TABS.some((t) => t.test(it) && !(t.lock && !S.unlocked(t.lock)))
+        && `${it.name} ${it.en}`.toLowerCase().includes(query));
+      if (!found.length) { list.innerHTML = `<div class="locked-shelf"><div class="big">🔍</div><p class="help">没找到“${esc(query)}”。<br>Nothing called “${esc(query)}” — try another word.</p></div>`; return; }
+      shelf(found.sort((a, b) => S.price(a[0]) - S.price(b[0])));
+      return;
+    }
     if (def.lock && !S.unlocked(def.lock)) {
       const need = S.UNLOCKS[def.lock], lv = S.level();
       list.innerHTML = `<div class="locked-shelf"><div class="big">🔒</div>
@@ -84,7 +120,11 @@ export function shopScreen({ go, tab = 'food' }) {
         <div class="bar" style="max-width:320px;margin:0 auto"><i style="width:${Math.min(100, (lv / need) * 100)}%;--c:#6cb6f2"></i></div></div>`;
       return;
     }
-    Object.entries(ITEMS).filter(([, it]) => def.test(it)).sort((a, b) => S.price(a[0]) - S.price(b[0])).forEach(([id, it]) => {
+    shelf(Object.entries(ITEMS).filter(([, it]) => def.test(it) && (def.key !== 'decor' || subcat === 'all' || decorGroup(it) === subcat)).sort((a, b) => S.price(a[0]) - S.price(b[0])));
+  }
+  function shelf(entries) {
+    const s = S.get(), list = $('#list', n);
+    entries.forEach(([id, it]) => {
       const cost = S.price(id);
       const special = it.cat === 'special';
       const isPet = it.cat === 'pet', adopted = isPet && S.petOf(id);
@@ -183,7 +223,9 @@ export function shopScreen({ go, tab = 'food' }) {
       : `📦 <span class="zh">${it.name}放进收纳箱了！</span> In your storage box — place it in your home with 🪑 Move furniture`);
     render();
   }
-  $('#tabs', n).onclick = (e) => { const t = e.target.closest('[data-tab]'); if (t) { tab = t.dataset.tab; render(); } };
+  $('#tabs', n).onclick = (e) => { const t = e.target.closest('[data-tab]'); if (t) { tab = t.dataset.tab; subcat = 'all'; $('#q', n).value = ''; render(); } };
+  $('#subcats', n).onclick = (e) => { const b = e.target.closest('[data-sub]'); if (b) { subcat = b.dataset.sub; sfx.click(); render(); } };
+  $('#q', n).addEventListener('input', () => render());
   $('#reset', n).onclick = () => { tryOn = { ...S.get().kitten.equipped }; drawKitten(); render(); };
   n._mounted = () => { drawKitten(); render(); };
   n._refresh = () => { const y = window.scrollY; render(); window.scrollTo(0, y); };   // new data arrived: redraw in place, same aisle

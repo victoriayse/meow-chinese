@@ -201,4 +201,10 @@ export const CHANGES = [
   { v: 98, items: [
     'Moving furniture: whatever you drag last now sits in front of things it overlaps (e.g. the bird cage in front of the fence).',
   ] },
+  { v: 99, items: [
+    'Lights off: now only lamps, bulbs and light garlands glow — everything else goes dark.',
+    'Fixed: photos in picture frames no longer disappear when the lights are off.',
+    'Shop: furniture is sorted into little aisles — Living room, Bedroom, Kitchen, Bathroom, Garden, Pool, Lights, Curtains and Toys.',
+    'Shop: new 🔍 search bar — type a name in Chinese or English to find anything.',
+  ] },
 ];
