@@ -1303,6 +1303,27 @@ const APRON = [
   '.oaaaaaaaao.',
   '.oooooooooo.',
 ];
+const BIKINI = [
+  '..o......o..',
+  '..oo....oo..',
+  '.oaao..oaao.',
+  'oaabaoobaaao',
+  'oaaaaooaaaao',
+  '.oooo..oooo.',
+  '............',
+  'oooooooooooo',
+  'oaabaaaabaao',
+  '.oaaaaaaaao.',
+  '..oaaaaaao..',
+  '...oooooo...',
+];
+// a bikini: two cups and a little bottom with white polka dots (the rest is her own fur)
+const bikiniPaint = (x, y, p) => (
+  y === 2 && Math.abs(x) === 3 ? p.c
+  : y >= 3 && y <= 5 && Math.abs(x) >= 1 && Math.abs(x) <= 5 ? (((x + 9) * 2 + y) % 5 === 0 ? p.b : p.a)
+  : y === 3 && x === 0 ? p.c
+  : y >= 9 && y <= 11 && Math.abs(x) <= (y === 11 ? 3 : 5) ? (((x + 9) * 2 + y) % 5 === 0 ? p.b : p.a)
+  : y === 8 && Math.abs(x) <= 6 ? p.c : null);
 const wearBody = (id, name, en, price, pal, paint, tpl = SHIRT) => [id, { cat: 'wear', slot: 'body', name, en, price, pal: { o: O, ...pal }, art: tpl, paint }];
 const wearFeet = (id, name, en, price, pal) => [id, { cat: 'wear', slot: 'feet', name, en, price, pal: { o: O, ...pal }, art: SHOE }];
 Object.assign(ITEMS, Object.fromEntries([
@@ -1341,6 +1362,9 @@ Object.assign(ITEMS, Object.fromEntries([
       : y <= 6 ? (Math.abs(x) <= 3 ? (Math.abs(x) === 3 || y === 2 ? p.b : p.a) : null)
       : y === 7 ? p.b
       : Math.abs(x) <= 5 ? ((y === 9 || y === 10) && Math.abs(x) <= 1 ? p.c : (Math.abs(x) === 5 ? p.b : p.a)) : null), APRON),
+  wearBody('bikinipink', '粉色比基尼', 'Pink bikini', 60, { a: '#ff8fb8', b: '#ffffff', c: '#e0628c' }, bikiniPaint, BIKINI),
+  wearBody('bikiniblue', '蓝色比基尼', 'Blue bikini', 60, { a: '#5fb8ff', b: '#ffffff', c: '#2f7fd0' }, bikiniPaint, BIKINI),
+  wearBody('bikinipurple', '紫色比基尼', 'Purple bikini', 60, { a: '#b98cf0', b: '#ffffff', c: '#7a4fc0' }, bikiniPaint, BIKINI),
   wearFeet('sneakers', '红色球鞋', 'Red sneakers', 40, { a: '#e8576b', b: '#ffffff', l: '#ffb3c0' }),
   wearFeet('boots', '黄色雨靴', 'Rain boots', 45, { a: '#ffd23f', b: '#a8781a', l: '#fff3a8' }),
   wearFeet('flats', '芭蕾鞋', 'Ballet flats', 50, { a: '#ff9ec4', b: '#d65f89', l: '#ffd6e6' }),
