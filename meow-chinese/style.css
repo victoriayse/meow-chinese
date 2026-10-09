@@ -1396,3 +1396,9 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .pet.in-cage.on-wheel .pflip { animation: none; transform: none; }
 .pet.in-cage.on-wheel .pf-stand { animation-duration: .18s; }
 .pet.in-cage.on-wheel .pf-walk { animation-duration: .18s; }
+/* standing fan: blades spin and the head turns side to side while it's on */
+.decor .spin-head { position: absolute; left: 0; top: 0; pointer-events: none; }
+.decor .spin-head canvas { display: block; image-rendering: pixelated; }
+.decor[data-power="fan"]:not(.off) .spin-head { animation: fanturn 5s ease-in-out infinite alternate; }
+.decor[data-power="fan"]:not(.off) .spin-ring { animation: wheelspin .35s steps(6) infinite; }
+@keyframes fanturn { 0% { transform: scaleX(1); } 50% { transform: scaleX(.72); } 100% { transform: scaleX(1); } }

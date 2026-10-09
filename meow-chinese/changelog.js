@@ -145,4 +145,10 @@ export const CHANGES = [
   { v: 85, items: [
     'Name labels in the house are smaller, so they don\'t cover the room.',
   ] },
+  { v: 86, items: [
+    'New furniture: coffee machine, toaster, countertop, wooden table, side table, dish rack, rubbish bin, laundry rack, TV console, armchair, chair, study desk, study chair, laptop and a book rack.',
+    'New standing fan — tap to switch it on: the blades spin and it turns side to side!',
+    'New clothes: a pink apron 👩‍🍳',
+    'Fixed: the kitchen Kitty bowl is back (the hamster cage food bowl had taken its place).',
+  ] },
 ];

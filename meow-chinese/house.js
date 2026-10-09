@@ -107,8 +107,23 @@ export function decorEl({ id, css, kind, photo, closed, cage }, { putAway = fals
       wrap.appendChild(img);
     }
   }
-  if (it.power) { wrap.dataset.power = it.power; if (it.power === 'tv') wrap.appendChild(Object.assign(document.createElement('i'), { className: 'tv-screen' })); }
-  wrap.appendChild(c);
+  if (it.power) {
+    wrap.dataset.power = it.power;
+    if (it.power === 'tv') {
+      const sc = Object.assign(document.createElement('i'), { className: 'tv-screen' });
+      if (it.screen) Object.assign(sc.style, { left: `${it.screen.x * 100}%`, top: `${it.screen.y * 100}%`, width: `${it.screen.w * 100}%`, height: `${it.screen.h * 100}%` });   // e.g. the laptop's screen
+      wrap.appendChild(sc);
+    }
+  }
+  if (it.spin) {
+    // a fan: the round head (blades spin, and it turns side to side) on a pole that stays still
+    const g = artGrid(it.art, it.pal), sp = it.spin, inRing = (x, y) => Math.hypot(x - sp.cx, y - sp.cy) <= sp.r;
+    drawGrid(c, g.map((row, y) => row.map((v, x) => (inRing(x, y) ? null : v))), HOUSE.decor);
+    const head = document.createElement('div'); head.className = 'spin-head';
+    const ring = document.createElement('canvas'); ring.className = 'spin-ring';
+    drawGrid(ring, g.slice(0, sp.cy * 2 + 1).map((row, y) => row.slice(0, sp.cx * 2 + 1).map((v, x) => (inRing(x, y) ? v : null))), HOUSE.decor);
+    head.appendChild(ring); wrap.append(c, head);
+  } else wrap.appendChild(c);
   if (cage) {
     wrap.classList.add('cage'); wrap.dataset.cage = it.cage; if (cage.open) wrap.classList.add('door-open');
     const W = artGrid(it.art, it.pal)[0].length, H = it.art.length, inner = it.cageW || W;
