@@ -14,7 +14,7 @@ import { Channel } from './rt.js';
 import { drawRoom, drawRoof } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal } from './ui.js';
 import { sfx } from './audio.js';
-import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote, PetLayer, roomArrowsHtml, poolShine, inPool } from './house.js';
+import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote, PetLayer, roomArrowsHtml, inPool } from './house.js';
 import * as Radio from './radio.js';
 
 const isNight = () => { const h = new Date().getHours(); return h >= 18 || h < 5; };
@@ -250,7 +250,6 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     others.attach(room, roomKey);
     fitHouse(box, unit);
     drawRoom($('#roombg', box), isNight(), roomKey, (house.styles || {})[roomKey]); drawRoof($('#roof', box));
-    poolShine(room, !!((house.styles || {})[roomKey] || {}).pool);
     room.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, room); });
     const pw = house.power || {};
     applyPower(room, { dark: !!(pw.dark || {})[roomKey], off: pw.off || {} });
@@ -276,7 +275,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     if (spot) { myEl.classList.remove('swimming'); mine.x = spot.x; mine.y = spot.y; myEl.style.left = `${spot.x}%`; myEl.style.bottom = `${spot.y}%`; myEl.style.zIndex = spot.z; return; }
     Object.assign(mine, clampPos(mine));
     myEl.style.left = `${mine.x}%`; myEl.style.bottom = `${mine.y}%`; myEl.style.zIndex = 2 + Math.round(100 - mine.y);
-    myEl.classList.toggle('swimming', !!room && room.dataset.pool === '1' && inPool(mine.x, mine.y));
+    myEl.classList.toggle('swimming', inPool(room, mine.x, mine.y));
   }
   // chat
   $('#vchat', n).appendChild(chatBar((text) => {

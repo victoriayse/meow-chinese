@@ -27,15 +27,41 @@ export function roomArrowsHtml(key, isOpen, { showLocked = true } = {}) {
     return `<button class="room-nav ${d} ${open ? '' : 'locked'}" data-room="${r.key}" aria-label="${r.en}${open ? '' : ` (Lv${UNLOCKS[r.lock]})`}">${sym[d]}</button>`;
   }).join('');
 }
-// the swimming pool on the floor (percent of the room: x across, y up from the bottom)
-export const POOL = { x0: 18, x1: 82, y0: 2, y1: 24 };
-export const inPool = (x, y) => x > POOL.x0 + 4 && x < POOL.x1 - 4 && y >= POOL.y0 && y <= POOL.y1 - 5;
-export function poolShine(roomEl, on) {
-  let el = roomEl.querySelector('.pool-shine');
-  if (!on) { if (el) el.remove(); roomEl.dataset.pool = ''; return; }
-  roomEl.dataset.pool = '1';
-  if (!el) { el = document.createElement('div'); el.className = 'pool-shine'; roomEl.appendChild(el); }
-  Object.assign(el.style, { left: `${POOL.x0 + 1}%`, width: `${POOL.x1 - POOL.x0 - 2}%`, bottom: `${POOL.y0 + 1}%`, height: `${POOL.y1 - POOL.y0 - 2}%` });
+// the swimming pool: a square pool standing on the floor that she can drag around (🪑 Move furniture)
+const POOL_W = 34, POOL_H = 30;   // art pixels
+function poolGrid() {
+  const g = [];
+  for (let y = 0; y < POOL_H; y++) {
+    const row = [];
+    for (let x = 0; x < POOL_W; x++) {
+      const edge = x < 2 || y < 2 || x >= POOL_W - 2 || y >= POOL_H - 2;
+      let c = edge ? (((x + y) % 4 === 0) ? '#c9d3de' : '#eef2f6') : (y < 4 ? '#2f97cc' : '#3fb4ea');
+      if (!edge && y >= 4 && y % 5 === 2 && ((x + Math.floor(y / 5) * 6) % 12) < 5) c = '#9fe3ff';
+      if (x === 0 || y === 0 || x === POOL_W - 1 || y === POOL_H - 1) c = '#3a2a35';
+      // a little ladder at the back corner
+      if ((x === POOL_W - 7 || x === POOL_W - 4) && y >= 1 && y <= 8) c = '#9fb3c8';
+      if (x > POOL_W - 7 && x < POOL_W - 4 && (y === 3 || y === 6)) c = '#9fb3c8';
+      row.push(c);
+    }
+    g.push(row);
+  }
+  return g;
+}
+function poolEl({ id, css }) {
+  const wrap = document.createElement('div');
+  wrap.className = 'decor flat movable pool-el'; wrap.dataset.id = id; wrap.style.cssText = css;
+  const c = document.createElement('canvas'); drawGrid(c, poolGrid(), HOUSE.decor);
+  const shine = document.createElement('div'); shine.className = 'pool-shine';
+  wrap.append(c, shine);
+  return wrap;
+}
+// is this spot (percent of the room: x across, y up from the bottom) in the water?
+export function inPool(roomEl, x, y) {
+  const el = roomEl && roomEl.querySelector('.pool-el'); if (!el) return false;
+  const W = roomEl.clientWidth || 1, H = roomEl.clientHeight || 1;
+  const x0 = (el.offsetLeft / W) * 100, x1 = ((el.offsetLeft + el.offsetWidth) / W) * 100;
+  const y0 = ((H - el.offsetTop - el.offsetHeight) / H) * 100, y1 = ((H - el.offsetTop) / H) * 100;
+  return x > x0 + 3 && x < x1 - 3 && y > y0 + 1 && y < y1 - 6;
 }
 
 // where each home item sits inside the room (percent of the room box)
@@ -81,7 +107,11 @@ export function roomLayout(s, roomKey, roomOf) {
     const cage = it.cage ? { things: (s.owned || []).filter((x) => ITEMS[x] && ITEMS[x].cat === 'petacc' && (ITEMS[x].cageFor || []).includes(it.cage) && !(s.cageOff || []).includes(x)), open: !!((s.pets || []).find((p) => p.kind === it.cage) || {}).out } : null;
     const back = it.frames && it.frames.back && (s.facing || {})[id] === 'back';   // turned round to face the back
     return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : {}) };
-  }).filter(Boolean);
+  }).filter(Boolean).concat(((s.roomStyle || {})[roomKey] || {}).pool ? [(() => {
+    // the swimming pool (from 🎨 Renovate): she can move it like furniture
+    const id = `@pool-${roomKey}`, saved = pos[id];
+    return { id, kind: 'pool', css: saved ? `left:${saved.x}%;top:${saved.y}%` : 'left:38%;bottom:2%' };
+  })()] : []);
 }
 // a window covering drawn shut: side curtains meet in the middle, blinds come all the way down
 export function closedCurtain(g) {
@@ -107,6 +137,7 @@ export function closedCurtain(g) {
 }
 // one piece of furniture as a page element
 export function decorEl({ id, css, kind, photo, closed, cage, facing }, { putAway = false } = {}) {
+  if (kind === 'pool') return poolEl({ id, css });
   const it = ITEMS[id]; if (!it) return null;
   const c = document.createElement('canvas');
   const art = cage && cage.open && it.frames && it.frames.open ? it.frames.open : facing === 'back' && it.frames && it.frames.back ? it.frames.back : it.art;
@@ -262,7 +293,7 @@ export class OtherCats {
     c.el.style.left = `${c.dx}%`; c.el.style.bottom = `${c.dy}%`;
     c.el.style.zIndex = spot ? spot.z : 2 + Math.round(100 - c.dy);
     c.el.classList.toggle('lying', !!(spot && spot.lie)); c.el.classList.toggle('seated', !!spot);
-    c.el.classList.toggle('swimming', !spot && this.roomEl.dataset.pool === '1' && inPool(c.dx, c.dy));
+    c.el.classList.toggle('swimming', !spot && inPool(this.roomEl, c.dx, c.dy));
     if (c.kv) c.kv.setPose(spot ? spot.pose : null); c.el.dataset.pose = (spot && spot.pose) || '';
     if (c.bedShown && c.bedShown !== (spot && spot.lie && c.seat)) { blanket(this.roomEl, c.bedShown, false); c.bedShown = null; }
     if (spot && spot.lie) { blanket(this.roomEl, c.seat, true); c.bedShown = c.seat; }
@@ -505,11 +536,11 @@ export class PetLayer {
     // pets in the pool swim (checked a few times a second, as they walk)
     const t = setInterval(() => {
       if (!roomEl.isConnected) { clearInterval(t); return; }
-      const pool = roomEl.dataset.pool === '1', W = roomEl.clientWidth || 1, H = roomEl.clientHeight || 1;
+      const pool = !!roomEl.querySelector('.pool-el'), W = roomEl.clientWidth || 1, H = roomEl.clientHeight || 1;
       this.els.forEach((el) => {
         if (el.classList.contains('in-cage') || !el.isConnected) return;
         const cs = getComputedStyle(el);
-        el.classList.toggle('swimming', pool && !el.classList.contains('sitting') && inPool((parseFloat(cs.left) / W) * 100, (parseFloat(cs.bottom) / H) * 100));
+        el.classList.toggle('swimming', pool && !el.classList.contains('sitting') && inPool(roomEl, (parseFloat(cs.left) / W) * 100, (parseFloat(cs.bottom) / H) * 100));
       });
     }, 250);
   }

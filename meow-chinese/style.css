@@ -1439,7 +1439,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .house-unit.bare .roof { visibility: hidden; }
 .house-unit.bare .room { border-color: #4a4c55; border-width: 4px; border-radius: 10px; }
 /* 🏊 swimming: only the head and shoulders show above the water, bobbing gently */
-.pool-shine { position: absolute; z-index: 1; pointer-events: none; border-radius: 2px; opacity: .55;
+.pool-el .pool-shine { position: absolute; left: 6%; right: 6%; top: 16%; bottom: 7%; pointer-events: none; opacity: .55;
   background: repeating-linear-gradient(115deg, rgba(255,255,255,0) 0 18px, rgba(255,255,255,.35) 18px 22px, rgba(255,255,255,0) 22px 40px); background-size: 80px 80px; animation: poolshine 3s linear infinite; }
 @keyframes poolshine { to { background-position: 80px 0; } }
 .swimming .kflip, .pet.swimming .pflip { clip-path: inset(0 0 42% 0); translate: 0 42%; animation: swimbob 1.6s ease-in-out infinite;

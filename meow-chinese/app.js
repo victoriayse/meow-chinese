@@ -14,7 +14,7 @@ let pendingNotes = null, notesDismissed = false;   // a newer version is waiting
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, compressPhoto, PetLayer, roomArrowsHtml, poolShine, inPool } from './house.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, compressPhoto, PetLayer, roomArrowsHtml, inPool } from './house.js';
 import * as Pets from './pets.js';
 import * as Radio from './radio.js';
 import * as Visit from './visit.js';
@@ -701,7 +701,7 @@ function homeScreen(params = {}) {
     const halfW = room.clientWidth ? (kflip.offsetWidth / 2 / room.clientWidth) * 100 : 10;
     cat.x = Math.max(halfW, Math.min(100 - halfW, cat.x));
     cat.y = Math.max(1, Math.min(S.roomMaxY(roomKey), cat.y));
-    ground.classList.toggle('swimming', !!S.roomStyle(roomKey).pool && inPool(cat.x, cat.y));   // in the pool: she swims
+    ground.classList.toggle('swimming', inPool(room, cat.x, cat.y));   // in the pool: she swims
     ground.style.left = cat.x + '%';
     ground.style.bottom = cat.y + '%';
     ground.style.zIndex = 2 + Math.round(100 - cat.y);
@@ -842,7 +842,8 @@ function homeScreen(params = {}) {
         box.querySelectorAll('.reno-opt[data-id]:not([data-id=""]) .art').forEach((a) => a.appendChild(spriteCanvas(a.parentElement.dataset.id, 52)));
         box.querySelectorAll('.reno-opt').forEach((b) => { b.onclick = () => {
           S.setRoomStyle(roomKey, b.dataset.kind, b.dataset.id || null); sfx.coin();
-          drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); poolShine(room, !!S.roomStyle(roomKey).pool); placeCat(); Visit.hostResendHouse(); draw();
+          drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); Visit.hostResendHouse(); draw();
+          if (b.dataset.kind === 'pool') { closeModal(); go('home', { ...currentParams, view: 'house', room: roomKey }, { replace: true }); }   // put in / take out the pool
         }; });
         $('#r-close', box).onclick = closeModal;
         const rs = $('#r-shop', box); if (rs) rs.onclick = () => { closeModal(); go('shop', { tab: 'reno' }); };
@@ -1047,7 +1048,7 @@ function homeScreen(params = {}) {
       cageMenu(d.dataset.cage);
     });
   } else { hostRoomNow = 'living'; roomPower = null; homePets = null; Radio.stop(); }
-  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); poolShine(room, !!S.roomStyle(roomKey).pool); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); if (homePets) homePets(); } };
+  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); placeCat(); if (homePets) homePets(); } };
   return n;
 }
 

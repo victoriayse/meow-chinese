@@ -173,4 +173,7 @@ export const CHANGES = [
     'New in 🎨 Renovate: a 🏊 swimming pool for any room. Walk into it to swim — friends can swim with you!',
     'New poolside things: BBQ pit, poolside chair, umbrella, cocktails and a stack of towels.',
   ] },
+  { v: 91, items: [
+    'The swimming pool is now a smaller square — and you can move it! Tap 🪑 Move furniture and drag the pool anywhere.',
+  ] },
 ];

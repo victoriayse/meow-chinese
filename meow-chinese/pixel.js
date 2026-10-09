@@ -3610,16 +3610,6 @@ export function drawRoom(canvas, night = false, kind = 'living', style = null) {
     R(mx, wy0, 1, wy1 - wy0, '#ffffff'); R(wx0, my, wx1 - wx0, 1, '#ffffff');
     R(wx0 - 3, wy1 + 1, wx1 - wx0 + 6, 2, '#e9e1d4');
     }
-    // a swimming pool on the floor (same place as POOL in house.js)
-    if (style && style.pool && ITEMS[style.pool]) {
-      const px0 = Math.round(W * 0.18), px1 = Math.round(W * 0.82), py0 = Math.round(H * (1 - 0.24)), py1 = Math.round(H * (1 - 0.02));
-      R(px0 - 2, py0 - 2, px1 - px0 + 4, py1 - py0 + 4, '#eef2f6');
-      for (let x = px0 - 2; x < px1 + 2; x += 4) { R(x, py0 - 2, 1, 2, '#c9d3de'); R(x, py1, 1, 2, '#c9d3de'); }
-      R(px0, py0, px1 - px0, py1 - py0, '#3fb4ea');
-      R(px0, py0, px1 - px0, 2, '#2f97cc');
-      for (let y = py0 + 4; y < py1 - 1; y += 4) for (let x = px0 + ((y / 4) % 2) * 6 + 2; x < px1 - 6; x += 12) R(x, y, 5, 1, '#9fe3ff');
-      R(px1 - 6, py0 - 4, 1, 7, '#c9d3de'); R(px1 - 3, py0 - 4, 1, 7, '#c9d3de'); R(px1 - 6, py0 - 1, 4, 1, '#c9d3de'); R(px1 - 6, py0 + 2, 4, 1, '#c9d3de');
-    }
   });
 }
 export function drawRoof(canvas) {
