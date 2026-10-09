@@ -176,4 +176,10 @@ export const CHANGES = [
   { v: 91, items: [
     'The swimming pool is now a smaller square — and you can move it! Tap 🪑 Move furniture and drag the pool anywhere.',
   ] },
+  { v: 92, items: [
+    'Your puppy got a makeover: a round fluffy white face, big floppy ears, and a red strawberry outfit 🍓',
+    'Cocktails are now in wine glasses, and the cocktails and towels are smaller. The pool is a little bigger.',
+    'New ✨ light garlands (warm fairy lights, rainbow and stars) — tap to switch on; they twinkle and glow in the dark.',
+    'New lounge sofas (cream or navy) — three cats can sit on one!',
+  ] },
 ];

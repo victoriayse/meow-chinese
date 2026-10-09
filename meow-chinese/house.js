@@ -28,7 +28,7 @@ export function roomArrowsHtml(key, isOpen, { showLocked = true } = {}) {
   }).join('');
 }
 // the swimming pool: a square pool standing on the floor that she can drag around (🪑 Move furniture)
-const POOL_W = 34, POOL_H = 30;   // art pixels
+const POOL_W = 40, POOL_H = 35;   // art pixels
 function poolGrid() {
   const g = [];
   for (let y = 0; y < POOL_H; y++) {
@@ -142,7 +142,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing }, { putAwa
   const c = document.createElement('canvas');
   const art = cage && cage.open && it.frames && it.frames.open ? it.frames.open : facing === 'back' && it.frames && it.frames.back ? it.frames.back : it.art;
   const g = artGrid(art, it.pal);
-  drawGrid(c, kind === 'curtain' && closed ? closedCurtain(g) : g, HOUSE.decor);
+  drawGrid(c, kind === 'curtain' && closed ? closedCurtain(g) : g, HOUSE.decor * (it.size || 1));   // some small things are drawn smaller
   const wrap = document.createElement('div');
   wrap.className = 'decor';
   wrap.dataset.id = id;
@@ -210,6 +210,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing }, { putAwa
   }
   if (facing === 'back') wrap.dataset.facing = 'back';
   if (it.radio) wrap.classList.add('radio');
+  if (it.garland) wrap.classList.add('garland');
   if (putAway && it.frames && it.frames.back) {      // 🔄 turn it round (shown while moving furniture)
     const tb = document.createElement('button'); tb.className = 'turn-btn'; tb.type = 'button'; tb.title = 'Turn around'; tb.textContent = '🔄'; wrap.appendChild(tb);
   }

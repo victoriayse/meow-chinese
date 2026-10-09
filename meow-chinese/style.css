@@ -1459,3 +1459,8 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 @keyframes parrotA { 0%, 80% { visibility: visible; } 81%, 99% { visibility: hidden; } }
 @keyframes parrotB { 0%, 80% { visibility: hidden; } 81%, 99% { visibility: visible; } }
 .house-unit.outdoor .room[data-room="rooftop"] { border-color: #a84c2c; }
+/* ✨ light garlands twinkle while they're on, and glow when the room is dark */
+.decor.garland:not(.off) canvas { animation: twinkle 1.8s ease-in-out infinite; }
+@keyframes twinkle { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.25) drop-shadow(0 0 4px rgba(255, 230, 140, .9)); } }
+.room.lights-off .decor.garland:not(.off) canvas { filter: drop-shadow(0 0 6px rgba(255, 220, 120, .95)); animation: twinkledark 1.8s ease-in-out infinite; }
+@keyframes twinkledark { 0%, 100% { filter: drop-shadow(0 0 4px rgba(255, 220, 120, .7)); } 50% { filter: drop-shadow(0 0 9px rgba(255, 230, 140, 1)) brightness(1.2); } }
