@@ -142,4 +142,7 @@ export const CHANGES = [
     'Chat history: long names no longer squash the message into a thin column.',
     'Names like "MinMin的MinMin的Kitty" are now just "MinMin的Kitty".',
   ] },
+  { v: 85, items: [
+    'Name labels in the house are smaller, so they don\'t cover the room.',
+  ] },
 ];

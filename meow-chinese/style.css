@@ -1233,7 +1233,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .house .kitten-wrap .bubble.chat-bubble { top: auto; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); zoom: var(--inv, 1);
   font-size: 13px; line-height: 1.35; padding: 4px 9px; border-width: 2px; max-width: 160px; width: max-content; white-space: normal; text-align: center; overflow-wrap: anywhere; }
 .house .kitten-wrap .bubble.chat-bubble::after { left: calc(50% - 6px + var(--tailx, 0px)); width: 10px; height: 10px; bottom: -8px; border-width: 2px; }
-.house .nametag { zoom: max(0.8, calc(var(--inv, 1) * 0.5)) !important; }
+.house .nametag { zoom: max(0.56, calc(var(--inv, 1) * 0.35)) !important; }   /* 30% smaller than before */
 /* ---------- lights & TV ---------- */
 .light-switch { position: absolute; top: 6px; right: 6px; z-index: 300; width: 40px; height: 40px; padding: 0; font-size: 20px; line-height: 1;
   background: #fff8c2; border: 3px solid var(--ink); border-radius: 8px; box-shadow: 0 3px 0 rgba(43,33,64,.4); cursor: pointer; transform: scale(var(--inv, 1)); transform-origin: top right; }
@@ -1375,7 +1375,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .pet.sitting:has(.pf-sit) .pf-stand { visibility: hidden; }
 .pet.sitting .pf-sit { visibility: visible; }
 .pet .pet-tag { font-size: 13px; padding: 0 6px; margin-top: 2px; }
-.house .pet .pet-tag { zoom: max(0.8, calc(var(--inv, 1) * 0.5)); }
+.house .pet .pet-tag { zoom: max(0.56, calc(var(--inv, 1) * 0.35)) !important; }
 .pet.in-cage { position: absolute; left: 6%; transform: none; animation: cagerun 9s ease-in-out infinite; z-index: 2; filter: none; }
 .pet.in-cage .pet-tag { display: none; }
 .pet.in-cage .pflip { animation: cageflip 9s steps(1) infinite; }
