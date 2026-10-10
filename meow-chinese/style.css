@@ -1663,3 +1663,15 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .stage.in-house .house-tools { gap: 6px; }
   .stage.in-house .house-tools { top: 58px; }
 }
+/* computers with a mouse or trackpad: no on-screen arrows (the arrow keys walk the kitten) */
+@media (min-width: 901px) and (any-pointer: fine) and (any-hover: hover) {
+  .dpad, .visit-home .dpad, .house-log-wrap .dpad, .visit-log .dpad { display: none !important; }
+}
+/* wide computer windows: the buttons at the top of the right-hand column, small */
+@media (min-width: 901px) and (min-aspect-ratio: 7/4) {
+  .stage.in-house .stage-tray, .stage.in-house .house-tools { gap: 5px; }
+  .stage.in-house .house-tools .tool-btn, .stage.in-house .house-tools .light-switch, .stage.in-house .stage-tray .tray-btn { width: 32px; height: 32px; font-size: 16px; border-radius: 8px; }
+  .stage.in-house .stage-tray .tray-btn svg, .stage.in-house .stage-tray .tray-btn canvas { max-width: 22px; max-height: 22px; }
+  .stage.in-house .house-tools { top: 44px; }
+  .house-log-wrap { top: 82px; }
+}

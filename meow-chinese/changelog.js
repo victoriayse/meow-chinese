@@ -312,4 +312,8 @@ export const CHANGES = [
   { v: 124, items: [
     'On wide computer screens, your house is bigger: it fills the full height, with the buttons, chat history and chat bar in a column on its right.',
   ] },
+  { v: 125, items: [
+    'On a computer with a mouse or trackpad, the on-screen arrow buttons are hidden (use the keyboard arrow keys to walk).',
+    'On wide computer screens, the buttons at the top of the right-hand column are smaller.',
+  ] },
 ];
