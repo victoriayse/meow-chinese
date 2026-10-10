@@ -255,4 +255,9 @@ export const CHANGES = [
     'Tap the slide: your cat climbs up and slides down. Tap the swing or see-saw to ride it.',
     'Tap the merry-go-round to make it spin (tap again to stop). Your cat can ride it too.',
   ] },
+  { v: 112, items: [
+    'New in the shop: hanging pots & pans, air fryer, trolley (kitchen), boxes, baby stroller, stool, game console, backpack, rose in a vase, soap bottles.',
+    'New snacks & small things: water bottle, tea set, cookie jar, iced latte.',
+    'Your cat can sit on the boxes and the stool, and ride in the baby stroller.',
+  ] },
 ];
