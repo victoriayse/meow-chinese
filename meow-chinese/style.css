@@ -1705,3 +1705,9 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .home.house-view .side { display: none; }
   .home.house-view .stage { width: 100%; max-width: calc((100dvh - var(--top-h, 60px)) * 1.11 + 440px); margin: 0 auto; }
 }
+/* the collection counter: its waiter (behind it) and the "Collection" plaque */
+.decor[data-id^="collectcounter"] > canvas { position: relative; z-index: 1; }
+.decor .tux-cat { position: absolute; left: 50%; bottom: 70%; transform: translateX(-50%); z-index: 0; pointer-events: none; }
+.decor .tux-cat .kitten-canvas { display: block; }
+.decor .pickup.coming { visibility: hidden; }
+.decor .screen-label.plaque { z-index: 2; color: #ffd23f; font-size: 8px; letter-spacing: .2px; animation: none; white-space: nowrap; }

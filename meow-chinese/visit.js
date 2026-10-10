@@ -273,7 +273,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
   function render() {
     const info = S.roomInfo(roomKey), open = house.open || ['living'];
     box.innerHTML = `<div class="house-unit ${info.outdoor ? 'outdoor' : ''} ${info.bare || info.noRoof ? 'bare' : ''}" id="hunit"><canvas class="roof" id="roof"></canvas>
-        <div class="room-name">${info.icon} <span class="zh">${info.zh}</span> ${info.en}</div>
+        <div class="room-name">${info.icon} <span class="zh">${info.zh}</span> ${info.en}${P ? `<button class="room-light ${((house.power || {}).dark || {})[roomKey] ? 'off' : ''}" id="v-light" title="Lights" aria-label="Lights">💡</button>` : ''}</div>
         <div class="room" id="room" data-room="${roomKey}"><canvas class="room-bg" id="roombg"></canvas></div>
       </div>${roomArrowsHtml(roomKey, (k) => open.includes(k), { showLocked: false })}`;
     const unit = $('#hunit', box), room = $('#room', box);
@@ -327,6 +327,16 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
     room.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, room); }); stackDecor(room);
     const pw = house.power || {};
     applyPower(room, { dark: !!(pw.dark || {})[roomKey], off: pw.off || {} });
+    // 💡 in a public place: the owner switches the room's lights for everyone; anyone else just for their own screen
+    const vl = $('#v-light', box);
+    if (vl) vl.onclick = () => {
+      house.power = house.power || {}; house.power.dark = { ...(house.power.dark || {}) };
+      const dark = !house.power.dark[roomKey];
+      if (dark) house.power.dark[roomKey] = true; else delete house.power.dark[roomKey];
+      if (Places.isAdmin() && S.roomDark(roomKey) !== dark) S.toggleRoomLight(roomKey);
+      sfx.click(); vl.classList.toggle('off', dark);
+      applyPower(room, { dark, off: house.power.off || {} });
+    };
     place();
     // the friend's pets wandering around
     petLayer = new PetLayer(room, roomKey, { onClick: (kind) => { const p = (house.pets || []).find((x) => x.kind === kind); if (p) { sfx.coin(); toast(`🤍 <span class="zh">${esc(p.name)}</span>`, { ms: 1500 }); } } });

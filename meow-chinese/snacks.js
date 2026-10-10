@@ -5,6 +5,7 @@ import { SNACKS, SNACK_ORDER, drawGrid, artGrid } from './pixel.js';
 import { rest } from './cloud.js';
 import { $, html, esc, coinI, toast, openModal, closeModal, hydrateIcons } from './ui.js';
 import { sfx } from './audio.js';
+import { say } from './house.js';
 
 const rpc = (name, body = {}) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
 export const priceOf = (kind, prices = {}) => { const v = (prices || {})[kind]; return v != null && v !== '' && Number.isFinite(+v) ? Math.max(0, Math.round(+v)) : SNACKS[kind].price; };
@@ -99,21 +100,46 @@ export function openKiosk({ prices = {}, admin = false, onPaid = () => {}, onPri
 // ---------- the collection counter: two orders at a time, anyone can pick them up ----------
 export async function counterNow() { try { return (await rpc('cinema_counter')) || { ready: [] }; } catch { return null; } }
 export async function pickUp(id) { try { return await rpc('pick_cinema_order', { p_id: id }); } catch { return null; } }
-// draw what's ready onto the counter in this room
+// draw what's ready onto the counter in this room.
+// The tuxedo cat behind it brings each new order out (holds it up, then puts it down), and says thank you when one is picked up.
+const seenOrders = new Set();
+let lastShown = new Set(), serving = Promise.resolve();
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 export function showCounter(roomEl, data, onPick) {
   const d = roomEl && roomEl.querySelector('.decor[data-id^="collectcounter"]'); if (!d) return;
+  const tux = d.tux;
+  const ready = ((data && data.ready) || []).slice(0, 2).filter((o) => SNACKS[o.item]);
+  const ids = new Set(ready.map((o) => o.id));
+  // someone picked one up: thank you!
+  if ([...lastShown].some((id) => !ids.has(id)) && tux) { say(tux.wrap, '谢谢！Thank you!'); tux.kv.jump(); }
+  lastShown = ids;
   d.querySelectorAll('.pickup').forEach((x) => x.remove());
   const slots = [0.28, 0.72];
-  ((data && data.ready) || []).slice(0, 2).forEach((o, i) => {
-    if (!SNACKS[o.item]) return;
+  ready.forEach((o, i) => {
     const b = document.createElement('button'); b.type = 'button'; b.className = 'pickup'; b.title = `${SNACKS[o.item].zh} ${SNACKS[o.item].en}`;
     b.style.left = `${slots[i] * 100}%`;
     b.appendChild(snackCanvas(o.item, 4));
     b.addEventListener('pointerdown', (e) => e.stopPropagation());
     b.onclick = (e) => { e.stopPropagation(); onPick(o, b); };
     d.appendChild(b);
+    if (!seenOrders.has(o.id)) {
+      seenOrders.add(o.id);
+      if (tux) {
+        // a new order: the waiter brings it out first
+        b.classList.add('coming');
+        serving = serving.then(async () => {
+          if (!b.isConnected) return;
+          tux.kv.setHeld(o.item); tux.kv.jump();
+          await wait(900);
+          tux.kv.setHeld(null);
+          b.classList.remove('coming');
+          if (Math.random() < 0.6) say(tux.wrap, ['请慢用！Enjoy!', '好了！Here you go!', '来啦！Ready!'][Math.floor(Math.random() * 3)]);
+          await wait(250);
+        });
+      }
+    }
   });
-  const waiting = Math.max(0, ((data && data.waiting) || 0) - ((data && data.ready) || []).length);
+  const waiting = Math.max(0, ((data && data.waiting) || 0) - ready.length);
   let w = d.querySelector('.counter-wait');
   if (waiting) { if (!w) { w = document.createElement('i'); w.className = 'counter-wait'; d.appendChild(w); } w.textContent = `+${waiting}`; } else if (w) w.remove();
 }

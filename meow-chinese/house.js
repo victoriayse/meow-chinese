@@ -185,11 +185,21 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
       wrap.appendChild(img);
     }
   }
-  if (it.label && it.screen) {
-    // words on a screen (the kiosk's "Order Here")
-    const lb = document.createElement('div'); lb.className = 'screen-label'; lb.textContent = it.label;
-    Object.assign(lb.style, { left: `${it.screen.x * 100}%`, top: `${it.screen.y * 100}%`, width: `${it.screen.w * 100}%`, height: `${it.screen.h * 100}%` });
+  if (it.label && (it.labelBox || it.screen)) {
+    // words on a screen (the kiosk's "Order Here") or a plaque (the collection counter's "Collection")
+    const box = it.labelBox || it.screen;
+    const lb = document.createElement('div'); lb.className = `screen-label ${it.labelStyle || ''}`; lb.textContent = it.label;
+    Object.assign(lb.style, { left: `${box.x * 100}%`, top: `${box.y * 100}%`, width: `${box.w * 100}%`, height: `${box.h * 100}%` });
     wrap.appendChild(lb);
+  }
+  if (it.counter) {
+    // the waiter: a white cat in a tuxedo who always stands behind the collection counter
+    const tux = document.createElement('div'); tux.className = 'tux-cat';
+    const tw = document.createElement('div'); tw.className = 'kitten-wrap';
+    const tkv = new KittenView({ scale: HOUSE.kitten, fur: 'white', equipped: { body: 'tuxedo', neck: 'bowtie' } });
+    tkv.setMood('happy'); tkv.canvas.classList.remove('bob');
+    tw.appendChild(tkv.canvas); tux.appendChild(tw); wrap.insertBefore(tux, wrap.firstChild);
+    wrap.tux = { el: tux, wrap: tw, kv: tkv };
   }
   if (it.board) {
     // a menu board: chalk writing she can change (tap it)

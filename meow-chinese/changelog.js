@@ -328,4 +328,9 @@ export const CHANGES = [
   { v: 128, items: [
     'The cinema owner can now switch each projector screen\'s film on or off with ▶️ / ⏸️ while walking around the cinema (not only from 🛠 布置). A switched-off screen shows its ▶️ button to the owner.',
   ] },
+  { v: 129, items: [
+    '🤵 A white waiter cat in a tuxedo now stands behind the collection counter. When an order is ready he brings it out and puts it on the counter — and says thank you when it\'s picked up.',
+    'The collection counter\'s plate now says "Collection".',
+    '💡 The cinema rooms have a light switch beside the room name too (the owner switches the lights for everyone; visitors only on their own screen).',
+  ] },
 ];

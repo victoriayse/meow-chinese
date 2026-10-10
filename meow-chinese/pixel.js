@@ -6505,8 +6505,12 @@ export const SNACKS = {
     ] },
 };
 export const SNACK_ORDER = ['popsweet', 'popsalty', 'popmix', 'coke', 'sprite', 'coffee', 'tea'];
+// the tuxedo the cinema's waiter cat wears (not sold in the shop)
+Object.assign(ITEMS, Object.fromEntries([wearBody('tuxedo', '燕尾服', 'Tuxedo', 0, { a: '#2b2140', b: '#ffffff', c: '#4a4070' },
+  (x, y, p) => (Math.abs(x) <= 1 && y <= 6 ? (x === 0 && (y === 2 || y === 4) ? p.a : p.b) : Math.abs(x) === 2 && y <= 5 ? p.c : p.a))]));
+ITEMS.tuxedo.special = true;
 Object.assign(ITEMS, {
-  collectcounter: { cat: 'decor', room: 'lobby', name: '取餐柜台', en: 'Collection counter', price: 120, spot: 'back-mid-right', group: 'cinema', one: true, counter: { slots: [0.28, 0.72], top: 2 / 26 },
+  collectcounter: { cat: 'decor', room: 'lobby', name: '取餐柜台', en: 'Collection counter', price: 120, spot: 'back-mid-right', group: 'cinema', one: true, counter: { slots: [0.28, 0.72], top: 2 / 26 }, label: 'Collection', labelBox: { x: 15 / 44, y: 16 / 26, w: 14 / 44, h: 5 / 26 }, labelStyle: 'plaque',
     pal: { o: O, t: '#2b2140', l: '#5b5070', r: '#b8233a', d: '#8e1b2e', y: '#ffd23f', g: '#e0a524', k: '#3a1420', p: '#e0a524', q: '#2b2140' },
     art: [
       '............................................',
@@ -6527,7 +6531,7 @@ Object.assign(ITEMS, {
       'odrrrrrrrdrrrrpppppppppppppppprrrdrrrrrrrdro',
       'odrrrrrrrdrrrrpqqqqqqqqqqqqqqprrrdrrrrrrrdro',
       'odrrrrrrrdrrrrpqqqqqqqqqqqqqqprrrdrrrrrrrdro',
-      'odrrrrrrrdrrrrpqqyyqyyqyyqyyqprrrdrrrrrrrdro',
+      'odrrrrrrrdrrrrpqqqqqqqqqqqqqqprrrdrrrrrrrdro',
       'odrrrrrrrdrrrrpqqqqqqqqqqqqqqprrrdrrrrrrrdro',
       'odrrrrrrrdrrrrpqqqqqqqqqqqqqqprrrdrrrrrrrdro',
       'odrrrrrrrdrrrrpppppppppppppppprrrdrrrrrrrdro',
