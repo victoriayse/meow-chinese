@@ -293,4 +293,8 @@ export const CHANGES = [
     'The cinema owner\'s ▶️ / ⏸️ button turns the film on or off for everyone. Visitors\' button only stops it on their own phone.',
     'The film buttons are bigger on phones.',
   ] },
+  { v: 120, items: [
+    'The film buttons (▶️ ⏸️ 🔇) are half the size.',
+    'Phone turned sideways: your home, friends\' homes and the cinema fill the screen, with the chat, arrows and buttons on the right — like on a computer.',
+  ] },
 ];

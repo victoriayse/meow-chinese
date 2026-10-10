@@ -1569,3 +1569,36 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .decor.has-film.vid-paused:not(.off) .screen-video { filter: brightness(.55); }
 /* film buttons stay big enough to tap on a phone (the house is drawn smaller there) */
 .decor .vid-sound, .decor .vid-pick, .decor .vid-play { width: calc(36px * var(--inv, 1)); height: calc(36px * var(--inv, 1)); font-size: calc(18px * var(--inv, 1)); border-width: calc(3px * var(--inv, 1)); }
+/* film buttons: half the size */
+.decor .vid-sound, .decor .vid-pick, .decor .vid-play { width: calc(18px * var(--inv, 1)); height: calc(18px * var(--inv, 1)); font-size: calc(9px * var(--inv, 1)); border-width: calc(2px * var(--inv, 1)); }
+
+/* ---------- phones turned sideways: the house fills the screen's height, chat and arrows on the right (like a computer) ---------- */
+@media (orientation: landscape) and (max-height: 520px) {
+  .home.house-view { grid-template-columns: 1fr; grid-template-rows: 1fr; height: 100%; }
+  .home.house-view .side { display: none; }
+  .home.house-view .stage { height: 100%; }
+  .stage.in-house .house { left: max(4px, env(safe-area-inset-left)); right: 300px; top: 4px; bottom: 4px; }
+  .stage.in-house .stage-tray { left: auto; right: max(8px, env(safe-area-inset-right)); top: 6px; width: 286px; justify-content: flex-start; flex-wrap: nowrap; }
+  .stage.in-house .house-tools { right: max(8px, env(safe-area-inset-right)); top: 50px; width: 286px; justify-content: flex-start; }
+  .stage.in-house .house-tools .tool-btn, .stage.in-house .house-tools .light-switch, .stage.in-house .stage-tray .tray-btn { width: 38px; height: 38px; font-size: 19px; }
+  .house-log-wrap { left: auto; right: max(8px, env(safe-area-inset-right)); width: 286px; top: 96px; bottom: 52px; height: auto; }
+  .house-log-wrap .chat-log { max-width: none; margin: 0; }
+  .house-chat-wrap { left: auto; right: max(8px, env(safe-area-inset-right)); width: 286px; bottom: 6px; }
+  .house-chat-wrap .house-chat { max-width: none; }
+  .house-chat input { font-size: 15px; padding: 6px 10px; }
+  .house-log-wrap .dpad, .visit-log .dpad { grid-template: repeat(2, 32px) / repeat(3, 32px); }
+  .house-log-wrap .dpad button, .visit-log .dpad button { width: 32px; height: 32px; font-size: 13px; }
+
+  .visit-home { grid-template-columns: minmax(0, 1fr) 290px; grid-template-rows: auto minmax(0, 1fr) auto; column-gap: 8px; }
+  .visit-home .visit-top { grid-column: 2; grid-row: 1; padding: 4px max(8px, env(safe-area-inset-right)) 0 0; gap: 6px; flex-wrap: wrap; }
+  .visit-home .visit-title { flex-direction: row; align-items: baseline; gap: 6px; font-size: 14px; }
+  .visit-home .visit-top .btn { padding: 4px 10px; min-height: 0; }
+  .visit-home .visit-title .zh { font-size: 16px; }
+  .visit-home .stage.in-house { grid-column: 1; grid-row: 1 / 4; height: auto; aspect-ratio: auto; max-height: none; }
+  .visit-home .stage.in-house .house { top: 2px; bottom: 4px; left: max(4px, env(safe-area-inset-left)); right: 0; }
+  .visit-home .visit-log { grid-column: 2; grid-row: 2; flex-direction: column; margin: 4px max(8px, env(safe-area-inset-right)) 0 0; max-width: none; width: auto; }
+  .visit-home .visit-log .chat-log { max-height: none; flex: 1; min-height: 0; }
+  .visit-home .visit-log .dpad { align-self: center; }
+  .visit-home .visit-chat { grid-column: 2; grid-row: 3; padding: 6px max(8px, env(safe-area-inset-right)) 6px 0; }
+  .visit-home .visit-chat .house-chat { max-width: none; }
+}
