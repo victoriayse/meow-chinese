@@ -1505,3 +1505,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .tool-btn, .house-tools .light-switch { width: 34px; height: 34px; font-size: 17px; border-width: 2px; border-radius: 8px; }
   .stage.in-house .house { top: 52px; }
 }
+/* the studio barre: a wooden rail on brackets along the wall, in front of mirrors on the wall */
+.studio-barre { position: absolute; left: 0; right: 0; top: 39.5%; height: 9px; z-index: 68; pointer-events: none; background: linear-gradient(#c49a62 0 55%, #8a6a42 55% 100%); box-shadow: 0 2px 0 rgba(0,0,0,.12); }
+.studio-barre i { position: absolute; top: 100%; width: 5px; height: 20px; background: #9aa0aa; }
+.studio-barre i:nth-child(1) { left: 6%; } .studio-barre i:nth-child(2) { left: 31%; } .studio-barre i:nth-child(3) { left: 56%; } .studio-barre i:nth-child(4) { left: 81%; }

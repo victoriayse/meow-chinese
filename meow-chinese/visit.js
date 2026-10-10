@@ -15,7 +15,7 @@ import { Channel } from './rt.js';
 import { drawRoom, drawRoof } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal } from './ui.js';
 import { sfx } from './audio.js';
-import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote, PetLayer, roomArrowsHtml, inPool, stackDecor } from './house.js';
+import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre } from './house.js';
 import * as Radio from './radio.js';
 
 const isNight = () => { const h = new Date().getHours(); return h >= 18 || h < 5; };
@@ -259,7 +259,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     room.appendChild(myEl);
     others.attach(room, roomKey);
     fitHouse(box, unit);
-    drawRoom($('#roombg', box), isNight(), roomKey, (house.styles || {})[roomKey]); drawRoof($('#roof', box));
+    drawRoom($('#roombg', box), isNight(), roomKey, (house.styles || {})[roomKey]); drawRoof($('#roof', box)); studioBarre(room, roomKey === 'basement');
     room.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, room); }); stackDecor(room);
     const pw = house.power || {};
     applyPower(room, { dark: !!(pw.dark || {})[roomKey], off: pw.off || {} });

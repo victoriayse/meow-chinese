@@ -88,6 +88,12 @@ export const DECOR_POS = {
   hang2: 'left:62%;top:0',
 };
 
+// the studio's wooden barre runs along the wall IN FRONT of wall things like the mirror
+export function studioBarre(roomEl, on) {
+  let el = roomEl.querySelector('.studio-barre');
+  if (!on) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('div'); el.className = 'studio-barre'; el.innerHTML = '<i></i><i></i><i></i><i></i>'; roomEl.appendChild(el); }
+}
 // the furniture standing in one room: [{ id, css, kind: 'curtain' | 'flat' | 'stand' }]
 export function roomLayout(s, roomKey, roomOf) {
   const pos = s.decorPos || {};

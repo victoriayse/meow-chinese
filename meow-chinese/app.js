@@ -14,7 +14,7 @@ let pendingNotes = null, notesDismissed = false;   // a newer version is waiting
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, compressPhoto, PetLayer, roomArrowsHtml, inPool, stackDecor } from './house.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, compressPhoto, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre } from './house.js';
 import * as Pets from './pets.js';
 import * as Radio from './radio.js';
 import * as Visit from './visit.js';
@@ -1067,7 +1067,7 @@ function homeScreen(params = {}) {
       cageMenu(d.dataset.cage);
     });
   } else { hostRoomNow = 'living'; roomPower = null; homePets = null; Radio.stop(); }
-  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); drawRoof($('#roof', n)); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); stackDecor(room); placeCat(); if (homePets) homePets(); } };
+  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); drawRoof($('#roof', n)); studioBarre(room, roomKey === 'basement'); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); stackDecor(room); placeCat(); if (homePets) homePets(); } };
   return n;
 }
 

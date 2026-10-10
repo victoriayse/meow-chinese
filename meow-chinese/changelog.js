@@ -229,4 +229,7 @@ export const CHANGES = [
   { v: 104, items: [
     'Fixed: the game no longer keeps asking you to update right after you updated.',
   ] },
+  { v: 105, items: [
+    'Studio: the tall mirror now fits the wall exactly, and the wooden barre runs in front of it.',
+  ] },
 ];
