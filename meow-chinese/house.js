@@ -86,6 +86,8 @@ export const DECOR_POS = {
   mirror: 'left:3%;top:1%',
   hang: 'left:30%;top:0',
   hang2: 'left:62%;top:0',
+  cinemascreen: 'left:21%;top:0',
+  projector: 'left:6%;top:0',
 };
 
 // the studio's wooden barre runs along the wall IN FRONT of wall things like the mirror

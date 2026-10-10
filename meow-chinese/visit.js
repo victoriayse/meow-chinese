@@ -17,6 +17,7 @@ import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal } 
 import { sfx } from './audio.js';
 import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
 import * as Radio from './radio.js';
+import * as Places from './places.js';
 
 const isNight = () => { const h = new Date().getHours(); return h >= 18 || h < 5; };
 export function myLook() {
@@ -141,11 +142,13 @@ export const visitorCount = () => visitors.ids().length;
 // =====================================================================
 // VISITOR: walk around a friend's house
 // =====================================================================
-export function visitScreen({ go, id: hostId, name = '' }) {
-  const me = (Auth.user() || {}).id;
+export function visitScreen({ go, id: hostId, name = '', place: placeKey = null }) {
+  // place: a public place on the map (the cinema) — no host, everyone signed in can be there
+  const me = (Auth.user() || {}).id, P = placeKey && Places.PLACES[placeKey];
   const n = html`<section class="visit-home">
-      <div class="visit-top"><button class="btn white small" id="leave">← <span class="zh">回家</span> Leave</button><button class="btn white small visit-phone" id="vphone" title="Meow phone">📱</button>
-        <div class="visit-title"><span class="zh">🏠 ${esc(name || '朋友')}的家</span><small id="vt-sub">敲门中… Knocking…</small></div></div>
+      <div class="visit-top"><button class="btn white small" id="leave">← ${P ? '<span class="zh">地图</span> Map' : '<span class="zh">回家</span> Leave'}</button><button class="btn white small visit-phone" id="vphone" title="Meow phone">📱</button>
+        ${P && Places.isAdmin() ? '<button class="btn yellow small" id="vdeco" title="Decorate">🛠 <span class="zh">布置</span></button>' : ''}
+        <div class="visit-title">${P ? `<span class="zh">${P.icon} ${P.zh}</span> ${P.en}<small id="vt-sub">加载中… Loading…</small>` : `<span class="zh">🏠 ${esc(name || '朋友')}的家</span><small id="vt-sub">敲门中… Knocking…</small>`}</div></div>
       <div class="stage in-house"><div class="house" id="house"></div></div>
       <div class="visit-log" id="vlog"></div>
       <div class="visit-chat" id="vchat"></div>
@@ -155,10 +158,11 @@ export function visitScreen({ go, id: hostId, name = '' }) {
   let house = null, host = null, roomKey = 'living', mine = { x: 30, y: 6, room: 'living', left: false }, lockedOut = false;
   let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null;
 
-  const ch = new Channel(`house:${hostId}`, {
+  const ch = new Channel(P ? `place:${placeKey}` : `house:${hostId}`, {
     presenceKey: me,
     onStatus: (st, info) => {
       if (st === 'joined') { ch.track({ id: me }); knock(); }
+
       if (st === 'denied') { sub.textContent = '不能进去 · Can\'t visit this house'; }
     },
     onBroadcast: (ev, p) => {
@@ -169,7 +173,9 @@ export function visitScreen({ go, id: hostId, name = '' }) {
         return;
       }
       if (ev === 'house' && (!p.to || p.to === me)) {
+        if (P && !gotHouse) return;    // still loading the place
         house = p.house || { rooms: {}, open: ['living'] };
+        if (P) { render(); return; }
         if (p.host) { host = p.host; others.upsert(host.id, { look: host.look, ...clampPos(host) }); }
         hostHere = true;
         if (!gotHouse) { gotHouse = true; roomKey = (p.host && p.host.room) || 'living'; mine.room = roomKey; sfx.coin(); }
@@ -227,13 +233,18 @@ export function visitScreen({ go, id: hostId, name = '' }) {
   const sendMine = () => ch.send('pos', { id: me, look: myLook(), ...mine });
   const sendMove = throttle((p) => ch.send('pos', p));
   ch.open();
+  // a public place: its furniture is saved online (people there say hello over the channel)
+  if (P) Places.loadPlace(placeKey).then((h) => {
+    if (gotHouse || !n.isConnected) return;
+    house = h; gotHouse = true; roomKey = P.start; mine.room = roomKey; sub.textContent = ''; sfx.coin(); render(); sendMine();
+  });
   // keep knocking until the friend answers; if nobody is home, say so
   let tries = 0;
   const kt = setInterval(() => {
     if (!n.isConnected) return clearInterval(kt);
     if (gotHouse || lockedOut) return clearInterval(kt);
     tries++; knock();
-    if (tries >= 4) { sub.innerHTML = '朋友现在不在家 · Your friend isn\'t home right now<br><small>朋友要打开喵喵中文才可以串门 · They need to have the app open</small>'; }
+    if (tries >= 4 && !P) { sub.innerHTML = '朋友现在不在家 · Your friend isn\'t home right now<br><small>朋友要打开喵喵中文才可以串门 · They need to have the app open</small>'; }
   }, 3000);
 
   function render() {
@@ -324,7 +335,8 @@ export function visitScreen({ go, id: hostId, name = '' }) {
   window.addEventListener('resize', refit);
   // leaving: say goodbye and close the line
   const leave = () => { Radio.stop(); clearInterval(kt); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
-  $('#leave', n).onclick = () => { leave(); go('friend', { id: hostId }); };
+  $('#leave', n).onclick = () => { leave(); if (P) go('map'); else go('friend', { id: hostId }); };
+  const deco = $('#vdeco', n); if (deco) deco.onclick = () => { leave(); go('home', { view: 'house', room: roomKey }); };   // the admin: furnish this room
   $('#vphone', n).onclick = () => import('./phone.js').then((P) => P.openPhone({ start: 'home' }));   // the phone works at a friend's house too
   const gone = setInterval(() => { if (!n.isConnected) { clearInterval(gone); leave(); } }, 1000);
   return n;

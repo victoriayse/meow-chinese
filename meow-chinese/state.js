@@ -533,11 +533,23 @@ export const ROOMS = [
   // downstairs, either side of the studio
   { key: 'lounge', zh: '休息区', en: 'Lounging area', icon: '☕', lock: 'basement', below: true, noRoof: true },
   { key: 'changing', zh: '更衣室', en: 'Changing room', icon: '👗', lock: 'basement', below: true, noRoof: true },
+  // the cinema (a public place on the 🗺️ map): only the admin furnishes it, everyone can go in
+  { key: 'theatre1', zh: '1号影厅', en: 'Theatre 1', icon: '🎬', place: 'cinema', noRoof: true },
+  { key: 'lobby', zh: '电影院大堂', en: 'Cinema lobby', icon: '🍿', place: 'cinema', noRoof: true },
+  { key: 'theatre2', zh: '2号影厅', en: 'Theatre 2', icon: '🎬', place: 'cinema', noRoof: true },
 ];
+export const PLACE_ROOMS = { cinema: ['theatre1', 'lobby', 'theatre2'] };   // left to right
+// the admin (who furnishes the public places): app.js tells us who is signed in
+let adminCheck = () => false;
+export const setAdminCheck = (fn) => { adminCheck = fn; };
+export const isAdmin = () => { try { return !!adminCheck(); } catch { return false; } };
+// a theatre's four tiers of steps: the floor heights (room %) a cinema chair snaps to
+export const THEATRE_TIERS = [27, 18, 9, 1];
 const DOWNSTAIRS = ['lounge', 'basement', 'changing'];   // left to right
 // the rooms next to this one: ◀ ▶ along the row of rooms, ▲ ▼ only from the living room
 export function roomNeighbors(key) {
-  const row = ROOMS.filter((r) => !r.vert && !r.below), i = row.findIndex((r) => r.key === key), me = roomInfo(key);
+  const row = ROOMS.filter((r) => !r.vert && !r.below && !r.place), i = row.findIndex((r) => r.key === key), me = roomInfo(key);
+  if (me.place) { const p = PLACE_ROOMS[me.place], j = p.indexOf(key); return { left: j > 0 ? roomInfo(p[j - 1]) : null, right: j < p.length - 1 ? roomInfo(p[j + 1]) : null }; }
   if (me.vert === 'up') return { down: roomInfo('living') };
   if (me.vert === 'down' || me.below) {      // downstairs: lounge ◀ studio ▶ changing room, ▲ back up from the studio
     const j = DOWNSTAIRS.indexOf(key);
@@ -548,9 +560,9 @@ export function roomNeighbors(key) {
 // how far back (up the screen) she can walk: the basement is all floor
 export const roomMaxY = (key) => roomInfo(key).maxY || 30;
 export const roomInfo = (key) => ROOMS.find((r) => r.key === key) || ROOMS.find((r) => r.key === 'living');
-export const roomOpen = (key) => { const r = roomInfo(key); return !r.lock || unlocked(r.lock); };
+export const roomOpen = (key) => { const r = roomInfo(key); if (r.place) return isAdmin(); return !r.lock || unlocked(r.lock); };
 // which room a piece of furniture stands in (she can move it to another open room)
-export const roomOf = (id) => (state.decorRoom || {})[id] || (ITEMS[id] && ITEMS[id].room) || 'living';
+export const roomOf = (id) => { const r = (state.decorRoom || {})[id] || (ITEMS[id] && ITEMS[id].room) || 'living'; return roomInfo(r).place && !isAdmin() ? 'living' : r; };   // cinema things bought by anyone else go home
 export function setDecorRoom(id, room) {
   state.decorRoom = state.decorRoom || {};
   state.decorRoom[id] = room;

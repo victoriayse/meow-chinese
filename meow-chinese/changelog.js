@@ -265,4 +265,10 @@ export const CHANGES = [
     'When the house is locked, friends see the "Visit their house" button greyed out, even when you are online.',
     'Friends you invite over can still come in.',
   ] },
+  { v: 114, items: [
+    '🗺️ New Map button (under Go to Home): go to your Home or the new Cinema. The Cafe is coming soon.',
+    '🎬 The Cinema is a public place: everyone who goes there can see each other, friends or not.',
+    'The cinema has a Lobby with Theatre 1 on the left and Theatre 2 on the right. Each theatre has 4 tiers of steps for the seats.',
+    'New Cinema aisle in the shop: projector screen, ceiling lights, projector, cinema chairs, popcorn, lobby sofa, popcorn machine, drinks dispenser, cashier, wall speakers, red drink cups, self-help kiosks and queue poles.',
+  ] },
 ];

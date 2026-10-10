@@ -36,6 +36,7 @@ const DECOR_GROUPS = [
   { key: 'studio', icon: '🏋️', zh: '健身房', en: 'Gym & studio' },
   { key: 'lounge', icon: '☕', zh: '休息区', en: 'Lounging area' },
   { key: 'changing', icon: '👗', zh: '更衣室', en: 'Changing room' },
+  { key: 'cinema', icon: '🎬', zh: '电影院', en: 'Cinema' },
   { key: 'food', icon: '🍰', zh: '小吃', en: 'Food & snacks' },
   { key: 'lights', icon: '💡', zh: '灯', en: 'Lights' },
   { key: 'windows', icon: '🪟', zh: '窗帘', en: 'Curtains' },
@@ -140,7 +141,7 @@ export function shopScreen({ go, tab = 'food' }) {
       const full = special && have >= S.MAX_FREEZES;
       const pharm = it.cat === 'pharmacy';
       const needed = !pharm || S.health() === it.cures;
-      const roomShut = it.cat === 'decor' && it.room && !S.roomOpen(it.room);
+      const roomShut = it.cat === 'decor' && it.room && !S.roomInfo(it.room).place && !S.roomOpen(it.room);   // cinema things: anyone may buy them (they go home)
       const can = s.coins >= cost && !full && needed && !roomShut && !needCage;
       const cageOf = (k) => ({ hamster: '🐹 仓鼠 hamster', guineapig: '🐾 豚鼠 guinea pig', parrot: '🐦 玄凤鹦鹉 cockatiel' }[k] || k);
       const eff = isPet ? (adopted ? `💕 ${esc(adopted.name)}` : needCage ? '要先买笼子 · Buy its cage first (🦴 Pet Accessories)' : it.hops ? '在家里蹦蹦跳 · Hops around the house' : it.roam ? '在家里到处跑 · Roams around the house' : '住在笼子里 · Lives in its cage')

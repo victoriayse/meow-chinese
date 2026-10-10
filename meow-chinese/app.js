@@ -18,6 +18,7 @@ import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, s
 import * as Pets from './pets.js';
 import * as Radio from './radio.js';
 import * as Visit from './visit.js';
+import * as Places from './places.js';
 import { randomJoke } from './jokes.js';
 import { practiceListScreen, practiceScreen, KINDS } from './practice.js';
 
@@ -71,6 +72,7 @@ const screens = {
   practiceList: (p) => practiceListScreen({ ...p, go }),
   practice: (p) => practiceScreen({ ...p, go }),
   friend: (p) => Friends.friendScreen({ ...p, go }),
+  map: () => Places.mapScreen({ go }),
 };
 // a simple history so every page can go Back
 const stack = [];
@@ -404,6 +406,8 @@ function tasksScreen() {
 }
 
 // home page buttons (parents choose the order)
+// 🗺️ Map sits right below the Home button (same column, next row)
+function mapButton() { const col = (S.menuOrder().indexOf('house') % 2) + 1; return `<button class="btn yellow" id="b-map" style="grid-column:${col}"><span class="zh">🗺️ 地图</span><span class="en">Map</span></button>`; }
 function menuButton(b, { reviewN, inHouse }) {
   const out = S.outstandingEssays().length, req = Friends.incomingRequests().length;
   switch (b) {
@@ -413,8 +417,8 @@ function menuButton(b, { reviewN, inHouse }) {
     case 'dress': return '<button class="btn white" id="b-dress"><span class="zh">🎒 我的物品</span><span class="en">My items</span></button>';
     case 'house': return S.unlocked('decor')
       ? (inHouse ? '<button class="btn green" id="b-house"><span class="zh">🌳 去草地</span><span class="en">Go outside</span></button>'
-                 : '<button class="btn green" id="b-house"><span class="zh">🏠 我的家</span><span class="en">Go to Home</span></button>')
-      : `<button class="btn white" disabled><span class="zh">🔒 我的家</span><span class="en">Home · Lv${S.UNLOCKS.decor}</span></button>`;
+                 : '<button class="btn green" id="b-house"><span class="zh">🏠 我的家</span><span class="en">Go to Home</span></button>') + mapButton()
+      : `<button class="btn white" disabled><span class="zh">🔒 我的家</span><span class="en">Home · Lv${S.UNLOCKS.decor}</span></button>` + mapButton();
     case 'friends': return `<button class="btn blue ${req ? 'has-badge' : ''}" id="b-friends"><span class="zh">👫 朋友</span><span class="en">Friends</span>${req ? `<i class="badge">${req}</i>` : ''}</button>`;
     default: return '';
   }
@@ -947,6 +951,12 @@ function homeScreen(params = {}) {
         const end = () => {
           el.removeEventListener('pointermove', mv); el.removeEventListener('pointerup', end); el.removeEventListener('pointercancel', end);
           el.classList.remove('dragging');
+          if (/^theatre/.test(roomKey) && ITEMS[el.dataset.id] && ITEMS[el.dataset.id].tier) {
+            // cinema chairs stand on one of the theatre's four steps
+            const h = (el.offsetHeight / H) * 100, b = 100 - (el.offsetTop / H) * 100 - h;
+            const tb = S.THEATRE_TIERS.reduce((a, c) => (Math.abs(c - b) < Math.abs(a - b) ? c : a));
+            el.style.top = `${Math.max(0, 100 - tb - h)}%`;
+          }
           s.decorPos[el.dataset.id] = pin(el);
           s.decorLayer = s.decorLayer || {}; s.decorLayer[el.dataset.id] = Date.now(); el.dataset.layer = s.decorLayer[el.dataset.id];   // the one moved last goes in front
           decorEls.forEach((d) => { d.style.zIndex = depth(d); }); stackDecor(room); placeCat();
@@ -993,6 +1003,7 @@ function homeScreen(params = {}) {
   // a parent has checked a composition: show the stars, coins and comment once
   // (a checked composition now arrives as a phone notification instead of a pop-up)
   const bh = $('#b-house', n); if (bh) bh.onclick = () => (inHouse ? goBack() : go('home', { view: 'house' }));
+  const bm = $('#b-map', n); if (bm) bm.onclick = () => go('map');
   // something chosen in My items (feed / bath / play)
   const care = S.takePendingCare();
   if (care) setTimeout(() => doCare(care, kv, fx, afterCare), 450);
@@ -1340,13 +1351,14 @@ Friends.startFriends((news) => {
 });
 // pets wander around the house all the time (friends visiting see them too)
 Pets.startPets();
+Places.startPublishing();   // the admin's cinema furniture, saved online for everyone
 Pets.onPets((snap) => Visit.hostPets(snap));
 Radio.onRadio(() => Visit.hostRadio(Radio.status()));
 // live visits: friends' kittens can walk into my house while the app is open
 Visit.startHosting({
   inHouse: () => current === 'home' && currentParams.view === 'house',
   house: () => {
-    const st = S.get(), rooms = {}, open = S.ROOMS.filter((r) => S.roomOpen(r.key) && S.unlocked('decor')).map((r) => r.key);
+    const st = S.get(), rooms = {}, open = S.ROOMS.filter((r) => !r.place && S.roomOpen(r.key) && S.unlocked('decor')).map((r) => r.key);
     (open.length ? open : ['living']).forEach((k) => { rooms[k] = roomLayout(st, k, S.roomOf); });
     return { rooms, pets: Pets.snapshot(), radio: Radio.status(), open: open.length ? open : ['living'], power: { dark: { ...(st.lightsOff || {}) }, off: { ...(st.powerOff || {}) } }, styles: JSON.parse(JSON.stringify(st.roomStyle || {})) };
   },
