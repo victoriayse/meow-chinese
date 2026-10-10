@@ -191,6 +191,25 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
     drawGrid(ring, g.slice(0, sp.cy * 2 + 1).map((row, y) => row.slice(0, sp.cx * 2 + 1).map((v, x) => (inRing(x, y) ? v : null))), HOUSE.decor);
     head.appendChild(ring); wrap.append(c, head);
   } else wrap.appendChild(c);
+  if (it.ride) {
+    // playground rides: the part that moves is drawn on its own layer (the swing's seat, the see-saw's plank, the merry-go-round's turning frames)
+    wrap.classList.add('ride'); wrap.dataset.ride = it.ride.kind;
+    const sc = HOUSE.decor * (it.size || 1);
+    if (it.ride.kind === 'merry') {
+      const grids = Array.from({ length: it.ride.n }, (_, k) => artGrid(it.frames[`m${k}`], it.pal));
+      const box = document.createElement('div'); box.className = 'ride-part';
+      const strip = document.createElement('canvas'); strip.className = 'ride-strip';
+      drawGrid(strip, grids[0].map((row, y) => grids.flatMap((gk) => gk[y])), sc);
+      box.appendChild(strip); wrap.appendChild(box);
+    } else {
+      drawGrid(c, artGrid(it.frames.base, it.pal), sc);
+      const part = document.createElement('canvas'); part.className = 'ride-part';
+      drawGrid(part, artGrid(it.frames.part, it.pal), sc);
+      part.style.transformOrigin = `${it.ride.px * 100}% ${it.ride.py * 100}%`;
+      wrap.appendChild(part);
+    }
+  }
+  if (it.slide) wrap.classList.add('slidey');
   if (cage) {
     wrap.classList.add('cage'); wrap.dataset.cage = it.cage; if (cage.open) wrap.classList.add('door-open');
     const W = artGrid(it.art, it.pal)[0].length, H = it.art.length, inner = it.cageW || W;
@@ -326,7 +345,7 @@ export class OtherCats {
     if (c.dx == null || roomChanged || c.seat || Math.hypot(c.x - c.dx, (c.y - c.dy) * 1.5) > 25) { c.dx = c.x; c.dy = c.y; }   // first sight, new room or a big jump: just appear there
     this.m.set(id, c); this.draw(id); this.go(); return c;
   }
-  remove(id) { const c = this.m.get(id); if (c && c.el) c.el.remove(); this.m.delete(id); }
+  remove(id) { const c = this.m.get(id); if (c && c.el) c.el.remove(); this.m.delete(id); syncRides(this.roomEl); }
   has(id) { return this.m.has(id); }
   ids() { return [...this.m.keys()]; }
   say(id, text) { const c = this.m.get(id); if (c && c.el) say($w(c.el), text); }
@@ -363,6 +382,7 @@ export class OtherCats {
     else if (c.kv && spot) c.kv.canvas.classList.remove('walking');
     if (c.bedShown && c.bedShown !== (spot && spot.lie && c.seat)) { blanket(this.roomEl, c.bedShown, false); c.bedShown = null; }
     if (spot && spot.lie) { blanket(this.roomEl, c.seat, true); c.bedShown = c.seat; }
+    rideFx(this.roomEl, c.el, spot ? c.seat : null);
   }
   draw(id) {
     const c = this.m.get(id); if (!c) return;
@@ -519,6 +539,52 @@ export function applyPower(roomEl, { dark = false, off = {} } = {}) {
     g.style.left = `${d.offsetLeft + d.offsetWidth / 2}px`; g.style.top = `${d.offsetTop + d.offsetHeight * (d.dataset.power === 'tv' ? 0.4 : 0.25)}px`;
     roomEl.appendChild(g);
   });
+  syncRides(roomEl);
+}
+// ---------- playground rides ----------
+// the swing and see-saw move while a kitten rides them; the merry-go-round turns while it's switched on.
+// Every moving thing runs on the same clock (startTime 0), so a kitten riding stays in step with the ride.
+const loopAnim = (el, kf, opts) => { const a = el.animate(kf, { iterations: Infinity, ...opts }); try { a.startTime = 0; } catch {} return a; };
+const rockKf = (deg) => [{ rotate: `${-deg}deg`, easing: 'ease-in-out' }, { rotate: `${deg}deg`, easing: 'ease-in-out' }, { rotate: `${-deg}deg` }];
+export function syncRides(roomEl) {
+  if (!roomEl || !roomEl.animate) return;
+  const riders = [...roomEl.querySelectorAll('[data-ride-for]')];
+  roomEl.querySelectorAll('.decor.ride').forEach((d) => {
+    const r = ITEMS[d.dataset.id] && ITEMS[d.dataset.id].ride; if (!r) return;
+    const moving = r.kind === 'merry' ? d.classList.contains('off') : riders.some((c) => c.dataset.rideFor === d.dataset.id);   // the merry-go-round starts still: tapping it ("off") sets it turning
+    d.classList.toggle('moving', moving);
+    const part = d.querySelector(r.kind === 'merry' ? '.ride-strip' : '.ride-part'); if (!part) return;
+    if (moving && !part._a) part._a = r.kind === 'merry' ? loopAnim(part, [{ translate: '0 0' }, { translate: '-100% 0' }], { duration: r.ms, easing: `steps(${r.n})` }) : loopAnim(part, rockKf(r.deg), { duration: r.ms });
+    if (!moving && part._a) { part._a.cancel(); part._a = null; }
+  });
+  riders.forEach((c) => {
+    const d = roomEl.querySelector(`.decor.ride[data-id="${c.dataset.rideFor}"]`), on = !!(d && d.classList.contains('moving'));
+    const key = on ? `${c.dataset.rideFor}|${d.offsetLeft},${d.offsetTop},${c.offsetLeft},${c.offsetTop}` : '';
+    if (c._rk === key) return;
+    if (c._ra) { c._ra.cancel(); c._ra = null; }
+    c.style.transformOrigin = ''; c._rk = key;
+    if (!on) return;
+    const r = ITEMS[c.dataset.rideFor].ride;
+    if (r.kind === 'merry') {
+      // round and round, a quarter turn for each run of the turning frames
+      const rx = r.rx * d.offsetWidth, ry = r.ry * d.offsetHeight, kf = [];
+      for (let i = 0; i <= 16; i++) { const t = ((45 + i * 22.5) * Math.PI) / 180; kf.push({ translate: `${(rx * Math.cos(t)).toFixed(1)}px ${(ry * Math.sin(t)).toFixed(1)}px` }); }
+      c._ra = loopAnim(c, kf, { duration: r.ms * 4 });
+    } else {
+      // swinging / rocking round the same point as the swing's seat or the see-saw's plank
+      c.style.transformOrigin = `${d.offsetLeft + d.offsetWidth * r.px - c.offsetLeft}px ${d.offsetTop + d.offsetHeight * r.py - c.offsetTop}px`;
+      c._ra = loopAnim(c, rockKf(r.deg), { duration: r.ms });
+    }
+  });
+}
+// a kitten sat on (or got off) a ride
+export function rideFx(roomEl, catEl, id) {
+  if (!catEl) return;
+  const rid = id && ITEMS[id] && ITEMS[id].ride ? id : '';
+  if (!rid && !catEl.dataset.rideFor) return;
+  if (rid) catEl.dataset.rideFor = rid;
+  else { delete catEl.dataset.rideFor; if (catEl._ra) { catEl._ra.cancel(); catEl._ra = null; } catEl._rk = ''; catEl.style.transformOrigin = ''; }
+  syncRides(roomEl);
 }
 // tap a lamp or the TV to switch it (not while moving furniture)
 export function wirePower(roomEl, onToggle) {

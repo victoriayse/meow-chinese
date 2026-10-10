@@ -14,7 +14,7 @@ let pendingNotes = null, notesDismissed = false;   // a newer version is waiting
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, compressPhoto, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre } from './house.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, compressPhoto, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
 import * as Pets from './pets.js';
 import * as Radio from './radio.js';
 import * as Visit from './visit.js';
@@ -699,8 +699,10 @@ function homeScreen(params = {}) {
       ground.classList.remove('swimming');
       cat.x = spot.x; cat.y = spot.y;
       ground.style.left = cat.x + '%'; ground.style.bottom = cat.y + '%'; ground.style.zIndex = spot.z;
+      rideFx(room, ground, st.id);     // swinging / rocking / going round with the ride
       return;
     }
+    rideFx(room, ground, null);
     const halfW = room.clientWidth ? (kflip.offsetWidth / 2 / room.clientWidth) * 100 : 10;
     cat.x = Math.max(halfW, Math.min(100 - halfW, cat.x));
     cat.y = Math.max(1, Math.min(S.roomMaxY(roomKey), cat.y));
@@ -721,6 +723,30 @@ function homeScreen(params = {}) {
     S.get().catSeat = { id, room: roomKey, slot }; S.save();
     placeCat(); kv.jump(); sfx.click(); Visit.hostMove(hostPos());
     if (ITEMS[id].seat.lie) kv.flash('sleepy', 2500);
+  };
+  // the slide: she climbs to the top, then whooshes down and lands at the bottom
+  let sliding = null, slideAnim = null;
+  const stopSlide = () => { if (sliding) { clearTimeout(sliding); sliding = null; } if (slideAnim) { slideAnim.cancel(); slideAnim = null; } };
+  const slideDown = (id) => {
+    const d = room.querySelector(`.decor.slidey[data-id="${id}"]`), sl = ITEMS[id] && ITEMS[id].slide;
+    if (!d || !sl || sliding || slideAnim) return;
+    standUp();
+    const flip = d.dataset.facing === 'flip', W = room.clientWidth, H = room.clientHeight;
+    const pt = (p) => ({ x: ((d.offsetLeft + d.offsetWidth * (flip ? 1 - p.x : p.x)) / W) * 100, y: ((H - (d.offsetTop + d.offsetHeight * p.y)) / H) * 100 });
+    const a = pt(sl.top), b = pt(sl.end), floor = ((H - (d.offsetTop + d.offsetHeight)) / H) * 100;
+    kv.setFacing(flip); ground.classList.add('seated'); ground.style.zIndex = (parseInt(d.style.zIndex, 10) || 50) + 1;
+    ground.style.left = a.x + '%'; ground.style.bottom = a.y + '%'; cat.x = a.x; cat.y = a.y;
+    kv.jump(); sfx.click(); Visit.hostMove(hostPos());
+    sliding = setTimeout(() => {
+      sliding = null; if (!ground.isConnected) return;
+      slideAnim = ground.animate([{ left: a.x + '%', bottom: a.y + '%' }, { left: b.x + '%', bottom: b.y + '%' }], { duration: 800, easing: 'ease-in', fill: 'forwards' });
+      slideAnim.onfinish = () => {
+        slideAnim.cancel(); slideAnim = null;
+        ground.classList.remove('seated');
+        cat.x = b.x; cat.y = Math.max(1, floor - 1); placeCat(); kv.jump(); kv.flash('happy', 1500);
+        S.get().catPos = { x: +cat.x.toFixed(1), y: +cat.y.toFixed(1) }; S.save(); Visit.hostMove(hostPos());
+      };
+    }, 500);
   };
   const standUp = () => {
     if (!seatNow()) return;
@@ -747,6 +773,7 @@ function homeScreen(params = {}) {
   };
   const press = (d) => {
     if (md.face === 'faint') return;          // a fainted kitten can't walk
+    if (sliding || slideAnim) { stopSlide(); ground.classList.remove('seated'); }
     standUp();
     held.add(d); kv.canvas.classList.add('walking'); setHomeBusy(true);
     if (!raf) raf = requestAnimationFrame(walk);
@@ -1044,6 +1071,11 @@ function homeScreen(params = {}) {
       const rm = $('#prm', box); if (rm) rm.onclick = () => { S.setFramePhoto(id, null); closeModal(); Visit.hostResendHouse(); refreshHome(); };
       $('#pc', box).onclick = closeModal;
       openModal(box);
+    });
+    room.addEventListener('click', (e) => {
+      const d = e.target.closest('.decor.slidey');
+      if (!d || room.classList.contains('arranging') || md.face === 'faint') return;
+      slideDown(d.dataset.id);
     });
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.seat');

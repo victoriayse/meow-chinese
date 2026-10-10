@@ -249,4 +249,10 @@ export const CHANGES = [
   { v: 110, items: [
     'The changing room walls are now plain (no lockers painted on).',
   ] },
+  { v: 111, items: [
+    '🛝 New place: the Playground, outside to the right of the garden (opens at level 42).',
+    'New in the shop (Playground aisle): a slide, a swing, a see-saw and a merry-go-round.',
+    'Tap the slide: your cat climbs up and slides down. Tap the swing or see-saw to ride it.',
+    'Tap the merry-go-round to make it spin (tap again to stop). Your cat can ride it too.',
+  ] },
 ];

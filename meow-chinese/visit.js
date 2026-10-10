@@ -12,10 +12,10 @@ import * as S from './state.js';
 import * as Auth from './auth.js';
 import { managing } from './cloud.js';
 import { Channel } from './rt.js';
-import { drawRoom, drawRoof } from './pixel.js';
+import { drawRoom, drawRoof, ITEMS } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal } from './ui.js';
 import { sfx } from './audio.js';
-import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre } from './house.js';
+import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
 import * as Radio from './radio.js';
 
 const isNight = () => { const h = new Date().getHours(); return h >= 18 || h < 5; };
@@ -203,7 +203,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
   // the arrows (set up once; they move whichever room she is in)
   walker($('.dpad', n), {
     isAlive: () => n.isConnected,
-    canWalk: () => !!(myEl && myEl.isConnected),
+    canWalk: () => !!(myEl && myEl.isConnected && !myEl.dataset.sliding),
     onStep: (dx, dy, dt) => {
       if (mine.seat) { mine.seat = null; mine.slot = 0; mine.y = Math.min(mine.y, 28); }   // the arrows make her hop off
       mine.x += dx * 32 * dt; mine.y += dy * 22 * dt;
@@ -242,6 +242,20 @@ export function visitScreen({ go, id: hostId, name = '' }) {
       const d = e.target.closest('.decor.frame'); const img = d && d.querySelector('.frame-photo'); if (!img) return;
       const v = html`<div class="card stack" style="align-items:center"><div class="frame-preview big"><img src="${img.src}" alt=""></div><button class="btn white" id="pc">关闭 Close</button></div>`;
       $('#pc', v).onclick = closeModal; openModal(v);
+    });
+    // the slide: up to the top, then down we go
+    room.addEventListener('click', (e) => {
+      const d = e.target.closest('.decor.slidey'), sl = d && ITEMS[d.dataset.id] && ITEMS[d.dataset.id].slide; if (!sl || myEl.dataset.sliding) return;
+      const flip = d.dataset.facing === 'flip', W = room.clientWidth, H = room.clientHeight;
+      const pt = (p) => ({ x: ((d.offsetLeft + d.offsetWidth * (flip ? 1 - p.x : p.x)) / W) * 100, y: ((H - (d.offsetTop + d.offsetHeight * p.y)) / H) * 100 });
+      const a = pt(sl.top), b = pt(sl.end), floor = ((H - (d.offsetTop + d.offsetHeight)) / H) * 100;
+      mine.seat = null; myEl.dataset.sliding = '1'; myEl.classList.add('seated'); myKv.setPose(null); myKv.setFacing(flip);
+      Object.assign(mine, { x: a.x, y: a.y, left: flip }); myEl.style.left = `${a.x}%`; myEl.style.bottom = `${a.y}%`; myEl.style.zIndex = (parseInt(d.style.zIndex, 10) || 50) + 1;
+      rideFx(room, myEl, null); myKv.jump(); sfx.click(); sendMine();
+      setTimeout(() => {
+        const an = myEl.animate([{ left: `${a.x}%`, bottom: `${a.y}%` }, { left: `${b.x}%`, bottom: `${b.y}%` }], { duration: 800, easing: 'ease-in', fill: 'forwards' });
+        an.onfinish = () => { an.cancel(); delete myEl.dataset.sliding; myEl.classList.remove('seated'); mine.x = b.x; mine.y = Math.max(1, floor - 1); place(); myKv.jump(); sendMine(); };
+      }, 500);
     });
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.seat'); if (!d) return;
@@ -282,7 +296,8 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     myEl.classList.toggle('lying', !!(spot && spot.lie)); myEl.classList.toggle('seated', !!spot);
     if (myKv) myKv.setPose(spot ? spot.pose : null); myEl.dataset.pose = (spot && spot.pose) || '';
     if (room) room.querySelectorAll('.decor.seat').forEach((d) => { if (!others.ids().some((id) => (others.m.get(id) || {}).seat === d.dataset.id)) blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === mine.seat)); });
-    if (spot) { myEl.classList.remove('swimming'); mine.x = spot.x; mine.y = spot.y; myEl.style.left = `${spot.x}%`; myEl.style.bottom = `${spot.y}%`; myEl.style.zIndex = spot.z; return; }
+    if (spot) { myEl.classList.remove('swimming'); mine.x = spot.x; mine.y = spot.y; myEl.style.left = `${spot.x}%`; myEl.style.bottom = `${spot.y}%`; myEl.style.zIndex = spot.z; rideFx(room, myEl, mine.seat); return; }
+    rideFx(room, myEl, null);
     Object.assign(mine, clampPos(mine));
     myEl.style.left = `${mine.x}%`; myEl.style.bottom = `${mine.y}%`; myEl.style.zIndex = 2 + Math.round(100 - mine.y);
     myEl.classList.toggle('swimming', inPool(room, mine.x, mine.y));

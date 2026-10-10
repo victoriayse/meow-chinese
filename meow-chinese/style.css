@@ -1525,3 +1525,11 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   -webkit-mask-image: repeating-linear-gradient(180deg, #000 0 10px, transparent 10px 16px); mask-image: repeating-linear-gradient(180deg, #000 0 10px, transparent 10px 16px); animation: showerfall .45s linear infinite; }
 .decor[data-power="shower"].off .shower-water { display: block; }
 @keyframes showerfall { to { -webkit-mask-position: 0 16px; mask-position: 0 16px; } }
+/* 🛝 the playground */
+.house-unit.outdoor .room[data-room="playground"] { border-color: #d9b46a; }
+.house .decor .ride-part { position: absolute; left: 0; top: 0; pointer-events: none; }
+.house .decor[data-ride="merry"] .ride-part { width: 100%; height: 100%; overflow: hidden; }
+.house .decor[data-ride="merry"] .ride-strip { display: block; image-rendering: pixelated; }
+.house .decor[data-ride="merry"] > canvas:first-child { visibility: hidden; }
+.house .decor.slidey { pointer-events: auto; cursor: pointer; }
+.room.arranging .decor.slidey { cursor: grab; }
