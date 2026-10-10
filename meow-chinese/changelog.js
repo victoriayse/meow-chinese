@@ -232,4 +232,7 @@ export const CHANGES = [
   { v: 105, items: [
     'Studio: the tall mirror now fits the wall exactly, and the wooden barre runs in front of it.',
   ] },
+  { v: 106, items: [
+    'The treadmill and gym bench can now also face straight into the room: tap 🔄 to go sideways → the other side → facing you.',
+  ] },
 ];

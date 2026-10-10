@@ -1509,3 +1509,5 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .studio-barre { position: absolute; left: 0; right: 0; top: 39.5%; height: 9px; z-index: 68; pointer-events: none; background: linear-gradient(#c49a62 0 55%, #8a6a42 55% 100%); box-shadow: 0 2px 0 rgba(0,0,0,.12); }
 .studio-barre i { position: absolute; top: 100%; width: 5px; height: 20px; background: #9aa0aa; }
 .studio-barre i:nth-child(1) { left: 6%; } .studio-barre i:nth-child(2) { left: 31%; } .studio-barre i:nth-child(3) { left: 56%; } .studio-barre i:nth-child(4) { left: 81%; }
+.decor .belt.down { background: repeating-linear-gradient(0deg, rgba(255,255,255,.28) 0 2px, transparent 2px 8px); background-size: 100% 8px; animation-name: beltdown; }
+@keyframes beltdown { to { background-position: 0 8px; } }

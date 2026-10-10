@@ -4536,6 +4536,62 @@ Object.assign(ITEMS, {
     ] },
 });
 
+// the treadmill and gym bench can also face straight into the room (🔄: sideways → other side → facing you)
+ITEMS.treadmill.frames = { front: [
+    '...oooooooooooooo...',
+    '..occcccccccccccco..',
+    '..occggggggggggcco..',
+    '..occggggggggggcco..',
+    '..occggggggggggcco..',
+    '..occcccccccccrcco..',
+    '..occcccccccccccco..',
+    '..ossoooooooooosso..',
+    '..ossoooooooooosso..',
+    '..osssssssssssssso..',
+    '..ossoooooooooosso..',
+    '..osso........osso..',
+    '..osso........osso..',
+    '..osso........osso..',
+    '..osso........osso..',
+    '..ossoooooooooosso..',
+    '..ossobbbbbbbbosso..',
+    '..ossobbbbbbbbosso..',
+    '..ossnnnnnnnnnnsso..',
+    '..ossbbbbbbbbbbsso..',
+    '...obbbbbbbbbbbbo...',
+    '..onnnnnnnnnnnnnno..',
+    '..obbbbbbbbbbbbbbo..',
+    '.obbbbbbbbbbbbbbbbo.',
+    '.onnnnnnnnnnnnnnnno.',
+    'obbbbbbbbbbbbbbbbbbo',
+    'bbbbbbbbbbbbbbbbbbbb',
+    'ookkkkkkkkkkkkkkkkoo',
+    '.okkkkkkkkkkkkkkkko.',
+    '.okkkkkkkkkkkkkkkko.',
+  ] };
+ITEMS.treadmill.pal.n = '#4a5060';
+ITEMS.treadmill.beltFront = { x: 0.3500, y: 0.5333, w: 0.3000, h: 0.3667 };
+ITEMS.treadmill.seatFront = { x: 0.5, y: 0.84, run: true };
+ITEMS.gymbench.frames = { front: [
+    '..............',
+    '..............',
+    '.oooooooooooo.',
+    'oppppppppppppo',
+    'opqqqqqqqqqqpo',
+    'oppppppppppppo',
+    'oppppppppppppo',
+    'oppppppppppppo',
+    '.oooookkooooo.',
+    '.....okko.....',
+    '.....okko.....',
+    '.....okko.....',
+    '..ooookkoooo..',
+    '.okkkkkkkkkko.',
+    '.okkkkkkkkkko.',
+    '.okkkkkkkkkko.',
+  ] };
+ITEMS.gymbench.seatFront = { x: 0.5, y: 0.22 };
+
 // furniture you can switch on and off at home
 ITEMS.tv.power = 'tv';
 ['lamp', 'lantern', 'starlight', 'nightstand'].forEach((id) => { if (ITEMS[id]) ITEMS[id].power = 'light'; });

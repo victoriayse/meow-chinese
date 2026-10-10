@@ -561,6 +561,13 @@ export function setRoomStyle(room, kind, id) {
 export function setFramePhoto(id, dataUrl) { state.framePhotos = state.framePhotos || {}; if (dataUrl) state.framePhotos[id] = dataUrl; else delete state.framePhotos[id]; save(); }
 // lights and TV at home
 export const roomDark = (room) => !!(state.lightsOff || {})[room];
+// things that can face three ways (treadmill, gym bench): sideways → the other side → facing you → sideways
+export function cycleFacing(id) {
+  state.facing = state.facing || {};
+  const now = state.facing[id], next = !now ? 'back' : now === 'back' ? 'front' : null;
+  if (next) state.facing[id] = next; else delete state.facing[id];
+  save(); return next || 'side';
+}
 export function toggleFacing(id) { state.facing = state.facing || {}; if (state.facing[id] === 'back') delete state.facing[id]; else state.facing[id] = 'back'; save(); return state.facing[id] || 'front'; }
 export function toggleCurtain(id) { state.curtainClosed = state.curtainClosed || {}; if (state.curtainClosed[id]) delete state.curtainClosed[id]; else state.curtainClosed[id] = true; save(); return !!state.curtainClosed[id]; }
 export function toggleRoomLight(room) { state.lightsOff = state.lightsOff || {}; state.lightsOff[room] = !state.lightsOff[room]; save(); return !state.lightsOff[room]; }
