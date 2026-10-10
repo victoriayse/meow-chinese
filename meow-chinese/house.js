@@ -236,6 +236,11 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer }, {
   if (layer) wrap.dataset.layer = layer;
   if (it.radio) wrap.classList.add('radio');
   if (it.garland) wrap.classList.add('garland');
+  if (putAway && kind !== 'curtain') {                // ⬆ ⬇ put it in front of / behind other things (shown while moving furniture)
+    const up = document.createElement('button'); up.className = 'layer-btn up'; up.type = 'button'; up.title = 'Bring to front'; up.textContent = '⬆';
+    const dn = document.createElement('button'); dn.className = 'layer-btn down'; dn.type = 'button'; dn.title = 'Send behind'; dn.textContent = '⬇';
+    wrap.append(up, dn);
+  }
   if (putAway && ((it.frames && (it.frames.back || it.frames.front)) || it.flip)) {      // 🔄 turn it round / sideways (shown while moving furniture)
     const tb = document.createElement('button'); tb.className = 'turn-btn'; tb.type = 'button'; tb.title = 'Turn around'; tb.textContent = '🔄'; wrap.appendChild(tb);
   }
@@ -245,21 +250,33 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer }, {
   if (putAway) { const pa = document.createElement('button'); pa.className = 'put-away'; pa.type = 'button'; pa.title = 'Put away'; pa.textContent = '📦'; wrap.appendChild(pa); }
   return wrap;
 }
-// furniture she dragged on top of other furniture stays in front of it (the one moved last wins)
+// furniture she put in front (⬆ or dragged last) / behind (⬇) other things stays that way.
+// decorLayer: a big positive number = in front (newest wins), negative = behind.
 export function stackDecor(roomEl) {
   const els = [...roomEl.querySelectorAll('.decor:not(.curtain):not(.flat)')];
   const box = (el) => ({ l: el.offsetLeft, t: el.offsetTop, r: el.offsetLeft + el.offsetWidth, b: el.offsetTop + el.offsetHeight });
   const overlap = (a, b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
   const lay = (el) => +el.dataset.layer || 0;
-  for (let pass = 0; pass < 3; pass++) {
+  for (let pass = 0; pass < 4; pass++) {
     els.forEach((a) => {
       if (!lay(a)) return;
       const A = box(a);
       els.forEach((b) => {
-        if (a === b || lay(b) >= lay(a) || !overlap(A, box(b))) return;
+        if (a === b || !overlap(A, box(b))) return;
         const za = +a.style.zIndex || 0, zb = +b.style.zIndex || 0;
-        if (za <= zb) a.style.zIndex = zb + 1;
+        if (lay(a) > lay(b) && za <= zb) a.style.zIndex = zb + 1;
+        else if (lay(a) < lay(b) && za >= zb) a.style.zIndex = Math.max(2, zb - 1);
       });
+    });
+  }
+  // the studio's barre: things put in front go in front of it, things put behind go behind it
+  const barre = roomEl.querySelector('.studio-barre');
+  if (barre) {
+    const bz = +getComputedStyle(barre).zIndex || 68, by = barre.offsetTop;
+    els.forEach((el) => {
+      const B = box(el); if (!(B.t < by + 6 && B.b > by)) return;
+      if (lay(el) > 0 && (+el.style.zIndex || 0) <= bz) el.style.zIndex = bz + 1;
+      if (lay(el) < 0 && (+el.style.zIndex || 0) >= bz) el.style.zIndex = bz - 1;
     });
   }
 }

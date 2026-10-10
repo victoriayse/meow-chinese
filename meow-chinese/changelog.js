@@ -235,4 +235,7 @@ export const CHANGES = [
   { v: 106, items: [
     'The treadmill and gym bench can now also face straight into the room: tap 🔄 to go sideways → the other side → facing you.',
   ] },
+  { v: 107, items: [
+    'Moving furniture: new ⬆ and ⬇ buttons on each piece put it in front of or behind the things it overlaps — including the studio\'s wooden barre.',
+  ] },
 ];

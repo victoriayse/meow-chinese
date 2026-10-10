@@ -868,6 +868,18 @@ function homeScreen(params = {}) {
       const box = html`<div class="card stack reno-box"></div>`;
       openModal(box); draw();
     };
+    // ⬆ ⬇ on a piece of furniture: put it in front of / behind the things it overlaps
+    room.querySelectorAll('.decor .layer-btn').forEach((b) => {
+      b.addEventListener('pointerdown', (e) => e.stopPropagation());
+      b.onclick = (e) => {
+        e.stopPropagation();
+        const d = b.closest('.decor'), id = d.dataset.id, front = b.classList.contains('up');
+        s.decorLayer = s.decorLayer || {}; s.decorLayer[id] = front ? Date.now() : -Date.now(); d.dataset.layer = s.decorLayer[id];
+        decorEls.forEach((x) => { x.style.zIndex = depth(x); }); stackDecor(room);
+        S.saveQuiet(); sfx.click(); Visit.hostResendHouse();
+        toast(front ? '⬆ <span class="zh">放到前面</span> In front' : '⬇ <span class="zh">放到后面</span> Behind', { ms: 1200 });
+      };
+    });
     // 🔄 on the study chair / laptop: turn it to face the front or the back
     room.querySelectorAll('.decor .turn-btn').forEach((b) => {
       b.addEventListener('pointerdown', (e) => e.stopPropagation());

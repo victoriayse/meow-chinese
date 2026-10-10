@@ -1511,3 +1511,8 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .studio-barre i:nth-child(1) { left: 6%; } .studio-barre i:nth-child(2) { left: 31%; } .studio-barre i:nth-child(3) { left: 56%; } .studio-barre i:nth-child(4) { left: 81%; }
 .decor .belt.down { background: repeating-linear-gradient(0deg, rgba(255,255,255,.28) 0 2px, transparent 2px 8px); background-size: 100% 8px; animation-name: beltdown; }
 @keyframes beltdown { to { background-position: 0 8px; } }
+/* ⬆ ⬇ in front / behind (while moving furniture) */
+.decor .layer-btn { display: none; position: absolute; bottom: -5px; width: 15px; height: 15px; padding: 0; font-size: 8px; line-height: 1; background: #fff; border: 1px solid var(--ink); border-radius: 50%; cursor: pointer; z-index: 2; transform: scale(var(--inv, 1)); transform-origin: bottom left; }
+.decor .layer-btn.up { left: -5px; } .decor .layer-btn.down { left: calc(-5px + 18px * var(--inv, 1)); }
+.room.arranging .decor .layer-btn { display: grid; place-items: center; pointer-events: auto; }
+@media (max-width: 600px) { .decor .layer-btn { width: 13px; height: 13px; font-size: 7px; } .decor .layer-btn.down { left: calc(-5px + 15px * var(--inv, 1)); } }
