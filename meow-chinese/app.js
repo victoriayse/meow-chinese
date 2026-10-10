@@ -557,7 +557,7 @@ function homeScreen(params = {}) {
     <div class="stage ${inHouse ? 'in-house' : ''}" id="stage">
       ${inHouse ? `<div class="house" id="house"><div class="house-unit ${roomRI.outdoor ? 'outdoor' : ''} ${roomRI.bare || roomRI.noRoof ? 'bare' : ''}" id="hunit">
         <canvas class="roof" id="roof"></canvas>
-        <div class="room-name">${S.roomInfo(roomKey).icon} <span class="zh">${S.roomInfo(roomKey).zh}</span> ${S.roomInfo(roomKey).en}</div>
+        <div class="room-name">${S.roomInfo(roomKey).icon} <span class="zh">${S.roomInfo(roomKey).zh}</span> ${S.roomInfo(roomKey).en}<button class="room-light ${S.roomDark(roomKey) ? 'off' : ''}" id="b-light" title="Lights" aria-label="Lights">💡</button></div>
         <div class="room" id="room" data-room="${roomKey}">
           <canvas class="room-bg" id="roombg"></canvas>
 
@@ -568,7 +568,6 @@ function homeScreen(params = {}) {
           <button class="tool-btn reno-btn" id="b-reno" title="Renovate">🎨</button>
           <button class="tool-btn undo-btn" id="b-undo" title="Undo" aria-label="Undo">↶</button>
           <button class="tool-btn" id="b-arrange" title="Move furniture">🪑</button>
-          <button class="tool-btn light-switch ${S.roomDark(roomKey) ? 'off' : ''}" id="b-light" title="Lights" aria-label="Lights">💡</button>
           <button class="tool-btn" id="b-invite" title="Invite a friend" aria-label="Invite a friend">📨</button>
         </div><div class="house-log-wrap" id="hlog"><div class="dpad" id="dpad">
             <button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button>

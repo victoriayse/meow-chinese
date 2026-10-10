@@ -316,4 +316,10 @@ export const CHANGES = [
     'On a computer with a mouse or trackpad, the on-screen arrow buttons are hidden (use the keyboard arrow keys to walk).',
     'On wide computer screens, the buttons at the top of the right-hand column are smaller.',
   ] },
+  { v: 126, items: [
+    '💡 The light switch is now beside the room\'s name at the top of the house (always there, not only when moving furniture).',
+    'Sideways phones and wide computer screens: the 📱📅🛍️🎒 and 🪑📨 buttons sit in one row; the 📱 is centred in its button.',
+    'Cinema and friends\' houses on a computer: the room and the chat sit side by side in the middle, without a big gap.',
+    'A friend who closed the app without leaving no longer gets stuck in your house — she disappears within about 15 seconds.',
+  ] },
 ];

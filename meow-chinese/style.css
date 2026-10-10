@@ -1647,7 +1647,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 
 /* ---------- wide, short computer windows: the house uses the stage's full height; buttons, chat history and chat bar in a column on its right ---------- */
 @media (min-width: 901px) and (min-aspect-ratio: 7/4) {
-  .stage.in-house .house { left: max(4px, env(safe-area-inset-left)); right: 350px; top: 6px; bottom: 6px; }
+  .home .stage.in-house .house { left: max(4px, env(safe-area-inset-left)); right: 350px; top: 6px; bottom: 6px; }
   .stage.in-house .stage-tray { left: auto; right: max(8px, env(safe-area-inset-right)); top: 6px; width: 330px; justify-content: flex-start; flex-wrap: nowrap; }
   .stage.in-house .house-tools { right: max(8px, env(safe-area-inset-right)); top: 50px; width: 330px; justify-content: flex-start; }
   .stage.in-house .house-tools .tool-btn, .stage.in-house .house-tools .light-switch, .stage.in-house .stage-tray .tray-btn { width: 38px; height: 38px; font-size: 19px; }
@@ -1674,4 +1674,27 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .stage.in-house .stage-tray .tray-btn svg, .stage.in-house .stage-tray .tray-btn canvas { max-width: 22px; max-height: 22px; }
   .stage.in-house .house-tools { top: 44px; }
   .house-log-wrap { top: 82px; }
+}
+/* 💡 beside the room's name */
+.room-name { pointer-events: auto; display: inline-flex; align-items: center; gap: 6px; }
+.room-name .room-light { width: 24px; height: 24px; padding: 0; font-size: 14px; line-height: 1; border: 2px solid var(--ink); border-radius: 50%; background: #fff8c2; cursor: pointer; display: grid; place-items: center; }
+.room-name .room-light.off { background: #3a3f5c; filter: grayscale(.6); }
+/* the 📱 sits in the middle of its button */
+.tray-btn { padding: 0; }
+.tray-btn.phone-btn svg { width: auto; height: 74%; margin: 0 auto; }
+/* the buttons in one row at the top of the right-hand column (phones sideways, wide computer windows) */
+@media (orientation: landscape) and (max-height: 520px) {
+  .stage.in-house .stage-tray { right: calc(max(8px, env(safe-area-inset-right)) + 286px); transform: translateX(100%); width: auto; gap: 3px; }
+  .stage.in-house .house-tools { top: 6px; width: auto; gap: 3px; }
+  .stage.in-house .house-tools .tool-btn, .stage.in-house .stage-tray .tray-btn { width: 28px; height: 28px; font-size: 14px; border-width: 2px; border-radius: 7px; }
+  .house-log-wrap { top: 42px; }
+}
+@media (min-width: 901px) and (min-aspect-ratio: 7/4) {
+  .stage.in-house .stage-tray { right: calc(max(8px, env(safe-area-inset-right)) + 330px); transform: translateX(100%); width: auto; gap: 4px; }
+  .stage.in-house .house-tools { top: 6px; width: auto; gap: 4px; }
+  .house-log-wrap { top: 46px; }
+}
+/* computers: the room's column hugs the room, and the room + chat sit together in the middle */
+@media (min-width: 901px) {
+  .visit-home { grid-template-columns: minmax(0, var(--hw, 1fr)) minmax(320px, 400px); justify-content: center; }
 }

@@ -91,6 +91,16 @@ export function startHosting(hooks) {
     hostCh.open();
   };
   check();
+  // a friend whose app closed without saying goodbye: once she's gone from the line twice in a row, she leaves the house
+  const missing = new Map();
+  setInterval(() => {
+    if (!hostCh || !hostCh.joined || !hostCh.present.size) return;
+    visitors.ids().forEach((id) => {
+      if (hostCh.present.has(id)) { missing.delete(id); return; }
+      const n = (missing.get(id) || 0) + 1; missing.set(id, n);
+      if (n >= 2) { const c = visitors.m.get(id); visitors.remove(id); missing.delete(id); api.left && api.left(id, (c && c.look) || {}); api.changed && api.changed(); }
+    });
+  }, 8000);
   setInterval(check, 5000);
   document.addEventListener('visibilitychange', check);
 }
@@ -240,6 +250,17 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
     if (gotHouse || !n.isConnected) return;
     house = h; gotHouse = true; roomKey = P.start; mine.room = roomKey; sub.textContent = ''; sfx.coin(); render(); sendMine();
   });
+  // cats whose app closed without saying goodbye: gone from the line twice in a row → gone from here
+  const gone2 = new Map();
+  const sweep = setInterval(() => {
+    if (!n.isConnected) return clearInterval(sweep);
+    if (!ch.joined || !ch.present.size) return;
+    others.ids().forEach((id) => {
+      if (ch.present.has(id)) { gone2.delete(id); return; }
+      const k = (gone2.get(id) || 0) + 1; gone2.set(id, k);
+      if (k >= 2) { others.remove(id); gone2.delete(id); if (id === hostId) hostHere = false; }
+    });
+  }, 8000);
   // keep knocking until the friend answers; if nobody is home, say so
   let tries = 0;
   const kt = setInterval(() => {
@@ -293,7 +314,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
     myWrap = myEl.querySelector('.kitten-wrap');
     room.appendChild(myEl);
     others.attach(room, roomKey);
-    fitHouse(box, unit);
+    sizeCols(); fitHouse(box, unit); requestAnimationFrame(() => { if (unit.isConnected) { sizeCols(); fitHouse(box, unit); } });
     drawRoom($('#roombg', box), isNight(), roomKey, (house.styles || {})[roomKey]); drawRoof($('#roof', box)); studioBarre(room, roomKey === 'basement');
     room.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, room); }); stackDecor(room);
     const pw = house.power || {};
@@ -363,7 +384,9 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
     logLine(S.get().kitten.name, emoteIcon(mood), true);
     ch.send('emote', { id: me, mood });
   }));
-  const refit = () => { if (!n.isConnected) { window.removeEventListener('resize', refit); return; } fitHouse(box, $('#hunit', box)); };
+  // the room's column is only as wide as the room (so the chat sits right beside it, not across a big gap)
+  const sizeCols = () => { const st = box.closest('.stage'); if (st && st.clientHeight) n.style.setProperty('--hw', `${Math.round(st.clientHeight * HOUSE.w / (HOUSE.roof + HOUSE.room) + 90)}px`); };
+  const refit = () => { if (!n.isConnected) { window.removeEventListener('resize', refit); return; } sizeCols(); fitHouse(box, $('#hunit', box)); };
   window.addEventListener('resize', refit);
   // leaving: say goodbye and close the line
   const leave = () => { Radio.stop(); clearInterval(kt); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
