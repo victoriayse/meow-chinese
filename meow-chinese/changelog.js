@@ -223,4 +223,7 @@ export const CHANGES = [
     'You can open the 📱 phone while visiting a friend\'s house.',
     'Phones: the house buttons no longer overlap the 📱📅🛍️🎒 buttons.',
   ] },
+  { v: 103, items: [
+    'Phones: in the house, all the buttons are smaller and fit on one line — more room for your house.',
+  ] },
 ];

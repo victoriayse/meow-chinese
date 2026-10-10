@@ -1495,3 +1495,13 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 @keyframes beltrun { to { background-position: -12px 0; } }
 .house .decor[data-power="treadmill"] { pointer-events: auto; cursor: pointer; }
 .visit-top .visit-phone { font-size: 20px; padding: 4px 10px; margin-left: 6px; }
+/* phones, inside the house: all the buttons in one row, small but still easy to tap */
+@media (max-width: 600px) {
+  .stage.in-house .stage-tray { left: 6px; top: 8px; gap: 4px; }
+  .stage.in-house .tray-btn { width: 34px; height: 34px; font-size: 18px; border-width: 2px; border-radius: 8px; box-shadow: 0 2px 0 rgba(43,33,64,.35); }
+  .stage.in-house .tray-btn svg { width: 22px; height: 22px; }
+  .stage.in-house .tray-btn .badge, .house-tools .store-btn b { font-size: 10px; min-width: 15px; top: -6px; right: -6px; padding: 0 3px; }
+  .house-tools { top: 8px; right: 6px; gap: 4px; }
+  .tool-btn, .house-tools .light-switch { width: 34px; height: 34px; font-size: 17px; border-width: 2px; border-radius: 8px; }
+  .stage.in-house .house { top: 52px; }
+}
