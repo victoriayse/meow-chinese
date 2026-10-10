@@ -141,7 +141,7 @@ export const visitorCount = () => visitors.ids().length;
 export function visitScreen({ go, id: hostId, name = '' }) {
   const me = (Auth.user() || {}).id;
   const n = html`<section class="visit-home">
-      <div class="visit-top"><button class="btn white small" id="leave">← <span class="zh">回家</span> Leave</button>
+      <div class="visit-top"><button class="btn white small" id="leave">← <span class="zh">回家</span> Leave</button><button class="btn white small visit-phone" id="vphone" title="Meow phone">📱</button>
         <div class="visit-title"><span class="zh">🏠 ${esc(name || '朋友')}的家</span><small id="vt-sub">敲门中… Knocking…</small></div></div>
       <div class="stage in-house"><div class="house" id="house"></div></div>
       <div class="visit-log" id="vlog"></div>
@@ -230,7 +230,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
 
   function render() {
     const info = S.roomInfo(roomKey), open = house.open || ['living'];
-    box.innerHTML = `<div class="house-unit ${info.outdoor ? 'outdoor' : ''} ${info.bare ? 'bare' : ''}" id="hunit"><canvas class="roof" id="roof"></canvas>
+    box.innerHTML = `<div class="house-unit ${info.outdoor ? 'outdoor' : ''} ${info.bare || info.noRoof ? 'bare' : ''}" id="hunit"><canvas class="roof" id="roof"></canvas>
         <div class="room-name">${info.icon} <span class="zh">${info.zh}</span> ${info.en}</div>
         <div class="room" id="room" data-room="${roomKey}"><canvas class="room-bg" id="roombg"></canvas></div>
       </div>${roomArrowsHtml(roomKey, (k) => open.includes(k), { showLocked: false })}`;
@@ -302,6 +302,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
   // leaving: say goodbye and close the line
   const leave = () => { Radio.stop(); clearInterval(kt); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
   $('#leave', n).onclick = () => { leave(); go('friend', { id: hostId }); };
+  $('#vphone', n).onclick = () => import('./phone.js').then((P) => P.openPhone({ start: 'home' }));   // the phone works at a friend's house too
   const gone = setInterval(() => { if (!n.isConnected) { clearInterval(gone); leave(); } }, 1000);
   return n;
 }

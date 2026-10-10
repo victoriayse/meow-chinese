@@ -1483,3 +1483,15 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .toast-actions { display: flex; gap: 8px; flex-basis: 100%; justify-content: center; }
 .toast-actions button { font: inherit; font-size: 15px; padding: 5px 12px; border: 2px solid var(--ink); border-radius: 999px; background: #ffd23f; cursor: pointer; }
 .toast-actions button:last-child:not(:first-child) { background: #fff; }
+/* phones: the house buttons get their own row under the 📱📅🛍️🎒 buttons, so nothing overlaps */
+@media (max-width: 600px) {
+  .house-tools { top: 64px; right: 8px; gap: 6px; }
+  .stage.in-house .house { top: 112px; }
+}
+/* 🏃 treadmill belt runs while it's switched on */
+.decor .belt { position: absolute; pointer-events: none; background: repeating-linear-gradient(90deg, rgba(255,255,255,.28) 0 3px, transparent 3px 12px); background-size: 12px 100%; animation: beltrun .5s linear infinite; }
+.decor .belt.rev { animation-direction: reverse; }
+.decor.off .belt { animation: none; opacity: .5; }
+@keyframes beltrun { to { background-position: -12px 0; } }
+.house .decor[data-power="treadmill"] { pointer-events: auto; cursor: pointer; }
+.visit-top .visit-phone { font-size: 20px; padding: 4px 10px; margin-left: 6px; }

@@ -83,6 +83,9 @@ export const DECOR_POS = {
   'front-right': 'right:2%;bottom:3%',
   bench: 'left:9%;bottom:25%',
   'wall-mid': 'left:24%;top:10%',
+  mirror: 'left:3%;top:1%',
+  hang: 'left:30%;top:0',
+  hang2: 'left:62%;top:0',
 };
 
 // the furniture standing in one room: [{ id, css, kind: 'curtain' | 'flat' | 'stand' }]
@@ -105,7 +108,7 @@ export function roomLayout(s, roomKey, roomOf) {
     const photo = it.frame ? (s.framePhotos || {})[id] || null : null;   // a photo she put in a frame
     // a pet cage shows the water bottle, wheel… she bought for that pet, and an open door while the pet is out
     const cage = it.cage ? { things: (s.owned || []).filter((x) => ITEMS[x] && ITEMS[x].cat === 'petacc' && (ITEMS[x].cageFor || []).includes(it.cage) && !(s.cageOff || []).includes(x)), open: !!((s.pets || []).find((p) => p.kind === it.cage) || {}).out } : null;
-    const back = it.frames && it.frames.back && (s.facing || {})[id] === 'back';   // turned round to face the back
+    const back = ((it.frames && it.frames.back) || it.flip) && (s.facing || {})[id] === 'back';   // turned round (or sideways)
     const layer = (s.decorLayer || {})[id] || 0;   // dragged on top of something: stays in front of it
     return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : {}), ...(layer ? { layer } : {}) };
   }).filter(Boolean).concat(((s.roomStyle || {})[roomKey] || {}).pool ? [(() => {
@@ -141,7 +144,9 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer }, {
   if (kind === 'pool') return poolEl({ id, css });
   const it = ITEMS[id]; if (!it) return null;
   const c = document.createElement('canvas');
-  const art = cage && cage.open && it.frames && it.frames.open ? it.frames.open : facing === 'back' && it.frames && it.frames.back ? it.frames.back : it.art;
+  const art = cage && cage.open && it.frames && it.frames.open ? it.frames.open : facing === 'back' && !it.flip && it.frames && it.frames.back ? it.frames.back : it.art;
+  const flipped = facing === 'back' && it.flip;   // turned sideways: drawn the other way round
+  if (flipped) c.style.scale = '-1 1';
   const g = artGrid(art, it.pal);
   drawGrid(c, kind === 'curtain' && closed ? closedCurtain(g) : g, HOUSE.decor * (it.size || 1));   // some small things are drawn smaller
   const wrap = document.createElement('div');
@@ -209,11 +214,18 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer }, {
     wrap.dataset.inner = (inner / W).toFixed(3);
     wrap.dataset.floor = ((7 / H) * 100).toFixed(1);
   }
-  if (facing === 'back') wrap.dataset.facing = 'back';
+  if (facing === 'back') wrap.dataset.facing = flipped ? 'flip' : 'back';
+  if (it.belt) {     // the treadmill's moving belt
+    const bt = document.createElement('i'); bt.className = 'belt';
+    const x = flipped ? 1 - it.belt.x - it.belt.w : it.belt.x;
+    Object.assign(bt.style, { left: `${x * 100}%`, top: `${it.belt.y * 100}%`, width: `${it.belt.w * 100}%`, height: `${it.belt.h * 100}%` });
+    if (flipped) bt.classList.add('rev');
+    wrap.appendChild(bt);
+  }
   if (layer) wrap.dataset.layer = layer;
   if (it.radio) wrap.classList.add('radio');
   if (it.garland) wrap.classList.add('garland');
-  if (putAway && it.frames && it.frames.back) {      // 🔄 turn it round (shown while moving furniture)
+  if (putAway && ((it.frames && it.frames.back) || it.flip)) {      // 🔄 turn it round / sideways (shown while moving furniture)
     const tb = document.createElement('button'); tb.className = 'turn-btn'; tb.type = 'button'; tb.title = 'Turn around'; tb.textContent = '🔄'; wrap.appendChild(tb);
   }
   if (putAway && it.radio) {                          // 🎵 pick the radio's song
@@ -316,6 +328,8 @@ export class OtherCats {
     c.el.classList.toggle('lying', !!(spot && spot.lie)); c.el.classList.toggle('seated', !!spot);
     c.el.classList.toggle('swimming', !spot && inPool(this.roomEl, c.dx, c.dy));
     if (c.kv) c.kv.setPose(spot ? spot.pose : null); c.el.dataset.pose = (spot && spot.pose) || '';
+    if (c.kv && spot && spot.run) { c.kv.setFacing(spot.flip); c.kv.canvas.classList.add('walking'); }
+    else if (c.kv && spot) c.kv.canvas.classList.remove('walking');
     if (c.bedShown && c.bedShown !== (spot && spot.lie && c.seat)) { blanket(this.roomEl, c.bedShown, false); c.bedShown = null; }
     if (spot && spot.lie) { blanket(this.roomEl, c.seat, true); c.bedShown = c.seat; }
   }
@@ -490,8 +504,11 @@ export function seatSpot(roomEl, id, slot = 0) {
   const el = roomEl && roomEl.querySelector(`.decor.seat[data-id="${id}"]`), seat = ITEMS[id] && ITEMS[id].seat;
   if (!el || !seat) return null;
   const W = roomEl.clientWidth, H = roomEl.clientHeight;
-  const sx = seat.spots ? seat.spots[Math.min(slot || 0, seat.spots.length - 1)] : seat.x;
+  const flip = el.dataset.facing === 'flip';
+  let sx = seat.spots ? seat.spots[Math.min(slot || 0, seat.spots.length - 1)] : seat.x;
+  if (flip) sx = 1 - sx;
   return {
+    run: !!seat.run, flip,
     back: !!seat.back || el.dataset.facing === 'back', pose: seat.lie ? 'lie' : (seat.back || el.dataset.facing === 'back') ? 'back' : seat.side ? ((slot || 0) === 0 ? 'side-r' : 'side-l') : null,
     x: ((el.offsetLeft + el.offsetWidth * sx) / W) * 100,
     y: ((H - (el.offsetTop + el.offsetHeight * seat.y)) / H) * 100,

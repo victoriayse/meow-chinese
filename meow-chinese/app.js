@@ -549,7 +549,7 @@ function homeScreen(params = {}) {
 
   const n = html`<section class="home ${inHouse ? 'house-view' : ''}">
     <div class="stage ${inHouse ? 'in-house' : ''}" id="stage">
-      ${inHouse ? `<div class="house" id="house"><div class="house-unit ${roomRI.outdoor ? 'outdoor' : ''} ${roomRI.bare ? 'bare' : ''}" id="hunit">
+      ${inHouse ? `<div class="house" id="house"><div class="house-unit ${roomRI.outdoor ? 'outdoor' : ''} ${roomRI.bare || roomRI.noRoof ? 'bare' : ''}" id="hunit">
         <canvas class="roof" id="roof"></canvas>
         <div class="room-name">${S.roomInfo(roomKey).icon} <span class="zh">${S.roomInfo(roomKey).zh}</span> ${S.roomInfo(roomKey).en}</div>
         <div class="room" id="room" data-room="${roomKey}">
@@ -692,6 +692,8 @@ function homeScreen(params = {}) {
     const st = seatNow(), spot = st && seatSpot(room, st.id, st.slot);
     ground.classList.toggle('lying', !!(spot && spot.lie)); ground.classList.toggle('seated', !!spot);
     kv.setPose(spot ? spot.pose : null); ground.dataset.pose = (spot && spot.pose) || '';
+    if (spot && spot.run) { kv.setFacing(spot.flip); kv.canvas.classList.add('walking'); }   // running on the treadmill
+    else if (spot) kv.canvas.classList.remove('walking');
     room.querySelectorAll('.decor.seat').forEach((d) => blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === st.id)));
     if (spot) {
       ground.classList.remove('swimming');
@@ -724,7 +726,7 @@ function homeScreen(params = {}) {
     if (!seatNow()) return;
     S.get().catSeat = null;
     cat.y = Math.min(cat.y, 28);
-    ground.classList.remove('lying', 'seated'); kv.setPose(null); ground.dataset.pose = '';
+    ground.classList.remove('lying', 'seated'); kv.setPose(null); ground.dataset.pose = ''; kv.canvas.classList.remove('walking');
     room.querySelectorAll('.blanket').forEach((b) => b.remove());
   };
   const held = new Set();
@@ -1002,7 +1004,7 @@ function homeScreen(params = {}) {
           <div class="h-title" style="justify-content:center"><span class="zh">🖼️ ${it.name}</span><span class="en">${esc(it.en)}</span></div>
           <div class="frame-preview">${cur ? `<img src="${cur}" alt="">` : '<span class="help">还没有照片 · No photo yet</span>'}</div>
           <label class="btn blue">📷 <span class="zh">${cur ? '换照片' : '选照片'}</span> ${cur ? 'Change photo' : 'Choose a photo'}<input type="file" accept="image/*" hidden></label>
-          <p class="help" id="pmsg" style="margin:0">照片会缩小到 50KB 以内。来家里玩的朋友也看得到。<br>Photos are made small (under 50 KB). Friends visiting your house can see them.</p>
+          <p class="help" id="pmsg" style="margin:0">照片会缩小到 ${it.maxKB || 50}KB 以内。来家里玩的朋友也看得到。<br>Photos are made small (under ${it.maxKB || 50} KB). Friends visiting your house can see them.</p>
           <div class="row">${cur ? '<button class="btn white" id="prm">🗑 <span class="zh">拿掉</span> Remove</button>' : ''}<button class="btn white" id="pc">关闭 Close</button></div>
         </div>`;
       const msg = $('#pmsg', box);
@@ -1010,7 +1012,7 @@ function homeScreen(params = {}) {
         const f = ev.target.files && ev.target.files[0]; if (!f) return;
         msg.textContent = '处理中… Making it small…';
         try {
-          const url = await compressPhoto(f);
+          const url = await compressPhoto(f, (it.maxKB || 50) * 1024);   // posters: 10 KB
           S.setFramePhoto(id, url); sfx.coin(); closeModal();
           toast(`🖼️ <span class="zh">照片放好了！</span> Photo added (${Math.round((url.length * 3) / 4 / 1024)} KB)`);
           Visit.hostResendHouse(); refreshHome();

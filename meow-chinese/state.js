@@ -528,7 +528,7 @@ export const ROOMS = [
   { key: 'garden', zh: '花园', en: 'Garden', icon: '🌳', lock: 'garden', outdoor: true },
   // up and down from the living room (▲ ▼ arrows)
   { key: 'rooftop', zh: '天台', en: 'Rooftop', icon: '☀️', lock: 'rooftop', vert: 'up', outdoor: true },
-  { key: 'basement', zh: '地下室', en: 'Basement', icon: '🔦', lock: 'basement', vert: 'down', bare: true, maxY: 58 },
+  { key: 'basement', zh: '室内工作室', en: 'Indoor studio', icon: '🏋️', lock: 'basement', vert: 'down', noRoof: true },   // downstairs: a studio / gym
 ];
 // the rooms next to this one: ◀ ▶ along the row of rooms, ▲ ▼ only from the living room
 export function roomNeighbors(key) {
@@ -696,7 +696,7 @@ export function finishPlay(first, total) {
 
 // ---------- level unlocks ----------
 export const UNLOCKS = { head: 5, feet: 10, acc: 15, body: 20, decor: 25, bedroom: 35, garden: 40, kitchen: 45, toilet: 50, rooftop: 55, basement: 60 };
-export const UNLOCK_NAMES = { head: '头饰 Hair accessories', feet: '鞋子 Shoes', acc: '配饰 Extras', body: '衣服 Clothes', decor: '我的家 Home & furniture', bedroom: '卧室 Bedroom (right room)', kitchen: '厨房 Kitchen (left room)', garden: '花园 Garden (outside, right of the bedroom)', toilet: '浴室 Bathroom (left of the kitchen)', rooftop: '天台 Rooftop (up from the living room)', basement: '地下室 Basement (down from the living room)' };
+export const UNLOCK_NAMES = { head: '头饰 Hair accessories', feet: '鞋子 Shoes', acc: '配饰 Extras', body: '衣服 Clothes', decor: '我的家 Home & furniture', bedroom: '卧室 Bedroom (right room)', kitchen: '厨房 Kitchen (left room)', garden: '花园 Garden (outside, right of the bedroom)', toilet: '浴室 Bathroom (left of the kitchen)', rooftop: '天台 Rooftop (up from the living room)', basement: '室内工作室 Indoor studio (down from the living room)' };
 export const unlocked = (key) => !(key in UNLOCKS) || !!state.settings.unlockAll || level() >= UNLOCKS[key];
 export function nextUnlock() {
   const lv = level();

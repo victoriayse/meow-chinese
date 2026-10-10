@@ -32,6 +32,8 @@ const DECOR_GROUPS = [
   { key: 'toilet', icon: '🚽', zh: '浴室', en: 'Bathroom' },
   { key: 'garden', icon: '🌳', zh: '花园', en: 'Garden' },
   { key: 'pool', icon: '🏊', zh: '泳池天台', en: 'Pool & rooftop' },
+  { key: 'studio', icon: '🏋️', zh: '健身房', en: 'Gym & studio' },
+  { key: 'food', icon: '🍰', zh: '小吃', en: 'Food & snacks' },
   { key: 'lights', icon: '💡', zh: '灯', en: 'Lights' },
   { key: 'windows', icon: '🪟', zh: '窗帘', en: 'Curtains' },
   { key: 'toys', icon: '🧶', zh: '玩具', en: 'Toys' },
@@ -40,6 +42,7 @@ const POOLSIDE = ['bbq', 'lounger', 'umbrella', 'cocktails', 'towels', 'loungeso
 export function decorGroup(it) {
   const id = Object.keys(ITEMS).find((k) => ITEMS[k] === it);
   if (POOLSIDE.includes(id)) return 'pool';
+  if (it.group) return it.group;
   if (it.toy) return 'toys';
   if (it.spot === 'curtain') return 'windows';
   if (it.garland || (it.power === 'light' && !it.room)) return 'lights';   // room lamps (bedside table, garden lamp) stay with their room

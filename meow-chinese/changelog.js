@@ -215,4 +215,12 @@ export const CHANGES = [
     '📨 Invite friends to your house: the new 📨 button in your house, or "Invite to my house" on a friend\'s page.',
     'When a friend is at your house, tap the pop-up to go straight home and say hi.',
   ] },
+  { v: 102, items: [
+    'The basement is now an 🏋️ indoor studio, with walls, a barre and a wooden floor.',
+    'New gym things: treadmill (cats can run on it!), barbell machine, chest press, dumbbell rack, barbell rack, gym bench, yoga mat, yoga ball, foam rollers, ceiling-high mirror, vending machine — and aerial yoga silks and hoop that hang from the ceiling (cats can sit in them).',
+    'Turn gym equipment sideways: 🪑 Move furniture → 🔄.',
+    'New little food: cake slice, whole cake, soup, tea cup, roast chicken, burger, tissue box. Plus a microwave, ceiling light, wall light, and posters you can put your own photo in.',
+    'You can open the 📱 phone while visiting a friend\'s house.',
+    'Phones: the house buttons no longer overlap the 📱📅🛍️🎒 buttons.',
+  ] },
 ];
