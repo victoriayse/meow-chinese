@@ -285,4 +285,7 @@ export const CHANGES = [
     'Tap 🔇 on the screen to hear the film (the game music goes quiet while it plays).',
     'The popcorn machine and drinks dispenser are 30% smaller.',
   ] },
+  { v: 118, items: [
+    'The film on the projector screen keeps playing (and stays bright) when you switch the lights off.',
+  ] },
 ];
