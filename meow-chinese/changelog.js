@@ -309,4 +309,7 @@ export const CHANGES = [
   { v: 123, items: [
     '↶ Undo when moving furniture: while 🪑 is on, tap ↶ to take back the last change (moving, ⬆⬇ front/behind, turning, putting away or placing from storage). Tap it again to go back further.',
   ] },
+  { v: 124, items: [
+    'On wide computer screens, your house is bigger: it fills the full height, with the buttons, chat history and chat bar in a column on its right.',
+  ] },
 ];

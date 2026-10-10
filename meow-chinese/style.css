@@ -1644,3 +1644,22 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .decor .screen-label { position: absolute; z-index: 1; display: grid; place-items: center; text-align: center; white-space: pre-line; font-family: var(--zh), system-ui, sans-serif; font-weight: 800; font-size: 11px; line-height: 1.15; color: #1c1530; pointer-events: none; animation: labelglow 1.6s ease-in-out infinite; }
 .decor.off .screen-label { color: rgba(255,255,255,.25); animation: none; }
 @keyframes labelglow { 50% { opacity: .65; } }
+
+/* ---------- wide, short computer windows: the house uses the stage's full height; buttons, chat history and chat bar in a column on its right ---------- */
+@media (min-width: 901px) and (min-aspect-ratio: 7/4) {
+  .stage.in-house .house { left: max(4px, env(safe-area-inset-left)); right: 350px; top: 6px; bottom: 6px; }
+  .stage.in-house .stage-tray { left: auto; right: max(8px, env(safe-area-inset-right)); top: 6px; width: 330px; justify-content: flex-start; flex-wrap: nowrap; }
+  .stage.in-house .house-tools { right: max(8px, env(safe-area-inset-right)); top: 50px; width: 330px; justify-content: flex-start; }
+  .stage.in-house .house-tools .tool-btn, .stage.in-house .house-tools .light-switch, .stage.in-house .stage-tray .tray-btn { width: 38px; height: 38px; font-size: 19px; }
+  .house-log-wrap { left: auto; right: max(8px, env(safe-area-inset-right)); width: 330px; top: 96px; bottom: 52px; height: auto; }
+  .house-log-wrap .chat-log { max-width: none; margin: 0; }
+  .house-chat-wrap { left: auto; right: max(8px, env(safe-area-inset-right)); width: 330px; bottom: 6px; }
+  .house-chat-wrap .house-chat { max-width: none; }
+  .house-chat input { font-size: 15px; padding: 6px 10px; }
+  .house-log-wrap .dpad, .visit-log .dpad { grid-template: repeat(2, 32px) / repeat(3, 32px); }
+  .house-log-wrap .dpad button, .visit-log .dpad button { width: 32px; height: 32px; font-size: 13px; }
+  .stage.in-house .house-tools .tool-btn, .stage.in-house .house-tools .light-switch, .stage.in-house .stage-tray .tray-btn { width: 41px; height: 41px; font-size: 20px; }
+  .house-log-wrap { top: 104px; bottom: 58px; }
+  .stage.in-house .house-tools { gap: 6px; }
+  .stage.in-house .house-tools { top: 58px; }
+}
