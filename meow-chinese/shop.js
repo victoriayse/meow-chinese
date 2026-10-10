@@ -179,14 +179,37 @@ export function shopScreen({ go, tab = 'food' }) {
   }
   // always ask first, so nothing is bought by a stray tap
   async function askBuy(id) {
-    const it = ITEMS[id], cost = S.price(id), left = S.get().coins - cost;
+    const it = ITEMS[id], cost = S.price(id), coins = S.get().coins;
+    // furniture, food and toiletries can be bought several at once
+    const multi = ['decor', 'food', 'toiletry'].includes(it.cat), most = multi ? Math.max(1, Math.min(20, Math.floor(coins / cost))) : 1;
+    let qty = 1;
     sfx.click();
     const asking = confirmBox(`买${esc(it.name)}吗？ Buy ${esc(it.en)}?`,
-      `<span class="buy-ask"><span class="art"></span><span><span class="nowrap">${coinI(18)} <b>${cost}</b> 金币 coins</span><br><small>买了以后还剩 ${left} · You'll have ${left} left</small></span></span>`,
+      `<span class="buy-ask"><span class="art"></span><span><span class="nowrap">${coinI(18)} <b id="bq-total">${cost}</b> 金币 coins</span><br><small id="bq-left">买了以后还剩 ${coins - cost} · You'll have ${coins - cost} left</small></span></span>
+       ${multi && most > 1 ? `<span class="qty-row"><span class="zh">数量</span> How many: <button type="button" class="qty-btn" data-q="-1" aria-label="Fewer">−</button><b id="bq-n">1</b><button type="button" class="qty-btn" data-q="1" aria-label="More">＋</button><small>(${cost}${coinI(14)} 每个 each)</small></span>` : ''}`,
       '🛒 买 Buy', '取消 Cancel');
-    const art = document.querySelector('#modal .buy-ask .art'); if (art) art.appendChild(spriteCanvas(id, 56));
-    hydrateIcons(document.querySelector('#modal'));
-    if (await asking) buy(id);
+    const modal = document.querySelector('#modal');
+    const art = modal.querySelector('.buy-ask .art'); if (art) art.appendChild(spriteCanvas(id, 56));
+    modal.querySelectorAll('.qty-btn').forEach((b) => {
+      b.onclick = (e) => {
+        e.stopPropagation();
+        qty = Math.max(1, Math.min(most, qty + +b.dataset.q)); sfx.click();
+        const total = cost * qty;
+        modal.querySelector('#bq-n').textContent = qty;
+        modal.querySelector('#bq-total').textContent = total;
+        modal.querySelector('#bq-left').textContent = `买了以后还剩 ${coins - total} · You'll have ${coins - total} left`;
+      };
+    });
+    hydrateIcons(modal);
+    if (!(await asking)) return;
+    if (qty === 1) return buy(id);
+    let got = 0;
+    for (let i = 0; i < qty; i++) { if (!S.buy(id)) break; got++; }
+    if (!got) { toast('金币不够 · Not enough coins'); return; }
+    sfx.coin(); drawKitten(); kv.flash('happy', 1500); kv.jump(); burst($('#fx', n), 'heart', 4, '50%', '20%');
+    toast(it.cat === 'decor' ? `📦 <span class="zh">买了${got}个${it.name}！</span> ${got} × ${esc(it.en)} in your storage box — place them with 🪑 Move furniture`
+      : `<span class="zh">买了${got}个${it.name}！</span> ${got} × ${esc(it.en)} — find them in 🎒 My items`, { ms: 3500 });
+    render();
   }
   // adopting a pet: say yes, then give it a name
   async function adopt(id) {

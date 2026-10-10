@@ -1547,3 +1547,8 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .map-pin:hover .ic { background: #fff3c4; }
 @media (max-width: 600px) { .map-pin .ic { font-size: 24px; width: 40px; height: 40px; } .map-pin .lb { font-size: 12px; padding: 0 5px; } }
 .house-unit .room[data-room^="theatre"], .house-unit .room[data-room="lobby"] { border-color: #2b2140; }
+/* how many to buy */
+.qty-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; font-weight: 700; }
+.qty-row .qty-btn { width: 40px; height: 40px; border: 3px solid var(--ink); border-radius: 8px; background: #fff; font: inherit; font-size: 22px; font-weight: 800; cursor: pointer; line-height: 1; }
+.qty-row b { min-width: 28px; text-align: center; font-size: 22px; }
+.qty-row small { font-weight: 600; color: #6b5d7a; white-space: nowrap; }

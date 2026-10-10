@@ -6280,6 +6280,38 @@ Object.assign(ITEMS, {
     ] },
 });
 
+// the cinema lobby counter: line several up side by side; a kitten can stand behind it to serve
+Object.assign(ITEMS, {
+  lobbycounter: { cat: 'decor', room: 'lobby', name: '大堂柜台', en: 'Lobby counter', price: 90, spot: 'back-mid-left', group: 'cinema', seat: { x: 0.5, y: 0.25, cover: true, blanket: [0, 24, 0, 44] },
+    pal: { o: O, t: '#2b2140', l: '#5b5070', r: '#b8233a', d: '#8e1b2e', y: '#ffd23f', g: '#e0a524', k: '#3a1420' },
+    art: [
+      'llllllllllllllllllllllllllllllllllllllllllll',
+      'tttttttttttttttttttttttttttttttttttttttttttt',
+      'tttttttttttttttttttttttttttttttttttttttttttt',
+      'oddddddddddddddddddddddddddddddddddddddddddo',
+      'odrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdro',
+      'odrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdro',
+      'odrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdro',
+      'odrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdro',
+      'odrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdro',
+      'oyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyo',
+      'oggggggggggggggggggggggggggggggggggggggggggo',
+      'odrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdro',
+      'odrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdro',
+      'odrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdro',
+      'odrrryyrrdrrryyrrdrrryyrrdrrryyrrdrrryyrrdro',
+      'odrrryyrrdrrryyrrdrrryyrrdrrryyrrdrrryyrrdro',
+      'odrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdro',
+      'odrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdro',
+      'odrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdro',
+      'odrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdro',
+      'odrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdro',
+      'odrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdrrrrrrrdro',
+      'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
+      'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
+    ] },
+});
+
 // furniture you can switch on and off at home
 ITEMS.tv.power = 'tv';
 ['lamp', 'lantern', 'starlight', 'nightstand'].forEach((id) => { if (ITEMS[id]) ITEMS[id].power = 'light'; });

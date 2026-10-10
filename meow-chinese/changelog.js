@@ -271,4 +271,8 @@ export const CHANGES = [
     'The cinema has a Lobby with Theatre 1 on the left and Theatre 2 on the right. Each theatre has 4 tiers of steps for the seats.',
     'New Cinema aisle in the shop: projector screen, ceiling lights, projector, cinema chairs, popcorn, lobby sofa, popcorn machine, drinks dispenser, cashier, wall speakers, red drink cups, self-help kiosks and queue poles.',
   ] },
+  { v: 115, items: [
+    'Shop: buy several of the same thing at once — use − and ＋ when you buy furniture, food or toiletries.',
+    'New for the cinema: Lobby counter. Line a few up side by side, and your cat can stand behind it.',
+  ] },
 ];
