@@ -226,4 +226,7 @@ export const CHANGES = [
   { v: 103, items: [
     'Phones: in the house, all the buttons are smaller and fit on one line — more room for your house.',
   ] },
+  { v: 104, items: [
+    'Fixed: the game no longer keeps asking you to update right after you updated.',
+  ] },
 ];

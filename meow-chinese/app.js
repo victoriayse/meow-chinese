@@ -1365,8 +1365,10 @@ const verNum = (v) => Number(String(v || '').replace(/\D/g, '')) || 0;
 async function checkForUpdate() {
   if (updateShown || document.hidden || !navigator.onLine) return;
   try {
-    const t = await (await fetch(`sw.js?check=${Date.now()}`, { cache: 'no-store' })).text();
-    const live = (t.match(/VERSION\s*=\s*'([^']+)'/) || [])[1];
+    // ask for version.js exactly the way a reload would get it (same address, same caches): only offer the update once
+    // the new files can actually arrive — otherwise tapping Update reloads the old version and asks again
+    const t = await (await fetch('version.js', { cache: 'no-cache' })).text();
+    const live = (t.match(/APP_VERSION\s*=\s*'([^']+)'/) || [])[1];
     if (live && live !== APP_VERSION) {
       updateShown = true;
       // the notes for every version she hasn't got yet, all in one list
