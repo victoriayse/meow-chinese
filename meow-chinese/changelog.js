@@ -303,4 +303,7 @@ export const CHANGES = [
     'Snacks you pick up show as buttons at the bottom. Tap one to hold it in your cat\'s paw (friends see it too), tap again to put it away, and tap 吃 Eat to eat it — it fills Food or Water.',
     'New: Collection counter for the cinema lobby (only one per player).',
   ] },
+  { v: 122, items: [
+    'The self-help kiosk\'s screen now says 点餐 Order Here.',
+  ] },
 ];

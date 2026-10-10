@@ -1638,3 +1638,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .kiosk-total canvas, .kiosk-row canvas.coin, .kiosk-card .kiosk-total i { display: inline-block !important; vertical-align: middle; }
 .kiosk-list { max-height: 40vh; }
 @media (max-width: 600px) { .kiosk-card { gap: 8px; } .kiosk-card .row .btn { padding: 6px 10px; font-size: 15px; } .kiosk-card .help { font-size: 13px; } }
+/* the kiosk's "Order Here" */
+.decor .screen-label { position: absolute; z-index: 1; display: grid; place-items: center; text-align: center; white-space: pre-line; font-family: var(--zh), system-ui, sans-serif; font-weight: 800; font-size: 11px; line-height: 1.15; color: #1c1530; pointer-events: none; animation: labelglow 1.6s ease-in-out infinite; }
+.decor.off .screen-label { color: rgba(255,255,255,.25); animation: none; }
+@keyframes labelglow { 50% { opacity: .65; } }

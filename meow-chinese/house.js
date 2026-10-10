@@ -185,6 +185,12 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
       wrap.appendChild(img);
     }
   }
+  if (it.label && it.screen) {
+    // words on a screen (the kiosk's "Order Here")
+    const lb = document.createElement('div'); lb.className = 'screen-label'; lb.textContent = it.label;
+    Object.assign(lb.style, { left: `${it.screen.x * 100}%`, top: `${it.screen.y * 100}%`, width: `${it.screen.w * 100}%`, height: `${it.screen.h * 100}%` });
+    wrap.appendChild(lb);
+  }
   if (it.board) {
     // a menu board: chalk writing she can change (tap it)
     wrap.classList.add('board');

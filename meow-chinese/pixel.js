@@ -6214,7 +6214,7 @@ Object.assign(ITEMS, {
       '.orrrrrro.',
       '.orrrrro..',
     ] },
-  kiosk: { cat: 'decor', room: 'lobby', name: '自助售票机', en: 'Self-help kiosk', price: 160, spot: 'back-mid-right', group: 'cinema', power: 'tv', screen: { x: 4 / 18, y: 4 / 38, w: 10 / 18, h: 12 / 38 },
+  kiosk: { cat: 'decor', room: 'lobby', name: '自助售票机', en: 'Self-help kiosk', price: 160, spot: 'back-mid-right', group: 'cinema', power: 'tv', label: '点餐\nOrder Here', screen: { x: 4 / 18, y: 4 / 38, w: 10 / 18, h: 12 / 38 },
     pal: { o: O, k: '#2b2140', s: '#8a8d99', f: '#1c1530', b: '#7ec3e8', y: '#ffd23f', g: '#5b6170' },
     art: [
       'osssssssssssssssso',
