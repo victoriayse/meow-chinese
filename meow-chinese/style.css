@@ -1559,6 +1559,13 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 /* 🎞️ a film on the projector screen */
 .decor .screen-video { position: absolute; z-index: 1; object-fit: cover; background: #000; pointer-events: none; }   /* above the screen, and still bright when the lights are off */
 .decor.off .screen-video, .decor.off .vid-sound { display: none; }
-.decor .vid-sound, .decor .vid-pick { position: absolute; right: 8%; bottom: 14%; width: 40px; height: 40px; font-size: 20px; border: 3px solid var(--ink); border-radius: 50%; background: rgba(255,255,255,.92); cursor: pointer; pointer-events: auto; display: grid; place-items: center; padding: 0; z-index: 2; }
+.decor .vid-sound, .decor .vid-pick, .decor .vid-play { position: absolute; right: 8%; bottom: 14%; width: 40px; height: 40px; font-size: 20px; border: 3px solid var(--ink); border-radius: 50%; background: rgba(255,255,255,.92); cursor: pointer; pointer-events: auto; display: grid; place-items: center; padding: 0; z-index: 2; }
 .decor .vid-pick { right: auto; left: 8%; }
-.room.arranging .decor .vid-sound, .room.arranging .decor .vid-pick { display: none; }
+.room.arranging .decor .vid-sound, .room.arranging .decor .vid-pick, .room.arranging .decor .vid-play { display: none; }
+.decor .vid-play { right: auto; left: 50%; transform: translateX(-50%); }
+.decor.off .vid-play.owner { display: grid; }
+.decor.off .vid-play:not(.owner) { display: none; }
+.decor.has-film { cursor: pointer; }
+.decor.has-film.vid-paused:not(.off) .screen-video { filter: brightness(.55); }
+/* film buttons stay big enough to tap on a phone (the house is drawn smaller there) */
+.decor .vid-sound, .decor .vid-pick, .decor .vid-play { width: calc(36px * var(--inv, 1)); height: calc(36px * var(--inv, 1)); font-size: calc(18px * var(--inv, 1)); border-width: calc(3px * var(--inv, 1)); }

@@ -1056,6 +1056,11 @@ function homeScreen(params = {}) {
       toast(shut ? '🌙 <span class="zh">拉上窗帘</span> Curtains closed' : '☀️ <span class="zh">拉开窗帘</span> Curtains open', { ms: 1400 });
       Visit.hostResendHouse();
     });
+    // ⏯ the projector screen's film: on / off (for everyone in the cinema)
+    room.addEventListener('screen-power', (e) => {
+      const on = S.togglePower(e.detail.id); sfx.click(); applyPower(room, { dark: S.roomDark(roomKey), off: S.get().powerOff || {} }); Visit.hostResendHouse();
+      toast(on ? '▶️ <span class="zh">开始放电影</span> Film on' : '⏹ <span class="zh">电影停了</span> Film off', { ms: 1400 });
+    });
     // 🎞️ the projector screen (admin): choose a film, up to 10 MB
     room.addEventListener('screen-video', (e) => {
       const id = e.detail.id, it = ITEMS[id], cur = (S.get().screenVideos || {})[id];

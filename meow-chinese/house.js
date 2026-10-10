@@ -202,21 +202,36 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
       if (video && video.url) {
         // a film playing on the screen: everyone sees the same part (it started at video.at); tap 🔇 for sound
         const v = document.createElement('video'); v.className = 'screen-video';
-        Object.assign(v, { muted: true, loop: true, autoplay: true, playsInline: true, preload: 'auto', src: video.url });
-        v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+        v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto';
+        v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', ''); v.setAttribute('autoplay', ''); v.setAttribute('loop', '');
+        v.src = video.url;
         Object.assign(v.style, { left: sc.style.left, top: sc.style.top, width: sc.style.width, height: sc.style.height });
         const sync = () => { if (v.duration > 0) { try { v.currentTime = ((Date.now() - (video.at || 0)) / 1000) % v.duration; } catch {} } };
         v.addEventListener('loadedmetadata', sync);
         v.addEventListener('play', sync, { once: true });
-        const snd = document.createElement('button'); snd.type = 'button'; snd.className = 'vid-sound'; snd.textContent = '🔇'; snd.title = 'Sound';
-        snd.addEventListener('pointerdown', (e) => e.stopPropagation());
+        const btn = (cls, txt, title) => { const x = document.createElement('button'); x.type = 'button'; x.className = cls; x.textContent = txt; x.title = title; x.addEventListener('pointerdown', (e) => e.stopPropagation()); return x; };
+        const snd = btn('vid-sound', '🔇', 'Sound'), play = btn(`vid-play ${videoPick ? 'owner' : ''}`, '▶️', 'Play / stop');
+        const show = () => { play.textContent = v.paused ? '▶️' : '⏸️'; wrap.classList.toggle('vid-paused', v.paused); };
+        v.addEventListener('play', show); v.addEventListener('pause', show);
+        // start it (phones may refuse until someone taps — then the ▶️ button / a tap on the screen starts it)
+        v.startFilm = () => { if (v.dataset.stopped) return; const p = v.play(); if (p) p.catch(() => show()); };
         snd.onclick = (e) => {
           e.stopPropagation();
           v.muted = !v.muted; snd.textContent = v.muted ? '🔇' : '🔊';
-          if (!v.muted) { sync(); v.play().catch(() => {}); }
+          if (!v.muted) { delete v.dataset.stopped; sync(); v.play().catch(() => {}); }
           screenSound(v);
         };
-        wrap.append(v, snd);
+        play.onclick = (e) => {
+          e.stopPropagation();
+          if (videoPick) { play.dispatchEvent(new CustomEvent('screen-power', { bubbles: true, detail: { id } })); return; }   // the owner: on / off for everyone
+          if (v.paused) { delete v.dataset.stopped; sync(); v.play().catch(() => {}); }
+          else { v.dataset.stopped = '1'; v.pause(); if (!v.muted) { v.muted = true; snd.textContent = '🔇'; screenSound(v); } }
+        };
+        // a tap on the screen itself: start the film if it isn't playing
+        wrap.addEventListener('click', (e) => { if (e.target.closest('button') || !v.paused || wrap.classList.contains('off')) return; delete v.dataset.stopped; sync(); v.play().catch(() => {}); });
+        wrap.classList.add('has-film', 'vid-paused');
+        wrap.append(v, snd, play);
+        requestAnimationFrame(() => { if (!wrap.classList.contains('off')) v.startFilm(); });
       }
       if (videoPick) {
         const pk = document.createElement('button'); pk.type = 'button'; pk.className = 'vid-pick'; pk.textContent = '🎞️'; pk.title = 'Choose a video';
@@ -572,7 +587,7 @@ export function chatLog(entries) {
 export function applyPower(roomEl, { dark = false, off = {} } = {}) {
   if (!roomEl) return;
   roomEl.querySelectorAll('.decor[data-power]').forEach((d) => d.classList.toggle('off', !!off[d.dataset.id]));
-  roomEl.querySelectorAll('.decor .screen-video').forEach((v) => { if (v.closest('.decor').classList.contains('off')) { v.pause(); v.muted = true; screenSound(v); } else v.play().catch(() => {}); });
+  roomEl.querySelectorAll('.decor .screen-video').forEach((v) => { if (v.closest('.decor').classList.contains('off')) { v.pause(); v.muted = true; screenSound(v); } else if (v.startFilm) v.startFilm(); });
   let shade = roomEl.querySelector('.room-dark');
   if (!shade) { shade = document.createElement('div'); shade.className = 'room-dark'; roomEl.appendChild(shade); }
   roomEl.classList.toggle('lights-off', !!dark);
@@ -635,7 +650,7 @@ export function rideFx(roomEl, catEl, id) {
 export function wirePower(roomEl, onToggle) {
   roomEl.addEventListener('click', (e) => {
     const d = e.target.closest('.decor[data-power]');
-    if (!d || roomEl.classList.contains('arranging')) return;
+    if (!d || roomEl.classList.contains('arranging') || d.classList.contains('has-film')) return;
     sfx.click(); onToggle(d.dataset.id);
   });
 }

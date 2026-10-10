@@ -288,4 +288,9 @@ export const CHANGES = [
   { v: 118, items: [
     'The film on the projector screen keeps playing (and stays bright) when you switch the lights off.',
   ] },
+  { v: 119, items: [
+    'Cinema film: a new ▶️ / ⏸️ button on the screen. Tap the screen to start the film if your phone didn\'t start it by itself.',
+    'The cinema owner\'s ▶️ / ⏸️ button turns the film on or off for everyone. Visitors\' button only stops it on their own phone.',
+    'The film buttons are bigger on phones.',
+  ] },
 ];
