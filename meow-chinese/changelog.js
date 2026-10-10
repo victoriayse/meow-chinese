@@ -246,4 +246,7 @@ export const CHANGES = [
     'New: long table with four chairs — four cats can sit at it together.',
     'Shop: new ☕ Lounging area and 👗 Changing room aisles.',
   ] },
+  { v: 110, items: [
+    'The changing room walls are now plain (no lockers painted on).',
+  ] },
 ];
