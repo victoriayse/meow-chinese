@@ -260,4 +260,9 @@ export const CHANGES = [
     'New snacks & small things: water bottle, tea set, cookie jar, iced latte.',
     'Your cat can sit on the boxes and the stool, and ride in the baby stroller.',
   ] },
+  { v: 113, items: [
+    '🔐 New setting (Parent area → Settings): Lock my house.',
+    'When the house is locked, friends see the "Visit their house" button greyed out, even when you are online.',
+    'Friends you invite over can still come in.',
+  ] },
 ];

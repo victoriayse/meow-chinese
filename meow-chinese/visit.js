@@ -54,6 +54,7 @@ export function startHosting(hooks) {
         if (!p || !p.id || p.id === hostUser) return;
         if (ev === 'knock') {
           const fresh = !visitors.has(p.id);
+          if (fresh && S.get().settings.houseLocked && !(Date.now() - (invited.get(p.id) || 0) < 15 * 60000)) { hostCh.send('locked', { id: hostUser, to: p.id }); return; }
           visitors.upsert(p.id, { look: p.look, ...clampPos(p) });
           sendHouse(p.id);
           if (fresh) { sfx.coin(); api.arrived && api.arrived(p.id, p.look || {}); }
@@ -117,8 +118,10 @@ export function typingTo(friendId) {
   if (Date.now() - lastTyping > 2000) { lastTyping = Date.now(); line.ch.send('typing', { id: me }); }
 }
 // invite a friend over: knock on their house channel with an 'invite' (they get a pop-up to come to mine)
+const invited = new Map();   // friends I invited (they may come in even when my house is locked)
 export function inviteFriend(friendId) {
   const me = (Auth.user() || {}).id; if (!me || !friendId || managing()) return false;
+  invited.set(friendId, Date.now());
   const ch = new Channel(`house:${friendId}`, { presenceKey: `${me}-invite`, onStatus: (st) => { if (st === 'joined') { ch.send('invite', { id: me, name: myLook().name }); setTimeout(() => ch.close(), 1500); } } });
   ch.open(); setTimeout(() => ch.close(), 8000);
   return true;
@@ -149,7 +152,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     </section>`;
   const box = $('#house', n), sub = $('#vt-sub', n);
   const others = new OtherCats();
-  let house = null, host = null, roomKey = 'living', mine = { x: 30, y: 6, room: 'living', left: false };
+  let house = null, host = null, roomKey = 'living', mine = { x: 30, y: 6, room: 'living', left: false }, lockedOut = false;
   let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null;
 
   const ch = new Channel(`house:${hostId}`, {
@@ -160,6 +163,11 @@ export function visitScreen({ go, id: hostId, name = '' }) {
     },
     onBroadcast: (ev, p) => {
       if (!p || p.id === me) return;
+      if (ev === 'locked' && p.to === me && !gotHouse) {
+        clearInterval(kt); lockedOut = true;
+        sub.innerHTML = '🔒 朋友的家锁上了 · Your friend\'s house is locked<br><small>下次再来吧 · Try again another time</small>';
+        return;
+      }
       if (ev === 'house' && (!p.to || p.to === me)) {
         house = p.house || { rooms: {}, open: ['living'] };
         if (p.host) { host = p.host; others.upsert(host.id, { look: host.look, ...clampPos(host) }); }
@@ -223,7 +231,7 @@ export function visitScreen({ go, id: hostId, name = '' }) {
   let tries = 0;
   const kt = setInterval(() => {
     if (!n.isConnected) return clearInterval(kt);
-    if (gotHouse) return clearInterval(kt);
+    if (gotHouse || lockedOut) return clearInterval(kt);
     tries++; knock();
     if (tries >= 4) { sub.innerHTML = '朋友现在不在家 · Your friend isn\'t home right now<br><small>朋友要打开喵喵中文才可以串门 · They need to have the app open</small>'; }
   }, 3000);

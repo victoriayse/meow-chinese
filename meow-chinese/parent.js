@@ -9,7 +9,7 @@ import * as Cloud from './cloud.js';
 import * as Auth from './auth.js';
 import * as Push from './push.js';
 import * as Weather from './weather.js';
-import { parentFriendsView, incomingRequests } from './friends.js';
+import { parentFriendsView, incomingRequests, publishCard } from './friends.js';
 import { KINDS, parseSet } from './practice.js';
 
 let unlockedUntil = 0;
@@ -644,6 +644,8 @@ function settingsView(rerender, go) {
       <div class="row" style="align-items:center"><span class="help" style="margin:0" id="wx-state">This phone: ${Weather.allowed() ? `✅ location allowed${Weather.current() ? ` · now: ${Weather.current()}` : ''}` : Weather.asked() === 'no' ? '❌ location not allowed' : 'not asked yet'}</span>${Weather.allowed() ? '' : '<button class="btn white small" id="wx-allow">📍 Allow on this phone</button>'}</div>
       <h3>😊 Always smiling</h3>
       <div class="toggle"><span>Make the kitten always smile<br><small class="help">Her kitten's face stays happy whatever its Food, Water, Happy or Hygiene bars say. The bars and reminders still work as usual.</small></span><button class="switch ${S.get().settings.alwaysSmile ? 'on' : ''}" id="smile"></button></div>
+      <h3>🔐 Lock my house</h3>
+      <div class="toggle"><span>Lock the house so friends can't visit<br><small class="help">Friends see the "Visit their house" button greyed out, even when she's online. Friends she invites over can still come in.</small></span><button class="switch ${S.get().settings.houseLocked ? 'on' : ''}" id="hlock"></button></div>
       <h3>🛡️ God mode</h3>
       <div class="toggle"><span>God mode — the kitten never gets hungry, thirsty, sick or dies<br><small class="help">Use it for holidays, exam weeks or sick days. Food, Water and Happy stay topped up, and missed days don't count. Turning it on also cures and brings back the kitten. Daily tasks and coins still work as usual.</small></span><button class="switch ${S.godMode() ? 'on' : ''}" id="god"></button></div>
       <h3>☁️ Account &amp; cloud backup</h3>
@@ -713,6 +715,7 @@ function settingsView(rerender, go) {
     toast(kind ? `🌦️ Weather found: ${kind}` : Weather.allowed() ? 'Couldn’t get the weather right now — it will try again later' : 'Location was not allowed. On iPhone: Settings → Privacy & Security → Location Services → turn on for Safari Websites (or 喵喵中文).', { ms: 5000 });
     rerender();
   };
+  $('#hlock', n).onclick = () => { const st = S.get().settings; st.houseLocked = !st.houseLocked; S.save(); publishCard(true); toast(st.houseLocked ? '🔐 House locked' : '🏠 House unlocked'); rerender(); };
   $('#smile', n).onclick = () => { const st = S.get().settings; st.alwaysSmile = !st.alwaysSmile; S.save(); toast(st.alwaysSmile ? '😊 Always smiling on' : 'Always smiling off'); rerender(); };
   $('#god', n).onclick = () => { S.setGodMode(!S.godMode()); toast(S.godMode() ? '🛡️ God mode on' : 'God mode off'); rerender(); };
   $('#ul', n).onclick = () => { set.unlockAll = !set.unlockAll; S.save(); rerender(); };

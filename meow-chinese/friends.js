@@ -35,7 +35,7 @@ function myCard() {
   const s = S.get(), k = s.kitten, md = S.mood();
   return { v: 1, name: k.name, childName: s.childName || '', fur: k.fur, equipped: k.equipped,
     hunger: Math.round(k.hunger), water: Math.round(k.water ?? 75), happy: Math.round(k.happy), level: S.level(), stage: S.health(), face: s.settings.alwaysSmile && md.face !== 'faint' ? 'happy' : md.face,
-    doing: document.hidden ? 'away' : activity };
+    doing: document.hidden ? 'away' : activity, ...(s.settings.houseLocked ? { locked: true } : {}) };
 }
 // what she is doing right now, shown to friends ('essay', 'spelling', 'phone', ...)
 let activity = 'online';
@@ -250,9 +250,9 @@ export function friendScreen({ go, id }) {
             <button class="btn blue" id="v-letter">✉️ <span class="zh">写信</span> Letter</button>
             <button class="btn pink" id="v-gift">🎁 <span class="zh">送礼物</span> Gift</button>
           </div>
-          <button class="btn green big" id="v-home" ${isOnline(f) ? '' : 'disabled'}>🏠 <span class="zh">去串门</span> Visit their house</button>
+          <button class="btn green big" id="v-home" ${isOnline(f) && !c.locked ? '' : 'disabled'}>${c.locked ? '🔒' : '🏠'} <span class="zh">去串门</span> Visit their house</button>
           <button class="btn blue" id="v-invite" ${isOnline(f) ? '' : 'disabled'}>📨 <span class="zh">邀请来我家</span> Invite to my house</button>
-          ${isOnline(f) ? '' : '<p class="help" style="margin:0">朋友在线的时候才可以去串门。 You can visit when your friend is online.</p>'}
+          ${c.locked ? '<p class="help" style="margin:0">🔒 朋友的家锁上了。 Your friend\'s house is locked right now.</p>' : isOnline(f) ? '' : '<p class="help" style="margin:0">朋友在线的时候才可以去串门。 You can visit when your friend is online.</p>'}
         </div>
       </div>`;
     const kv = f.card ? friendKitten(c, Math.max(4, Math.min(8, Math.floor(window.innerHeight * 0.32 / 38)))) : null;
