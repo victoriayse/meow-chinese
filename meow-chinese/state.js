@@ -529,12 +529,19 @@ export const ROOMS = [
   // up and down from the living room (▲ ▼ arrows)
   { key: 'rooftop', zh: '天台', en: 'Rooftop', icon: '☀️', lock: 'rooftop', vert: 'up', outdoor: true },
   { key: 'basement', zh: '室内工作室', en: 'Indoor studio', icon: '🏋️', lock: 'basement', vert: 'down', noRoof: true },   // downstairs: a studio / gym
+  // downstairs, either side of the studio
+  { key: 'lounge', zh: '休息区', en: 'Lounging area', icon: '☕', lock: 'basement', below: true, noRoof: true },
+  { key: 'changing', zh: '更衣室', en: 'Changing room', icon: '👗', lock: 'basement', below: true, noRoof: true },
 ];
+const DOWNSTAIRS = ['lounge', 'basement', 'changing'];   // left to right
 // the rooms next to this one: ◀ ▶ along the row of rooms, ▲ ▼ only from the living room
 export function roomNeighbors(key) {
-  const row = ROOMS.filter((r) => !r.vert), i = row.findIndex((r) => r.key === key), me = roomInfo(key);
+  const row = ROOMS.filter((r) => !r.vert && !r.below), i = row.findIndex((r) => r.key === key), me = roomInfo(key);
   if (me.vert === 'up') return { down: roomInfo('living') };
-  if (me.vert === 'down') return { up: roomInfo('living') };
+  if (me.vert === 'down' || me.below) {      // downstairs: lounge ◀ studio ▶ changing room, ▲ back up from the studio
+    const j = DOWNSTAIRS.indexOf(key);
+    return { left: j > 0 ? roomInfo(DOWNSTAIRS[j - 1]) : null, right: j < DOWNSTAIRS.length - 1 ? roomInfo(DOWNSTAIRS[j + 1]) : null, ...(key === 'basement' ? { up: roomInfo('living') } : {}) };
+  }
   return { left: row[i - 1] || null, right: row[i + 1] || null, ...(key === 'living' ? { up: roomInfo('rooftop'), down: roomInfo('basement') } : {}) };
 }
 // how far back (up the screen) she can walk: the basement is all floor

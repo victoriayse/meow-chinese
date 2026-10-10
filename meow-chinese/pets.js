@@ -12,7 +12,7 @@ export const onPets = (fn) => { listeners.add(fn); return () => listeners.delete
 const SPEED = { dog: 11, guineapig: 6, hamster: 7, rabbit: 9, parrot: 6 };      // % of the room per second
 const rnd = (a, b) => a + Math.random() * (b - a);
 // the row of rooms pets wander along (not up to the rooftop or down to the basement)
-const openRooms = () => (S.unlocked('decor') ? S.ROOMS.filter((r) => !r.vert && S.roomOpen(r.key)).map((r) => r.key) : ['living']);
+const openRooms = () => (S.unlocked('decor') ? S.ROOMS.filter((r) => !r.vert && !r.below && S.roomOpen(r.key)).map((r) => r.key) : ['living']);
 
 // is this pet free to wander (dog always; the small ones when let out, or when their cage is put away)
 export const roaming = (p) => !ITEMS[p.kind].cage || (!ITEMS[p.kind].stayIn && (p.out || !S.petCage(p.kind)));   // the parrot never leaves its cage

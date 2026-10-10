@@ -4664,6 +4664,29 @@ export function drawRoom(canvas, night = false, kind = 'living', style = null) {
       for (let y = wy + 2; y < floorY; y += 3) for (let x = (y % 2) * 3; x < W; x += 6) R(x, y, 1, 2, '#a84c2c');
       for (let y = floorY, row = 0; y < H; y += 5, row++) for (let x = 0, col = 0; x < W; x += 8, col++) { R(x, y, 8, 5, (row + col) % 2 ? '#d9825a' : '#e39a74'); R(x, y, 8, 1, '#c4704a'); R(x, y, 1, 5, '#c4704a'); }
       open = true;
+    } else if (kind === 'lounge') {
+      // downstairs lounging area: warm cream walls with wooden panelling below, a soft plum carpet, cosy wall lamps
+      R(0, 0, W, floorY, '#f6ead8');
+      for (let x = 0; x < W; x += 6) R(x, 0, 1, Math.round(floorY * 0.5), '#efe0c8');
+      const py = Math.round(floorY * 0.55); R(0, py, W, floorY - py, '#b98a5c'); R(0, py, W, 2, '#8a5a32');
+      for (let x = 4; x < W; x += 16) { R(x, py + 4, 12, floorY - py - 8, '#c99a6a'); R(x, py + 4, 12, 1, '#a8743f'); }
+      for (let x = 14; x < W; x += 40) { R(x, Math.round(floorY * 0.2), 4, 3, '#ffcf5a'); R(x + 1, Math.round(floorY * 0.2) + 3, 2, 4, '#8a5a32'); }
+      R(0, floorY - 3, W, 3, '#6b4426');
+      R(0, floorY, W, H - floorY, '#8e5f8f');
+      for (let y = floorY + 2; y < H; y += 3) for (let x = (y % 6 ? 1 : 3); x < W; x += 4) R(x, y, 1, 1, '#a374a4');
+      noWindow = true;
+    } else if (kind === 'changing') {
+      // changing room: pale blue walls with a row of lockers built in, grey tiled floor
+      R(0, 0, W, floorY, '#e3eef8');
+      const ly0 = Math.round(floorY * 0.18), ly1 = floorY - 3;
+      for (let x = 2, k = 0; x + 12 <= W; x += 14, k++) {
+        R(x, ly0, 12, ly1 - ly0, k % 2 ? '#7fb3dc' : '#8fc0e6'); R(x, ly0, 12, 1, '#5f93bc'); R(x, ly0, 1, ly1 - ly0, '#5f93bc');
+        for (let y = ly0 + 3; y < ly0 + 9; y += 2) R(x + 3, y, 6, 1, '#5f93bc');   // little air vents
+        R(x + 9, Math.round((ly0 + ly1) / 2), 2, 3, '#e0e6ee');                    // handle
+      }
+      R(0, floorY - 3, W, 3, '#5b6170');
+      for (let y = floorY, row = 0; y < H; y += 5, row++) for (let x = 0, col = 0; x < W; x += 7, col++) { R(x, y, 7, 5, (row + col) % 2 ? '#c9d3de' : '#d9e1ea'); R(x, y, 7, 1, '#b4c0cc'); R(x, y, 1, 5, '#b4c0cc'); }
+      noWindow = true;
     } else if (kind === 'basement') {
       // downstairs indoor studio: soft grey panelled walls, a wall-length barre, light wooden floor
       R(0, 0, W, floorY, '#ecebf2');

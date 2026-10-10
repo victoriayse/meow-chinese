@@ -238,4 +238,7 @@ export const CHANGES = [
   { v: 107, items: [
     'Moving furniture: new ⬆ and ⬇ buttons on each piece put it in front of or behind the things it overlaps — including the studio\'s wooden barre.',
   ] },
+  { v: 108, items: [
+    'Two new rooms downstairs, either side of the studio: ☕ Lounging area (◀) and 👗 Changing room with lockers (▶).',
+  ] },
 ];
