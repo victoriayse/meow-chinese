@@ -922,7 +922,7 @@ function homeScreen(params = {}) {
           el.classList.remove('dragging');
           s.decorPos[el.dataset.id] = pin(el);
           s.decorLayer = s.decorLayer || {}; s.decorLayer[el.dataset.id] = Date.now(); el.dataset.layer = s.decorLayer[el.dataset.id];   // the one moved last goes in front
-          decorEls.forEach((d) => { d.style.zIndex = depth(d); }); stackDecor(room);
+          decorEls.forEach((d) => { d.style.zIndex = depth(d); }); stackDecor(room); placeCat();
           S.saveQuiet(); setHomeBusy(false); Visit.hostResendHouse();
         };
         el.addEventListener('pointermove', mv); el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
@@ -999,6 +999,15 @@ function homeScreen(params = {}) {
     houseLog = chatLog(houseChat);
     $('#hlog', n).prepend(houseLog.el);
     wirePlayable(room, (i) => Visit.hostNote(i));
+    // changing cubicle: tap to pull the curtain open / closed
+    room.addEventListener('click', (e) => {
+      const d = e.target.closest('.decor.tap-open');
+      if (!d || room.classList.contains('arranging') || e.target.closest('button')) return;
+      S.toggleOpen(d.dataset.id); sfx.click();
+      const entry = roomLayout(S.get(), roomKey, S.roomOf).find((x) => x.id === d.dataset.id);
+      const ne = entry && decorEl(entry, { putAway: true }); if (ne) { ne.style.zIndex = d.style.zIndex; d.replaceWith(ne); }
+      Visit.hostResendHouse();
+    });
     // curtains and blinds: tap to draw them shut, tap again to open
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.curtain');

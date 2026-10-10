@@ -33,6 +33,8 @@ const DECOR_GROUPS = [
   { key: 'garden', icon: '🌳', zh: '花园', en: 'Garden' },
   { key: 'pool', icon: '🏊', zh: '泳池天台', en: 'Pool & rooftop' },
   { key: 'studio', icon: '🏋️', zh: '健身房', en: 'Gym & studio' },
+  { key: 'lounge', icon: '☕', zh: '休息区', en: 'Lounging area' },
+  { key: 'changing', icon: '👗', zh: '更衣室', en: 'Changing room' },
   { key: 'food', icon: '🍰', zh: '小吃', en: 'Food & snacks' },
   { key: 'lights', icon: '💡', zh: '灯', en: 'Lights' },
   { key: 'windows', icon: '🪟', zh: '窗帘', en: 'Curtains' },

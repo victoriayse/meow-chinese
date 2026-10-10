@@ -496,7 +496,7 @@ export function sellItem(id) {
   state.coins += got;
   // tidy up everything that remembered this piece
   state.decorHidden = (state.decorHidden || []).filter((x) => x !== id);
-  ['decorPos', 'decorRoom', 'decorLayer', 'powerOff', 'curtainClosed', 'framePhotos', 'facing'].forEach((k) => { if (state[k]) delete state[k][id]; });
+  ['decorPos', 'decorRoom', 'decorLayer', 'openThings', 'powerOff', 'curtainClosed', 'framePhotos', 'facing'].forEach((k) => { if (state[k]) delete state[k][id]; });
   state.cageOff = (state.cageOff || []).filter((x) => x !== id);
   Object.keys(state.kitten.equipped || {}).forEach((slot) => { if (state.kitten.equipped[slot] === id) state.kitten.equipped[slot] = null; });
   Object.values(state.roomStyle || {}).forEach((st) => { if (st.wall === id) delete st.wall; if (st.floor === id) delete st.floor; });
@@ -576,6 +576,7 @@ export function cycleFacing(id) {
   save(); return next || 'side';
 }
 export function toggleFacing(id) { state.facing = state.facing || {}; if (state.facing[id] === 'back') delete state.facing[id]; else state.facing[id] = 'back'; save(); return state.facing[id] || 'front'; }
+export function toggleOpen(id) { state.openThings = state.openThings || {}; if (state.openThings[id]) delete state.openThings[id]; else state.openThings[id] = true; save(); return !!state.openThings[id]; }
 export function toggleCurtain(id) { state.curtainClosed = state.curtainClosed || {}; if (state.curtainClosed[id]) delete state.curtainClosed[id]; else state.curtainClosed[id] = true; save(); return !!state.curtainClosed[id]; }
 export function toggleRoomLight(room) { state.lightsOff = state.lightsOff || {}; state.lightsOff[room] = !state.lightsOff[room]; save(); return !state.lightsOff[room]; }
 export function togglePower(id) { state.powerOff = state.powerOff || {}; state.powerOff[id] = !state.powerOff[id]; save(); return !state.powerOff[id]; }

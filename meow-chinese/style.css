@@ -1516,3 +1516,12 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .decor .layer-btn.up { left: -5px; } .decor .layer-btn.down { left: calc(-5px + 18px * var(--inv, 1)); }
 .room.arranging .decor .layer-btn { display: grid; place-items: center; pointer-events: auto; }
 @media (max-width: 600px) { .decor .layer-btn { width: 13px; height: 13px; font-size: 7px; } .decor .layer-btn.down { left: calc(-5px + 15px * var(--inv, 1)); } }
+/* changing cubicle: tap the curtain */
+.home .house .decor.tap-open { pointer-events: auto; cursor: pointer; }
+/* 🚿 shower: tap to turn the water on (water shows when switched "on" = data off flag) */
+.house .decor[data-power="shower"] { pointer-events: auto; cursor: pointer; }
+.decor .shower-water { display: none; position: absolute; left: 30%; width: 34%; top: 17%; bottom: 10%; pointer-events: none;
+  background: repeating-linear-gradient(90deg, rgba(120,200,255,.0) 0 3px, rgba(120,200,255,.65) 3px 5px); background-size: 100% 24px;
+  -webkit-mask-image: repeating-linear-gradient(180deg, #000 0 10px, transparent 10px 16px); mask-image: repeating-linear-gradient(180deg, #000 0 10px, transparent 10px 16px); animation: showerfall .45s linear infinite; }
+.decor[data-power="shower"].off .shower-water { display: block; }
+@keyframes showerfall { to { -webkit-mask-position: 0 16px; mask-position: 0 16px; } }

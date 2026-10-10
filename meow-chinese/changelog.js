@@ -241,4 +241,9 @@ export const CHANGES = [
   { v: 108, items: [
     'Two new rooms downstairs, either side of the studio: ☕ Lounging area (◀) and 👗 Changing room with lockers (▶).',
   ] },
+  { v: 109, items: [
+    'New: 👗 changing cubicle (tap to open/close its curtain), towel rack with lots of towels, and a 🚿 shower room — tap to turn the water on, tap again and your cat steps inside.',
+    'New: long table with four chairs — four cats can sit at it together.',
+    'Shop: new ☕ Lounging area and 👗 Changing room aisles.',
+  ] },
 ];

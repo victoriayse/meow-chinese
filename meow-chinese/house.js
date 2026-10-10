@@ -117,8 +117,9 @@ export function roomLayout(s, roomKey, roomOf) {
     const fv = (s.facing || {})[id];
     const back = ((it.frames && it.frames.back) || it.flip) && fv === 'back';   // turned round (or sideways)
     const front = it.frames && it.frames.front && fv === 'front';            // facing straight into the room
-    const layer = (s.decorLayer || {})[id] || 0;   // dragged on top of something: stays in front of it
-    return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : front ? { facing: 'front' } : {}), ...(layer ? { layer } : {}) };
+    const layer = (s.decorLayer || {})[id] || 0;
+    const opened = it.tapOpen && !!(s.openThings || {})[id];   // changing cubicle: curtain pulled open   // dragged on top of something: stays in front of it
+    return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : front ? { facing: 'front' } : {}), ...(layer ? { layer } : {}), ...(opened ? { opened } : {}) };
   }).filter(Boolean).concat(((s.roomStyle || {})[roomKey] || {}).pool ? [(() => {
     // the swimming pool (from 🎨 Renovate): she can move it like furniture
     const id = `@pool-${roomKey}`, saved = pos[id];
@@ -148,11 +149,11 @@ export function closedCurtain(g) {
   return out;
 }
 // one piece of furniture as a page element
-export function decorEl({ id, css, kind, photo, closed, cage, facing, layer }, { putAway = false } = {}) {
+export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, opened }, { putAway = false } = {}) {
   if (kind === 'pool') return poolEl({ id, css });
   const it = ITEMS[id]; if (!it) return null;
   const c = document.createElement('canvas');
-  const art = cage && cage.open && it.frames && it.frames.open ? it.frames.open : facing === 'front' && it.frames && it.frames.front ? it.frames.front : facing === 'back' && !it.flip && it.frames && it.frames.back ? it.frames.back : it.art;
+  const art = (cage && cage.open || opened) && it.frames && it.frames.open ? it.frames.open : facing === 'front' && it.frames && it.frames.front ? it.frames.front : facing === 'back' && !it.flip && it.frames && it.frames.back ? it.frames.back : it.art;
   const flipped = facing === 'back' && it.flip;   // turned sideways: drawn the other way round
   if (flipped) c.style.scale = '-1 1';
   const g = artGrid(art, it.pal);
@@ -224,6 +225,8 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer }, {
   }
   if (facing === 'back') wrap.dataset.facing = flipped ? 'flip' : 'back';
   if (facing === 'front') wrap.dataset.facing = 'front';
+  if (it.tapOpen) wrap.classList.add('tap-open');
+  if (it.power === 'shower') wrap.appendChild(Object.assign(document.createElement('i'), { className: 'shower-water' }));
   if (it.belt) {     // the treadmill's moving belt
     const bt = document.createElement('i'); bt.className = 'belt';
     const bl = facing === 'front' && it.beltFront ? it.beltFront : it.belt;
@@ -548,10 +551,11 @@ export function seatSpot(roomEl, id, slot = 0) {
 export function blanket(roomEl, id, on) {
   const el = roomEl && roomEl.querySelector(`.decor.seat[data-id="${id}"]`), seat = ITEMS[id] && ITEMS[id].seat;
   let b = roomEl && roomEl.querySelector(`.blanket[data-for="${id}"]`);
+  if (seat && seat.cover) on = true;      // a table: its front is always drawn over the cats sitting behind it
   if (!on || !el || !seat || !seat.blanket) { if (b) b.remove(); return; }
   if (!b) {
     const [r0, r1, c0, c1] = seat.blanket, it = ITEMS[id];
-    const g = artGrid(it.art, it.pal).map((row, y) => row.map((c, x) => (y >= r0 && y < r1 && x >= c0 && x < c1 ? c : null)));
+    const g = artGrid((seat.coverArt && it.frames && it.frames[seat.coverArt]) || it.art, it.pal).map((row, y) => row.map((c, x) => (y >= r0 && y < r1 && x >= c0 && x < c1 ? c : null)));   // the shower's glass door
     b = document.createElement('canvas'); b.className = 'blanket'; b.dataset.for = id;
     drawGrid(b, g, HOUSE.decor);
     roomEl.appendChild(b);
