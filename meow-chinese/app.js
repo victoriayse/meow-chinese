@@ -831,7 +831,7 @@ function homeScreen(params = {}) {
       arranging = on;
       room.classList.toggle('arranging', arranging); tools.classList.toggle('arranging', arranging);
       ab.innerHTML = arranging ? '✅' : '🪑'; ab.title = arranging ? 'Done' : 'Move furniture';
-      if (arranging) { if (!quiet) { sfx.click(); toast('<span class="zh">按住家具拖一拖！点 📦 收起来。</span> Drag furniture to move it · tap 📦 to put it away'); } }
+      if (arranging) { if (!quiet) sfx.click(); }
       else { S.save(); if (!quiet) sfx.coin(); }
     };
     ab.onclick = () => setArranging(!arranging);
@@ -1055,6 +1055,27 @@ function homeScreen(params = {}) {
       const ne = entry && decorEl(entry, { putAway: true }); if (ne) d.replaceWith(ne);
       toast(shut ? '🌙 <span class="zh">拉上窗帘</span> Curtains closed' : '☀️ <span class="zh">拉开窗帘</span> Curtains open', { ms: 1400 });
       Visit.hostResendHouse();
+    });
+    // menu boards: tap to change what's written on them
+    room.addEventListener('click', (e) => {
+      const d = e.target.closest('.decor.board');
+      if (!d || room.classList.contains('arranging')) return;
+      const id = d.dataset.id, it = ITEMS[id], cur = (S.get().boardTexts || {})[id] ?? it.board.def;
+      sfx.click();
+      const box = html`<div class="card stack">
+          <div class="h-title"><span class="zh">✏️ ${it.name}</span><span class="en">${it.en}</span></div>
+          <p class="help" style="margin:0">写上你想写的字（最多 6 行）。来玩的人都看得到。<br>Write anything (up to 6 lines). Everyone who comes can read it.</p>
+          <textarea class="board-edit" maxlength="160" rows="6"></textarea>
+          <div class="row" style="justify-content:flex-end"><button class="btn white" id="bc">取消 Cancel</button><button class="btn green" id="bs">✓ <span class="zh">好了</span> Save</button></div>
+        </div>`;
+      const ta = box.querySelector('textarea'); ta.value = cur;
+      $('#bc', box).onclick = closeModal;
+      $('#bs', box).onclick = () => {
+        const v = ta.value.split('\n').slice(0, 6).join('\n').slice(0, 160);
+        S.get().boardTexts = S.get().boardTexts || {}; S.get().boardTexts[id] = v; S.save(); closeModal();
+        d.querySelector('.board-text').textContent = v; sfx.coin(); Visit.hostResendHouse();
+      };
+      openModal(box); setTimeout(() => ta.focus(), 50);
     });
     // photo frames: tap to put a photo in (it is shrunk to 50 KB)
     room.addEventListener('click', (e) => {

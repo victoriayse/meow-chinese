@@ -275,4 +275,9 @@ export const CHANGES = [
     'Shop: buy several of the same thing at once — use − and ＋ when you buy furniture, food or toiletries.',
     'New for the cinema: Lobby counter. Line a few up side by side, and your cat can stand behind it.',
   ] },
+  { v: 116, items: [
+    'New for the cinema: Movie poster frame (tall, lights round the edge). Tap it to put in a photo (made small, under 10 KB).',
+    'New for the cinema: Menu board. Tap it to write on it (up to 6 lines). Everyone who comes can read it.',
+    'The "Drag furniture to move it" pop-up no longer shows when you tap 🪑.',
+  ] },
 ];

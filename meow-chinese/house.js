@@ -114,6 +114,7 @@ export function roomLayout(s, roomKey, roomOf) {
         .replace(/(bottom):(-?[\d.]+)%/, (m, side, v) => `bottom:${+v + 2 * copy}%`);
     }
     const photo = it.frame ? (s.framePhotos || {})[id] || null : null;   // a photo she put in a frame
+    const text = it.board ? ((s.boardTexts || {})[id] ?? it.board.def) : null;   // what's written on a menu board
     // a pet cage shows the water bottle, wheel… she bought for that pet, and an open door while the pet is out
     const cage = it.cage ? { things: (s.owned || []).filter((x) => ITEMS[x] && ITEMS[x].cat === 'petacc' && (ITEMS[x].cageFor || []).includes(it.cage) && !(s.cageOff || []).includes(x)), open: !!((s.pets || []).find((p) => p.kind === it.cage) || {}).out } : null;
     const fv = (s.facing || {})[id];
@@ -121,7 +122,7 @@ export function roomLayout(s, roomKey, roomOf) {
     const front = it.frames && it.frames.front && fv === 'front';            // facing straight into the room
     const layer = (s.decorLayer || {})[id] || 0;
     const opened = it.tapOpen && !!(s.openThings || {})[id];   // changing cubicle: curtain pulled open   // dragged on top of something: stays in front of it
-    return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : front ? { facing: 'front' } : {}), ...(layer ? { layer } : {}), ...(opened ? { opened } : {}) };
+    return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : front ? { facing: 'front' } : {}), ...(layer ? { layer } : {}), ...(opened ? { opened } : {}), ...(text != null ? { text } : {}) };
   }).filter(Boolean).concat(((s.roomStyle || {})[roomKey] || {}).pool ? [(() => {
     // the swimming pool (from 🎨 Renovate): she can move it like furniture
     const id = `@pool-${roomKey}`, saved = pos[id];
@@ -151,7 +152,7 @@ export function closedCurtain(g) {
   return out;
 }
 // one piece of furniture as a page element
-export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, opened }, { putAway = false } = {}) {
+export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, opened, text }, { putAway = false } = {}) {
   if (kind === 'pool') return poolEl({ id, css });
   const it = ITEMS[id]; if (!it) return null;
   const c = document.createElement('canvas');
@@ -175,6 +176,14 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
       const f = it.frame; img.style.cssText = `left:${f.x * 100}%;top:${f.y * 100}%;width:${f.w * 100}%;height:${f.h * 100}%`;
       wrap.appendChild(img);
     }
+  }
+  if (it.board) {
+    // a menu board: chalk writing she can change (tap it)
+    wrap.classList.add('board');
+    const t = document.createElement('div'); t.className = 'board-text';
+    const b = it.board; Object.assign(t.style, { left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%` });
+    t.textContent = text ?? b.def;
+    wrap.appendChild(t);
   }
   if (it.power) {
     wrap.dataset.power = it.power;

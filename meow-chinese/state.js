@@ -496,7 +496,7 @@ export function sellItem(id) {
   state.coins += got;
   // tidy up everything that remembered this piece
   state.decorHidden = (state.decorHidden || []).filter((x) => x !== id);
-  ['decorPos', 'decorRoom', 'decorLayer', 'openThings', 'powerOff', 'curtainClosed', 'framePhotos', 'facing'].forEach((k) => { if (state[k]) delete state[k][id]; });
+  ['decorPos', 'decorRoom', 'decorLayer', 'openThings', 'powerOff', 'curtainClosed', 'framePhotos', 'facing', 'boardTexts'].forEach((k) => { if (state[k]) delete state[k][id]; });
   state.cageOff = (state.cageOff || []).filter((x) => x !== id);
   Object.keys(state.kitten.equipped || {}).forEach((slot) => { if (state.kitten.equipped[slot] === id) state.kitten.equipped[slot] = null; });
   Object.values(state.roomStyle || {}).forEach((st) => { if (st.wall === id) delete st.wall; if (st.floor === id) delete st.floor; });
