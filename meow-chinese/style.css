@@ -1646,7 +1646,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 @keyframes labelglow { 50% { opacity: .65; } }
 
 /* ---------- wide, short computer windows: the house uses the stage's full height; buttons, chat history and chat bar in a column on its right ---------- */
-@media (min-width: 901px) and (min-aspect-ratio: 7/4) {
+@media (min-width: 901px) {
   .home .stage.in-house .house { left: max(4px, env(safe-area-inset-left)); right: 350px; top: 6px; bottom: 6px; }
   .stage.in-house .stage-tray { left: auto; right: max(8px, env(safe-area-inset-right)); top: 6px; width: 330px; justify-content: flex-start; flex-wrap: nowrap; }
   .stage.in-house .house-tools { right: max(8px, env(safe-area-inset-right)); top: 50px; width: 330px; justify-content: flex-start; }
@@ -1668,7 +1668,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .dpad, .visit-home .dpad, .house-log-wrap .dpad, .visit-log .dpad { display: none !important; }
 }
 /* wide computer windows: the buttons at the top of the right-hand column, small */
-@media (min-width: 901px) and (min-aspect-ratio: 7/4) {
+@media (min-width: 901px) {
   .stage.in-house .stage-tray, .stage.in-house .house-tools { gap: 5px; }
   .stage.in-house .house-tools .tool-btn, .stage.in-house .house-tools .light-switch, .stage.in-house .stage-tray .tray-btn { width: 32px; height: 32px; font-size: 16px; border-radius: 8px; }
   .stage.in-house .stage-tray .tray-btn svg, .stage.in-house .stage-tray .tray-btn canvas { max-width: 22px; max-height: 22px; }
@@ -1689,7 +1689,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .stage.in-house .house-tools .tool-btn, .stage.in-house .stage-tray .tray-btn { width: 28px; height: 28px; font-size: 14px; border-width: 2px; border-radius: 7px; }
   .house-log-wrap { top: 42px; }
 }
-@media (min-width: 901px) and (min-aspect-ratio: 7/4) {
+@media (min-width: 901px) {
   .stage.in-house .stage-tray { right: calc(max(8px, env(safe-area-inset-right)) + 330px); transform: translateX(100%); width: auto; gap: 4px; }
   .stage.in-house .house-tools { top: 6px; width: auto; gap: 4px; }
   .house-log-wrap { top: 46px; }
@@ -1697,4 +1697,11 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 /* computers: the room's column hugs the room, and the room + chat sit together in the middle */
 @media (min-width: 901px) {
   .visit-home { grid-template-columns: minmax(0, var(--hw, 1fr)) minmax(320px, 400px); justify-content: center; }
+}
+
+/* computers, inside the house: just the house and its chat column (the food bars and tasks are on the main page) */
+@media (min-width: 901px) {
+  .home.house-view { grid-template-columns: minmax(0, 1fr); }
+  .home.house-view .side { display: none; }
+  .home.house-view .stage { width: 100%; max-width: calc((100dvh - var(--top-h, 60px)) * 1.11 + 440px); margin: 0 auto; }
 }

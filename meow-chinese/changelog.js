@@ -322,4 +322,7 @@ export const CHANGES = [
     'Cinema and friends\' houses on a computer: the room and the chat sit side by side in the middle, without a big gap.',
     'A friend who closed the app without leaving no longer gets stuck in your house — she disappears within about 15 seconds.',
   ] },
+  { v: 127, items: [
+    'On a computer, inside your house you now see just the house with the chat on its right (the food bars and tasks stay on the main page).',
+  ] },
 ];
