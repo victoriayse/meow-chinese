@@ -325,4 +325,7 @@ export const CHANGES = [
   { v: 127, items: [
     'On a computer, inside your house you now see just the house with the chat on its right (the food bars and tasks stay on the main page).',
   ] },
+  { v: 128, items: [
+    'The cinema owner can now switch each projector screen\'s film on or off with ▶️ / ⏸️ while walking around the cinema (not only from 🛠 布置). A switched-off screen shows its ▶️ button to the owner.',
+  ] },
 ];

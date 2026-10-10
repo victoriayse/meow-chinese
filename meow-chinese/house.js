@@ -160,7 +160,7 @@ export function closedCurtain(g) {
   return out;
 }
 // one piece of furniture as a page element
-export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, opened, text, video }, { putAway = false, videoPick = putAway && isAdmin() } = {}) {
+export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, opened, text, video }, { putAway = false, videoPick = putAway && isAdmin(), videoOwner = videoPick } = {}) {
   if (kind === 'pool') return poolEl({ id, css });
   const it = ITEMS[id]; if (!it) return null;
   const c = document.createElement('canvas');
@@ -216,7 +216,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
         v.addEventListener('loadedmetadata', sync);
         v.addEventListener('play', sync, { once: true });
         const btn = (cls, txt, title) => { const x = document.createElement('button'); x.type = 'button'; x.className = cls; x.textContent = txt; x.title = title; x.addEventListener('pointerdown', (e) => e.stopPropagation()); return x; };
-        const snd = btn('vid-sound', '🔇', 'Sound'), play = btn(`vid-play ${videoPick ? 'owner' : ''}`, '▶️', 'Play / stop');
+        const snd = btn('vid-sound', '🔇', 'Sound'), play = btn(`vid-play ${videoOwner ? 'owner' : ''}`, '▶️', 'Play / stop');
         const show = () => { play.textContent = v.paused ? '▶️' : '⏸️'; wrap.classList.toggle('vid-paused', v.paused); };
         v.addEventListener('play', show); v.addEventListener('pause', show);
         // start it (phones may refuse until someone taps — then the ▶️ button / a tap on the screen starts it)
@@ -229,7 +229,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
         };
         play.onclick = (e) => {
           e.stopPropagation();
-          if (videoPick) { play.dispatchEvent(new CustomEvent('screen-power', { bubbles: true, detail: { id } })); return; }   // the owner: on / off for everyone
+          if (videoOwner) { play.dispatchEvent(new CustomEvent('screen-power', { bubbles: true, detail: { id } })); return; }   // the owner: on / off for everyone
           if (v.paused) { delete v.dataset.stopped; sync(); v.play().catch(() => {}); }
           else { v.dataset.stopped = '1'; v.pause(); if (!v.muted) { v.muted = true; snd.textContent = '🔇'; screenSound(v); } }
         };

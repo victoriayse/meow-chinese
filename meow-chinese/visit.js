@@ -277,7 +277,15 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
         <div class="room" id="room" data-room="${roomKey}"><canvas class="room-bg" id="roombg"></canvas></div>
       </div>${roomArrowsHtml(roomKey, (k) => open.includes(k), { showLocked: false })}`;
     const unit = $('#hunit', box), room = $('#room', box);
-    (house.rooms[roomKey] || []).forEach((e) => { const el = decorEl(e); if (el) room.appendChild(el); });
+    (house.rooms[roomKey] || []).forEach((e) => { const el = decorEl(e, { videoOwner: !!(P && Places.isAdmin()) }); if (el) room.appendChild(el); });
+    // the cinema owner can switch a projector screen's film on / off from here too (everyone sees it)
+    if (P && Places.isAdmin()) room.addEventListener('screen-power', (e) => {
+      const id = e.detail.id, on = S.togglePower(id); sfx.click();
+      house.power = house.power || {}; house.power.off = { ...(house.power.off || {}) };
+      if (on) delete house.power.off[id]; else house.power.off[id] = true;
+      applyPower(room, { dark: !!((house.power.dark || {})[roomKey]), off: house.power.off });
+      toast(on ? '▶️ <span class="zh">开始放电影</span> Film on' : '⏹ <span class="zh">电影停了</span> Film off', { ms: 1400 });
+    });
     wirePlayable(room, (i) => ch.send('note', { id: me, i }));
     // a friend's photo frame: tap to see the photo bigger
     room.addEventListener('click', (e) => {
