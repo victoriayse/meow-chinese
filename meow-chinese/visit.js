@@ -12,17 +12,18 @@ import * as S from './state.js';
 import * as Auth from './auth.js';
 import { managing } from './cloud.js';
 import { Channel } from './rt.js';
-import { drawRoom, drawRoof, ITEMS } from './pixel.js';
+import { drawRoom, drawRoof, ITEMS, SNACKS } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal } from './ui.js';
 import { sfx } from './audio.js';
 import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
 import * as Radio from './radio.js';
 import * as Places from './places.js';
+import * as Snacks from './snacks.js';
 
 const isNight = () => { const h = new Date().getHours(); return h >= 18 || h < 5; };
 export function myLook() {
   const s = S.get(), k = s.kitten;
-  return { name: s.childName && !String(k.name).includes(s.childName) ? `${s.childName}的${k.name}` : k.name, level: S.level(), fur: k.fur, equipped: { ...(k.equipped || {}) } };
+  return { name: s.childName && !String(k.name).includes(s.childName) ? `${s.childName}的${k.name}` : k.name, level: S.level(), fur: k.fur, equipped: { ...(k.equipped || {}) }, hold: s.holding || null };
 }
 const clampPos = (p) => ({ ...p, x: Math.max(6, Math.min(94, p.x)), y: Math.max(1, Math.min(S.roomMaxY(p.room || 'living'), p.y)) });
 // send at most ~8 moves a second, and always the last one
@@ -200,6 +201,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
         others.emote(p.id, p.mood);
         const c = others.m.get(p.id);
         logLine((c && c.look && c.look.name) || '朋友', emoteIcon(p.mood), false);
+      } else if (ev === 'counter') { refreshCounter();
       } else if (ev === 'bye') others.remove(p.id);
     },
     onPresence: (present, joins, leaves) => {
@@ -302,8 +304,38 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
     petLayer.update(house.pets || []);
     room.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', !!(house.radio || {}).on));
     box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { roomKey = b.dataset.room; mine.room = roomKey; mine.seat = null; sfx.click(); render(); sendMine(); }; });
+    // 🍿 her snacks: hold one, eat it
+    box.appendChild(Snacks.snackBar({ onHold: () => { if (myKv) myKv.draw(); sendMine(); } }));
+    if (P) {
+      // the self-help kiosk: order snacks
+      room.addEventListener('click', (e) => {
+        const d = e.target.closest('.decor[data-id^="kiosk"]'); if (!d) return;
+        sfx.click();
+        Snacks.openKiosk({ prices: house.prices || {}, admin: Places.isAdmin(),
+          onPaid: () => { ch.send('counter', { id: me }); setTimeout(() => { refreshCounter(); ch.send('counter', { id: me }); }, 3300); },
+          onPrices: (p) => { S.get().kioskPrices = p; S.save(); house.prices = p; } });
+      });
+      refreshCounter();
+    }
     hydrateIcons(box);
   }
+  // 🧾 the collection counter (public places): the first two orders that are ready; anyone can pick them up
+  let counterBusy = false;
+  async function refreshCounter() {
+    const room = $('#room', box);
+    if (!P || !room || !room.querySelector('.decor[data-id^="collectcounter"]') || counterBusy) return;
+    counterBusy = true;
+    const data = await Snacks.counterNow(); counterBusy = false;
+    if (!data || !room.isConnected) return;
+    Snacks.showCounter(room, data, async (o, btn) => {
+      btn.disabled = true;
+      const got = await Snacks.pickUp(o.id);
+      if (got) { S.addSnack(got); sfx.coin(); toast(`🍿 <span class="zh">拿到${SNACKS[got].zh}了！</span> Tap it at the bottom to hold it`, { ms: 2500 }); }
+      else { sfx.miss(); toast('<span class="zh">被拿走了</span> Someone already took it', { ms: 1800 }); }
+      ch.send('counter', { id: me }); refreshCounter();
+    });
+  }
+  if (P) { const ct = setInterval(() => { if (!n.isConnected) return clearInterval(ct); if (!document.hidden) refreshCounter(); }, 4000); }
   // the friend's radio: play it here too (same song, same part of it)
   function hearRadio() {
     const r = (house && house.radio) || { on: false };

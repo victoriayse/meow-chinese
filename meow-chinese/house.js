@@ -436,7 +436,7 @@ export class OtherCats {
     c.el.style.zIndex = spot ? spot.z : 2 + Math.round(100 - c.dy);
     c.el.classList.toggle('lying', !!(spot && spot.lie)); c.el.classList.toggle('seated', !!spot);
     c.el.classList.toggle('swimming', !spot && inPool(this.roomEl, c.dx, c.dy));
-    if (c.kv) c.kv.setPose(spot ? spot.pose : null); c.el.dataset.pose = (spot && spot.pose) || '';
+    if (c.kv) { c.kv.setPose(spot ? spot.pose : null); c.kv.setHeld(c.look && c.look.hold); } c.el.dataset.pose = (spot && spot.pose) || '';
     if (c.kv && spot && spot.run) { c.kv.setFacing(spot.flip); c.kv.canvas.classList.add('walking'); }
     else if (c.kv && spot) c.kv.canvas.classList.remove('walking');
     if (c.bedShown && c.bedShown !== (spot && spot.lie && c.seat)) { blanket(this.roomEl, c.bedShown, false); c.bedShown = null; }

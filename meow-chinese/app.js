@@ -19,6 +19,7 @@ import * as Pets from './pets.js';
 import * as Radio from './radio.js';
 import * as Visit from './visit.js';
 import * as Places from './places.js';
+import * as Snacks from './snacks.js';
 import { randomJoke } from './jokes.js';
 import { practiceListScreen, practiceScreen, KINDS } from './practice.js';
 
@@ -653,6 +654,8 @@ function homeScreen(params = {}) {
         <button class="tray-btn" id="t-bag" title="My items" aria-label="My items">🎒</button>
       </div>`;
     $('#stage', n).appendChild(tray);
+    // 🍿 snacks from the cinema: hold one, eat it
+    ($('#house', n) || $('#stage', n)).appendChild(Snacks.snackBar({ onHold: () => { kv.draw(); Visit.hostResendHouse(); } }));
     const tg = $('#t-gift', tray); if (tg) tg.onclick = () => Friends.openGiftBox(S.unopenedGifts()[0], refreshHome);
     $('#t-ck', tray).onclick = () => openCheckin(refreshHome);
     $('#t-shop', tray).onclick = () => go('shop');

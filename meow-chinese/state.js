@@ -1,6 +1,6 @@
 // Game state: saved on this iPad (localStorage). Shaped as one JSON blob so it can
 // later be backed up to Supabase as a single row.
-import { ITEMS, baseId } from './pixel.js';
+import { ITEMS, baseId, SNACKS } from './pixel.js';
 import { BANKS } from './banks.js';
 
 const OWN_KEY = 'meow-chinese-v1';
@@ -410,6 +410,23 @@ export function feed(id) {
   markActive();
   save();
   return true;
+}
+// ---------- cinema snacks: in her bag (snacks), one held in her paw (holding) ----------
+export const snacks = () => state.snacks || {};
+export function addSnack(kind) { if (!SNACKS[kind]) return; state.snacks = state.snacks || {}; state.snacks[kind] = (state.snacks[kind] || 0) + 1; save(); }
+export function holdSnack(kind) { state.holding = kind && snacks()[kind] > 0 && state.holding !== kind ? kind : null; save(); return state.holding; }
+export function eatSnack() {
+  const kind = state.holding, sn = SNACKS[kind];
+  if (!sn || !(snacks()[kind] > 0)) { state.holding = null; save(); return null; }
+  state.snacks[kind] -= 1; if (!state.snacks[kind]) delete state.snacks[kind];
+  state.holding = null;
+  const k = state.kitten;
+  k.hunger = Math.min(100, k.hunger + (sn.hunger || 0));
+  k.water = Math.min(100, (k.water ?? 75) + (sn.water || 0));
+  k.happy = Math.min(100, k.happy + (sn.happy || 0));
+  state.daily.care = true; markActive();
+  save();
+  return kind;
 }
 // shampoo / comb: cleaner kitten (counts as looking after her)
 export function groom(id) {

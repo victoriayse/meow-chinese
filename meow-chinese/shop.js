@@ -142,7 +142,8 @@ export function shopScreen({ go, tab = 'food' }) {
       const pharm = it.cat === 'pharmacy';
       const needed = !pharm || S.health() === it.cures;
       const roomShut = it.cat === 'decor' && it.room && !S.roomInfo(it.room).place && !S.roomOpen(it.room);   // cinema things: anyone may buy them (they go home)
-      const can = s.coins >= cost && !full && needed && !roomShut && !needCage;
+      const onlyOne = it.one && S.ownedCount(id) >= 1;   // e.g. the collection counter
+      const can = s.coins >= cost && !full && needed && !roomShut && !needCage && !onlyOne;
       const cageOf = (k) => ({ hamster: '🐹 仓鼠 hamster', guineapig: '🐾 豚鼠 guinea pig', parrot: '🐦 玄凤鹦鹉 cockatiel' }[k] || k);
       const eff = isPet ? (adopted ? `💕 ${esc(adopted.name)}` : needCage ? '要先买笼子 · Buy its cage first (🦴 Pet Accessories)' : it.hops ? '在家里蹦蹦跳 · Hops around the house' : it.roam ? '在家里到处跑 · Roams around the house' : '住在笼子里 · Lives in its cage')
         : it.cat === 'petacc' ? `放在笼子里 · Goes in the cage: ${(it.cageFor || []).map(cageOf).join(' / ')}`
@@ -152,7 +153,7 @@ export function shopScreen({ go, tab = 'food' }) {
         : pharm ? (needed ? `治好${it.cures === 'cough' ? '咳嗽' : '头晕'}！Cures ${it.cures === 'cough' ? 'a cough' : 'dizziness'}` : `小猫${it.cures === 'cough' ? '咳嗽' : '头晕'}时才需要 · Only when your kitten ${it.cures === 'cough' ? 'coughs' : 'is dizzy'}`)
         : it.cat === 'wear' ? `${SLOT_NAME[it.slot] || ''}`
         : it.cat === 'reno' ? (it.kind === 'wall' ? '🧱 墙纸 Wallpaper' : it.kind === 'pool' ? '🏊 在家里游泳！Swim at home' : '🟫 地板 Floor')
-        : it.cat === 'decor' ? (() => { const g = DECOR_GROUPS.find((x) => x.key === decorGroup(it)) || DECOR_GROUPS[1]; return `${g.icon} ${g.zh} ${g.en}${roomShut ? ` · 🔒 Lv${S.UNLOCKS[it.room]}` : ''}`; })() : '';
+        : it.cat === 'decor' ? (() => { const g = DECOR_GROUPS.find((x) => x.key === decorGroup(it)) || DECOR_GROUPS[1]; return `${g.icon} ${g.zh} ${g.en}${roomShut ? ` · 🔒 Lv${S.UNLOCKS[it.room]}` : ''}${it.one ? ' · 只能买一个 Only one' : ''}`; })() : '';
       const trying = it.cat === 'wear' && tryOn[it.slot] === id && S.get().kitten.equipped[it.slot] !== id;
       const card = html`<div class="product ${trying ? 'sel' : ''} ${owned ? 'is-owned' : ''}">
           ${owned ? `<span class="owned">${isPet ? '已领养 Adopted' : '已有 Owned'}</span>` : have ? `<span class="count">×${have}</span>` : ''}
@@ -181,7 +182,7 @@ export function shopScreen({ go, tab = 'food' }) {
   async function askBuy(id) {
     const it = ITEMS[id], cost = S.price(id), coins = S.get().coins;
     // furniture, food and toiletries can be bought several at once
-    const multi = ['decor', 'food', 'toiletry'].includes(it.cat), most = multi ? Math.max(1, Math.min(20, Math.floor(coins / cost))) : 1;
+    const multi = ['decor', 'food', 'toiletry'].includes(it.cat) && !it.one, most = multi ? Math.max(1, Math.min(20, Math.floor(coins / cost))) : 1;
     let qty = 1;
     sfx.click();
     const asking = confirmBox(`买${esc(it.name)}吗？ Buy ${esc(it.en)}?`,

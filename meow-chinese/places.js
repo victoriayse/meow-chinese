@@ -25,7 +25,7 @@ export function layoutOf(place) {
   const ids = new Set(keys.flatMap((k) => rooms[k].map((e) => e.id)));
   Object.entries(st.powerOff || {}).forEach(([id, v]) => { if (v && ids.has(id)) off[id] = true; });
   keys.forEach((k) => { if ((st.lightsOff || {})[k]) dark[k] = true; });
-  return { rooms, open: keys.slice(), power: { dark, off } };
+  return { rooms, open: keys.slice(), power: { dark, off }, prices: { ...(st.kioskPrices || {}) } };
 }
 export async function loadPlace(place) {
   const empty = { rooms: {}, open: PLACES[place].rooms.slice(), power: {} };

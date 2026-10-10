@@ -1,5 +1,5 @@
 // Small UI helpers shared by all screens.
-import { kittenGrid, kittenLyingGrid, kittenSideGrid, drawGrid, artGrid, COIN, HEART, FISHBONE } from './pixel.js';
+import { kittenGrid, kittenLyingGrid, kittenSideGrid, drawGrid, artGrid, COIN, HEART, FISHBONE, SNACKS } from './pixel.js';
 import { get } from './state.js';
 import { sfx } from './audio.js';
 
@@ -46,6 +46,9 @@ export class KittenView {
   }
   get fur() { return this.furOverride || get().kitten.fur; }
   get equipped() { return this.equippedOverride || get().kitten.equipped; }
+  // a snack in her paw: her own kitten holds what she picked; friends' kittens are told (setHeld)
+  get held() { if (this.heldOverride !== undefined) return this.heldOverride; const s = get(); return !this.furOverride && s ? s.holding || null : null; }
+  setHeld(kind) { kind = kind || null; if (this.heldOverride !== kind) { this.heldOverride = kind; this.draw(); } }
   setMood(m) { this.mood = m; this.draw(); }
   setPose(p) { if (this.pose !== p) { this.pose = p; this.draw(); } }
   // face left or right (the picture is mirrored, but fur patches stay where they are)
@@ -74,6 +77,11 @@ export class KittenView {
     }
     if (this.pose === 'back') { drawGrid(this.canvas, kittenGrid(this.fur, 'back', this.equipped, Math.floor(this.frame / 3)), this.scale); return; }
     let g = kittenGrid(this.fur, m, this.equipped, Math.floor(this.frame / 3), !!this.left);
+    const h = this.held && SNACKS[this.held];
+    if (h) {   // held up in her front paw
+      const sg = artGrid(h.art, h.pal);
+      sg.forEach((row, y) => row.forEach((c, x) => { const gy = 25 + y, gx = 21 + x; if (c && g[gy] && gx < g[gy].length) g[gy][gx] = c; }));
+    }
     if (this.left) g = g.map((row) => [...row].reverse());
     drawGrid(this.canvas, g, this.scale);
   }

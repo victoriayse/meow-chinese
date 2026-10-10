@@ -1602,3 +1602,39 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .visit-home .visit-chat { grid-column: 2; grid-row: 3; padding: 6px max(8px, env(safe-area-inset-right)) 6px 0; }
   .visit-home .visit-chat .house-chat { max-width: none; }
 }
+/* 🍿 snacks: buttons at the bottom of the house, hold / eat */
+.snack-bar { position: absolute; left: 6px; bottom: 6px; z-index: 45; display: flex; gap: 5px; align-items: center; flex-wrap: wrap; max-width: calc(100% - 12px); pointer-events: auto; }
+.snack-bar.empty { display: none; }
+.stage:not(.in-house) > .snack-bar { left: 12px; bottom: 12px; }
+.snack-btn { position: relative; width: 42px; height: 42px; display: grid; place-items: center; padding: 0; background: #fff; border: 3px solid var(--ink); border-radius: 10px; cursor: pointer; box-shadow: 0 3px 0 rgba(43,33,64,.35); }
+.snack-btn canvas { image-rendering: pixelated; }
+.snack-btn.held { background: #fff3c4; box-shadow: 0 0 0 3px #ffd23f, 0 3px 0 rgba(43,33,64,.35); }
+.snack-btn .n { position: absolute; top: -7px; right: -7px; font-style: normal; font-size: 11px; font-weight: 800; color: #fff; background: var(--pink-d); border-radius: 999px; padding: 0 5px; }
+.snack-eat { height: 30px; padding: 0 10px; font: inherit; font-weight: 800; font-size: 14px; background: #9be27a; border: 3px solid var(--ink); border-radius: 999px; cursor: pointer; }
+/* the collection counter: orders waiting on top */
+.decor .pickup { position: absolute; bottom: calc(100% - 3px - 100% * 2 / 26); transform: translateX(-50%); padding: 0; background: none; border: 0; cursor: pointer; pointer-events: auto; z-index: 3; animation: pickbob 1.2s ease-in-out infinite; }
+.decor .pickup canvas { display: block; image-rendering: pixelated; filter: drop-shadow(0 2px 0 rgba(0,0,0,.3)); }
+@keyframes pickbob { 50% { transform: translate(-50%, -4px); } }
+.decor .counter-wait { position: absolute; right: 4%; top: 30%; font-style: normal; font-weight: 800; font-size: 16px; color: #fff; background: var(--pink-d); border-radius: 999px; padding: 1px 8px; z-index: 3; }
+.room.arranging .decor .pickup { display: none; }
+.house .decor[data-id^="kiosk"] { pointer-events: auto; cursor: pointer; }
+/* the kiosk's order screen */
+.kiosk-card { max-width: 440px; }
+.kiosk-list { display: flex; flex-direction: column; gap: 6px; max-height: 52vh; overflow-y: auto; }
+.kiosk-row { display: grid; grid-template-columns: 34px 1fr auto auto; gap: 8px; align-items: center; background: #fff8ec; border: 2px solid var(--ink); border-radius: 8px; padding: 4px 8px; }
+.kiosk-row .art { display: grid; place-items: center; }
+.kiosk-row .art canvas { image-rendering: pixelated; }
+.kiosk-row .nm { display: flex; flex-direction: column; line-height: 1.1; font-weight: 700; }
+.kiosk-row .nm small { font-size: 12px; color: #6b5d7a; }
+.kiosk-row .pr { font-weight: 800; white-space: nowrap; }
+.kiosk-row .q { display: flex; align-items: center; gap: 6px; }
+.kiosk-row .q .qty-btn { width: 32px; height: 32px; border: 3px solid var(--ink); border-radius: 8px; background: #fff; font: inherit; font-size: 18px; font-weight: 800; cursor: pointer; line-height: 1; padding: 0; }
+.kiosk-row .q b { min-width: 18px; text-align: center; }
+.kiosk-row .k-price { width: 70px; font: inherit; font-size: 16px; padding: 4px 6px; border: 2px solid var(--ink); border-radius: 6px; grid-column: 3 / 5; justify-self: end; }
+.kiosk-total { font-size: 18px; font-weight: 700; }
+.kiosk-total .bad { color: var(--red); }
+.kiosk-card [data-icon], .kiosk-card [data-icon] canvas { display: inline-block; vertical-align: middle; }
+.kiosk-row .pr { display: inline-flex; align-items: center; gap: 2px; }
+.kiosk-total canvas, .kiosk-row canvas.coin, .kiosk-card .kiosk-total i { display: inline-block !important; vertical-align: middle; }
+.kiosk-list { max-height: 40vh; }
+@media (max-width: 600px) { .kiosk-card { gap: 8px; } .kiosk-card .row .btn { padding: 6px 10px; font-size: 15px; } .kiosk-card .help { font-size: 13px; } }

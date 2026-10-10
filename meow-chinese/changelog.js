@@ -297,4 +297,10 @@ export const CHANGES = [
     'The film buttons (▶️ ⏸️ 🔇) are half the size.',
     'Phone turned sideways: your home, friends\' homes and the cinema fill the screen, with the chat, arrows and buttons on the right — like on a computer.',
   ] },
+  { v: 121, items: [
+    '🍿 Cinema snacks! Tap the self-help kiosk to order popcorn (sweet / salty / mix), Coke, Sprite, coffee or tea. Pay with your coins.',
+    'Your order appears on the new Collection counter after 3 seconds (2 orders at a time — the next ones appear when those are picked up). Anyone can pick them up.',
+    'Snacks you pick up show as buttons at the bottom. Tap one to hold it in your cat\'s paw (friends see it too), tap again to put it away, and tap 吃 Eat to eat it — it fills Food or Water.',
+    'New: Collection counter for the cinema lobby (only one per player).',
+  ] },
 ];
