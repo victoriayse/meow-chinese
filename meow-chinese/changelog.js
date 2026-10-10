@@ -306,4 +306,7 @@ export const CHANGES = [
   { v: 122, items: [
     'The self-help kiosk\'s screen now says 点餐 Order Here.',
   ] },
+  { v: 123, items: [
+    '↶ Undo when moving furniture: while 🪑 is on, tap ↶ to take back the last change (moving, ⬆⬇ front/behind, turning, putting away or placing from storage). Tap it again to go back further.',
+  ] },
 ];

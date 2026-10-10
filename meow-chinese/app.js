@@ -426,6 +426,7 @@ function menuButton(b, { reviewN, inHouse }) {
 }
 // ---------- pets: tap a pet or a cage ----------
 let homePets = null;
+const undoStack = [];   // ↶ furniture changes she can take back (survives the redraws while arranging)
 const PET_ICON = { dog: '🐶', guineapig: '🐾', hamster: '🐹', rabbit: '🐰', parrot: '🦜' };
 export function petArtCanvas(kind, scale = 5) { const c = document.createElement('canvas'); drawGrid(c, artGrid(ITEMS[kind].art, ITEMS[kind].pal), scale); return c; }
 function petMenu(kind) {
@@ -565,6 +566,7 @@ function homeScreen(params = {}) {
       </div>${roomArrowsHtml(roomKey, S.roomOpen)}</div><div class="house-tools" id="htools">
           <button class="tool-btn store-btn" id="b-store" title="Storage">📦<b id="store-n"></b></button>
           <button class="tool-btn reno-btn" id="b-reno" title="Renovate">🎨</button>
+          <button class="tool-btn undo-btn" id="b-undo" title="Undo" aria-label="Undo">↶</button>
           <button class="tool-btn" id="b-arrange" title="Move furniture">🪑</button>
           <button class="tool-btn light-switch ${S.roomDark(roomKey) ? 'off' : ''}" id="b-light" title="Lights" aria-label="Lights">💡</button>
           <button class="tool-btn" id="b-invite" title="Invite a friend" aria-label="Invite a friend">📨</button>
@@ -824,6 +826,18 @@ function homeScreen(params = {}) {
 
     // ----- move furniture: tap the button, then drag things around -----
     let arranging = false;
+    // ↶ undo: what the furniture looked like before each change (kept while she's moving furniture)
+    const snapNow = () => { const st = S.get(); return JSON.stringify({ decorPos: st.decorPos || {}, decorLayer: st.decorLayer || {}, facing: st.facing || {}, decorHidden: st.decorHidden || [], decorRoom: st.decorRoom || {}, roomStyle: st.roomStyle || {} }); };
+    const ub = $('#b-undo', n);
+    const showUndo = () => { ub.disabled = !undoStack.length; };
+    const remember = (snap = snapNow()) => { if (undoStack[undoStack.length - 1] !== snap) undoStack.push(snap); if (undoStack.length > 40) undoStack.shift(); showUndo(); };
+    ub.onclick = () => {
+      const snap = undoStack.pop(); if (!snap) return;
+      Object.assign(S.get(), JSON.parse(snap)); S.save(); sfx.click();
+      toast('↶ <span class="zh">撤销了</span> Undone', { ms: 1000 });
+      Visit.hostResendHouse(); redrawArranging();
+    };
+    showUndo();
     const ab = $('#b-arrange', n), sb = $('#b-store', n);
     const hasFurniture = s.owned.some((id) => ITEMS[id] && ITEMS[id].cat === 'decor');
     const tools = $('#htools', n);
@@ -835,7 +849,7 @@ function homeScreen(params = {}) {
       room.classList.toggle('arranging', arranging); tools.classList.toggle('arranging', arranging);
       ab.innerHTML = arranging ? '✅' : '🪑'; ab.title = arranging ? 'Done' : 'Move furniture';
       if (arranging) { if (!quiet) sfx.click(); }
-      else { S.save(); if (!quiet) sfx.coin(); }
+      else { S.save(); if (!quiet) sfx.coin(); undoStack.length = 0; showUndo(); }
     };
     ab.onclick = () => setArranging(!arranging);
     if (currentParams.arrange) setArranging(true, true);                 // came back after placing / putting away
@@ -855,7 +869,7 @@ function homeScreen(params = {}) {
         </div>`;
       box.querySelectorAll('.store-item').forEach((b) => b.querySelector('.art').appendChild(spriteCanvas(b.dataset.id, 56)));
       box.querySelectorAll('.store-item').forEach((b) => { b.onclick = () => {
-        S.placeDecor(b.dataset.id, roomKey); sfx.coin(); closeModal();
+        remember(); S.placeDecor(b.dataset.id, roomKey); sfx.coin(); closeModal();
         toast(`<span class="zh">${ITEMS[b.dataset.id].name}放进${ri.zh}了！</span> Drag it where you like`);
         redrawArranging();
       }; });
@@ -907,6 +921,7 @@ function homeScreen(params = {}) {
       b.addEventListener('pointerdown', (e) => e.stopPropagation());
       b.onclick = (e) => {
         e.stopPropagation();
+        remember();
         const d = b.closest('.decor'), id = d.dataset.id, front = b.classList.contains('up');
         s.decorLayer = s.decorLayer || {}; s.decorLayer[id] = front ? Date.now() : -Date.now(); d.dataset.layer = s.decorLayer[id];
         decorEls.forEach((x) => { x.style.zIndex = depth(x); }); stackDecor(room);
@@ -919,6 +934,7 @@ function homeScreen(params = {}) {
       b.addEventListener('pointerdown', (e) => e.stopPropagation());
       b.onclick = (e) => {
         e.stopPropagation();
+        remember();
         const id = b.closest('.decor').dataset.id, it = ITEMS[id];
         const way = it.frames && it.frames.front ? S.cycleFacing(id) : S.toggleFacing(id); sfx.click();
         const say = way === 'front' ? ['面向前面', 'Facing you'] : it.flip ? (way === 'back' ? ['转到另一边', 'Turned the other way'] : ['侧放', 'Sideways']) : way === 'back' ? ['转向后面', 'Facing the back'] : ['转向前面', 'Facing the front'];
@@ -931,6 +947,7 @@ function homeScreen(params = {}) {
       b.addEventListener('pointerdown', (e) => e.stopPropagation());
       b.onclick = (e) => {
         e.stopPropagation();
+        remember();
         const id = b.closest('.decor').dataset.id;
         S.storeDecor(id); sfx.click();
         toast(`📦 <span class="zh">${ITEMS[id].name}收进收纳箱了</span> Put away`);
@@ -941,6 +958,7 @@ function homeScreen(params = {}) {
       el.addEventListener('pointerdown', (e) => {
         if (!arranging) return;
         e.preventDefault(); el.setPointerCapture(e.pointerId);
+        const before = snapNow(), wasX = el.offsetLeft, wasY = el.offsetTop;
         pin(el);
         const W = room.clientWidth, H = room.clientHeight;
         const sx = e.clientX, sy = e.clientY, ox = el.offsetLeft, oy = el.offsetTop;
@@ -960,7 +978,9 @@ function homeScreen(params = {}) {
             const tb = S.THEATRE_TIERS.reduce((a, c) => (Math.abs(c - b) < Math.abs(a - b) ? c : a));
             el.style.top = `${Math.max(0, 100 - tb - h)}%`;
           }
+          const moved = Math.abs(el.offsetLeft - wasX) > 1 || Math.abs(el.offsetTop - wasY) > 1;
           s.decorPos[el.dataset.id] = pin(el);
+          if (moved) remember(before);
           s.decorLayer = s.decorLayer || {}; s.decorLayer[el.dataset.id] = Date.now(); el.dataset.layer = s.decorLayer[el.dataset.id];   // the one moved last goes in front
           decorEls.forEach((d) => { d.style.zIndex = depth(d); }); stackDecor(room); placeCat();
           S.saveQuiet(); setHomeBusy(false); Visit.hostResendHouse();

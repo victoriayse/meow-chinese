@@ -1265,8 +1265,10 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .tool-btn { position: relative; width: 52px; height: 52px; padding: 0; font-size: 26px; line-height: 1; background: #fff; border: 3px solid var(--ink); border-radius: 10px;
   box-shadow: 0 4px 0 rgba(43,33,64,.35); display: grid; place-items: center; cursor: pointer; }
 .tool-btn:active { transform: translateY(2px); }
-.house-tools .store-btn, .house-tools .reno-btn { display: none; }
-.house-tools.arranging .store-btn, .house-tools.arranging .reno-btn { display: grid; background: #ffe9a8; }
+.house-tools .store-btn, .house-tools .reno-btn, .house-tools .undo-btn { display: none; }
+.house-tools.arranging .store-btn, .house-tools.arranging .reno-btn, .house-tools.arranging .undo-btn { display: grid; background: #ffe9a8; }
+.house-tools .undo-btn { font-size: 24px; font-weight: 800; }
+.house-tools .undo-btn:disabled { opacity: .45; cursor: default; }
 .house-tools.arranging .light-switch { display: none; }
 .house-tools.arranging #b-arrange { background: #9be27a; }
 .house-tools .store-btn b { position: absolute; top: -8px; right: -8px; min-width: 20px; font-size: 12px; color: #fff; background: var(--pink-d); border-radius: 999px; padding: 1px 5px; }
