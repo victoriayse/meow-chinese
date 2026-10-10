@@ -1,9 +1,16 @@
 // The kitten's house, shared by her own home page and by visits to a friend's house:
 // one fixed layout size, the furniture, the cats walking around, speech bubbles and the chat bar.
 import { ITEMS, drawGrid, artGrid, ROOM_WINDOW, kittenGrid } from './pixel.js';
-import { get as getState, roomNeighbors, UNLOCKS, roomInfo } from './state.js';
+import { get as getState, roomNeighbors, UNLOCKS, roomInfo, isAdmin } from './state.js';
 import { KittenView, esc, html } from './ui.js';
-import { sfx } from './audio.js';
+import { sfx, hushMusic } from './audio.js';
+// a film's sound is on: the game's music goes quiet until it's muted again (or the screen goes away)
+let loudVideo = null;
+function screenSound(v) {
+  if (!v.muted) { if (loudVideo && loudVideo !== v) { loudVideo.muted = true; const b = loudVideo.parentElement && loudVideo.parentElement.querySelector('.vid-sound'); if (b) b.textContent = '🔇'; } loudVideo = v; hushMusic(true); }
+  else if (loudVideo === v) { loudVideo = null; hushMusic(false); }
+}
+setInterval(() => { if (loudVideo && (!loudVideo.isConnected || loudVideo.muted)) { loudVideo = null; hushMusic(false); } }, 1000);
 
 export const HOUSE = { w: 720, roof: 48, room: 600, kitten: 4, decor: 5 };   // kitten: was 7, then 5, now 4 (20% smaller again)
 const ROOM_ARROW = 40;   // screen px kept free on each side for the ◀ ▶ room arrows
@@ -115,6 +122,7 @@ export function roomLayout(s, roomKey, roomOf) {
     }
     const photo = it.frame ? (s.framePhotos || {})[id] || null : null;   // a photo she put in a frame
     const text = it.board ? ((s.boardTexts || {})[id] ?? it.board.def) : null;   // what's written on a menu board
+    const sv = it.video && (s.screenVideos || {})[id], video = sv ? { url: sv.url, at: sv.at } : null;   // a film on the projector screen
     // a pet cage shows the water bottle, wheel… she bought for that pet, and an open door while the pet is out
     const cage = it.cage ? { things: (s.owned || []).filter((x) => ITEMS[x] && ITEMS[x].cat === 'petacc' && (ITEMS[x].cageFor || []).includes(it.cage) && !(s.cageOff || []).includes(x)), open: !!((s.pets || []).find((p) => p.kind === it.cage) || {}).out } : null;
     const fv = (s.facing || {})[id];
@@ -122,7 +130,7 @@ export function roomLayout(s, roomKey, roomOf) {
     const front = it.frames && it.frames.front && fv === 'front';            // facing straight into the room
     const layer = (s.decorLayer || {})[id] || 0;
     const opened = it.tapOpen && !!(s.openThings || {})[id];   // changing cubicle: curtain pulled open   // dragged on top of something: stays in front of it
-    return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : front ? { facing: 'front' } : {}), ...(layer ? { layer } : {}), ...(opened ? { opened } : {}), ...(text != null ? { text } : {}) };
+    return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : front ? { facing: 'front' } : {}), ...(layer ? { layer } : {}), ...(opened ? { opened } : {}), ...(text != null ? { text } : {}), ...(video ? { video } : {}) };
   }).filter(Boolean).concat(((s.roomStyle || {})[roomKey] || {}).pool ? [(() => {
     // the swimming pool (from 🎨 Renovate): she can move it like furniture
     const id = `@pool-${roomKey}`, saved = pos[id];
@@ -152,7 +160,7 @@ export function closedCurtain(g) {
   return out;
 }
 // one piece of furniture as a page element
-export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, opened, text }, { putAway = false } = {}) {
+export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, opened, text, video }, { putAway = false, videoPick = putAway && isAdmin() } = {}) {
   if (kind === 'pool') return poolEl({ id, css });
   const it = ITEMS[id]; if (!it) return null;
   const c = document.createElement('canvas');
@@ -191,6 +199,31 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
       const sc = Object.assign(document.createElement('i'), { className: 'tv-screen' });
       if (it.screen) Object.assign(sc.style, { left: `${it.screen.x * 100}%`, top: `${it.screen.y * 100}%`, width: `${it.screen.w * 100}%`, height: `${it.screen.h * 100}%` });   // e.g. the laptop's screen
       wrap.appendChild(sc);
+      if (video && video.url) {
+        // a film playing on the screen: everyone sees the same part (it started at video.at); tap 🔇 for sound
+        const v = document.createElement('video'); v.className = 'screen-video';
+        Object.assign(v, { muted: true, loop: true, autoplay: true, playsInline: true, preload: 'auto', src: video.url });
+        v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+        Object.assign(v.style, { left: sc.style.left, top: sc.style.top, width: sc.style.width, height: sc.style.height });
+        const sync = () => { if (v.duration > 0) { try { v.currentTime = ((Date.now() - (video.at || 0)) / 1000) % v.duration; } catch {} } };
+        v.addEventListener('loadedmetadata', sync);
+        v.addEventListener('play', sync, { once: true });
+        const snd = document.createElement('button'); snd.type = 'button'; snd.className = 'vid-sound'; snd.textContent = '🔇'; snd.title = 'Sound';
+        snd.addEventListener('pointerdown', (e) => e.stopPropagation());
+        snd.onclick = (e) => {
+          e.stopPropagation();
+          v.muted = !v.muted; snd.textContent = v.muted ? '🔇' : '🔊';
+          if (!v.muted) { sync(); v.play().catch(() => {}); }
+          screenSound(v);
+        };
+        wrap.append(v, snd);
+      }
+      if (videoPick) {
+        const pk = document.createElement('button'); pk.type = 'button'; pk.className = 'vid-pick'; pk.textContent = '🎞️'; pk.title = 'Choose a video';
+        pk.addEventListener('pointerdown', (e) => e.stopPropagation());
+        pk.onclick = (e) => { e.stopPropagation(); pk.dispatchEvent(new CustomEvent('screen-video', { bubbles: true, detail: { id } })); };
+        wrap.appendChild(pk);
+      }
     }
   }
   if (it.spin) {
@@ -539,6 +572,7 @@ export function chatLog(entries) {
 export function applyPower(roomEl, { dark = false, off = {} } = {}) {
   if (!roomEl) return;
   roomEl.querySelectorAll('.decor[data-power]').forEach((d) => d.classList.toggle('off', !!off[d.dataset.id]));
+  roomEl.querySelectorAll('.decor .screen-video').forEach((v) => { if (v.closest('.decor').classList.contains('off')) { v.pause(); v.muted = true; screenSound(v); } else v.play().catch(() => {}); });
   let shade = roomEl.querySelector('.room-dark');
   if (!shade) { shade = document.createElement('div'); shade.className = 'room-dark'; roomEl.appendChild(shade); }
   roomEl.classList.toggle('lights-off', !!dark);

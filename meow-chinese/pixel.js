@@ -5892,7 +5892,7 @@ Object.assign(ITEMS, {
 
 // ---------- the cinema (a public place: the admin furnishes it) ----------
 Object.assign(ITEMS, {
-  cinemascreen: { cat: 'decor', room: 'theatre1', name: '电影银幕', en: 'Projector screen', price: 300, spot: 'cinemascreen', group: 'cinema', power: 'tv', screen: { x: 4 / 84, y: 5 / 56, w: 76 / 84, h: 47 / 56 },
+  cinemascreen: { cat: 'decor', room: 'theatre1', name: '电影银幕', en: 'Projector screen', price: 300, spot: 'cinemascreen', group: 'cinema', power: 'tv', video: true, screen: { x: 4 / 84, y: 5 / 56, w: 76 / 84, h: 47 / 56 },
     pal: { o: O, k: '#5b6170', f: '#1c1530', w: '#f4f4f6', g: '#d6d8e0' },
     art: [
       'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
@@ -6068,7 +6068,7 @@ Object.assign(ITEMS, {
       '...okkko..................................okkko...',
       '...okkko..................................okkko...',
     ] },
-  popcornmachine: { cat: 'decor', room: 'lobby', name: '爆米花机', en: 'Popcorn machine', price: 200, spot: 'back-left', group: 'cinema',
+  popcornmachine: { cat: 'decor', room: 'lobby', name: '爆米花机', en: 'Popcorn machine', price: 200, spot: 'back-left', group: 'cinema', size: 0.7,
     pal: { o: O, r: '#e8384f', h: '#ff6b7d', y: '#ffd23f', s: '#c9d3de', g: '#e3f6f8', p: '#fff2b8', k: '#3d4252' },
     art: [
       '.orrhhhhhhhhhhhhhhhhhhrro.',
@@ -6110,7 +6110,7 @@ Object.assign(ITEMS, {
       '....okkko.........okkko...',
       '.....ooo...........ooo....',
     ] },
-  drinksdispenser: { cat: 'decor', room: 'lobby', name: '饮料机', en: 'Drinks dispenser', price: 180, spot: 'back-right', group: 'cinema',
+  drinksdispenser: { cat: 'decor', room: 'lobby', name: '饮料机', en: 'Drinks dispenser', price: 180, spot: 'back-right', group: 'cinema', size: 0.7,
     pal: { o: O, k: '#2b2140', s: '#c9d3de', d: '#8a8d99', r: '#e8384f', q: '#ff6b7d', b: '#3f7fe0', c: '#7ec3e8', g: '#7cbd52', h: '#b4e59a' },
     art: [
       'ssssssssssssssssssssssssssss',

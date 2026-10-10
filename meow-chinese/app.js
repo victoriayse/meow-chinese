@@ -1056,6 +1056,29 @@ function homeScreen(params = {}) {
       toast(shut ? '🌙 <span class="zh">拉上窗帘</span> Curtains closed' : '☀️ <span class="zh">拉开窗帘</span> Curtains open', { ms: 1400 });
       Visit.hostResendHouse();
     });
+    // 🎞️ the projector screen (admin): choose a film, up to 10 MB
+    room.addEventListener('screen-video', (e) => {
+      const id = e.detail.id, it = ITEMS[id], cur = (S.get().screenVideos || {})[id];
+      sfx.click();
+      const box = html`<div class="card stack" style="align-items:center;text-align:center">
+          <div class="h-title"><span class="zh">🎞️ 放电影</span><span class="en">Show a film</span></div>
+          ${cur ? `<p class="help" style="margin:0">现在播放 Now showing: <b>${esc(cur.name || 'video')}</b></p>` : ''}
+          <label class="btn green"><input type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm" hidden>📁 <span class="zh">选视频</span> Choose a video</label>
+          <p class="help" style="margin:0" id="vmsg">最大 10MB（MP4 最好）。电影院里的人都看得到。<br>Up to 10 MB (MP4 works best). Everyone in the cinema can watch it.</p>
+          <div class="row">${cur ? '<button class="btn white" id="vrm">🗑 <span class="zh">拿掉</span> Remove</button>' : ''}<button class="btn white" id="vc">关闭 Close</button></div>
+        </div>`;
+      const msg = $('#vmsg', box);
+      box.querySelector('input[type=file]').onchange = async (ev) => {
+        const f = ev.target.files && ev.target.files[0]; if (!f) return;
+        if (f.size > Places.MAX_VIDEO) { msg.textContent = `太大了（${(f.size / 1048576).toFixed(1)} MB）· Too big — the video must be 10 MB or less`; return; }
+        msg.textContent = '上传中… Uploading…';
+        try { await Places.uploadScreenVideo(id, f); sfx.coin(); closeModal(); toast('🎞️ <span class="zh">电影放好了！</span> Film added to the screen'); refreshHome(); }
+        catch (x) { msg.textContent = x.message === 'too big' ? '太大了 · Too big — 10 MB at most' : x.message === 'not video' ? '这不是视频 · That isn\'t a video file' : '上传不了，再试一次 · Couldn\'t upload — try again'; }
+      };
+      const rm = $('#vrm', box); if (rm) rm.onclick = async () => { await Places.removeScreenVideo(id); closeModal(); refreshHome(); };
+      $('#vc', box).onclick = closeModal;
+      openModal(box);
+    });
     // menu boards: tap to change what's written on them
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.board');

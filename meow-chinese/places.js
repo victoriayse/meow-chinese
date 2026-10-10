@@ -51,6 +51,33 @@ export function startPublishing() {
   setInterval(() => { if (isAdmin() && !document.hidden) publish('cinema'); }, 6000);
 }
 
+// ---------- 🎞️ a film for the projector screen (the admin uploads it; anyone can watch) ----------
+export const MAX_VIDEO = 10 * 1024 * 1024;   // 10 MB
+const objUrl = (path) => `${Auth.API}/storage/v1/object/cinema/${path}`;
+export async function uploadScreenVideo(id, file) {
+  if (!isAdmin()) throw new Error('not allowed');
+  if (!file) throw new Error('no file');
+  if (file.size > MAX_VIDEO) throw new Error('too big');
+  if (!/^video\//.test(file.type) && !/\.(mp4|m4v|mov|webm)$/i.test(file.name)) throw new Error('not video');
+  const ext = ((file.name.match(/\.([a-z0-9]{2,4})$/i) || [])[1] || 'mp4').toLowerCase();
+  const type = file.type || (ext === 'webm' ? 'video/webm' : ext === 'mov' ? 'video/quicktime' : 'video/mp4');
+  const path = `${Auth.user().id}/screen-${Date.now()}.${ext}`;
+  const t = await Auth.token();
+  const r = await fetch(objUrl(path), { method: 'POST', headers: { apikey: Auth.KEY, Authorization: `Bearer ${t}`, 'content-type': type, 'x-upsert': 'true' }, body: file });
+  if (!r.ok) { const txt = await r.text().catch(() => ''); throw new Error(/too large|exceeded|size/i.test(txt) ? 'too big' : /mime|type/i.test(txt) ? 'not video' : `upload ${r.status}`); }
+  const st = S.get(); st.screenVideos = st.screenVideos || {};
+  const old = st.screenVideos[id];
+  st.screenVideos[id] = { path, url: `${Auth.API}/storage/v1/object/public/cinema/${path}`, name: file.name.replace(/\.[^.]+$/, '').slice(0, 60), at: Date.now() };
+  S.save();
+  if (old && old.path && old.path !== path) fetch(objUrl(old.path), { method: 'DELETE', headers: { apikey: Auth.KEY, Authorization: `Bearer ${t}` } }).catch(() => {});
+}
+export async function removeScreenVideo(id) {
+  const st = S.get(), old = (st.screenVideos || {})[id]; if (!old) return;
+  delete st.screenVideos[id]; S.save();
+  const t = await Auth.token().catch(() => null);
+  if (t && old.path) fetch(objUrl(old.path), { method: 'DELETE', headers: { apikey: Auth.KEY, Authorization: `Bearer ${t}` } }).catch(() => {});
+}
+
 // ---------- the 🗺️ map: Home, Cinema, Cafe ----------
 import { $, html, toast } from './ui.js';
 import { sfx } from './audio.js';

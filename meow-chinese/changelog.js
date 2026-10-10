@@ -280,4 +280,9 @@ export const CHANGES = [
     'New for the cinema: Menu board. Tap it to write on it (up to 6 lines). Everyone who comes can read it.',
     'The "Drag furniture to move it" pop-up no longer shows when you tap 🪑.',
   ] },
+  { v: 117, items: [
+    '🎞️ Films on the projector screen: the cinema owner can put a video (up to 10 MB) on the screen. Everyone in the cinema sees it.',
+    'Tap 🔇 on the screen to hear the film (the game music goes quiet while it plays).',
+    'The popcorn machine and drinks dispenser are 30% smaller.',
+  ] },
 ];
