@@ -6,7 +6,7 @@ grant usage on schema cafe_private to authenticated;
 
 create table public.cafe_orders (
   id bigint generated always as identity primary key,
-  item text not null check (item in ('croissant','painauchocolat','donut','canele','cakeslice','cakeloaf','pancakes','wrap','tart','cookies','bottledwater','coffee','tea','bubbletea','latte','cappuccino','hotchocolate','lemonade')),
+  item text not null check (item in ('croissant','painauchocolat','donut','canele','cakeslice','cakeloaf','pancakes','wrap','tart','cookies','bottledwater','coffee','tea','bubbletea','latte','cappuccino','hotchocolate','lemonade','desserttray','icedmatcha','hotmatcha')),
   buyer uuid not null,
   created_at timestamptz not null default now(),
   ready_at timestamptz not null default (now() + interval '3 seconds'),
@@ -26,7 +26,7 @@ begin
   if auth.uid() is null then raise exception 'signed out'; end if;
   if p_items is null or cardinality(p_items) < 1 or cardinality(p_items) > 12 or array_ndims(p_items) <> 1 then raise exception 'bad order'; end if;
   foreach it in array p_items loop
-    if it is null or it not in ('croissant','painauchocolat','donut','canele','cakeslice','cakeloaf','pancakes','wrap','tart','cookies','bottledwater','coffee','tea','bubbletea','latte','cappuccino','hotchocolate','lemonade') then raise exception 'unknown item'; end if;
+    if it is null or it not in ('croissant','painauchocolat','donut','canele','cakeslice','cakeloaf','pancakes','wrap','tart','cookies','bottledwater','coffee','tea','bubbletea','latte','cappuccino','hotchocolate','lemonade','desserttray','icedmatcha','hotmatcha') then raise exception 'unknown item'; end if;
     insert into public.cafe_orders(item,buyer) values (it,auth.uid());
     n := n + 1;
   end loop;
@@ -87,7 +87,7 @@ language sql stable security definer set search_path = '' as $$
 $$;
 create function cafe_private.put_table_item(p_token uuid,p_item text,p_room text,p_table text) returns jsonb
 language plpgsql security definer set search_path = '' as $$
-declare prev public.cafe_table_items; spot integer; capacity integer; saved jsonb; allowed text[] := array['popsweet','popsalty','popmix','coke','sprite','coffee','tea','bubbletea','rootbeer','sevenup','cokefloat','icecone','icecup','nachos','sausagebun','chips','kacang','bottledwater','croissant','painauchocolat','donut','canele','cakeslice','cakeloaf','pancakes','wrap','tart','cookies','latte','cappuccino','hotchocolate','lemonade'];
+declare prev public.cafe_table_items; spot integer; capacity integer; saved jsonb; allowed text[] := array['popsweet','popsalty','popmix','coke','sprite','coffee','tea','bubbletea','rootbeer','sevenup','cokefloat','icecone','icecup','nachos','sausagebun','chips','kacang','bottledwater','croissant','painauchocolat','donut','canele','cakeslice','cakeloaf','pancakes','wrap','tart','cookies','latte','cappuccino','hotchocolate','lemonade','desserttray','icedmatcha','hotmatcha'];
 begin
   if auth.uid() is null then raise exception 'signed out'; end if;
   if p_token is null or p_item is null or not(p_item=any(allowed)) or p_table is null or p_room is null then return jsonb_build_object('accepted',false,'reason','invalid'); end if;
