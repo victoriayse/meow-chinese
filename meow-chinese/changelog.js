@@ -345,4 +345,8 @@ export const CHANGES = [
     'Order pastries, cakes, pancakes, wraps and drinks at the cafe kiosk, then collect them from its own counter and use the buttons at the bottom.',
     'Share food: place an item from your bag on a cafe table or bar. Anyone there can pick it up. Display pastries stay as decorations.',
   ] },
+  { v: 133, items: [
+    'The cafe starts empty so you can design it yourself. Buy furniture and display decorations in Shop > Home > Cafe, then arrange them as admin.',
+    'Removed the free starter furnishings. Your shop purchases stay yours.',
+  ] },
 ];
