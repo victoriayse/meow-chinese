@@ -71,12 +71,14 @@ export function startPublishing() {
 }
 
 // ---------- 🎞️ a film for the projector screen (the admin uploads it; anyone can watch) ----------
+export const videoLimit = (id) => String(id).split('#')[0] === 'tv' ? 5 * 1024 * 1024 : MAX_VIDEO;
 export const MAX_VIDEO = 10 * 1024 * 1024;   // 10 MB
 const objUrl = (path) => `${Auth.API}/storage/v1/object/cinema/${path}`;
 export async function uploadScreenVideo(id, file) {
   if (!isAdmin()) throw new Error('not allowed');
   if (!file) throw new Error('no file');
-  if (file.size > MAX_VIDEO) throw new Error('too big');
+  if (file.size > videoLimit(id)) throw new Error('too big');
+  if (videoLimit(id) < MAX_VIDEO && (!/\.mp4$/i.test(file.name) || (file.type && file.type !== 'video/mp4'))) throw new Error('not mp4');
   if (!/^video\//.test(file.type) && !/\.(mp4|m4v|mov|webm)$/i.test(file.name)) throw new Error('not video');
   const ext = ((file.name.match(/\.([a-z0-9]{2,4})$/i) || [])[1] || 'mp4').toLowerCase();
   const type = file.type || (ext === 'webm' ? 'video/webm' : ext === 'mov' ? 'video/quicktime' : 'video/mp4');

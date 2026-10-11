@@ -1,0 +1,61 @@
+// Shared upload dialogs for home and admin-managed public places.
+import * as S from './state.js';
+import * as Places from './places.js';
+import { ITEMS } from './pixel.js';
+import { compressPhoto } from './house.js';
+import { $, html, esc, toast, openModal, closeModal } from './ui.js';
+import { sfx } from './audio.js';
+export function openVideo(id, changed) {
+  if (!Places.isAdmin()) return;
+  const limit = Places.videoLimit(id), mb = limit / 1048576, tv = limit < Places.MAX_VIDEO;
+  const cur = (S.get().screenVideos || {})[id];
+  sfx.click();
+  const box = html`<div class="card stack" style="align-items:center;text-align:center">
+      <div class="h-title"><span class="zh">🎞️ 放电影</span><span class="en">Show a film</span></div>
+      ${cur ? `<p class="help" style="margin:0">现在播放 Now showing: <b>${esc(cur.name || 'video')}</b></p>` : ''}
+      <label class="btn green"><input type="file" accept="${tv ? 'video/mp4,.mp4' : 'video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm'}" hidden>📁 <span class="zh">选视频</span> Choose a video</label>
+      <p class="help" style="margin:0" id="vmsg">最大 ${mb}MB · ${tv ? 'MP4 only' : 'MP4 works best'}. Everyone here can watch it.</p>
+      <div class="row">${cur ? '<button class="btn white" id="vrm">🗑 <span class="zh">拿掉</span> Remove</button>' : ''}<button class="btn white" id="vc">关闭 Close</button></div>
+    </div>`;
+  const msg = $('#vmsg', box);
+  box.querySelector('input[type=file]').onchange = async (ev) => {
+    const f = ev.target.files && ev.target.files[0]; if (!f) return;
+    if (f.size > limit) { msg.textContent = `太大了（${(f.size / 1048576).toFixed(1)} MB）· Too big — the video must be ${mb} MB or less`; return; }
+    msg.textContent = '上传中… Uploading…';
+    try { await Places.uploadScreenVideo(id, f); await changed(); sfx.coin(); closeModal(); toast('🎞️ <span class="zh">电影放好了！</span> Film added to the screen'); }
+    catch (x) { msg.textContent = x.message === 'too big' ? `太大了 · Too big — ${mb} MB at most` : x.message === 'not mp4' ? 'Please choose an MP4 file (up to 5 MB)' : x.message === 'not video' ? '这不是视频 · That isn\'t a video file' : '上传不了，再试一次 · Couldn\'t upload — try again'; }
+  };
+  const rm = $('#vrm', box); if (rm) rm.onclick = async () => {
+    try { await Places.removeScreenVideo(id); await changed(); closeModal(); }
+    catch (x) { msg.textContent = 'Could not save the change — please try again.'; }
+  };
+  $('#vc', box).onclick = closeModal;
+  openModal(box);
+}
+export function openPoster(id, changed) {
+  const it = ITEMS[id], cur = (S.get().framePhotos || {})[id];
+  const box = html`<div class="card stack" style="align-items:center;text-align:center">
+      <div class="h-title" style="justify-content:center"><span class="zh">🖼️ ${it.name}</span><span class="en">${esc(it.en)}</span></div>
+      <div class="frame-preview">${cur ? `<img src="${cur}" alt="">` : '<span class="help">还没有照片 · No photo yet</span>'}</div>
+      <label class="btn blue">📷 <span class="zh">${cur ? '换照片' : '选照片'}</span> ${cur ? 'Change photo' : 'Choose a photo'}<input type="file" accept="image/*" hidden></label>
+      <p class="help" id="pmsg" style="margin:0">照片会缩小到 ${it.maxKB || 50}KB 以内。来家里玩的朋友也看得到。<br>Photos are made small (under ${it.maxKB || 50} KB). Friends visiting your house can see them.</p>
+      <div class="row">${cur ? '<button class="btn white" id="prm">🗑 <span class="zh">拿掉</span> Remove</button>' : ''}<button class="btn white" id="pc">关闭 Close</button></div>
+    </div>`;
+  const msg = $('#pmsg', box);
+  box.querySelector('input[type=file]').onchange = async (ev) => {
+    const f = ev.target.files && ev.target.files[0]; if (!f) return;
+    msg.textContent = '处理中… Making it small…';
+    try {
+      const url = await compressPhoto(f, (it.maxKB || 50) * 1024);   // posters: 10 KB
+      S.setFramePhoto(id, url); await changed(); sfx.coin(); closeModal();
+      toast(`🖼️ <span class="zh">照片放好了！</span> Photo added (${Math.round((url.length * 3) / 4 / 1024)} KB)`);
+
+    } catch (x) { msg.textContent = '这张照片用不了，换一张试试。 That photo didn\'t work — try another one.'; }
+  };
+  const rm = $('#prm', box); if (rm) rm.onclick = async () => {
+    try { S.setFramePhoto(id, null); await changed(); closeModal(); }
+    catch (x) { msg.textContent = 'Could not save the change — please try again.'; }
+  };
+  $('#pc', box).onclick = closeModal;
+  openModal(box);
+}
