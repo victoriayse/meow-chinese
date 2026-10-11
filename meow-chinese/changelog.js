@@ -359,4 +359,7 @@ export const CHANGES = [
     'Resize furniture: while decorating, tap the ↔ button on an item and choose its size. New items placed from storage appear in front.',
     'The cafe and cinema kiosks now work in the admin furnishing view after tapping Done. Order, collect from the counter, and use your food from the buttons below.',
   ] },
+  { v: 137, items: [
+    'A small corner handle replaces the large size button. While decorating, drag the corner inward or outward to resize directly with your finger or mouse.',
+  ] },
 ];

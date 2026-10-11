@@ -916,25 +916,47 @@ function homeScreen(params = {}) {
     // Size is saved per copy, so matching pieces can have different sizes.
     room.querySelectorAll('.decor').forEach((d) => {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'resize-btn';
-      b.textContent = '↔'; b.title = 'Resize'; b.setAttribute('aria-label', 'Resize'); d.appendChild(b);
-      b.addEventListener('pointerdown', (e) => e.stopPropagation());
-      b.onclick = (e) => {
-        e.stopPropagation();
-        const id = d.dataset.id, old = (S.get().decorScale || {})[id] || 1;
-        const box = html`<div class="card stack"><div class="h-title">调整大小 · Resize</div>
-          <label>大小 Size <output id="size-label">${Math.round(old * 100)}%</output>
-          <input id="size-value" type="range" min="25" max="200" step="5" value="${Math.round(old * 100)}" style="width:100%"></label>
-          <button class="btn white" id="size-reset">100% · Original size</button>
-          <button class="btn green" id="size-save">保存 Save</button><button class="btn white" id="size-cancel">取消 Cancel</button></div>`;
-        const input = $('#size-value', box), label = $('#size-label', box);
-        input.oninput = () => { label.textContent = input.value + '%'; };
-        $('#size-reset', box).onclick = () => { input.value = 100; input.oninput(); };
-        $('#size-cancel', box).onclick = closeModal;
-        $('#size-save', box).onclick = () => {
-          remember(); const st = S.get(); st.decorScale = st.decorScale || {}; st.decorScale[id] = +input.value / 100;
-          S.save(); closeModal(); Visit.hostResendHouse(); redrawArranging();
+      b.textContent = '↘'; b.title = 'Drag corner to resize'; b.setAttribute('aria-label', 'Resize: drag corner, or use arrow keys'); d.appendChild(b);
+      b.onclick = (e) => e.stopPropagation();
+      b.addEventListener('pointerdown', (e) => {
+        e.stopPropagation(); e.preventDefault();
+        if (!arranging || (e.pointerType === 'mouse' && e.button !== 0)) return;
+        const id = d.dataset.id, old = (S.get().decorScale || {})[id] || 1, before = snapNow();
+        const curtain = d.classList.contains('curtain');
+        const position = curtain ? null : pin(d);
+        const rect = d.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
+        const width = parseFloat(d.style.width), height = parseFloat(d.style.height);
+        const canvases = [...d.querySelectorAll(':scope > canvas')].map((c) => ({ c, w: parseFloat(c.style.width), h: parseFloat(c.style.height) }));
+        let size = old;
+        b.setPointerCapture(e.pointerId); setHomeBusy(true);
+        const move = (ev) => {
+          if (ev.pointerId !== e.pointerId) return;
+          const change = ((ev.clientX - sx) * rect.width + (ev.clientY - sy) * rect.height) / (rect.width ** 2 + rect.height ** 2);
+          size = Math.max(0.25, Math.min(2, Math.round(old * (1 + change) * 100) / 100));
+          const ratio = size / old;
+          if (curtain) { d.style.width = width * ratio + '%'; d.style.height = height * ratio + '%'; }
+          else canvases.forEach(({ c, w, h }) => { c.style.width = w * ratio + 'px'; c.style.height = h * ratio + 'px'; });
+          b.title = Math.round(size * 100) + '%';
         };
-        openModal(box);
+        const end = (ev) => {
+          if (ev.pointerId !== e.pointerId) return;
+          b.removeEventListener('pointermove', move); b.removeEventListener('pointerup', end); b.removeEventListener('pointercancel', end);
+          if (b.hasPointerCapture(e.pointerId)) b.releasePointerCapture(e.pointerId);
+          if (ev.type !== 'pointercancel' && size !== old) {
+            remember(before); const st = S.get(); st.decorScale = st.decorScale || {}; st.decorScale[id] = size;
+            if (position) st.decorPos[id] = position;
+            S.save(); Visit.hostResendHouse();
+          }
+          setHomeBusy(false); redrawArranging();
+        };
+        b.addEventListener('pointermove', move); b.addEventListener('pointerup', end); b.addEventListener('pointercancel', end);
+      });
+      b.onkeydown = (e) => {
+        if (!['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'].includes(e.key)) return;
+        e.preventDefault(); e.stopPropagation(); remember();
+        const st = S.get(), id = d.dataset.id; st.decorScale = st.decorScale || {};
+        st.decorScale[id] = Math.max(0.25, Math.min(2, (st.decorScale[id] || 1) + (['ArrowUp', 'ArrowRight'].includes(e.key) ? 0.05 : -0.05)));
+        S.save(); Visit.hostResendHouse(); redrawArranging();
       };
     });
     // Admins can use the public kiosk and collection counter after finishing editing.
