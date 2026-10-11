@@ -382,4 +382,7 @@ export const CHANGES = [
   { v: 143, items: [
     'Admins can tap posters and TVs in the cafe or cinema to update their media. Poster images are compressed to 10 KB; TV uploads accept MP4 files up to 5 MB.',
   ] },
+  { v: 144, items: [
+    'Admins can tap the cafe or cinema radio to upload an MP3, change songs, play, stop, or remove their radio song. The existing 10 MB limit still applies.',
+  ] },
 ];
