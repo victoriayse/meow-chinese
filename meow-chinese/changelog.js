@@ -372,4 +372,7 @@ export const CHANGES = [
     'Choose Pick up or Table service at the cafe kiosk. For table service, enter the small number on your table and the tuxedo cat brings your food there.',
     'Pickup orders still go to the collection counter. Full tables wait for space; if a table is removed, its pending food goes to the counter.',
   ] },
+  { v: 141, items: [
+    'The tuxedo cat walks more slowly when serving your table and says Enjoy! after putting down the food.',
+  ] },
 ];
