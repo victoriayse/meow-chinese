@@ -352,4 +352,7 @@ export const CHANGES = [
   { v: 134, items: [
     'Tap Decorate in the cafe or cinema to open your furniture storage, choose an item, and drag it into place. Editing controls stay available in empty rooms too.',
   ] },
+  { v: 135, items: [
+    'New in Shop > Home > Cafe: a decorative wooden door and a matching blue-glass window. Buy and arrange them like other furniture; the door does not change rooms.',
+  ] },
 ];
