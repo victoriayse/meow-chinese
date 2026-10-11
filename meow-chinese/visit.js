@@ -306,10 +306,10 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (P && Places.isAdmin()) {
       room.querySelectorAll('.decor.radio').forEach((d) => d.classList.add('radio-editable'));
       room.addEventListener('click', (e) => {
-        if (!e.target.closest('.decor.radio')) return;
-        e.stopPropagation(); openRadio();
+        const d = e.target.closest('.decor.radio'); if (!d) return;
+        e.stopPropagation(); openRadio(d.dataset.id);
       });
-      const markRadio = () => room.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', Radio.isPlaying()));
+      const markRadio = () => room.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', Radio.isPlaying(d.dataset.id)));
       const unRadio = Radio.onRadio(() => { if (!room.isConnected) { unRadio(); return; } markRadio(); });
       markRadio();
     }
@@ -428,7 +428,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (P && Places.isAdmin()) return; // Keep the admin's chosen song through room refreshes.
     const r = (house && house.radio) || { on: false };
     Radio.listen(r);
-    box.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', !!r.on));
+    box.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', !!r.on && (!r.radioId || r.radioId === d.dataset.id)));
   }
   function place() {
     const room = $('#room', box), spot = mine.seat && seatSpot(room, mine.seat, mine.slot);

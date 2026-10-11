@@ -385,4 +385,7 @@ export const CHANGES = [
   { v: 144, items: [
     'Admins can tap the cafe or cinema radio to upload an MP3, change songs, play, stop, or remove their radio song. The existing 10 MB limit still applies.',
   ] },
+  { v: 145, items: [
+    'Each radio now has its own uploaded song. Changing or removing the cafe radio song leaves your home radio song alone. Your existing song stays with a home radio.',
+  ] },
 ];

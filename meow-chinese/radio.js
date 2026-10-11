@@ -9,7 +9,7 @@ import * as S from './state.js';
 
 const DB = 'meow-radio', STORE = 'song';
 const MAX_BYTES = 10 * 1024 * 1024;   // 10 MB at most
-let audio = null, loaded = null, playing = false, startedAt = 0;
+let audio = null, loaded = null, playing = false, startedAt = 0, activeId = null;
 const listeners = new Set();
 export const onRadio = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 const tell = () => listeners.forEach((fn) => { try { fn(playing); } catch (e) { console.warn(e); } });
@@ -43,7 +43,17 @@ async function cachePut(key, blob) {
 const objUrl = (path) => `${Auth.API}/storage/v1/object/radio/${path.split('/').map(encodeURIComponent).join('/')}`;
 async function headers(extra = {}) { const t = await Auth.token(); if (!t) throw new Error('signed out'); return { apikey: Auth.KEY, Authorization: `Bearer ${t}`, ...extra }; }
 // { path, name } of my radio song (saved with the rest of the game, so all her devices know it)
-export const mySong = () => S.get().radioSong || null;
+// Keep the old shared song on one home radio only. Furniture copy IDs stay unique.
+const homeRadio = () => (S.get().owned || []).find((id) => String(id).split('#')[0] === 'radio' && !Object.values(S.PLACE_ROOMS).flat().includes(S.roomOf(id)));
+export function mySong(id = 'radio') {
+  const st = S.get();
+  if (st.radioSong && homeRadio() === id) {
+    st.radioSongs = st.radioSongs || {};
+    if (!Object.prototype.hasOwnProperty.call(st.radioSongs, id)) st.radioSongs[id] = st.radioSong;
+    st.radioSong = null; S.save();
+  }
+  return (st.radioSongs || {})[id] || null;
+}
 async function download(path) {
   const cached = await cacheGet(path); if (cached) return cached;
   const r = await fetch(`${Auth.API}/storage/v1/object/authenticated/radio/${path.split('/').map(encodeURIComponent).join('/')}`, { headers: await headers() });
@@ -52,7 +62,7 @@ async function download(path) {
   await cachePut(path, blob);
   return blob;
 }
-export async function setSong(file) {
+export async function setSong(file, id = 'radio') {
   if (!file) throw new Error('no file');
   if (file.size > MAX_BYTES) throw new Error('too big');
   if (!/^audio\//.test(file.type) && !/\.(mp3|m4a|aac|wav|ogg)$/i.test(file.name)) throw new Error('not audio');
@@ -60,27 +70,29 @@ export async function setSong(file) {
   stop();
   const ext = ((file.name.match(/\.([a-z0-9]{2,4})$/i) || [])[1] || 'mp3').toLowerCase();
   const type = file.type || (ext === 'mp3' ? 'audio/mpeg' : `audio/${ext}`);
-  const path = `${me.id}/song-${Date.now()}.${ext}`;
+  const path = `${me.id}/song-${Date.now()}-${crypto.randomUUID()}.${ext}`;
   const r = await fetch(objUrl(path), { method: 'POST', headers: await headers({ 'content-type': type, 'x-upsert': 'true' }), body: file });
   if (!r.ok) { const t = await r.text().catch(() => ''); throw new Error(/too large|exceeded/i.test(t) ? 'too big' : `upload ${r.status}`); }
-  const old = mySong();
-  S.get().radioSong = { path, name: file.name.replace(/\.[^.]+$/, '').slice(0, 60) }; S.save();
+  const old = mySong(id);
+  S.get().radioSongs = S.get().radioSongs || {};
+  S.get().radioSongs[id] = { path, name: file.name.replace(/\.[^.]+$/, '').slice(0, 60) }; S.save();
   await cachePut(path, file);
   if (old && old.path && old.path !== path) fetch(objUrl(old.path), { method: 'DELETE', headers: await headers() }).catch(() => {});
   loaded = null;
 }
-export async function removeSong() {
-  stop();
-  const old = mySong();
-  S.get().radioSong = null; S.save();
+export async function removeSong(id = 'radio') {
+  if (isPlaying(id)) stop();
+  const old = mySong(id);
+  S.get().radioSongs = S.get().radioSongs || {};
+  S.get().radioSongs[id] = null; S.save();
   if (old && old.path) fetch(objUrl(old.path), { method: 'DELETE', headers: await headers() }).catch(() => {});
-  loaded = null;
+  if (old && loaded === old.path) loaded = null;
 }
 // a song added on this device before songs were saved online: upload it now
-export async function moveOldSong() {
-  if (mySong() || !Auth.user()) return;
+export async function moveOldSong(id = 'radio') {
+  if (mySong(id) || homeRadio() !== id || !Auth.user()) return;
   const old = await cacheGet('current');
-  if (old && old.blob) { try { await setSong(new File([old.blob], `${old.name || 'song'}.mp3`, { type: old.blob.type || 'audio/mpeg' })); await idb('readwrite', (st) => st.delete('current')); } catch (e) { console.warn('radio move', e); } }
+  if (old && old.blob) { try { await setSong(new File([old.blob], `${old.name || 'song'}.mp3`, { type: old.blob.type || 'audio/mpeg' }), id); await idb('readwrite', (st) => st.delete('current')); } catch (e) { console.warn('radio move', e); } }
 }
 
 // ---------- playing ----------
@@ -101,29 +113,29 @@ async function load(path) {
   return true;
 }
 // start the song (from `at` seconds in, so friends hear the same part)
-async function start(path, at = 0) {
+async function start(path, at = 0, id = null) {
   try { await load(path); } catch (e) { console.warn('radio load', e); return false; }
   const a = player();
   try { if (at > 0 && Number.isFinite(a.duration) && a.duration > 0) a.currentTime = at % a.duration; } catch {}
   try { await a.play(); } catch (e) { console.warn('radio play', e); return false; }
   if (at > 0 && !(Number.isFinite(a.duration) && a.duration > 0)) a.addEventListener('loadedmetadata', () => { try { a.currentTime = at % a.duration; } catch {} }, { once: true });
-  playing = true; startedAt = Date.now() - (at || 0) * 1000; hushMusic(true); tell();
+  activeId = id; playing = true; startedAt = Date.now() - (at || 0) * 1000; hushMusic(true); tell();
   return true;
 }
-export const isPlaying = () => playing;
+export const isPlaying = (id = null) => playing && (id === null || activeId === id);
 // what friends in my house need to hear it too
-export const status = () => { const s = mySong(); return playing && s && loaded === s.path ? { on: true, path: s.path, name: s.name, startedAt } : { on: false }; };
-export async function play() { await moveOldSong(); const s = mySong(); if (!s) return false; return start(s.path); }
+export const status = () => { const s = activeId && mySong(activeId); return !Object.values(S.PLACE_ROOMS).flat().includes(S.roomOf(activeId || 'radio')) && playing && s && loaded === s.path ? { on: true, radioId: activeId, path: s.path, name: s.name, startedAt } : { on: false }; };
+export async function play(id = 'radio') { await moveOldSong(id); const s = mySong(id); if (!s) return false; return start(s.path, 0, id); }
 export function stop() {
   if (!playing && !(audio && !audio.paused)) return;
   playing = false;
   if (audio) audio.pause();
   hushMusic(false); tell();
 }
-export async function toggle() { if (playing) { stop(); return false; } return play(); }
+export async function toggle(id = 'radio') { if (isPlaying(id)) { stop(); return false; } return play(id); }
 // a friend's radio, while I'm visiting their house
 export async function listen(r) {
   if (!r || !r.on || !r.path) { stop(); return; }
   if (playing && loaded === r.path) return;
-  await start(r.path, Math.max(0, (Date.now() - (r.startedAt || Date.now())) / 1000));
+  await start(r.path, Math.max(0, (Date.now() - (r.startedAt || Date.now())) / 1000), r.radioId || null);
 }
