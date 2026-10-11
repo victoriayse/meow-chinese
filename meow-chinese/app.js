@@ -826,7 +826,7 @@ function homeScreen(params = {}) {
     // ----- move furniture: tap the button, then drag things around -----
     let arranging = false;
     // ↶ undo: what the furniture looked like before each change (kept while she's moving furniture)
-    const snapNow = () => { const st = S.get(); return JSON.stringify({ decorPos: st.decorPos || {}, decorLayer: st.decorLayer || {}, facing: st.facing || {}, decorHidden: st.decorHidden || [], decorRoom: st.decorRoom || {}, roomStyle: st.roomStyle || {} }); };
+    const snapNow = () => { const st = S.get(); return JSON.stringify({ decorPos: st.decorPos || {}, decorScale: st.decorScale || {}, decorLayer: st.decorLayer || {}, facing: st.facing || {}, decorHidden: st.decorHidden || [], decorRoom: st.decorRoom || {}, roomStyle: st.roomStyle || {} }); };
     const ub = $('#b-undo', n);
     const showUndo = () => { ub.disabled = !undoStack.length; };
     const remember = (snap = snapNow()) => { if (undoStack[undoStack.length - 1] !== snap) undoStack.push(snap); if (undoStack.length > 40) undoStack.shift(); showUndo(); };
@@ -913,6 +913,60 @@ function homeScreen(params = {}) {
       const box = html`<div class="card stack reno-box"></div>`;
       openModal(box); draw();
     };
+    // Size is saved per copy, so matching pieces can have different sizes.
+    room.querySelectorAll('.decor').forEach((d) => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'resize-btn';
+      b.textContent = '↔'; b.title = 'Resize'; b.setAttribute('aria-label', 'Resize'); d.appendChild(b);
+      b.addEventListener('pointerdown', (e) => e.stopPropagation());
+      b.onclick = (e) => {
+        e.stopPropagation();
+        const id = d.dataset.id, old = (S.get().decorScale || {})[id] || 1;
+        const box = html`<div class="card stack"><div class="h-title">调整大小 · Resize</div>
+          <label>大小 Size <output id="size-label">${Math.round(old * 100)}%</output>
+          <input id="size-value" type="range" min="25" max="200" step="5" value="${Math.round(old * 100)}" style="width:100%"></label>
+          <button class="btn white" id="size-reset">100% · Original size</button>
+          <button class="btn green" id="size-save">保存 Save</button><button class="btn white" id="size-cancel">取消 Cancel</button></div>`;
+        const input = $('#size-value', box), label = $('#size-label', box);
+        input.oninput = () => { label.textContent = input.value + '%'; };
+        $('#size-reset', box).onclick = () => { input.value = 100; input.oninput(); };
+        $('#size-cancel', box).onclick = closeModal;
+        $('#size-save', box).onclick = () => {
+          remember(); const st = S.get(); st.decorScale = st.decorScale || {}; st.decorScale[id] = +input.value / 100;
+          S.save(); closeModal(); Visit.hostResendHouse(); redrawArranging();
+        };
+        openModal(box);
+      };
+    });
+    // Admins can use the public kiosk and collection counter after finishing editing.
+    if (roomRI.place && Places.isAdmin()) {
+      const place = roomRI.place;
+      let counterBusy = false;
+      const refreshCounter = async () => {
+        if (!room.isConnected || arranging || counterBusy || !room.querySelector('[data-counter]')) return;
+        counterBusy = true;
+        const data = await Snacks.counterNow(place); counterBusy = false;
+        if (!data || !room.isConnected || arranging) return;
+        Snacks.showCounter(room, data, async (order, btn) => {
+          if (arranging) return;
+          btn.disabled = true;
+          const got = await Snacks.pickUp(order.id, place);
+          if (got) { S.addSnack(got); sfx.coin(); toast('拿到了！ · Collected — tap it at the bottom'); }
+          else toast('已被拿走 · Already collected');
+          refreshCounter();
+        }, place);
+      };
+      room.addEventListener('click', (e) => {
+        const kiosk = e.target.closest(place === 'cafe' ? '.decor[data-id^="cafekiosk"]' : '.decor[data-id^="kiosk"]');
+        if (!kiosk || e.target.closest('button')) return;
+        if (arranging) return;
+        const field = place === 'cafe' ? 'cafePrices' : 'kioskPrices';
+        Snacks.openKiosk({ place, prices: S.get()[field] || {}, admin: true,
+          onPrices: (prices) => { S.get()[field] = prices; S.save(); },
+          onPaid: () => { setTimeout(refreshCounter, 3300); } });
+      });
+      const poll = setInterval(() => { if (!room.isConnected) return clearInterval(poll); if (!document.hidden) refreshCounter(); }, 4000);
+      ab.addEventListener('click', refreshCounter);
+    }
     // ⬆ ⬇ on a piece of furniture: put it in front of / behind the things it overlaps
     room.querySelectorAll('.decor .layer-btn').forEach((b) => {
       b.addEventListener('pointerdown', (e) => e.stopPropagation());

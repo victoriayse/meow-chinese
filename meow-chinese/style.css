@@ -1726,3 +1726,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .cafe-loose-food .table-food { position: relative; transform: none; }
 
 .cafe-transfer { position: absolute; top: 28px; left: 5%; right: 5%; z-index: 160; padding: 6px; background: #f6ead8; border: 2px solid var(--ink); font-size: 16px; text-align: center; }
+
+/* Size controls stay finger-sized while furniture itself changes size. */
+.decor .resize-btn { display:none; position:absolute; right:-5px; bottom:-5px; width:28px; height:28px; padding:0; background:#fff; color:var(--ink); border:2px solid var(--ink); border-radius:6px; z-index:3; transform:scale(var(--inv, 1)); transform-origin:bottom right; }
+.room.arranging .decor .resize-btn { display:grid; place-items:center; pointer-events:auto; }

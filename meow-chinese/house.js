@@ -54,10 +54,10 @@ function poolGrid() {
   }
   return g;
 }
-function poolEl({ id, css }) {
+function poolEl({ id, css, scale = 1 }) {
   const wrap = document.createElement('div');
   wrap.className = 'decor flat movable pool-el'; wrap.dataset.id = id; wrap.style.cssText = css;
-  const c = document.createElement('canvas'); drawGrid(c, poolGrid(), HOUSE.decor);
+  const c = document.createElement('canvas'); drawGrid(c, poolGrid(), HOUSE.decor * scale);
   const shine = document.createElement('div'); shine.className = 'pool-shine';
   wrap.append(c, shine);
   return wrap;
@@ -107,10 +107,11 @@ export function studioBarre(roomEl, on) {
 export function roomLayout(s, roomKey, roomOf) {
   const pos = s.decorPos || {};
   return (s.owned || []).filter((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && !(s.decorHidden || []).includes(id) && roomOf(id) === roomKey).map((id) => {
+    const scale = Math.max(0.25, Math.min(2, +(s.decorScale || {})[id] || 1));
     const it = ITEMS[id], spot = DECOR_POS[it.spot] || 'left:10%;bottom:10%', saved = pos[id];
     // window coverings hang from just above the window to just below it, as wide as the window plus a little
     if (spot === 'curtain' && roomKey === 'garden') return null;   // no window outside
-    if (spot === 'curtain') return { id, kind: 'curtain', closed: !!(s.curtainClosed || {})[id], css: `left:${(ROOM_WINDOW.x0 + ROOM_WINDOW.x1) * 50}%;top:${ROOM_WINDOW.y0 * 100 - 4}%;width:${(ROOM_WINDOW.x1 - ROOM_WINDOW.x0) * 100 + 12}%;height:${(ROOM_WINDOW.y1 - ROOM_WINDOW.y0) * 100 + 7}%;transform:translateX(-50%);z-index:1` };
+    if (spot === 'curtain') return { id, scale, layer: (s.decorLayer || {})[id] || 0, kind: 'curtain', closed: !!(s.curtainClosed || {})[id], css: `left:${(ROOM_WINDOW.x0 + ROOM_WINDOW.x1) * 50}%;top:${ROOM_WINDOW.y0 * 100 - 4}%;width:${(ROOM_WINDOW.x1 - ROOM_WINDOW.x0) * 100 + 12}%;height:${(ROOM_WINDOW.y1 - ROOM_WINDOW.y0) * 100 + 7}%;transform:translateX(-50%);z-index:1` };
     const flat = it.spot === 'rug' || it.spot === 'under';
     let css = saved ? `left:${saved.x}%;top:${saved.y}%` : flat ? `left:50%;bottom:${it.spot === 'rug' ? 2 : 3}%;transform:translateX(-50%)` : spot;
     // a second or third copy that hasn't been dragged anywhere yet: nudge it so it doesn't hide the first one
@@ -130,11 +131,11 @@ export function roomLayout(s, roomKey, roomOf) {
     const front = it.frames && it.frames.front && fv === 'front';            // facing straight into the room
     const layer = (s.decorLayer || {})[id] || 0;
     const opened = it.tapOpen && !!(s.openThings || {})[id];   // changing cubicle: curtain pulled open   // dragged on top of something: stays in front of it
-    return { id, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : front ? { facing: 'front' } : {}), ...(layer ? { layer } : {}), ...(opened ? { opened } : {}), ...(text != null ? { text } : {}), ...(video ? { video } : {}) };
+    return { id, scale, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : front ? { facing: 'front' } : {}), ...(layer ? { layer } : {}), ...(opened ? { opened } : {}), ...(text != null ? { text } : {}), ...(video ? { video } : {}) };
   }).filter(Boolean).concat(((s.roomStyle || {})[roomKey] || {}).pool ? [(() => {
     // the swimming pool (from 🎨 Renovate): she can move it like furniture
     const id = `@pool-${roomKey}`, saved = pos[id];
-    return { id, kind: 'pool', css: saved ? `left:${saved.x}%;top:${saved.y}%` : 'left:38%;bottom:2%' };
+    return { id, scale: (s.decorScale || {})[id] || 1, kind: 'pool', css: saved ? `left:${saved.x}%;top:${saved.y}%` : 'left:38%;bottom:2%' };
   })()] : []);
 }
 // a window covering drawn shut: side curtains meet in the middle, blinds come all the way down
@@ -160,19 +161,21 @@ export function closedCurtain(g) {
   return out;
 }
 // one piece of furniture as a page element
-export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, opened, text, video }, { putAway = false, videoPick = putAway && isAdmin(), videoOwner = videoPick } = {}) {
-  if (kind === 'pool') return poolEl({ id, css });
+export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, opened, text, video, scale = 1 }, { putAway = false, videoPick = putAway && isAdmin(), videoOwner = videoPick } = {}) {
+  scale = Math.max(0.25, Math.min(2, +scale || 1));
+  if (kind === 'pool') return poolEl({ id, css, scale });
   const it = ITEMS[id]; if (!it) return null;
   const c = document.createElement('canvas');
   const art = (cage && cage.open || opened) && it.frames && it.frames.open ? it.frames.open : facing === 'front' && it.frames && it.frames.front ? it.frames.front : facing === 'back' && !it.flip && it.frames && it.frames.back ? it.frames.back : it.art;
   const flipped = facing === 'back' && it.flip;   // turned sideways: drawn the other way round
   if (flipped) c.style.scale = '-1 1';
   const g = artGrid(art, it.pal);
-  drawGrid(c, kind === 'curtain' && closed ? closedCurtain(g) : g, HOUSE.decor * (it.size || 1));   // some small things are drawn smaller
+  drawGrid(c, kind === 'curtain' && closed ? closedCurtain(g) : g, HOUSE.decor * (it.size || 1) * scale);   // some small things are drawn smaller
   const wrap = document.createElement('div');
   wrap.className = 'decor';
   wrap.dataset.id = id;
   wrap.style.cssText = css;
+  if (kind === 'curtain') { wrap.style.width = parseFloat(wrap.style.width) * scale + '%'; wrap.style.height = parseFloat(wrap.style.height) * scale + '%'; }
   if (kind === 'curtain') { wrap.classList.add('curtain'); if (closed) wrap.classList.add('closed'); }
   else { wrap.classList.add('movable'); if (kind === 'flat') wrap.classList.add('flat'); }
   if (it.playable) wrap.classList.add('playable');
@@ -313,7 +316,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
     // the cage's bars in front of everything inside it (only the bedding stays behind)
     const back = new Set([it.pal.z, it.pal.y].filter(Boolean));
     const front = document.createElement('canvas'); front.className = 'cage-front';
-    drawGrid(front, g.map((row) => row.map((v) => (back.has(v) ? null : v))), HOUSE.decor * (it.size || 1));
+    drawGrid(front, g.map((row) => row.map((v) => (back.has(v) ? null : v))), HOUSE.decor * (it.size || 1) * scale);
     wrap.appendChild(front);
     wrap.dataset.inner = (inner / W).toFixed(3);
     wrap.dataset.floor = ((7 / H) * 100).toFixed(1);
@@ -351,7 +354,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
 // furniture she put in front (⬆ or dragged last) / behind (⬇) other things stays that way.
 // decorLayer: a big positive number = in front (newest wins), negative = behind.
 export function stackDecor(roomEl) {
-  const els = [...roomEl.querySelectorAll('.decor:not(.curtain):not(.flat)')];
+  const els = [...roomEl.querySelectorAll('.decor:not(.curtain):not(.flat), .decor[data-layer]')];
   const box = (el) => ({ l: el.offsetLeft, t: el.offsetTop, r: el.offsetLeft + el.offsetWidth, b: el.offsetTop + el.offsetHeight });
   const overlap = (a, b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
   const lay = (el) => +el.dataset.layer || 0;

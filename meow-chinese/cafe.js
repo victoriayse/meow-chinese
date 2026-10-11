@@ -19,7 +19,7 @@ export function clearCafeStarter(S) {
   if (!st.owned.some(isCafeStarter)) return;
   st.owned = st.owned.filter((id) => !isCafeStarter(id));
   st.decorHidden = st.decorHidden.filter((id) => !isCafeStarter(id));
-  ['decorRoom', 'decorPos', 'decorLayer', 'powerOff'].forEach((field) => {
+  ['decorRoom', 'decorPos', 'decorLayer', 'decorScale', 'powerOff'].forEach((field) => {
     Object.keys(st[field] || {}).filter(isCafeStarter).forEach((id) => { delete st[field][id]; });
   });
   S.save();
@@ -45,6 +45,7 @@ export function prepareCafe(S, layout) {
       st.decorRoom[e.id] = room;
       const x = /left:([\d.]+)%/.exec(e.css), y = /top:([\d.]+)%/.exec(e.css);
       if (x && y) st.decorPos[e.id] = { x: +x[1], y: +y[1] };
+      if (e.scale) { st.decorScale = st.decorScale || {}; st.decorScale[e.id] = e.scale; }
       if (e.layer) st.decorLayer[e.id] = e.layer;
     });
     st.roomStyle = st.roomStyle || {}; st.roomStyle[room] = { ...(layout.styles || {})[room] };
