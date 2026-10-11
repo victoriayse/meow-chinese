@@ -1,4 +1,4 @@
-// Public places on the 🗺️ map (the cinema; the cafe is coming soon).
+// Public places on the 🗺️ map (the cinema and cafe).
 // Anyone signed in can walk in and see everyone else there, friends or not.
 // Only the admin furnishes them: she buys and arranges the cinema's furniture like her own rooms,
 // and the layout is saved online for everyone to see.
@@ -7,6 +7,7 @@ import * as Auth from './auth.js';
 import { rest, managing } from './cloud.js';
 import { roomLayout } from './house.js';
 import { Channel } from './rt.js';
+import { cafeLayout, prepareCafe } from './cafe.js';
 
 export const ADMIN_IDS = ['9d0ff106-393a-4de4-8ab4-e8636c8c7f8f'];   // Victoria
 export const isAdmin = () => { const u = Auth.user(); return !!(u && ADMIN_IDS.includes(u.id) && !managing()); };
@@ -15,6 +16,7 @@ S.setAdminCheck(isAdmin);
 const rpc = (name, body = {}) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
 
 export const PLACES = {
+  cafe: { zh: '咖啡馆', en: 'Cafe', icon: '☕', rooms: S.PLACE_ROOMS.cafe, start: 'cafeentrance' },
   cinema: { zh: '电影院', en: 'Cinema', icon: '🎬', rooms: S.PLACE_ROOMS.cinema, start: 'lobby' },
 };
 
@@ -25,30 +27,36 @@ export function layoutOf(place) {
   const ids = new Set(keys.flatMap((k) => rooms[k].map((e) => e.id)));
   Object.entries(st.powerOff || {}).forEach(([id, v]) => { if (v && ids.has(id)) off[id] = true; });
   keys.forEach((k) => { if ((st.lightsOff || {})[k]) dark[k] = true; });
-  return { rooms, open: keys.slice(), power: { dark, off }, prices: { ...(st.kioskPrices || {}) } };
+  return { rooms, open: keys.slice(), styles: Object.fromEntries(keys.map((k) => [k, S.roomStyle(k)])), power: { dark, off }, prices: { ...(place === 'cafe' ? st.cafePrices || {} : st.kioskPrices || {}) } };
 }
 export async function loadPlace(place) {
-  const empty = { rooms: {}, open: PLACES[place].rooms.slice(), power: {} };
-  try { const r = await rpc('get_place', { p_key: place }); return r && r.rooms ? { ...empty, ...r, open: empty.open } : empty; } catch (e) { return empty; }
+  const empty = place === 'cafe' ? cafeLayout() : { rooms: {}, open: PLACES[place].rooms.slice(), power: {} };
+  try {
+    const r = await rpc('get_place', { p_key: place });
+    const layout = r && r.rooms ? { ...empty, ...r, open: empty.open } : empty;
+    if (place === 'cafe') prepareCafe(S, layout);
+    return layout;
+  } catch (e) { if (place === 'cafe') throw e; return empty; }
 }
 
 // the admin: whenever the cinema's furniture changes, save it online and tell anyone inside
-let lastSent = '', busy = false;
+const lastSent = new Map(), busy = new Set();
 async function publish(place) {
-  if (busy || !isAdmin()) return;
+  if (busy.has(place) || !isAdmin() || (place === 'cafe' && !S.get().cafeReady)) return;
   const layout = layoutOf(place), j = JSON.stringify(layout);
-  if (j === lastSent) return;
-  busy = true;
+  const key = `${Auth.user().id}:${place}`;
+  if (j === lastSent.get(key)) return;
+  busy.add(place);
   try {
-    await rpc('put_place', { p_key: place, p_layout: layout }); lastSent = j;
+    await rpc('put_place', { p_key: place, p_layout: layout }); lastSent.set(key, j);
     const me = Auth.user().id;
     const ch = new Channel(`place:${place}`, { presenceKey: `${me}-admin`, onStatus: (st) => { if (st === 'joined') { ch.send('house', { id: `${me}-admin`, house: layout }); setTimeout(() => ch.close(), 1500); } } });
     ch.open(); setTimeout(() => ch.close(), 8000);
   } catch (e) { console.warn('place publish', e); }
-  busy = false;
+  busy.delete(place);
 }
 export function startPublishing() {
-  setInterval(() => { if (isAdmin() && !document.hidden) publish('cinema'); }, 6000);
+  setInterval(() => { if (isAdmin() && !document.hidden) Object.keys(PLACES).forEach(publish); }, 6000);
 }
 
 // ---------- 🎞️ a film for the projector screen (the admin uploads it; anyone can watch) ----------
@@ -100,7 +108,7 @@ function drawMap(c) {
 const PINS = [
   { key: 'home', zh: '我的家', en: 'Home', icon: '🏠', x: 30, y: 30 },
   { key: 'cinema', zh: '电影院', en: 'Cinema', icon: '🎬', x: 70, y: 22 },
-  { key: 'cafe', zh: '咖啡馆', en: 'Cafe', icon: '☕', x: 66, y: 68, soon: true },
+  { key: 'cafe', zh: '咖啡馆', en: 'Cafe', icon: '☕', x: 66, y: 68 },
 ];
 export function mapScreen({ go }) {
   const n = html`<section class="screen"><div class="card stack map-card">

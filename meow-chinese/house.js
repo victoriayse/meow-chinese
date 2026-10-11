@@ -193,6 +193,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
     wrap.appendChild(lb);
   }
   if (it.counter) {
+    wrap.dataset.counter = '1';
     // the waiter: a white cat in a tuxedo who always stands behind the collection counter
     const tux = document.createElement('div'); tux.className = 'tux-cat';
     const tw = document.createElement('div'); tw.className = 'kitten-wrap';
@@ -679,13 +680,14 @@ export function seatSpot(roomEl, id, slot = 0) {
   if (!el || !seat) return null;
   const W = roomEl.clientWidth, H = roomEl.clientHeight;
   const flip = el.dataset.facing === 'flip';
-  let sx = seat.spots ? seat.spots[Math.min(slot || 0, seat.spots.length - 1)] : seat.x;
+  const point = seat.points && seat.points[Math.min(slot || 0, seat.points.length - 1)];
+  let sx = point ? point.x : seat.spots ? seat.spots[Math.min(slot || 0, seat.spots.length - 1)] : seat.x;
   if (flip) sx = 1 - sx;
   return {
     run: !!seat.run, flip,
-    back: !!seat.back || el.dataset.facing === 'back', pose: seat.lie ? 'lie' : (seat.back || el.dataset.facing === 'back') ? 'back' : seat.side ? ((slot || 0) === 0 ? 'side-r' : 'side-l') : null,
+    back: !!seat.back || el.dataset.facing === 'back', pose: point ? point.pose || null : seat.lie ? 'lie' : (seat.back || el.dataset.facing === 'back') ? 'back' : seat.side ? ((slot || 0) === 0 ? 'side-r' : 'side-l') : null,
     x: ((el.offsetLeft + el.offsetWidth * sx) / W) * 100,
-    y: ((H - (el.offsetTop + el.offsetHeight * seat.y)) / H) * 100,
+    y: ((H - (el.offsetTop + el.offsetHeight * (point ? point.y : seat.y))) / H) * 100,
     z: (parseInt(el.style.zIndex, 10) || 50) + 1, lie: !!seat.lie, el,
   };
 }
@@ -709,7 +711,7 @@ export function blanket(roomEl, id, on) {
 
 // the first free place on a piece of furniture (a sofa has two); taken = [{ seat, slot }]
 export function freeSlot(id, taken) {
-  const seat = ITEMS[id] && ITEMS[id].seat; const n = seat && seat.spots ? seat.spots.length : 1;
+  const seat = ITEMS[id] && ITEMS[id].seat; const n = seat && seat.points ? seat.points.length : seat && seat.spots ? seat.spots.length : 1;
   for (let i = 0; i < n; i++) if (!taken.some((t) => t && t.seat === id && (t.slot || 0) === i)) return i;
   return -1;   // full
 }

@@ -339,4 +339,10 @@ export const CHANGES = [
   { v: 131, items: [
     'Bottled water is now at the cinema kiosk for 5 coins. Pick it up from the collection counter, tap its button at the bottom to hold it, and drink it to restore one segment of your cat’s Water bar.',
   ] },
+  { v: 132, items: [
+    'The cafe is open! Everyone arrives at the Entrance. Explore the Main Store, two dining rooms, Kitchen and Toilet, and meet other visitors.',
+    'A cream-and-wood cafe with new furniture, plants, a Coffee light sign and glass pastry display. Only the owner can arrange the cafe.',
+    'Order pastries, cakes, pancakes, wraps and drinks at the cafe kiosk, then collect them from its own counter and use the buttons at the bottom.',
+    'Share food: place an item from your bag on a cafe table or bar. Anyone there can pick it up. Display pastries stay as decorations.',
+  ] },
 ];
