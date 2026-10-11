@@ -7,7 +7,7 @@ import * as Auth from './auth.js';
 import { rest, managing } from './cloud.js';
 import { roomLayout } from './house.js';
 import { Channel } from './rt.js';
-import { cafeLayout, prepareCafe } from './cafe.js';
+import { cafeLayout, prepareCafe, clearCafeStarter, isCafeStarter } from './cafe.js';
 
 export const ADMIN_IDS = ['9d0ff106-393a-4de4-8ab4-e8636c8c7f8f'];   // Victoria
 export const isAdmin = () => { const u = Auth.user(); return !!(u && ADMIN_IDS.includes(u.id) && !managing()); };
@@ -22,6 +22,7 @@ export const PLACES = {
 
 // the layout everyone sees: { rooms: { theatre1: [...], lobby: [...], theatre2: [...] }, open, power, styles }
 export function layoutOf(place) {
+  if (place === 'cafe') clearCafeStarter(S);
   const st = S.get(), rooms = {}, keys = PLACES[place].rooms, off = {}, dark = {};
   keys.forEach((k) => { rooms[k] = roomLayout(st, k, S.roomOf); });
   const ids = new Set(keys.flatMap((k) => rooms[k].map((e) => e.id)));
@@ -34,7 +35,12 @@ export async function loadPlace(place) {
   try {
     const r = await rpc('get_place', { p_key: place });
     const layout = r && r.rooms ? { ...empty, ...r, open: empty.open } : empty;
-    if (place === 'cafe') prepareCafe(S, layout);
+    if (place === 'cafe') {
+      // Ignore old starter copies even if an older open device publishes them again.
+      layout.rooms = Object.fromEntries(Object.entries(layout.rooms).map(([room, items]) =>
+        [room, items.filter((item) => !isCafeStarter(item.id))]));
+      prepareCafe(S, layout);
+    }
     return layout;
   } catch (e) { if (place === 'cafe') throw e; return empty; }
 }
