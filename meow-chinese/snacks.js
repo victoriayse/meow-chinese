@@ -6,6 +6,7 @@ import { rest } from './cloud.js';
 import { $, html, esc, coinI, toast, openModal, closeModal, hydrateIcons } from './ui.js';
 import { sfx } from './audio.js';
 import { say } from './house.js';
+import { cafeTableList } from './cafe.js';
 
 const rpc = (name, body = {}) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
 export const priceOf = (kind, prices = {}) => { const v = (prices || {})[kind]; return v != null && v !== '' && Number.isFinite(+v) ? Math.max(0, Math.round(+v)) : SNACKS[kind].price; };
@@ -43,14 +44,33 @@ export function snackBar({ onHold = () => {} } = {}) {
 }
 
 // ---------- the self-help kiosk: pick snacks, see the total, pay ----------
-export function openKiosk({ place = 'cinema', prices = {}, admin = false, onPaid = () => {}, onPrices = () => {} } = {}) {
+export function openKiosk({ place = 'cinema', layout = null, service = null, tableNumber = null, prices = {}, admin = false, onPaid = () => {}, onPrices = () => {} } = {}) {
+  if (place === 'cafe' && !service) {
+    const tables = cafeTableList(layout || {});
+    const choice = html`<div class="card stack"><div class="h-title">取餐方式 · Order type</div>
+      <button class="btn green" id="service-pickup">自取 Pick up</button>
+      <button class="btn blue" id="service-table" ${tables.length ? '' : 'disabled'}>送到桌上 Table service</button>
+      <div id="service-number" class="hidden"><label>桌号 Table number <input id="table-number" type="number" min="1" max="${tables.length}" inputmode="numeric"></label>
+      <p class="help">${tables.map((t) => `#${t.number}`).join(' · ')}</p><button class="btn green" id="service-next">继续 Continue</button></div>
+      <p class="help">自取：在取餐柜台拿。送餐：礼服猫送到桌上。<br>Pick up at the counter, or let the tuxedo cat deliver to your table. Full tables wait for space. If a table is removed, collect at the counter.</p>
+      <button class="btn white" id="service-close">关闭 Close</button></div>`;
+    const next = (mode, number) => openKiosk({ place, layout, service: mode, tableNumber: number, prices, admin, onPaid, onPrices });
+    $('#service-pickup', choice).onclick = () => next('pickup', null);
+    $('#service-table', choice).onclick = () => { $('#service-number', choice).classList.remove('hidden'); $('#table-number', choice).focus(); };
+    $('#service-next', choice).onclick = () => {
+      const num = Number($('#table-number', choice).value);
+      if (!tables.some((t) => t.number === num)) return toast('请输入桌上的号码 · Enter a number shown on a table');
+      next('table', num);
+    };
+    $('#service-close', choice).onclick = closeModal; openModal(choice); return;
+  }
   const menu = place === 'cafe' ? CAFE_SNACK_ORDER : CINEMA_SNACK_ORDER;
   const qty = {};
   const box = html`<div class="card stack kiosk-card">
       <div class="h-title"><span class="zh">🍿 自助点餐</span><span class="en">Order snacks</span></div>
       <div class="kiosk-list"></div>
       <div class="kiosk-total"></div>
-      <p class="help" style="margin:0">付钱以后，去 <b>取餐柜台</b> 拿。<br>After you pay, pick it up at the <b>collection counter</b>.</p>
+      <p class="help" style="margin:0">${service === 'table' ? `礼服猫会送到 <b>${tableNumber} 号桌</b>。` : '付钱以后，去 <b>取餐柜台</b> 拿。'}<br>${service === 'table' ? `Delivery to table #${tableNumber}. The tuxedo cat will bring your food.` : 'After you pay, pick it up at the <b>collection counter</b>.'}</p>
       <div class="row" style="justify-content:flex-end;flex-wrap:wrap">
         ${admin ? '<button class="btn white" id="k-edit">✏️ <span class="zh">改价格</span> Prices</button>' : ''}
         <button class="btn white" id="k-close">关闭 Close</button><button class="btn green" id="k-pay" disabled>💳 <span class="zh">付钱</span> Pay</button></div>
@@ -87,10 +107,10 @@ export function openKiosk({ place = 'cinema', prices = {}, admin = false, onPaid
     if (!items.length || S.get().coins < t) return;
     pay.disabled = true; pay.textContent = '…';
     try {
-      await rpc(place === 'cafe' ? 'place_cafe_order' : 'place_cinema_order', { p_items: items });
+      await rpc(service === 'table' && place === 'cafe' ? 'place_cafe_table_order' : place === 'cafe' ? 'place_cafe_order' : 'place_cinema_order', { p_items: items, ...(service === 'table' && place === 'cafe' ? { p_number: tableNumber } : {}) });
       S.get().coins -= t; S.save();
       sfx.coin(); closeModal();
-      toast(`🧾 <span class="zh">点好了！3秒后去取餐柜台拿</span> Paid ${t} — pick it up at the collection counter`, { ms: 3500 });
+      toast(service === 'table' ? `🧾 Paid ${t} — 送到桌号 Table #${tableNumber}` : `🧾 <span class="zh">点好了！3秒后去取餐柜台拿</span> Paid ${t} — pick it up at the collection counter`, { ms: 3500 });
       onPaid(items);
     } catch (e) { toast('点不了，再试一次 · Couldn\'t order — try again'); draw(); }
   };

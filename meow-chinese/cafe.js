@@ -55,3 +55,12 @@ export function prepareCafe(S, layout) {
   st.powerOff = { ...(st.powerOff || {}), ...((layout.power || {}).off || {}) };
   st.cafeReady = true; S.save();
 }
+
+// Numbers follow the same ID ordering as the server; orders retain the furniture ID.
+export function cafeTableList(layout) {
+  return Object.entries(layout.rooms || {}).flatMap(([room, items]) => items
+    .filter((e) => ['cafetable2', 'cafetable4'].includes(e.id.split('#')[0]))
+    .map((e) => ({ id: e.id, room })))
+    .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+    .map((e, i) => ({ ...e, number: i + 1 }));
+}

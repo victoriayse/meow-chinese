@@ -4,12 +4,14 @@ import * as Auth from './auth.js';
 import { SNACKS, ITEMS } from './pixel.js';
 import { rest } from './cloud.js';
 import { snackCanvas } from './snacks.js';
-import { html, $, openModal, closeModal, toast } from './ui.js';
+import { html, $, openModal, closeModal, toast, KittenView } from './ui.js';
+
+import { cafeTableList } from './cafe.js';
 
 const rpc = (name, body = {}) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
 let dropping = false;
 const picking = new Set();
-export async function tableItems() { try { return await rpc('cafe_table_items_now') || []; } catch { return null; } }
+export async function tableItems() { try { return await rpc('cafe_service_tables_now') || []; } catch { return null; } }
 
 // Reserve one snack locally before sending it. A persisted request ID makes retrying safe after a disconnect.
 export async function finishDrop(onChanged = () => {}) {
@@ -56,10 +58,12 @@ export function showTableItems(roomEl, roomKey, rows, layout, onChanged) {
     if (!status) { status = document.createElement('div'); status.className = 'cafe-transfer'; status.setAttribute('role', 'status'); roomEl.parentElement.appendChild(status); }
     status.textContent = '正在放食物，联网后会继续 · Placing food; reconnect to finish';
   } else if (status) status.remove();
-  roomEl.querySelectorAll('.table-food, .table-place, .cafe-loose-food').forEach((el) => el.remove());
+  const numbers = new Map(cafeTableList(layout).map((t) => [t.id, t.number]));
+  roomEl.querySelectorAll('.table-food, .table-place, .cafe-loose-food, .cafe-table-number').forEach((el) => el.remove());
   roomEl.querySelectorAll('.decor').forEach((d) => {
     const surface = ITEMS[d.dataset.id] && ITEMS[d.dataset.id].surface;
     if (!surface || !['cafetable2', 'cafetable4'].includes(d.dataset.id.split('#')[0])) return;
+    const label = document.createElement('span'); label.className = 'cafe-table-number'; label.textContent = '#' + numbers.get(d.dataset.id); d.appendChild(label);
     const b = document.createElement('button'); b.type = 'button'; b.className = 'table-place'; b.textContent = '+ 放食物'; b.setAttribute('aria-label', '放食物 · Place food on this table'); b.title = 'Place food or drink from your bag';
     b.addEventListener('pointerdown', (e) => e.stopPropagation());
     b.onclick = (e) => { e.stopPropagation(); chooseFood(roomKey, d.dataset.id, onChanged); };
@@ -88,5 +92,26 @@ export function showTableItems(roomEl, roomKey, rows, layout, onChanged) {
       finally { picking.delete(row.id); onChanged(); }
     };
     parent.appendChild(b);
+    if (surface && row.deliveredAt && Date.now() - Date.parse(row.deliveredAt) < 12000 && !served.has(row.id)) {
+      served.add(row.id); deliverCat(roomEl, d, b, row.item);
+    }
   }
+}
+
+// A delivery uses the same tuxedo outfit as the collection-counter waiter.
+const served = new Set();
+function deliverCat(room, table, food, item) {
+  const waiter = document.createElement('div'); waiter.className = 'cafe-waiter';
+  const cat = new KittenView({ scale: 4, fur: 'white', equipped: { body: 'tuxedo', neck: 'bowtie' } });
+  cat.setMood('happy'); cat.setHeld(item); waiter.appendChild(cat.canvas); room.appendChild(waiter);
+  const x = table.offsetLeft + table.offsetWidth / 2 - waiter.offsetWidth / 2;
+  const y = table.offsetTop + table.offsetHeight * 0.45 - waiter.offsetHeight;
+  waiter.style.left = x + 'px'; waiter.style.top = y + 'px';
+  food.style.visibility = 'hidden';
+  const arrival = waiter.animate([{ transform: `translate(${room.clientWidth / 2 - x}px, ${room.clientHeight - y}px)` }, { transform: 'translate(0, 0)' }], { duration: 1400, easing: 'linear', fill: 'forwards' });
+  arrival.finished.then(() => {
+    food.style.visibility = ''; cat.setHeld(null);
+    const departure = waiter.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 500, delay: 400, fill: 'forwards' });
+    departure.finished.then(() => waiter.remove()).catch(() => waiter.remove());
+  }).catch(() => { food.style.visibility = ''; waiter.remove(); });
 }
