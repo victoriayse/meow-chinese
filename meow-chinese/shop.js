@@ -25,6 +25,7 @@ export const TABS = [
 ];
 // the furniture aisle's sub-aisles
 const DECOR_GROUPS = [
+  { key: 'mall', icon: '🛍️', zh: '购物中心', en: 'Shopping Mall' },
   { key: 'all', icon: '✨', zh: '全部', en: 'All' },
   { key: 'living', icon: '🛋️', zh: '客厅', en: 'Living room' },
   { key: 'bedroom', icon: '🛏️', zh: '卧室', en: 'Bedroom' },

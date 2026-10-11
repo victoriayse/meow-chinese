@@ -1,3 +1,4 @@
+import { spriteCanvas } from './pixel.js';
 import * as Radio from './radio.js';
 // Public places on the 🗺️ map (the cinema and cafe).
 // Anyone signed in can walk in and see everyone else there, friends or not.
@@ -17,6 +18,7 @@ S.setAdminCheck(isAdmin);
 const rpc = (name, body = {}) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
 
 export const PLACES = {
+  mall: { zh: '购物中心', en: 'Shopping Mall', icon: '🛍️', rooms: S.PLACE_ROOMS.mall, start: 'malllobby' },
   cafe: { zh: '咖啡馆', en: 'Cafe', icon: '☕', rooms: S.PLACE_ROOMS.cafe, start: 'cafeentrance' },
   cinema: { zh: '电影院', en: 'Cinema', icon: '🎬', rooms: S.PLACE_ROOMS.cinema, start: 'lobby' },
 };
@@ -42,6 +44,17 @@ export async function loadPlace(place) {
   try {
     const r = await rpc('get_place', { p_key: place });
     const layout = r && r.rooms ? { ...empty, ...r, open: empty.open } : empty;
+    if (place === 'mall' && isAdmin() && !S.get().mallReady) {
+      const st = S.get();
+      Object.entries(layout.rooms).forEach(([room, entries]) => entries.forEach((e) => {
+        if (!st.owned.includes(e.id)) st.owned.push(e.id);
+        st.decorRoom[e.id] = room; st.decorHidden = st.decorHidden.filter((id) => id !== e.id);
+        const x = /left:([\d.]+)%/.exec(e.css || ''), y = /top:([\d.]+)%/.exec(e.css || '');
+        if (x && y) st.decorPos[e.id] = { x: +x[1], y: +y[1] };
+        (st.decorScale ||= {})[e.id] = e.scale || 1; (st.decorLayer ||= {})[e.id] = e.layer || 0;
+      }));
+      Object.assign(st.roomStyle ||= {}, layout.styles || {}); st.mallReady = true; S.save();
+    }
     if (place === 'cafe') {
       // Ignore old starter copies even if an older open device publishes them again.
       layout.rooms = Object.fromEntries(Object.entries(layout.rooms).map(([room, items]) =>
@@ -49,13 +62,13 @@ export async function loadPlace(place) {
       prepareCafe(S, layout);
     }
     return layout;
-  } catch (e) { if (place === 'cafe') throw e; return empty; }
+  } catch (e) { if (place === 'cafe' || place === 'mall') throw e; return empty; }
 }
 
 // the admin: whenever the cinema's furniture changes, save it online and tell anyone inside
 const lastSent = new Map(), busy = new Map();
 export async function savePlace(place) {
-  if (!isAdmin() || (place === 'cafe' && !S.get().cafeReady)) return false;
+  if (!isAdmin() || (place === 'mall' && !S.get().mallReady) || (place === 'cafe' && !S.get().cafeReady)) return false;
   // Wait for any older autosave, then capture the latest furniture before leaving editing.
   if (busy.has(place)) { await busy.get(place); return savePlace(place); }
   const layout = layoutOf(place), j = JSON.stringify(layout);
@@ -126,18 +139,20 @@ function drawMap(c) {
   R(110, 92, 14, 8, '#5ab4ea'); R(112, 91, 10, 10, '#5ab4ea');
 }
 const PINS = [
-  { key: 'home', zh: '我的家', en: 'Home', icon: '🏠', x: 30, y: 30 },
-  { key: 'cinema', zh: '电影院', en: 'Cinema', icon: '🎬', x: 70, y: 22 },
-  { key: 'cafe', zh: '咖啡馆', en: 'Cafe', icon: '☕', x: 66, y: 68 },
+  { key: 'mall', zh: '购物中心', en: 'Shopping Mall', icon: '🛍️', x: 26, y: 77 },
+  { key: 'home', zh: '我的家', en: 'Home', icon: '🏠', x: 28, y: 34 },
+  { key: 'cinema', zh: '电影院', en: 'Cinema', icon: '🎬', x: 70, y: 34 },
+  { key: 'cafe', zh: '咖啡馆', en: 'Cafe', icon: '☕', x: 72, y: 77 },
 ];
 export function mapScreen({ go }) {
   const n = html`<section class="screen"><div class="card stack map-card">
       <div class="h-title"><span class="zh">🗺️ 地图</span><span class="en">Map</span></div>
-      <p class="help" style="margin:0">点一个地方去看看！电影院和咖啡馆是大家的地方，在那里可以见到所有人。<br>Tap a place to go there. The cinema and cafe are public — you'll see everyone who is there.</p>
+      <p class="help" style="margin:0">点一个地方去看看！电影院、咖啡馆和商场是大家的地方，在那里可以见到所有人。<br>Tap a place to go there. The cinema, cafe and mall are public — you'll see everyone who is there.</p>
       <div class="map-box"><canvas class="map-art"></canvas>
         ${PINS.map((p) => `<button class="map-pin ${p.soon ? 'pin-soon' : ''}" data-pin="${p.key}" style="left:${p.x}%;top:${p.y}%"><span class="ic">${p.icon}</span><span class="lb"><span class="zh">${p.zh}</span> ${p.en}${p.soon ? '<small>即将开放 Coming soon</small>' : ''}</span></button>`).join('')}
       </div></div></section>`;
   drawMap($('.map-art', n));
+  n.querySelectorAll('.map-pin').forEach((pin) => { const icon = pin.querySelector('.ic'); icon.textContent = ''; icon.appendChild(spriteCanvas('map' + pin.dataset.pin, 48)); });
   n.querySelectorAll('.map-pin').forEach((b) => {
     b.onclick = () => {
       const p = PINS.find((x) => x.key === b.dataset.pin);
