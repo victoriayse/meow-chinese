@@ -333,4 +333,7 @@ export const CHANGES = [
     'The collection counter\'s plate now says "Collection".',
     '💡 The cinema rooms have a light switch beside the room name too (the owner switches the lights for everyone; visitors only on their own screen).',
   ] },
+  { v: 130, items: [
+    'More cinema snacks at the kiosk: bubble tea, root beer, 7-UP, Coke float, ice cream cone, ice cream cup, nachos & cheese, sausage bun, packet of chips and kacang puteh (in a paper cone).',
+  ] },
 ];
