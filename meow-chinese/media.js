@@ -89,3 +89,25 @@ export async function openRadio(id) {
   $('#rc', box).onclick = closeModal;
   openModal(box);
 }
+
+// Both home and the admin's public-place view use the same board editor.
+export function openBoard(id, changed, current) {
+  const it = ITEMS[id], cur = current ?? (S.get().boardTexts || {})[id] ?? it.board.def;
+  const box = html`<div class="card stack">
+    <div class="h-title"><span class="zh">✏️ ${esc(it.name)}</span><span class="en">${esc(it.en)}</span></div>
+    <p class="help">最多 6 行 · Up to 6 lines, 160 characters.</p>
+    <textarea class="board-edit" maxlength="160" rows="6"></textarea>
+    <p class="help" id="board-message"></p>
+    <div class="row"><button class="btn white" id="bc">取消 Cancel</button><button class="btn green" id="bs">✓ 好了 Save</button></div>
+  </div>`;
+  const ta = box.querySelector('textarea'); ta.value = cur;
+  $('#bc', box).onclick = closeModal;
+  $('#bs', box).onclick = async () => {
+    const button = $('#bs', box); button.disabled = true;
+    S.get().boardTexts = S.get().boardTexts || {};
+    S.get().boardTexts[id] = ta.value.split('\n').slice(0, 6).join('\n').slice(0, 160); S.save();
+    try { await changed(); sfx.coin(); closeModal(); }
+    catch (e) { $('#board-message', box).textContent = 'Could not save online. Please try again.'; button.disabled = false; }
+  };
+  openModal(box); setTimeout(() => { if (box.isConnected) ta.focus(); }, 50);
+}

@@ -392,4 +392,7 @@ export const CHANGES = [
     'New cafe furnishings: pot, pan, chandelier, dome window, wall lantern, welcome sign, monstera plant, wooden magazine rack, and Welcome Desk.',
     'Place a Welcome Desk at the cafe entrance: its tuxedo cat greets arrivals, recommends matcha latte, and points visitors to the self-ordering kiosk.',
   ] },
+  { v: 147, items: [
+    'Admins can tap menu boards in the cafe or cinema to edit and save their text. The wall menu board lettering is 30% smaller.',
+  ] },
 ];

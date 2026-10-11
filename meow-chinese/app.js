@@ -1,4 +1,4 @@
-import { openPoster, openVideo, openRadio } from './media.js';
+import { openPoster, openVideo, openRadio, openBoard } from './media.js';
 // 喵喵中文 Meow Chinese — app shell, router, top bar, welcome and home screen.
 import * as S from './state.js';
 import { drawLandscape, FURS, ITEMS, spriteCanvas, itemEffect, drawGrid, artGrid, TOMB, drawRoom, drawRoof, ROOM_WINDOW } from './pixel.js';
@@ -1144,22 +1144,7 @@ function homeScreen(params = {}) {
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.board');
       if (!d || room.classList.contains('arranging')) return;
-      const id = d.dataset.id, it = ITEMS[id], cur = (S.get().boardTexts || {})[id] ?? it.board.def;
-      sfx.click();
-      const box = html`<div class="card stack">
-          <div class="h-title"><span class="zh">✏️ ${it.name}</span><span class="en">${it.en}</span></div>
-          <p class="help" style="margin:0">写上你想写的字（最多 6 行）。来玩的人都看得到。<br>Write anything (up to 6 lines). Everyone who comes can read it.</p>
-          <textarea class="board-edit" maxlength="160" rows="6"></textarea>
-          <div class="row" style="justify-content:flex-end"><button class="btn white" id="bc">取消 Cancel</button><button class="btn green" id="bs">✓ <span class="zh">好了</span> Save</button></div>
-        </div>`;
-      const ta = box.querySelector('textarea'); ta.value = cur;
-      $('#bc', box).onclick = closeModal;
-      $('#bs', box).onclick = () => {
-        const v = ta.value.split('\n').slice(0, 6).join('\n').slice(0, 160);
-        S.get().boardTexts = S.get().boardTexts || {}; S.get().boardTexts[id] = v; S.save(); closeModal();
-        d.querySelector('.board-text').textContent = v; sfx.coin(); Visit.hostResendHouse();
-      };
-      openModal(box); setTimeout(() => ta.focus(), 50);
+      openBoard(d.dataset.id, () => { d.querySelector('.board-text').textContent = S.get().boardTexts[d.dataset.id]; Visit.hostResendHouse(); });
     });
     // photo frames: tap to put a photo in (it is shrunk to 50 KB)
     room.addEventListener('click', (e) => {

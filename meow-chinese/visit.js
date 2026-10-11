@@ -1,4 +1,4 @@
-import { openPoster, openVideo, openRadio } from './media.js';
+import { openPoster, openVideo, openRadio, openBoard } from './media.js';
 import * as CafeTables from './cafe-tables.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
@@ -293,6 +293,10 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       if (!await Places.savePlace(placeKey)) throw new Error('Could not save the shared layout');
       await refreshPlace();
     };
+    if (P && Places.isAdmin()) room.addEventListener('click', (e) => {
+      const d = e.target.closest('.decor.board'); if (!d) return;
+      openBoard(d.dataset.id, saveMedia, d.querySelector('.board-text').textContent);
+    });
     if (P && Places.isAdmin()) room.addEventListener('screen-video', (e) => openVideo(e.detail.id, saveMedia));
     // the cinema owner can switch a projector screen's film on / off from here too (everyone sees it)
     if (P && Places.isAdmin()) room.addEventListener('screen-power', (e) => {

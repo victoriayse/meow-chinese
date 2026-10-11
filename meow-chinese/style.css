@@ -1740,3 +1740,6 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .cafe-greeter .greeter-portrait { width:128px; height:110px; overflow:hidden; }
 .cafe-greeter .greeter-portrait canvas { width:128px; height:152px; }
 .cafe-greeter .chat-bubble { white-space:normal; width:230px; max-width:230px; font-size:15px; }
+
+/* Menu board lettering: 30% smaller than the original 15px. */
+.decor[data-id="menuboard"] .board-text, .decor[data-id^="menuboard#"] .board-text { font-size:10.5px; }
