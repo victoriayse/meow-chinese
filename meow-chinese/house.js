@@ -350,6 +350,12 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
   if (putAway && ((it.frames && (it.frames.back || it.frames.front)) || it.flip)) {      // 🔄 turn it round / sideways (shown while moving furniture)
     const tb = document.createElement('button'); tb.className = 'turn-btn'; tb.type = 'button'; tb.title = 'Turn around'; tb.textContent = '🔄'; wrap.appendChild(tb);
   }
+  if (it.greeter) {
+    const host = document.createElement('div'); host.className = 'cafe-greeter kitten-wrap';
+    const portrait = document.createElement('div'); portrait.className = 'greeter-portrait';
+    const cat = new KittenView({ scale: 4, fur: 'white', equipped: { body: 'tuxedo', neck: 'bowtie' } });
+    cat.setMood('happy'); portrait.appendChild(cat.canvas); host.appendChild(portrait); wrap.appendChild(host);
+  }
   if (putAway && it.radio) {                          // 🎵 pick the radio's song
     const sb = document.createElement('button'); sb.className = 'radio-song'; sb.type = 'button'; sb.title = 'Choose a song'; sb.textContent = '🎵'; wrap.appendChild(sb);
   }
