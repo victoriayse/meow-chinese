@@ -1,3 +1,4 @@
+import { openPoster, openVideo } from './media.js';
 // 喵喵中文 Meow Chinese — app shell, router, top bar, welcome and home screen.
 import * as S from './state.js';
 import { drawLandscape, FURS, ITEMS, spriteCanvas, itemEffect, drawGrid, artGrid, TOMB, drawRoom, drawRoof, ROOM_WINDOW } from './pixel.js';
@@ -14,7 +15,7 @@ let pendingNotes = null, notesDismissed = false;   // a newer version is waiting
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, compressPhoto, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
 import * as Pets from './pets.js';
 import * as Radio from './radio.js';
 import * as Visit from './visit.js';
@@ -1166,29 +1167,7 @@ function homeScreen(params = {}) {
       const on = S.togglePower(e.detail.id); sfx.click(); applyPower(room, { dark: S.roomDark(roomKey), off: S.get().powerOff || {} }); Visit.hostResendHouse();
       toast(on ? '▶️ <span class="zh">开始放电影</span> Film on' : '⏹ <span class="zh">电影停了</span> Film off', { ms: 1400 });
     });
-    // 🎞️ the projector screen (admin): choose a film, up to 10 MB
-    room.addEventListener('screen-video', (e) => {
-      const id = e.detail.id, it = ITEMS[id], cur = (S.get().screenVideos || {})[id];
-      sfx.click();
-      const box = html`<div class="card stack" style="align-items:center;text-align:center">
-          <div class="h-title"><span class="zh">🎞️ 放电影</span><span class="en">Show a film</span></div>
-          ${cur ? `<p class="help" style="margin:0">现在播放 Now showing: <b>${esc(cur.name || 'video')}</b></p>` : ''}
-          <label class="btn green"><input type="file" accept="video/mp4,video/webm,video/quicktime,.mp4,.m4v,.mov,.webm" hidden>📁 <span class="zh">选视频</span> Choose a video</label>
-          <p class="help" style="margin:0" id="vmsg">最大 10MB（MP4 最好）。电影院里的人都看得到。<br>Up to 10 MB (MP4 works best). Everyone in the cinema can watch it.</p>
-          <div class="row">${cur ? '<button class="btn white" id="vrm">🗑 <span class="zh">拿掉</span> Remove</button>' : ''}<button class="btn white" id="vc">关闭 Close</button></div>
-        </div>`;
-      const msg = $('#vmsg', box);
-      box.querySelector('input[type=file]').onchange = async (ev) => {
-        const f = ev.target.files && ev.target.files[0]; if (!f) return;
-        if (f.size > Places.MAX_VIDEO) { msg.textContent = `太大了（${(f.size / 1048576).toFixed(1)} MB）· Too big — the video must be 10 MB or less`; return; }
-        msg.textContent = '上传中… Uploading…';
-        try { await Places.uploadScreenVideo(id, f); sfx.coin(); closeModal(); toast('🎞️ <span class="zh">电影放好了！</span> Film added to the screen'); refreshHome(); }
-        catch (x) { msg.textContent = x.message === 'too big' ? '太大了 · Too big — 10 MB at most' : x.message === 'not video' ? '这不是视频 · That isn\'t a video file' : '上传不了，再试一次 · Couldn\'t upload — try again'; }
-      };
-      const rm = $('#vrm', box); if (rm) rm.onclick = async () => { await Places.removeScreenVideo(id); closeModal(); refreshHome(); };
-      $('#vc', box).onclick = closeModal;
-      openModal(box);
-    });
+    room.addEventListener('screen-video', (e) => openVideo(e.detail.id, () => { Visit.hostResendHouse(); refreshHome(); }));
     // menu boards: tap to change what's written on them
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.board');
@@ -1214,28 +1193,7 @@ function homeScreen(params = {}) {
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.frame');
       if (!d || room.classList.contains('arranging')) return;
-      const id = d.dataset.id, it = ITEMS[id], cur = (S.get().framePhotos || {})[id];
-      const box = html`<div class="card stack" style="align-items:center;text-align:center">
-          <div class="h-title" style="justify-content:center"><span class="zh">🖼️ ${it.name}</span><span class="en">${esc(it.en)}</span></div>
-          <div class="frame-preview">${cur ? `<img src="${cur}" alt="">` : '<span class="help">还没有照片 · No photo yet</span>'}</div>
-          <label class="btn blue">📷 <span class="zh">${cur ? '换照片' : '选照片'}</span> ${cur ? 'Change photo' : 'Choose a photo'}<input type="file" accept="image/*" hidden></label>
-          <p class="help" id="pmsg" style="margin:0">照片会缩小到 ${it.maxKB || 50}KB 以内。来家里玩的朋友也看得到。<br>Photos are made small (under ${it.maxKB || 50} KB). Friends visiting your house can see them.</p>
-          <div class="row">${cur ? '<button class="btn white" id="prm">🗑 <span class="zh">拿掉</span> Remove</button>' : ''}<button class="btn white" id="pc">关闭 Close</button></div>
-        </div>`;
-      const msg = $('#pmsg', box);
-      box.querySelector('input[type=file]').onchange = async (ev) => {
-        const f = ev.target.files && ev.target.files[0]; if (!f) return;
-        msg.textContent = '处理中… Making it small…';
-        try {
-          const url = await compressPhoto(f, (it.maxKB || 50) * 1024);   // posters: 10 KB
-          S.setFramePhoto(id, url); sfx.coin(); closeModal();
-          toast(`🖼️ <span class="zh">照片放好了！</span> Photo added (${Math.round((url.length * 3) / 4 / 1024)} KB)`);
-          Visit.hostResendHouse(); refreshHome();
-        } catch (x) { msg.textContent = '这张照片用不了，换一张试试。 That photo didn\'t work — try another one.'; }
-      };
-      const rm = $('#prm', box); if (rm) rm.onclick = () => { S.setFramePhoto(id, null); closeModal(); Visit.hostResendHouse(); refreshHome(); };
-      $('#pc', box).onclick = closeModal;
-      openModal(box);
+      openPoster(d.dataset.id, () => { Visit.hostResendHouse(); refreshHome(); });
     });
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.slidey');

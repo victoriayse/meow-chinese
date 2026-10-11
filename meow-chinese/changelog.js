@@ -379,4 +379,7 @@ export const CHANGES = [
     'New cafe furniture: a stainless kitchen, coffee bean bag and grinder, hanging cups, decorative wine bottle, and an editable receipt-and-notes whiteboard.',
     'Three-tier dessert trays and hot or iced matcha lattes are now available as decorations and as cafe kiosk orders for pickup or table service.',
   ] },
+  { v: 143, items: [
+    'Admins can tap posters and TVs in the cafe or cinema to update their media. Poster images are compressed to 10 KB; TV uploads accept MP4 files up to 5 MB.',
+  ] },
 ];

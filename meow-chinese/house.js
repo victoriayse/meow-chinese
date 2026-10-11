@@ -253,6 +253,11 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
         wrap.append(v, snd, play);
         requestAnimationFrame(() => { if (!wrap.classList.contains('off')) v.startFilm(); });
       }
+      if (videoPick && it.power === 'tv') wrap.addEventListener('click', (e) => {
+        if (e.target.closest('button') || wrap.closest('.arranging')) return;
+        e.stopPropagation();
+        wrap.dispatchEvent(new CustomEvent('screen-video', { bubbles: true, detail: { id } }));
+      });
       if (videoPick) {
         const pk = document.createElement('button'); pk.type = 'button'; pk.className = 'vid-pick'; pk.textContent = '🎞️'; pk.title = 'Choose a video';
         pk.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -670,6 +675,7 @@ export function rideFx(roomEl, catEl, id) {
 export function wirePower(roomEl, onToggle) {
   roomEl.addEventListener('click', (e) => {
     const d = e.target.closest('.decor[data-power]');
+    if (e.target.closest('button')) return;
     if (!d || roomEl.classList.contains('arranging') || d.classList.contains('has-film')) return;
     sfx.click(); onToggle(d.dataset.id);
   });

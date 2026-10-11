@@ -1,3 +1,4 @@
+import { openPoster, openVideo } from './media.js';
 import * as CafeTables from './cafe-tables.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
@@ -287,7 +288,12 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
         <div class="room" id="room" data-room="${roomKey}"><canvas class="room-bg" id="roombg"></canvas></div>
       </div>${roomArrowsHtml(roomKey, (k) => open.includes(k), { showLocked: false })}`;
     const unit = $('#hunit', box), room = $('#room', box);
-    (house.rooms[roomKey] || []).forEach((e) => { const el = decorEl(e, { videoOwner: !!(P && Places.isAdmin()) }); if (el) room.appendChild(el); });
+    (house.rooms[roomKey] || []).forEach((e) => { const el = decorEl(e, { videoPick: !!(P && Places.isAdmin()), videoOwner: !!(P && Places.isAdmin()) }); if (el) room.appendChild(el); });
+    const saveMedia = async () => {
+      if (!await Places.savePlace(placeKey)) throw new Error('Could not save the shared layout');
+      await refreshPlace();
+    };
+    if (P && Places.isAdmin()) room.addEventListener('screen-video', (e) => openVideo(e.detail.id, saveMedia));
     // the cinema owner can switch a projector screen's film on / off from here too (everyone sees it)
     if (P && Places.isAdmin()) room.addEventListener('screen-power', (e) => {
       const id = e.detail.id, on = S.togglePower(id); sfx.click();
@@ -299,7 +305,9 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     wirePlayable(room, (i) => ch.send('note', { id: me, i }));
     // a friend's photo frame: tap to see the photo bigger
     room.addEventListener('click', (e) => {
-      const d = e.target.closest('.decor.frame'); const img = d && d.querySelector('.frame-photo'); if (!img) return;
+      const d = e.target.closest('.decor.frame');
+      if (d && P && Places.isAdmin()) { openPoster(d.dataset.id, saveMedia); return; }
+      const img = d && d.querySelector('.frame-photo'); if (!img) return;
       const v = html`<div class="card stack" style="align-items:center"><div class="frame-preview big"><img src="${img.src}" alt=""></div><button class="btn white" id="pc">关闭 Close</button></div>`;
       $('#pc', v).onclick = closeModal; openModal(v);
     });

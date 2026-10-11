@@ -8169,6 +8169,8 @@ Object.assign(ITEMS, {
 
 // furniture you can switch on and off at home
 ITEMS.tv.power = 'tv';
+ITEMS.tv.video = true;
+ITEMS.tv.screen = { x: 3 / 24, y: 3 / 20, w: 18 / 24, h: 10 / 20 };
 ['lamp', 'lantern', 'starlight', 'nightstand'].forEach((id) => { if (ITEMS[id]) ITEMS[id].power = 'light'; });
 
 export const ROOM_WINDOW = { x0: 0.39, x1: 0.61, y0: 0.08, y1: 0.42 };
