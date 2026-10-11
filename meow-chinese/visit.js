@@ -1,4 +1,4 @@
-import { openPoster, openVideo } from './media.js';
+import { openPoster, openVideo, openRadio } from './media.js';
 import * as CafeTables from './cafe-tables.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
@@ -302,6 +302,17 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       applyPower(room, { dark: !!((house.power.dark || {})[roomKey]), off: house.power.off });
       toast(on ? '▶️ <span class="zh">开始放电影</span> Film on' : '⏹ <span class="zh">电影停了</span> Film off', { ms: 1400 });
     });
+    // Public-place uploads use the admin's existing private radio library.
+    if (P && Places.isAdmin()) {
+      room.querySelectorAll('.decor.radio').forEach((d) => d.classList.add('radio-editable'));
+      room.addEventListener('click', (e) => {
+        if (!e.target.closest('.decor.radio')) return;
+        e.stopPropagation(); openRadio();
+      });
+      const markRadio = () => room.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', Radio.isPlaying()));
+      const unRadio = Radio.onRadio(() => { if (!room.isConnected) { unRadio(); return; } markRadio(); });
+      markRadio();
+    }
     wirePlayable(room, (i) => ch.send('note', { id: me, i }));
     // a friend's photo frame: tap to see the photo bigger
     room.addEventListener('click', (e) => {
@@ -414,6 +425,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   }
   // the friend's radio: play it here too (same song, same part of it)
   function hearRadio() {
+    if (P && Places.isAdmin()) return; // Keep the admin's chosen song through room refreshes.
     const r = (house && house.radio) || { on: false };
     Radio.listen(r);
     box.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', !!r.on));

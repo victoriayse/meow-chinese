@@ -1,4 +1,4 @@
-import { openPoster, openVideo } from './media.js';
+import { openPoster, openVideo, openRadio } from './media.js';
 // 喵喵中文 Meow Chinese — app shell, router, top bar, welcome and home screen.
 import * as S from './state.js';
 import { drawLandscape, FURS, ITEMS, spriteCanvas, itemEffect, drawGrid, artGrid, TOMB, drawRoom, drawRoof, ROOM_WINDOW } from './pixel.js';
@@ -454,34 +454,6 @@ function petMenu(kind) {
   openModal(box);
 }
 // 📻 the radio's song: choose an mp3 from this device (kept on this device only)
-async function radioMenu() {
-  await Radio.moveOldSong();
-  const song = Radio.mySong();
-  sfx.click();
-  const box = html`<div class="card stack" style="align-items:center;text-align:center">
-      <div class="h-title" style="justify-content:center"><span class="zh">📻 收音机</span><span class="en">Radio</span></div>
-      <p class="help" style="margin:0" id="rs">${song ? `🎵 <b>${esc(song.name)}</b>` : '还没有歌。选一首你喜欢的歌吧！<br>No song yet — pick one you like.'}</p>
-      <label class="btn blue">🎵 <span class="zh">${song ? '换一首歌' : '选一首歌'}</span> ${song ? 'Change song' : 'Choose a song'}<input type="file" accept="audio/*,.mp3" hidden></label>
-      <div class="row">${song ? `<button class="btn green" id="rp">${Radio.isPlaying() ? '⏹ <span class="zh">停</span> Stop' : '▶️ <span class="zh">播放</span> Play'}</button><button class="btn white" id="rx">🗑 <span class="zh">删掉</span> Remove</button>` : ''}</div>
-      <p class="help" style="margin:0;font-size:13px">最多 10MB。你的所有设备都能放，来串门的朋友也听得到。点收音机就能开关音乐。<br>Up to 10 MB. It plays on all your devices, and friends visiting can hear it. Tap the radio to switch it on and off.</p>
-      <button class="btn white" id="rc">关闭 Close</button>
-    </div>`;
-  const msg = $('#rs', box);
-  box.querySelector('input[type=file]').onchange = async (ev) => {
-    const f = ev.target.files && ev.target.files[0]; if (!f) return;
-    msg.textContent = '上传中… Uploading…';
-    try {
-      await Radio.setSong(f); await Radio.play(); sfx.coin(); closeModal();
-      toast(`📻 <span class="zh">正在播放</span> ${esc(f.name.replace(/\.[^.]+$/, ''))}`, { ms: 2500 });
-    } catch (x) {
-      msg.innerHTML = x.message === 'too big' ? '这首歌太大了（最多 10MB）。<br>That song is too big (10 MB at most).' : x.message === 'signed out' ? '要先登录才能放歌。<br>Please log in first.' : '这个文件放不了，换一首试试。<br>That file didn\'t work — try another song.';
-    }
-  };
-  const rp = $('#rp', box); if (rp) rp.onclick = async () => { await Radio.toggle(); closeModal(); };
-  const rx = $('#rx', box); if (rx) rx.onclick = async () => { await Radio.removeSong(); closeModal(); toast('🗑 <span class="zh">歌删掉了</span> Song removed'); };
-  $('#rc', box).onclick = closeModal;
-  openModal(box);
-}
 function cageMenu(kind) {
   const p = S.petOf(kind), it = ITEMS[kind];
   const things = S.get().owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'petacc' && (ITEMS[id].cageFor || []).includes(kind));
@@ -1231,7 +1203,7 @@ function homeScreen(params = {}) {
       if (!d || room.classList.contains('arranging') || e.target.closest('.put-away')) return;
       e.stopPropagation();
       if (!e.target.closest('.radio-song')) await Radio.moveOldSong();
-      if (e.target.closest('.radio-song') || !Radio.mySong()) { radioMenu(); return; }
+      if (e.target.closest('.radio-song') || !Radio.mySong()) { openRadio(); return; }
       const on = await Radio.toggle(); sfx.click();
       toast(on ? '📻 <span class="zh">音乐响起来啦！</span> Radio on' : '📻 <span class="zh">关掉收音机</span> Radio off', { ms: 1500 });
     });
