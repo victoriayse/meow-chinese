@@ -1619,7 +1619,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 @keyframes pickbob { 50% { transform: translate(-50%, -4px); } }
 .decor .counter-wait { position: absolute; right: 4%; top: 30%; font-style: normal; font-weight: 800; font-size: 16px; color: #fff; background: var(--pink-d); border-radius: 999px; padding: 1px 8px; z-index: 3; }
 .room.arranging .decor .pickup { display: none; }
-.house .decor[data-id^="kiosk"] { pointer-events: auto; cursor: pointer; }
+.house .decor[data-id^="kiosk"], .house .decor[data-id^="cafekiosk"] { pointer-events: auto; cursor: pointer; }
 /* the kiosk's order screen */
 .kiosk-card { max-width: 440px; }
 .kiosk-list { display: flex; flex-direction: column; gap: 6px; max-height: 52vh; overflow-y: auto; }
@@ -1706,8 +1706,23 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .home.house-view .stage { width: 100%; max-width: calc((100dvh - var(--top-h, 60px)) * 1.11 + 440px); margin: 0 auto; }
 }
 /* the collection counter: its waiter (behind it) and the "Collection" plaque */
-.decor[data-id^="collectcounter"] > canvas { position: relative; z-index: 1; }
+.decor[data-counter] > canvas { position: relative; z-index: 1; }
 .decor .tux-cat { position: absolute; left: 50%; bottom: 70%; transform: translateX(-50%); z-index: 0; pointer-events: none; }
 .decor .tux-cat .kitten-canvas { display: block; }
 .decor .pickup.coming { visibility: hidden; }
 .decor .screen-label.plaque { z-index: 2; color: #ffd23f; font-size: 8px; letter-spacing: .2px; animation: none; white-space: nowrap; }
+
+/* A flat, crisp LED label; the sign itself is pixel art in pixel.js. */
+.decor .screen-label.coffee-led { color: #f6ead8; font-size: 23px; letter-spacing: 2px; font-family: monospace; animation: none; text-shadow: 1px 1px 0 #ffd23f; }
+.decor.off .screen-label.coffee-led { color: #8a8d99; text-shadow: none; }
+
+/* Cafe table food remains clickable while the furniture is visitor read-only. */
+.table-place { position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%) scale(var(--inv, 1)); transform-origin: top center; min-height: 30px; white-space: nowrap; border: 2px solid var(--ink); border-radius: 4px; background: #f6ead8; color: var(--ink); font-size: 13px; padding: 4px 6px; cursor: pointer; pointer-events: auto; z-index: 3; }
+.table-food { position: absolute; transform: translate(-50%, -80%); background: none; border: 0; padding: 5px; pointer-events: auto; cursor: pointer; z-index: 4; }
+.table-food canvas { display: block; image-rendering: pixelated; }
+.cafe-food-choices { display: flex; flex-wrap: wrap; gap: 8px; max-height: 55vh; overflow: auto; }
+.cafe-food-choices button { display: flex; align-items: center; gap: 8px; }
+.cafe-loose-food { position: absolute; bottom: 6%; right: 4%; display: flex; gap: 8px; z-index: 150; }
+.cafe-loose-food .table-food { position: relative; transform: none; }
+
+.cafe-transfer { position: absolute; top: 28px; left: 5%; right: 5%; z-index: 160; padding: 6px; background: #f6ead8; border: 2px solid var(--ink); font-size: 16px; text-align: center; }

@@ -2,6 +2,7 @@
 // later be backed up to Supabase as a single row.
 import { ITEMS, baseId, SNACKS } from './pixel.js';
 import { BANKS } from './banks.js';
+import { CAFE_ROOMS, CAFE_NEIGHBORS } from './cafe.js';
 
 const OWN_KEY = 'meow-chinese-v1';
 let KEY = OWN_KEY;   // a parent looking after a linked child's account uses a separate copy on this device
@@ -554,8 +555,14 @@ export const ROOMS = [
   { key: 'theatre1', zh: '1号影厅', en: 'Theatre 1', icon: '🎬', place: 'cinema', noRoof: true },
   { key: 'lobby', zh: '电影院大堂', en: 'Cinema lobby', icon: '🍿', place: 'cinema', noRoof: true },
   { key: 'theatre2', zh: '2号影厅', en: 'Theatre 2', icon: '🎬', place: 'cinema', noRoof: true },
+  { key: 'cafedining1', zh: '用餐区一', en: 'Dining Room 1', icon: '🍽️', place: 'cafe', noRoof: true },
+  { key: 'cafemain', zh: '咖啡馆主店', en: 'Main Store', icon: '☕', place: 'cafe', noRoof: true },
+  { key: 'cafedining2', zh: '用餐区二', en: 'Dining Room 2', icon: '🍽️', place: 'cafe', noRoof: true },
+  { key: 'cafetoilet', zh: '洗手间', en: 'Toilet', icon: '🚻', place: 'cafe', noRoof: true },
+  { key: 'cafekitchen', zh: '咖啡馆厨房', en: 'Kitchen', icon: '🍳', place: 'cafe', noRoof: true },
+  { key: 'cafeentrance', zh: '咖啡馆入口', en: 'Entrance', icon: '🚪', place: 'cafe', noRoof: true },
 ];
-export const PLACE_ROOMS = { cinema: ['theatre1', 'lobby', 'theatre2'] };   // left to right
+export const PLACE_ROOMS = { cinema: ['theatre1', 'lobby', 'theatre2'], cafe: CAFE_ROOMS };   // left to right
 // the admin (who furnishes the public places): app.js tells us who is signed in
 let adminCheck = () => false;
 export const setAdminCheck = (fn) => { adminCheck = fn; };
@@ -566,6 +573,7 @@ const DOWNSTAIRS = ['lounge', 'basement', 'changing'];   // left to right
 // the rooms next to this one: ◀ ▶ along the row of rooms, ▲ ▼ only from the living room
 export function roomNeighbors(key) {
   const row = ROOMS.filter((r) => !r.vert && !r.below && !r.place), i = row.findIndex((r) => r.key === key), me = roomInfo(key);
+  if (me.place === 'cafe') return Object.fromEntries(Object.entries(CAFE_NEIGHBORS[key] || {}).map(([d, k]) => [d, roomInfo(k)]));
   if (me.place) { const p = PLACE_ROOMS[me.place], j = p.indexOf(key); return { left: j > 0 ? roomInfo(p[j - 1]) : null, right: j < p.length - 1 ? roomInfo(p[j + 1]) : null }; }
   if (me.vert === 'up') return { down: roomInfo('living') };
   if (me.vert === 'down' || me.below) {      // downstairs: lounge ◀ studio ▶ changing room, ▲ back up from the studio

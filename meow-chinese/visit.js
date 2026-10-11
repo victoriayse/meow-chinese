@@ -1,3 +1,4 @@
+import * as CafeTables from './cafe-tables.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
 //   knock  visitor -> house   { id, look, x, y, room, left }      "I'm here" (the owner answers with the house)
@@ -166,13 +167,21 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
     </section>`;
   const box = $('#house', n), sub = $('#vt-sub', n);
   const others = new OtherCats();
-  let house = null, host = null, roomKey = 'living', mine = { x: 30, y: 6, room: 'living', left: false }, lockedOut = false;
+  let house = null, host = null, roomKey = P ? P.start : 'living', mine = { x: 30, y: 6, room: P ? P.start : 'living', left: false }, lockedOut = false;
   let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null;
 
+  let refreshingPlace = false;
+  async function refreshPlace() {
+    if (!P || !gotHouse || refreshingPlace || !n.isConnected) return;
+    refreshingPlace = true;
+    try { const h = await Places.loadPlace(placeKey); if (n.isConnected) { house = h; render(); } }
+    catch (e) { /* keep the last saved layout while offline */ }
+    finally { refreshingPlace = false; }
+  }
   const ch = new Channel(P ? `place:${placeKey}` : `house:${hostId}`, {
     presenceKey: me,
     onStatus: (st, info) => {
-      if (st === 'joined') { ch.track({ id: me }); knock(); }
+      if (st === 'joined') { ch.track({ id: me }); knock(); if (P && gotHouse) refreshPlace(); }
 
       if (st === 'denied') { sub.textContent = '不能进去 · Can\'t visit this house'; }
     },
@@ -184,9 +193,8 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
         return;
       }
       if (ev === 'house' && (!p.to || p.to === me)) {
-        if (P && !gotHouse) return;    // still loading the place
+        if (P) { refreshPlace(); return; }   // only trust the layout saved by the server's admin-only function
         house = p.house || { rooms: {}, open: ['living'] };
-        if (P) { render(); return; }
         if (p.host) { host = p.host; others.upsert(host.id, { look: host.look, ...clampPos(host) }); }
         hostHere = true;
         if (!gotHouse) { gotHouse = true; roomKey = (p.host && p.host.room) || 'living'; mine.room = roomKey; sfx.coin(); }
@@ -211,6 +219,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
         others.emote(p.id, p.mood);
         const c = others.m.get(p.id);
         logLine((c && c.look && c.look.name) || '朋友', emoteIcon(p.mood), false);
+      } else if (ev === 'table-food' && placeKey === 'cafe') { refreshTables();
       } else if (ev === 'counter') { refreshCounter();
       } else if (ev === 'bye') others.remove(p.id);
     },
@@ -249,7 +258,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
   if (P) Places.loadPlace(placeKey).then((h) => {
     if (gotHouse || !n.isConnected) return;
     house = h; gotHouse = true; roomKey = P.start; mine.room = roomKey; sub.textContent = ''; sfx.coin(); render(); sendMine();
-  });
+  }).catch(() => { if (n.isConnected) sub.textContent = '加载不了，请返回地图重试 · Could not load — return to the map and try again'; });
   // cats whose app closed without saying goodbye: gone from the line twice in a row → gone from here
   const gone2 = new Map();
   const sweep = setInterval(() => {
@@ -346,35 +355,54 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
     // 🍿 her snacks: hold one, eat it
     box.appendChild(Snacks.snackBar({ onHold: () => { if (myKv) myKv.draw(); sendMine(); } }));
     if (P) {
-      // the self-help kiosk: order snacks
+      // each public place has its own kiosk menu and order queue: order snacks
       room.addEventListener('click', (e) => {
-        const d = e.target.closest('.decor[data-id^="kiosk"]'); if (!d) return;
+        const d = e.target.closest(placeKey === 'cafe' ? '.decor[data-id^="cafekiosk"]' : '.decor[data-id^="kiosk"]'); if (!d) return;
         sfx.click();
-        Snacks.openKiosk({ prices: house.prices || {}, admin: Places.isAdmin(),
+        Snacks.openKiosk({ place: placeKey, prices: house.prices || {}, admin: Places.isAdmin(),
           onPaid: () => { ch.send('counter', { id: me }); setTimeout(() => { refreshCounter(); ch.send('counter', { id: me }); }, 3300); },
-          onPrices: (p) => { S.get().kioskPrices = p; S.save(); house.prices = p; } });
+          onPrices: (p) => { S.get()[placeKey === 'cafe' ? 'cafePrices' : 'kioskPrices'] = p; S.save(); house.prices = p; } });
       });
       refreshCounter();
     }
+    if (placeKey === 'cafe') refreshTables();
     hydrateIcons(box);
   }
   // 🧾 the collection counter (public places): the first two orders that are ready; anyone can pick them up
   let counterBusy = false;
   async function refreshCounter() {
     const room = $('#room', box);
-    if (!P || !room || !room.querySelector('.decor[data-id^="collectcounter"]') || counterBusy) return;
+    if (!P || !room || !room.querySelector('.decor[data-counter]') || counterBusy) return;
     counterBusy = true;
-    const data = await Snacks.counterNow(); counterBusy = false;
+    const data = await Snacks.counterNow(placeKey); counterBusy = false;
     if (!data || !room.isConnected) return;
     Snacks.showCounter(room, data, async (o, btn) => {
       btn.disabled = true;
-      const got = await Snacks.pickUp(o.id);
+      const got = await Snacks.pickUp(o.id, placeKey);
       if (got) { S.addSnack(got); sfx.coin(); toast(`🍿 <span class="zh">拿到${SNACKS[got].zh}了！</span> Tap it at the bottom to hold it`, { ms: 2500 }); }
       else { sfx.miss(); toast('<span class="zh">被拿走了</span> Someone already took it', { ms: 1800 }); }
       ch.send('counter', { id: me }); refreshCounter();
-    });
+    }, placeKey);
   }
   if (P) { const ct = setInterval(() => { if (!n.isConnected) return clearInterval(ct); if (!document.hidden) refreshCounter(); }, 4000); }
+  let tableBusy = false;
+  function tableChanged() {
+    if (myKv) myKv.draw(); sendMine();
+    ch.send('table-food', { id: me }); refreshTables();
+  }
+  async function refreshTables() {
+    if (placeKey !== 'cafe' || !house || tableBusy) return;
+    tableBusy = true;
+    const rows = await CafeTables.tableItems(); tableBusy = false;
+    const room = $('#room', box);
+    if (rows && room && n.isConnected) CafeTables.showTableItems(room, roomKey, rows, house, tableChanged);
+  }
+  if (placeKey === 'cafe') {
+    const tt = setInterval(() => {
+      if (!n.isConnected) return clearInterval(tt);
+      if (!document.hidden) { refreshTables(); CafeTables.finishDrop(tableChanged); }
+    }, 4000);
+  }
   // the friend's radio: play it here too (same song, same part of it)
   function hearRadio() {
     const r = (house && house.radio) || { on: false };
@@ -409,7 +437,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
   // leaving: say goodbye and close the line
   const leave = () => { Radio.stop(); clearInterval(kt); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
   $('#leave', n).onclick = () => { leave(); if (P) go('map'); else go('friend', { id: hostId }); };
-  const deco = $('#vdeco', n); if (deco) deco.onclick = () => { leave(); go('home', { view: 'house', room: roomKey }); };   // the admin: furnish this room
+  const deco = $('#vdeco', n); if (deco) deco.onclick = () => { if (!gotHouse) return; leave(); go('home', { view: 'house', room: roomKey }); };   // the admin: furnish this room
   $('#vphone', n).onclick = () => import('./phone.js').then((P) => P.openPhone({ start: 'home' }));   // the phone works at a friend's house too
   const gone = setInterval(() => { if (!n.isConnected) { clearInterval(gone); leave(); } }, 1000);
   return n;

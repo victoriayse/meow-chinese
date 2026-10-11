@@ -1,7 +1,7 @@
 // 🍿 Cinema snacks: order at the self-help kiosk, pick up at the collection counter,
 // then hold one in her paw (tap its button at the bottom) and eat it (吃 Eat).
 import * as S from './state.js';
-import { SNACKS, SNACK_ORDER, drawGrid, artGrid } from './pixel.js';
+import { SNACKS, SNACK_ORDER, CINEMA_SNACK_ORDER, CAFE_SNACK_ORDER, drawGrid, artGrid } from './pixel.js';
 import { rest } from './cloud.js';
 import { $, html, esc, coinI, toast, openModal, closeModal, hydrateIcons } from './ui.js';
 import { sfx } from './audio.js';
@@ -43,7 +43,8 @@ export function snackBar({ onHold = () => {} } = {}) {
 }
 
 // ---------- the self-help kiosk: pick snacks, see the total, pay ----------
-export function openKiosk({ prices = {}, admin = false, onPaid = () => {}, onPrices = () => {} } = {}) {
+export function openKiosk({ place = 'cinema', prices = {}, admin = false, onPaid = () => {}, onPrices = () => {} } = {}) {
+  const menu = place === 'cafe' ? CAFE_SNACK_ORDER : CINEMA_SNACK_ORDER;
   const qty = {};
   const box = html`<div class="card stack kiosk-card">
       <div class="h-title"><span class="zh">🍿 自助点餐</span><span class="en">Order snacks</span></div>
@@ -56,11 +57,11 @@ export function openKiosk({ prices = {}, admin = false, onPaid = () => {}, onPri
     </div>`;
   const list = $('.kiosk-list', box), totalEl = $('.kiosk-total', box), pay = $('#k-pay', box);
   let editing = false;
-  const total = () => SNACK_ORDER.reduce((t, k) => t + (qty[k] || 0) * priceOf(k, prices), 0);
-  const count = () => SNACK_ORDER.reduce((t, k) => t + (qty[k] || 0), 0);
+  const total = () => menu.reduce((t, k) => t + (qty[k] || 0) * priceOf(k, prices), 0);
+  const count = () => menu.reduce((t, k) => t + (qty[k] || 0), 0);
   const draw = () => {
     list.innerHTML = '';
-    SNACK_ORDER.forEach((k) => {
+    menu.forEach((k) => {
       const sn = SNACKS[k];
       const row = html`<div class="kiosk-row"><span class="art"></span><span class="nm"><span class="zh">${sn.zh}</span><small>${sn.en}</small></span>
           ${editing ? `<input type="number" min="0" max="999" class="k-price" value="${priceOf(k, prices)}">` : `<span class="pr">${priceOf(k, prices)}${coinI(14)}</span>
@@ -82,11 +83,11 @@ export function openKiosk({ prices = {}, admin = false, onPaid = () => {}, onPri
   if (ed) ed.onclick = () => { if (editing) { onPrices({ ...prices }); toast('✓ <span class="zh">价格改好了</span> Prices saved', { ms: 1500 }); } editing = !editing; draw(); };
   $('#k-close', box).onclick = closeModal;
   pay.onclick = async () => {
-    const t = total(), items = SNACK_ORDER.flatMap((k) => Array(qty[k] || 0).fill(k));
+    const t = total(), items = menu.flatMap((k) => Array(qty[k] || 0).fill(k));
     if (!items.length || S.get().coins < t) return;
     pay.disabled = true; pay.textContent = '…';
     try {
-      await rpc('place_cinema_order', { p_items: items });
+      await rpc(place === 'cafe' ? 'place_cafe_order' : 'place_cinema_order', { p_items: items });
       S.get().coins -= t; S.save();
       sfx.coin(); closeModal();
       toast(`🧾 <span class="zh">点好了！3秒后去取餐柜台拿</span> Paid ${t} — pick it up at the collection counter`, { ms: 3500 });
@@ -98,21 +99,22 @@ export function openKiosk({ prices = {}, admin = false, onPaid = () => {}, onPri
 }
 
 // ---------- the collection counter: two orders at a time, anyone can pick them up ----------
-export async function counterNow() { try { return (await rpc('cinema_counter')) || { ready: [] }; } catch { return null; } }
-export async function pickUp(id) { try { return await rpc('pick_cinema_order', { p_id: id }); } catch { return null; } }
+export async function counterNow(place = 'cinema') { try { return (await rpc(place === 'cafe' ? 'cafe_counter' : 'cinema_counter')) || { ready: [] }; } catch { return null; } }
+export async function pickUp(id, place = 'cinema') { try { return await rpc(place === 'cafe' ? 'pick_cafe_order' : 'pick_cinema_order', { p_id: id }); } catch { return null; } }
 // draw what's ready onto the counter in this room.
 // The tuxedo cat behind it brings each new order out (holds it up, then puts it down), and says thank you when one is picked up.
 const seenOrders = new Set();
-let lastShown = new Set(), serving = Promise.resolve();
+const lastShown = new Map();
+let serving = Promise.resolve();
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-export function showCounter(roomEl, data, onPick) {
-  const d = roomEl && roomEl.querySelector('.decor[data-id^="collectcounter"]'); if (!d) return;
+export function showCounter(roomEl, data, onPick, place = 'cinema') {
+  const d = roomEl && roomEl.querySelector('.decor[data-counter]'); if (!d) return;
   const tux = d.tux;
   const ready = ((data && data.ready) || []).slice(0, 2).filter((o) => SNACKS[o.item]);
   const ids = new Set(ready.map((o) => o.id));
   // someone picked one up: thank you!
-  if ([...lastShown].some((id) => !ids.has(id)) && tux) { say(tux.wrap, '谢谢！Thank you!'); tux.kv.jump(); }
-  lastShown = ids;
+  if ([...(lastShown.get(place) || [])].some((id) => !ids.has(id)) && tux) { say(tux.wrap, '谢谢！Thank you!'); tux.kv.jump(); }
+  lastShown.set(place, ids);
   d.querySelectorAll('.pickup').forEach((x) => x.remove());
   const slots = [0.28, 0.72];
   ready.forEach((o, i) => {
@@ -122,8 +124,9 @@ export function showCounter(roomEl, data, onPick) {
     b.addEventListener('pointerdown', (e) => e.stopPropagation());
     b.onclick = (e) => { e.stopPropagation(); onPick(o, b); };
     d.appendChild(b);
-    if (!seenOrders.has(o.id)) {
-      seenOrders.add(o.id);
+    const key = `${place}:${o.id}`;
+    if (!seenOrders.has(key)) {
+      seenOrders.add(key);
       if (tux) {
         // a new order: the waiter brings it out first
         b.classList.add('coming');
