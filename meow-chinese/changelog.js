@@ -399,4 +399,9 @@ export const CHANGES = [
     'Cafe visitors can hear the radio song assigned to their room. Tap the music button if your phone needs permission to start audio. Home songs stay separate.',
     'The server cat enters Dining Room 1 from the right and Dining Room 2 from the left, stopping beside the ordered table before saying Enjoy!',
   ] },
+  { v: 149, items: [
+    'The map has cute pixel buildings and a new Shopping Mall. Enter at L1 and explore B1 to L5. All mall rooms start empty for the admin to furnish.',
+    'New mall furniture includes shop displays, bakery tools, hotpot ingredients, parking items, classroom desks, and playable ten-frame bowling with scores.',
+    'The bakery, coffee shop and hotpot restaurant have separate kiosks, collection staff, pickup and table delivery. Put ingredients on a table, then choose Add to Pot.',
+  ] },
 ];

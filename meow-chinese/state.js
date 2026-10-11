@@ -1,3 +1,4 @@
+import { MALL_ROOMS, MALL_ROOM_INFO, mallNeighbors } from './mall.js';
 // Game state: saved on this iPad (localStorage). Shaped as one JSON blob so it can
 // later be backed up to Supabase as a single row.
 import { ITEMS, baseId, SNACKS } from './pixel.js';
@@ -562,7 +563,8 @@ export const ROOMS = [
   { key: 'cafekitchen', zh: '咖啡馆厨房', en: 'Kitchen', icon: '🍳', place: 'cafe', noRoof: true },
   { key: 'cafeentrance', zh: '咖啡馆入口', en: 'Entrance', icon: '🚪', place: 'cafe', noRoof: true },
 ];
-export const PLACE_ROOMS = { cinema: ['theatre1', 'lobby', 'theatre2'], cafe: CAFE_ROOMS };   // left to right
+ROOMS.push(...MALL_ROOM_INFO);
+export const PLACE_ROOMS = { mall: MALL_ROOMS, cinema: ['theatre1', 'lobby', 'theatre2'], cafe: CAFE_ROOMS };   // left to right
 // the admin (who furnishes the public places): app.js tells us who is signed in
 let adminCheck = () => false;
 export const setAdminCheck = (fn) => { adminCheck = fn; };
@@ -573,6 +575,7 @@ const DOWNSTAIRS = ['lounge', 'basement', 'changing'];   // left to right
 // the rooms next to this one: ◀ ▶ along the row of rooms, ▲ ▼ only from the living room
 export function roomNeighbors(key) {
   const row = ROOMS.filter((r) => !r.vert && !r.below && !r.place), i = row.findIndex((r) => r.key === key), me = roomInfo(key);
+  if (me.place === 'mall') return Object.fromEntries(Object.entries(mallNeighbors(key)).map(([d,k]) => [d,roomInfo(k)]));
   if (me.place === 'cafe') return Object.fromEntries(Object.entries(CAFE_NEIGHBORS[key] || {}).map(([d, k]) => [d, roomInfo(k)]));
   if (me.place) { const p = PLACE_ROOMS[me.place], j = p.indexOf(key); return { left: j > 0 ? roomInfo(p[j - 1]) : null, right: j < p.length - 1 ? roomInfo(p[j + 1]) : null }; }
   if (me.vert === 'up') return { down: roomInfo('living') };

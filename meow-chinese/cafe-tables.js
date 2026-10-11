@@ -101,9 +101,9 @@ export function showTableItems(roomEl, roomKey, rows, layout, onChanged) {
 
 // A delivery uses the same tuxedo outfit as the collection-counter waiter.
 const served = new Set();
-function deliverCat(room, table, food, item) {
+export function deliverCat(room, table, food, item, staff = {}) {
   const waiter = document.createElement('div'); waiter.className = 'cafe-waiter kitten-wrap';
-  const cat = new KittenView({ scale: 4, fur: 'white', equipped: { body: 'tuxedo', neck: 'bowtie' } });
+  const cat = new KittenView({ scale: 4, fur: staff.fur || 'white', equipped: { body: 'tuxedo', neck: 'bowtie' } });
   cat.setMood('happy'); cat.setHeld(item); waiter.appendChild(cat.canvas); room.appendChild(waiter);
   const x = table.offsetLeft + table.offsetWidth / 2 - waiter.offsetWidth / 2;
   const dining = room.dataset.room === 'cafedining1' || room.dataset.room === 'cafedining2';

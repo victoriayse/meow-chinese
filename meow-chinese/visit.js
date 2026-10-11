@@ -1,3 +1,4 @@
+import { wireMall } from './mall-play.js';
 import { openPoster, openVideo, openRadio, openBoard } from './media.js';
 import * as CafeTables from './cafe-tables.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
@@ -400,13 +401,14 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       refreshCounter();
     }
     if (placeKey === 'cafe') refreshTables();
+    if (placeKey === 'mall') wireMall(room, roomKey, house, go, () => { if (myKv) myKv.draw(); sendMine(); });
     hydrateIcons(box);
   }
   // 🧾 the collection counter (public places): the first two orders that are ready; anyone can pick them up
   let counterBusy = false;
   async function refreshCounter() {
     const room = $('#room', box);
-    if (!P || !room || !room.querySelector('.decor[data-counter]') || counterBusy) return;
+    if (!P || placeKey === 'mall' || !room || !room.querySelector('.decor[data-counter]') || counterBusy) return;
     counterBusy = true;
     const data = await Snacks.counterNow(placeKey); counterBusy = false;
     if (!data || !room.isConnected) return;

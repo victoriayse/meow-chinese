@@ -200,7 +200,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
     // the waiter: a white cat in a tuxedo who always stands behind the collection counter
     const tux = document.createElement('div'); tux.className = 'tux-cat';
     const tw = document.createElement('div'); tw.className = 'kitten-wrap';
-    const tkv = new KittenView({ scale: HOUSE.kitten, fur: 'white', equipped: { body: 'tuxedo', neck: 'bowtie' } });
+    const tkv = new KittenView({ scale: HOUSE.kitten, fur: it.staff?.fur || 'white', equipped: { body: 'tuxedo', neck: 'bowtie' } });
     tkv.setMood('happy'); tkv.canvas.classList.remove('bob');
     tw.appendChild(tkv.canvas); tux.appendChild(tw); wrap.insertBefore(tux, wrap.firstChild);
     wrap.tux = { el: tux, wrap: tw, kv: tkv };
