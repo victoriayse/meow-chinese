@@ -7,6 +7,7 @@ import { snackCanvas } from './snacks.js';
 import { html, $, openModal, closeModal, toast, KittenView } from './ui.js';
 
 import { cafeTableList } from './cafe.js';
+import { say } from './house.js';
 
 const rpc = (name, body = {}) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
 let dropping = false;
@@ -101,17 +102,17 @@ export function showTableItems(roomEl, roomKey, rows, layout, onChanged) {
 // A delivery uses the same tuxedo outfit as the collection-counter waiter.
 const served = new Set();
 function deliverCat(room, table, food, item) {
-  const waiter = document.createElement('div'); waiter.className = 'cafe-waiter';
+  const waiter = document.createElement('div'); waiter.className = 'cafe-waiter kitten-wrap';
   const cat = new KittenView({ scale: 4, fur: 'white', equipped: { body: 'tuxedo', neck: 'bowtie' } });
   cat.setMood('happy'); cat.setHeld(item); waiter.appendChild(cat.canvas); room.appendChild(waiter);
   const x = table.offsetLeft + table.offsetWidth / 2 - waiter.offsetWidth / 2;
   const y = table.offsetTop + table.offsetHeight * 0.45 - waiter.offsetHeight;
   waiter.style.left = x + 'px'; waiter.style.top = y + 'px';
   food.style.visibility = 'hidden';
-  const arrival = waiter.animate([{ transform: `translate(${room.clientWidth / 2 - x}px, ${room.clientHeight - y}px)` }, { transform: 'translate(0, 0)' }], { duration: 1400, easing: 'linear', fill: 'forwards' });
+  const arrival = waiter.animate([{ transform: `translate(${room.clientWidth / 2 - x}px, ${room.clientHeight - y}px)` }, { transform: 'translate(0, 0)' }], { duration: 3000, easing: 'linear', fill: 'forwards' });
   arrival.finished.then(() => {
-    food.style.visibility = ''; cat.setHeld(null);
-    const departure = waiter.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 500, delay: 400, fill: 'forwards' });
+    food.style.visibility = ''; cat.setHeld(null); say(waiter, 'Enjoy!');
+    const departure = waiter.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 500, delay: 2000, fill: 'forwards' });
     departure.finished.then(() => waiter.remove()).catch(() => waiter.remove());
   }).catch(() => { food.style.visibility = ''; waiter.remove(); });
 }
