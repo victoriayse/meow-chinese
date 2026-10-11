@@ -1195,16 +1195,16 @@ function homeScreen(params = {}) {
       Visit.hostEmote(mood);
     }));
     // ----- the radio: tap to play / stop her song (🎵 picks the song) -----
-    const markRadio = () => room.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', Radio.isPlaying()));
+    const markRadio = () => room.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', Radio.isPlaying(d.dataset.id)));
     const unRadio = Radio.onRadio(() => { if (!room.isConnected) { unRadio(); return; } markRadio(); });
     markRadio();
     room.addEventListener('click', async (e) => {
       const d = e.target.closest('.decor.radio');
       if (!d || room.classList.contains('arranging') || e.target.closest('.put-away')) return;
       e.stopPropagation();
-      if (!e.target.closest('.radio-song')) await Radio.moveOldSong();
-      if (e.target.closest('.radio-song') || !Radio.mySong()) { openRadio(); return; }
-      const on = await Radio.toggle(); sfx.click();
+      if (!e.target.closest('.radio-song')) await Radio.moveOldSong(d.dataset.id);
+      if (e.target.closest('.radio-song') || !Radio.mySong(d.dataset.id)) { openRadio(d.dataset.id); return; }
+      const on = await Radio.toggle(d.dataset.id); sfx.click();
       toast(on ? '📻 <span class="zh">音乐响起来啦！</span> Radio on' : '📻 <span class="zh">关掉收音机</span> Radio off', { ms: 1500 });
     });
     // ----- pets: the puppy roams, the hamster / guinea pig live in their cage until she opens the door -----
