@@ -530,7 +530,7 @@ function homeScreen(params = {}) {
   S.tick();
   S.essayNotifications();
   S.purgeOldMessages();
-  const inHouse = params.view === 'house' && S.unlocked('decor');
+  const inHouse = params.view === 'house' && (S.unlocked('decor') || (S.roomInfo(params.room).place && Places.isAdmin()));
   const roomKey = inHouse && S.roomOpen(params.room) ? S.roomInfo(params.room).key : 'living';
   const roomRI = S.roomInfo(roomKey);
   if (S.health() === 'dead') return graveScreen();
@@ -838,9 +838,7 @@ function homeScreen(params = {}) {
     };
     showUndo();
     const ab = $('#b-arrange', n), sb = $('#b-store', n);
-    const hasFurniture = s.owned.some((id) => ITEMS[id] && ITEMS[id].cat === 'decor');
     const tools = $('#htools', n);
-    if (!hasFurniture && !S.ownedRenovations().length) { ab.style.display = 'none'; }
     const countStore = () => { const c = S.storedDecor().length; $('#store-n', n).textContent = c ? c : ''; };
     countStore();
     const setArranging = (on, quiet) => {
@@ -1204,7 +1202,7 @@ function homeScreen(params = {}) {
       cageMenu(d.dataset.cage);
     });
   } else { hostRoomNow = 'living'; roomPower = null; homePets = null; Radio.stop(); }
-  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); drawRoof($('#roof', n)); studioBarre(room, roomKey === 'basement'); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); stackDecor(room); placeCat(); if (homePets) homePets(); } };
+  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); drawRoof($('#roof', n)); studioBarre(room, roomKey === 'basement'); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); stackDecor(room); placeCat(); if (homePets) homePets(); if (params.openStorage) { delete currentParams.openStorage; $('#b-store', n).click(); } } };
   return n;
 }
 
