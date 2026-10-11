@@ -375,4 +375,8 @@ export const CHANGES = [
   { v: 141, items: [
     'The tuxedo cat walks more slowly when serving your table and says Enjoy! after putting down the food.',
   ] },
+  { v: 142, items: [
+    'New cafe furniture: a stainless kitchen, coffee bean bag and grinder, hanging cups, decorative wine bottle, and an editable receipt-and-notes whiteboard.',
+    'Three-tier dessert trays and hot or iced matcha lattes are now available as decorations and as cafe kiosk orders for pickup or table service.',
+  ] },
 ];

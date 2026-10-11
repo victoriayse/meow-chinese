@@ -1,7 +1,7 @@
 -- v140: owner-approved table-service queue. Existing pickup orders are unchanged.
 create table public.cafe_delivery_orders (
   id uuid primary key default gen_random_uuid(),
-  item text not null check (item in ('croissant','painauchocolat','donut','canele','cakeslice','cakeloaf','pancakes','wrap','tart','cookies','bottledwater','coffee','tea','bubbletea','latte','cappuccino','hotchocolate','lemonade')),
+  item text not null check (item in ('croissant','painauchocolat','donut','canele','cakeslice','cakeloaf','pancakes','wrap','tart','cookies','bottledwater','coffee','tea','bubbletea','latte','cappuccino','hotchocolate','lemonade','desserttray','icedmatcha','hotmatcha')),
   buyer uuid not null,
   furniture text not null,
   created_at timestamptz not null default now(),
