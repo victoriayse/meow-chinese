@@ -362,4 +362,7 @@ export const CHANGES = [
   { v: 137, items: [
     'A small corner handle replaces the large size button. While decorating, drag the corner inward or outward to resize directly with your finger or mouse.',
   ] },
+  { v: 138, items: [
+    'The green tick now saves your cafe or cinema layout and returns you to the normal visitor view in the same room, with ordering and table sharing available.',
+  ] },
 ];

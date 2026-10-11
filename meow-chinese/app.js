@@ -848,7 +848,16 @@ function homeScreen(params = {}) {
       if (arranging) { if (!quiet) sfx.click(); }
       else { S.save(); if (!quiet) sfx.coin(); undoStack.length = 0; showUndo(); }
     };
-    ab.onclick = () => setArranging(!arranging);
+    ab.onclick = async () => {
+      if (!arranging || !roomRI.place) return setArranging(!arranging);
+      S.save(); ab.disabled = true; room.style.pointerEvents = 'none'; setHomeBusy(true);
+      const saved = await Places.savePlace(roomRI.place);
+      ab.disabled = false; room.style.pointerEvents = ''; setHomeBusy(false);
+      if (!n.isConnected) return;
+      if (!saved) return toast('暂时无法保存，请联网后再点完成 · Could not save — reconnect and tap Done again');
+      undoStack.length = 0;
+      go('visit', { place: roomRI.place, returnRoom: roomKey }, { replace: true });
+    };
     if (currentParams.arrange) setArranging(true, true);                 // came back after placing / putting away
     const redrawArranging = () => { setHomeBusy(false); go('home', { ...currentParams, view: 'house', room: roomKey, arrange: true }, { replace: true }); };
     const leaveArrange = () => { if (currentParams.arrange) { delete currentParams.arrange; } };

@@ -46,23 +46,28 @@ export async function loadPlace(place) {
 }
 
 // the admin: whenever the cinema's furniture changes, save it online and tell anyone inside
-const lastSent = new Map(), busy = new Set();
-async function publish(place) {
-  if (busy.has(place) || !isAdmin() || (place === 'cafe' && !S.get().cafeReady)) return;
+const lastSent = new Map(), busy = new Map();
+export async function savePlace(place) {
+  if (!isAdmin() || (place === 'cafe' && !S.get().cafeReady)) return false;
+  // Wait for any older autosave, then capture the latest furniture before leaving editing.
+  if (busy.has(place)) { await busy.get(place); return savePlace(place); }
   const layout = layoutOf(place), j = JSON.stringify(layout);
   const key = `${Auth.user().id}:${place}`;
-  if (j === lastSent.get(key)) return;
-  busy.add(place);
-  try {
-    await rpc('put_place', { p_key: place, p_layout: layout }); lastSent.set(key, j);
-    const me = Auth.user().id;
-    const ch = new Channel(`place:${place}`, { presenceKey: `${me}-admin`, onStatus: (st) => { if (st === 'joined') { ch.send('house', { id: `${me}-admin`, house: layout }); setTimeout(() => ch.close(), 1500); } } });
-    ch.open(); setTimeout(() => ch.close(), 8000);
-  } catch (e) { console.warn('place publish', e); }
-  busy.delete(place);
+  if (j === lastSent.get(key)) return true;
+  const saving = (async () => {
+    try {
+      await rpc('put_place', { p_key: place, p_layout: layout }); lastSent.set(key, j);
+      const me = Auth.user().id;
+      const ch = new Channel(`place:${place}`, { presenceKey: `${me}-admin`, onStatus: (st) => { if (st === 'joined') { ch.send('house', { id: `${me}-admin`, house: layout }); setTimeout(() => ch.close(), 1500); } } });
+      ch.open(); setTimeout(() => ch.close(), 8000);
+      return true;
+    } catch (e) { console.warn('place publish', e); return false; }
+  })();
+  busy.set(place, saving);
+  try { return await saving; } finally { busy.delete(place); }
 }
 export function startPublishing() {
-  setInterval(() => { if (isAdmin() && !document.hidden) Object.keys(PLACES).forEach(publish); }, 6000);
+  setInterval(() => { if (isAdmin() && !document.hidden) Object.keys(PLACES).forEach(savePlace); }, 6000);
 }
 
 // ---------- 🎞️ a film for the projector screen (the admin uploads it; anyone can watch) ----------

@@ -154,9 +154,10 @@ export const visitorCount = () => visitors.ids().length;
 // =====================================================================
 // VISITOR: walk around a friend's house
 // =====================================================================
-export function visitScreen({ go, id: hostId, name = '', place: placeKey = null }) {
+export function visitScreen({ go, id: hostId, name = '', place: placeKey = null, returnRoom = null }) {
   // place: a public place on the map (the cinema) — no host, everyone signed in can be there
   const me = (Auth.user() || {}).id, P = placeKey && Places.PLACES[placeKey];
+  const startRoom = P ? (Places.isAdmin() && P.rooms.includes(returnRoom) ? returnRoom : P.start) : 'living';
   const n = html`<section class="visit-home">
       <div class="visit-top"><button class="btn white small" id="leave">← ${P ? '<span class="zh">地图</span> Map' : '<span class="zh">回家</span> Leave'}</button><button class="btn white small visit-phone" id="vphone" title="Meow phone">📱</button>
         ${P && Places.isAdmin() ? '<button class="btn yellow small" id="vdeco" title="Decorate">🛠 <span class="zh">布置</span></button>' : ''}
@@ -167,7 +168,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
     </section>`;
   const box = $('#house', n), sub = $('#vt-sub', n);
   const others = new OtherCats();
-  let house = null, host = null, roomKey = P ? P.start : 'living', mine = { x: 30, y: 6, room: P ? P.start : 'living', left: false }, lockedOut = false;
+  let house = null, host = null, roomKey = startRoom, mine = { x: 30, y: 6, room: startRoom, left: false }, lockedOut = false;
   let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null;
 
   let refreshingPlace = false;
@@ -257,7 +258,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null 
   // a public place: its furniture is saved online (people there say hello over the channel)
   if (P) Places.loadPlace(placeKey).then((h) => {
     if (gotHouse || !n.isConnected) return;
-    house = h; gotHouse = true; roomKey = P.start; mine.room = roomKey; sub.textContent = ''; sfx.coin(); render(); sendMine();
+    house = h; gotHouse = true; roomKey = startRoom; mine.room = roomKey; sub.textContent = ''; sfx.coin(); render(); sendMine();
   }).catch(() => { if (n.isConnected) sub.textContent = '加载不了，请返回地图重试 · Could not load — return to the map and try again'; });
   // cats whose app closed without saying goodbye: gone from the line twice in a row → gone from here
   const gone2 = new Map();
