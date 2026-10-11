@@ -9,7 +9,7 @@ import { say } from './house.js';
 
 const rpc = (name, body = {}) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
 export const priceOf = (kind, prices = {}) => { const v = (prices || {})[kind]; return v != null && v !== '' && Number.isFinite(+v) ? Math.max(0, Math.round(+v)) : SNACKS[kind].price; };
-export function snackCanvas(kind, scale = 4) { const c = document.createElement('canvas'); c.className = 'snack-art'; drawGrid(c, artGrid(SNACKS[kind].art, SNACKS[kind].pal), scale); return c; }
+export function snackCanvas(kind, scale = 4) { const c = document.createElement('canvas'); c.className = 'snack-art'; drawGrid(c, artGrid(SNACKS[kind].art, SNACKS[kind].pal), scale * (SNACKS[kind].size || 1)); return c; }
 
 // ---------- the buttons at the bottom: tap one to hold it, tap again to put it away; 吃 eats what's held ----------
 export function snackBar({ onHold = () => {} } = {}) {

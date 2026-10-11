@@ -336,4 +336,7 @@ export const CHANGES = [
   { v: 130, items: [
     'More cinema snacks at the kiosk: bubble tea, root beer, 7-UP, Coke float, ice cream cone, ice cream cup, nachos & cheese, sausage bun, packet of chips and kacang puteh (in a paper cone).',
   ] },
+  { v: 131, items: [
+    'Bottled water is now at the cinema kiosk for 5 coins. Pick it up from the collection counter, tap its button at the bottom to hold it, and drink it to restore one segment of your cat’s Water bar.',
+  ] },
 ];
