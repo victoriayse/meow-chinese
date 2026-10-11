@@ -61,7 +61,7 @@ export function openPoster(id, changed) {
   openModal(box);
 }
 
-export async function openRadio(id) {
+export async function openRadio(id, { shared = false, changed = async () => {} } = {}) {
   await Radio.moveOldSong(id);
   const song = Radio.mySong(id);
   sfx.click();
@@ -69,7 +69,7 @@ export async function openRadio(id) {
       <div class="h-title" style="justify-content:center"><span class="zh">📻 收音机</span><span class="en">Radio</span></div>
       <p class="help" style="margin:0" id="rs">${song ? `🎵 <b>${esc(song.name)}</b>` : '还没有歌。选一首你喜欢的歌吧！<br>No song yet — pick one you like.'}</p>
       <label class="btn blue">🎵 <span class="zh">${song ? '换一首歌' : '选一首歌'}</span> ${song ? 'Change song' : 'Choose a song'}<input type="file" accept="audio/*,.mp3" hidden></label>
-      <div class="row">${song ? `<button class="btn green" id="rp">${Radio.isPlaying(id) ? '⏹ <span class="zh">停</span> Stop' : '▶️ <span class="zh">播放</span> Play'}</button><button class="btn white" id="rx">🗑 <span class="zh">删掉</span> Remove</button>` : ''}</div>
+      <div class="row">${song ? `<button class="btn green" id="rp">${(shared ? song.on !== false : Radio.isPlaying(id)) ? '⏹ <span class="zh">停</span> Stop' : '▶️ <span class="zh">播放</span> Play'}</button><button class="btn white" id="rx">🗑 <span class="zh">删掉</span> Remove</button>` : ''}</div>
       <p class="help" style="margin:0;font-size:13px">最多 10MB。每台收音机都有自己的歌。<br>Up to 10 MB. This song belongs to this radio. Use Play or Stop to control it.</p>
       <button class="btn white" id="rc">关闭 Close</button>
     </div>`;
@@ -78,14 +78,22 @@ export async function openRadio(id) {
     const f = ev.target.files && ev.target.files[0]; if (!f) return;
     msg.textContent = '上传中… Uploading…';
     try {
-      await Radio.setSong(f, id); const playing = await Radio.play(id); sfx.coin(); closeModal();
+      await Radio.setSong(f, id); const playing = await Radio.play(id);
+      if (shared) { Radio.setSharedOn(id, true); await changed(); }
+      sfx.coin(); closeModal();
       toast(`📻 <span class="zh">${playing ? '正在播放' : '已上传'}</span> ${esc(f.name.replace(/\.[^.]+$/, ''))}`, { ms: 2500 });
     } catch (x) {
       msg.innerHTML = x.message === 'too big' ? '这首歌太大了（最多 10MB）。<br>That song is too big (10 MB at most).' : x.message === 'signed out' ? '要先登录才能放歌。<br>Please log in first.' : '这个文件放不了，换一首试试。<br>That file didn\'t work — try another song.';
     }
   };
-  const rp = $('#rp', box); if (rp) rp.onclick = async () => { await Radio.toggle(id); closeModal(); };
-  const rx = $('#rx', box); if (rx) rx.onclick = async () => { await Radio.removeSong(id); closeModal(); toast('🗑 <span class="zh">歌删掉了</span> Song removed'); };
+  const rp = $('#rp', box); if (rp) rp.onclick = async () => {
+    try {
+      if (shared) { Radio.setSharedOn(id, song.on === false); await changed(); }
+      else await Radio.toggle(id);
+      closeModal();
+    } catch { msg.textContent = 'Could not save music settings. Please try again.'; }
+  };
+  const rx = $('#rx', box); if (rx) rx.onclick = async () => { await Radio.removeSong(id); await changed(); closeModal(); toast('🗑 <span class="zh">歌删掉了</span> Song removed'); };
   $('#rc', box).onclick = closeModal;
   openModal(box);
 }

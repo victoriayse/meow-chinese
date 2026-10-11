@@ -395,4 +395,8 @@ export const CHANGES = [
   { v: 147, items: [
     'Admins can tap menu boards in the cafe or cinema to edit and save their text. The wall menu board lettering is 30% smaller.',
   ] },
+  { v: 148, items: [
+    'Cafe visitors can hear the radio song assigned to their room. Tap the music button if your phone needs permission to start audio. Home songs stay separate.',
+    'The server cat enters Dining Room 1 from the right and Dining Room 2 from the left, stopping beside the ordered table before saying Enjoy!',
+  ] },
 ];

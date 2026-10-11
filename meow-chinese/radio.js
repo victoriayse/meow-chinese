@@ -9,7 +9,7 @@ import * as S from './state.js';
 
 const DB = 'meow-radio', STORE = 'song';
 const MAX_BYTES = 10 * 1024 * 1024;   // 10 MB at most
-let audio = null, loaded = null, playing = false, startedAt = 0, activeId = null;
+let audio = null, loaded = null, playing = false, startedAt = 0, activeId = null, playbackRequest = 0;
 const listeners = new Set();
 export const onRadio = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 const tell = () => listeners.forEach((fn) => { try { fn(playing); } catch (e) { console.warn(e); } });
@@ -104,9 +104,10 @@ window.addEventListener('pointerdown', function unlock() {
   a.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
   a.play().then(() => a.pause()).catch(() => {});
 }, true);
-async function load(path) {
+async function load(path, request) {
   if (loaded === path) return true;
   const blob = await download(path);
+  if (request !== playbackRequest) return false;
   const a = player();
   if (a.src && a.src.startsWith('blob:')) URL.revokeObjectURL(a.src);
   a.src = URL.createObjectURL(blob); loaded = path;
@@ -114,10 +115,13 @@ async function load(path) {
 }
 // start the song (from `at` seconds in, so friends hear the same part)
 async function start(path, at = 0, id = null) {
-  try { await load(path); } catch (e) { console.warn('radio load', e); return false; }
+  const request = ++playbackRequest;
+  try { await load(path, request); } catch (e) { console.warn('radio load', e); return false; }
+  if (request !== playbackRequest) return false;
   const a = player();
   try { if (at > 0 && Number.isFinite(a.duration) && a.duration > 0) a.currentTime = at % a.duration; } catch {}
   try { await a.play(); } catch (e) { console.warn('radio play', e); return false; }
+  if (request !== playbackRequest) return false;
   if (at > 0 && !(Number.isFinite(a.duration) && a.duration > 0)) a.addEventListener('loadedmetadata', () => { try { a.currentTime = at % a.duration; } catch {} }, { once: true });
   activeId = id; playing = true; startedAt = Date.now() - (at || 0) * 1000; hushMusic(true); tell();
   return true;
@@ -125,8 +129,13 @@ async function start(path, at = 0, id = null) {
 export const isPlaying = (id = null) => playing && (id === null || activeId === id);
 // what friends in my house need to hear it too
 export const status = () => { const s = activeId && mySong(activeId); return !Object.values(S.PLACE_ROOMS).flat().includes(S.roomOf(activeId || 'radio')) && playing && s && loaded === s.path ? { on: true, radioId: activeId, path: s.path, name: s.name, startedAt } : { on: false }; };
+export function setSharedOn(id, on) {
+  const song = mySong(id); if (!song) return;
+  song.on = on; if (on) song.startedAt = Date.now(); S.save();
+}
 export async function play(id = 'radio') { await moveOldSong(id); const s = mySong(id); if (!s) return false; return start(s.path, 0, id); }
 export function stop() {
+  playbackRequest++;
   if (!playing && !(audio && !audio.paused)) return;
   playing = false;
   if (audio) audio.pause();
@@ -136,6 +145,6 @@ export async function toggle(id = 'radio') { if (isPlaying(id)) { stop(); return
 // a friend's radio, while I'm visiting their house
 export async function listen(r) {
   if (!r || !r.on || !r.path) { stop(); return; }
-  if (playing && loaded === r.path) return;
-  await start(r.path, Math.max(0, (Date.now() - (r.startedAt || Date.now())) / 1000), r.radioId || null);
+  if (playing && loaded === r.path) return true;
+  return await start(r.path, Math.max(0, (Date.now() - (r.startedAt || Date.now())) / 1000), r.radioId || null);
 }
