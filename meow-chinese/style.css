@@ -1717,7 +1717,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .decor.off .screen-label.coffee-led { color: #8a8d99; text-shadow: none; }
 
 /* Cafe table food remains clickable while the furniture is visitor read-only. */
-.table-place { position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%) scale(var(--inv, 1)); transform-origin: top center; min-height: 30px; white-space: nowrap; border: 2px solid var(--ink); border-radius: 4px; background: #f6ead8; color: var(--ink); font-size: 13px; padding: 4px 6px; cursor: pointer; pointer-events: auto; z-index: 3; }
+.table-place { position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%) scale(var(--inv, 1)); transform-origin: center; min-height: 22px; white-space: nowrap; border: 1px solid var(--ink); border-radius: 3px; background: #f6ead8; color: var(--ink); font-size: 11px; line-height: 1.2; padding: 3px 5px; cursor: pointer; pointer-events: auto; z-index: 5; }
 .table-food { position: absolute; transform: translate(-50%, -80%); background: none; border: 0; padding: 5px; pointer-events: auto; cursor: pointer; z-index: 4; }
 .table-food canvas { display: block; image-rendering: pixelated; }
 .cafe-food-choices { display: flex; flex-wrap: wrap; gap: 8px; max-height: 55vh; overflow: auto; }

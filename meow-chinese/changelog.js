@@ -365,4 +365,7 @@ export const CHANGES = [
   { v: 138, items: [
     'The green tick now saves your cafe or cinema layout and returns you to the normal visitor view in the same room, with ordering and table sharing available.',
   ] },
+  { v: 139, items: [
+    'The small + 放食物 button now sits on the tabletop, where you can see and tap it. New shared food goes on dining tables only, not bar counters.',
+  ] },
 ];

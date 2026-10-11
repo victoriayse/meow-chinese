@@ -59,8 +59,8 @@ export function showTableItems(roomEl, roomKey, rows, layout, onChanged) {
   roomEl.querySelectorAll('.table-food, .table-place, .cafe-loose-food').forEach((el) => el.remove());
   roomEl.querySelectorAll('.decor').forEach((d) => {
     const surface = ITEMS[d.dataset.id] && ITEMS[d.dataset.id].surface;
-    if (!surface) return;
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'table-place'; b.textContent = '+ 放食物'; b.title = 'Place food or drink from your bag';
+    if (!surface || !['cafetable2', 'cafetable4'].includes(d.dataset.id.split('#')[0])) return;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'table-place'; b.textContent = '+ 放食物'; b.setAttribute('aria-label', '放食物 · Place food on this table'); b.title = 'Place food or drink from your bag';
     b.addEventListener('pointerdown', (e) => e.stopPropagation());
     b.onclick = (e) => { e.stopPropagation(); chooseFood(roomKey, d.dataset.id, onChanged); };
     d.appendChild(b);
