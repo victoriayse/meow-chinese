@@ -311,7 +311,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       room.querySelectorAll('.decor.radio').forEach((d) => d.classList.add('radio-editable'));
       room.addEventListener('click', (e) => {
         const d = e.target.closest('.decor.radio'); if (!d) return;
-        e.stopPropagation(); openRadio(d.dataset.id);
+        e.stopPropagation(); openRadio(d.dataset.id, { shared: placeKey === 'cafe', changed: saveMedia });
       });
       const markRadio = () => room.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', Radio.isPlaying(d.dataset.id)));
       const unRadio = Radio.onRadio(() => { if (!room.isConnected) { unRadio(); return; } markRadio(); });
@@ -374,7 +374,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     // the friend's pets wandering around
     petLayer = new PetLayer(room, roomKey, { onClick: (kind) => { const p = (house.pets || []).find((x) => x.kind === kind); if (p) { sfx.coin(); toast(`🤍 <span class="zh">${esc(p.name)}</span>`, { ms: 1500 }); } } });
     petLayer.update(house.pets || []);
-    room.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', !!(house.radio || {}).on));
+    hearRadio();
     box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { roomKey = b.dataset.room; mine.room = roomKey; mine.seat = null; sfx.click(); render(); sendMine(); }; });
     // Each arrival gets one greeting sequence, even if the layout refreshes.
     if (placeKey === 'cafe' && roomKey === 'cafeentrance' && !welcomed && room.querySelector('.cafe-greeter')) {
@@ -439,9 +439,20 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   }
   // the friend's radio: play it here too (same song, same part of it)
   function hearRadio() {
-    if (P && Places.isAdmin()) return; // Keep the admin's chosen song through room refreshes.
-    const r = (house && house.radio) || { on: false };
-    Radio.listen(r);
+    if (P && placeKey !== 'cafe' && Places.isAdmin()) return;
+    let r = (house && house.radio) || { on: false };
+    if (placeKey === 'cafe') {
+      // One soundtrack per room, chosen deterministically from its placed radios.
+      const entry = Object.entries(house.radios || {}).filter(([, song]) => song.room === roomKey && song.on).sort(([a], [b]) => a.localeCompare(b))[0];
+      r = entry ? { ...entry[1], radioId: entry[0] } : { on: false };
+    }
+    box.querySelector('.radio-listen')?.remove();
+    if (placeKey === 'cafe' && r.on) {
+      const button = document.createElement('button'); button.className = 'btn small radio-listen'; button.textContent = '🔊 Tap to hear music';
+      button.onclick = async () => { if (await Radio.listen(r)) button.remove(); else button.textContent = '🔊 Tap to retry music'; };
+      box.appendChild(button);
+      Radio.listen(r).then((ok) => { if (ok) button.remove(); });
+    } else Radio.listen(r);
     box.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', !!r.on && (!r.radioId || r.radioId === d.dataset.id)));
   }
   function place() {

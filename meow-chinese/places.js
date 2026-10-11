@@ -1,3 +1,4 @@
+import * as Radio from './radio.js';
 // Public places on the 🗺️ map (the cinema and cafe).
 // Anyone signed in can walk in and see everyone else there, friends or not.
 // Only the admin furnishes them: she buys and arranges the cinema's furniture like her own rooms,
@@ -28,7 +29,13 @@ export function layoutOf(place) {
   const ids = new Set(keys.flatMap((k) => rooms[k].map((e) => e.id)));
   Object.entries(st.powerOff || {}).forEach(([id, v]) => { if (v && ids.has(id)) off[id] = true; });
   keys.forEach((k) => { if ((st.lightsOff || {})[k]) dark[k] = true; });
-  return { rooms, open: keys.slice(), styles: Object.fromEntries(keys.map((k) => [k, S.roomStyle(k)])), power: { dark, off }, prices: { ...(place === 'cafe' ? st.cafePrices || {} : st.kioskPrices || {}) } };
+  const radios = {};
+  if (place === 'cafe') keys.forEach((room) => rooms[room].forEach(({ id }) => {
+    if (id.split('#')[0] !== 'radio') return;
+    const song = Radio.mySong(id);
+    if (song) radios[id] = { path: song.path, name: song.name, on: song.on !== false, startedAt: song.startedAt || 0, room };
+  }));
+  return { radios, rooms, open: keys.slice(), styles: Object.fromEntries(keys.map((k) => [k, S.roomStyle(k)])), power: { dark, off }, prices: { ...(place === 'cafe' ? st.cafePrices || {} : st.kioskPrices || {}) } };
 }
 export async function loadPlace(place) {
   const empty = place === 'cafe' ? cafeLayout() : { rooms: {}, open: PLACES[place].rooms.slice(), power: {} };

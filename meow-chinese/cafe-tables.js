@@ -106,10 +106,15 @@ function deliverCat(room, table, food, item) {
   const cat = new KittenView({ scale: 4, fur: 'white', equipped: { body: 'tuxedo', neck: 'bowtie' } });
   cat.setMood('happy'); cat.setHeld(item); waiter.appendChild(cat.canvas); room.appendChild(waiter);
   const x = table.offsetLeft + table.offsetWidth / 2 - waiter.offsetWidth / 2;
-  const y = table.offsetTop + table.offsetHeight * 0.45 - waiter.offsetHeight;
+  const dining = room.dataset.room === 'cafedining1' || room.dataset.room === 'cafedining2';
+  const y = table.offsetTop + table.offsetHeight * (dining ? 0.12 : 0.45) - waiter.offsetHeight;
   waiter.style.left = x + 'px'; waiter.style.top = y + 'px';
   food.style.visibility = 'hidden';
-  const arrival = waiter.animate([{ transform: `translate(${room.clientWidth / 2 - x}px, ${room.clientHeight - y}px)` }, { transform: 'translate(0, 0)' }], { duration: 3000, easing: 'linear', fill: 'forwards' });
+  const fromLeft = room.dataset.room === 'cafedining2';
+  cat.setFacing(!fromLeft);
+  const startX = dining ? (fromLeft ? -waiter.offsetWidth : room.clientWidth) : room.clientWidth / 2;
+  const startY = dining ? y : room.clientHeight;
+  const arrival = waiter.animate([{ transform: `translate(${startX - x}px, ${startY - y}px)` }, { transform: 'translate(0, 0)' }], { duration: 3000, easing: 'linear', fill: 'forwards' });
   arrival.finished.then(() => {
     food.style.visibility = ''; cat.setHeld(null); say(waiter, 'Enjoy!');
     const departure = waiter.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 500, delay: 2000, fill: 'forwards' });
