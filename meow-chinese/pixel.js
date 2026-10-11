@@ -6447,6 +6447,30 @@ export const SNACKS = {
       '.orwrwro.',
       '.orwrwro.',
     ] },
+  bottledwater: { zh: '瓶装水', en: 'Bottled water', price: 5, water: 10, size: 0.5,
+    pal: { o: O, b: '#7ec3e8', d: '#4f9fd8', w: '#ffffff', s: '#c9d3de' },
+    art: [
+      '.....oooooo.....',
+      '.....obbbdo.....',
+      '.....obdddo.....',
+      '.....oooooo.....',
+      '.....owbbdo.....',
+      '....owwbbbdo....',
+      '...owwbbbbddo...',
+      '...owwbbbbddo...',
+      '...owbbbbbddo...',
+      '...owwwwwwsso...',
+      '...owwwwwwsso...',
+      '...owwwwwwsso...',
+      '...owwwwwwsso...',
+      '...owbbbbbddo...',
+      '...owbbbbbddo...',
+      '...owbbbbbddo...',
+      '...obbbbbbddo...',
+      '...obdddddddo...',
+      '....oddddddo....',
+      '.....oooooo.....',
+    ] },
   coke: { zh: '可乐', en: 'Coke', price: 8, water: 20, happy: 5, pal: SNACK_PAL,
     art: [
       '....osso.',
@@ -6504,7 +6528,7 @@ export const SNACKS = {
       'wwwwwwwwo',
     ] },
 };
-export const SNACK_ORDER = ['popsweet', 'popsalty', 'popmix', 'coke', 'sprite', 'coffee', 'tea'];
+export const SNACK_ORDER = ['popsweet', 'popsalty', 'popmix', 'bottledwater', 'coke', 'sprite', 'coffee', 'tea'];
 const SNACK_PAL2 = { o: O, p: '#ff9ec4', w: '#ffffff', m: '#d9b48a', k: '#3a2620', r: '#e8384f', h: '#ff6b7d', y: '#ffd23f', c: '#ffb020', l: '#ffe08a', t: '#d9a066', s: '#ff6b7d', u: '#b47a3c', i: '#fff6e0', j: '#ffd6e6', g: '#8fd6a0', n: '#6b4a3a', a: '#f3e1c0', v: '#c9a26b', e: '#3fae4a', f: '#f6ead8', q: '#e0a524', x: '#6b3a22' };
 Object.assign(SNACKS, {
   bubbletea: { zh: '珍珠奶茶', en: 'Bubble tea', price: 12, water: 18, hunger: 6, happy: 8, pal: SNACK_PAL2,
