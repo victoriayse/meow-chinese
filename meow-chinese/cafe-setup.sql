@@ -99,7 +99,7 @@ begin
   end if;
   select layout into saved from public.public_places where key='cafe';
   if not exists(select 1 from jsonb_array_elements(coalesce(saved->'rooms'->p_room,'[]'::jsonb)) e where e->>'id'=p_table) then return jsonb_build_object('accepted',false,'reason','moved'); end if;
-  capacity := case split_part(p_table,'#',1) when 'cafetable2' then 2 when 'cafetable4' then 4 when 'cafebar' then 4 else 0 end;
+  capacity := case split_part(p_table,'#',1) when 'cafetable2' then 2 when 'cafetable4' then 4 else 0 end;
   select x into spot from generate_series(0,capacity-1) x where not exists(select 1 from public.cafe_table_items where furniture=p_table and slot=x and picked_by is null) order by x limit 1;
   if spot is null then return jsonb_build_object('accepted',false,'reason','full'); end if;
   insert into public.cafe_table_items(id,item,room,furniture,slot,placed_by) values(p_token,p_item,p_room,p_table,spot,auth.uid());
