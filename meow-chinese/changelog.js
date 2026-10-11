@@ -368,4 +368,8 @@ export const CHANGES = [
   { v: 139, items: [
     'The small + 放食物 button now sits on the tabletop, where you can see and tap it. New shared food goes on dining tables only, not bar counters.',
   ] },
+  { v: 140, items: [
+    'Choose Pick up or Table service at the cafe kiosk. For table service, enter the small number on your table and the tuxedo cat brings your food there.',
+    'Pickup orders still go to the collection counter. Full tables wait for space; if a table is removed, its pending food goes to the counter.',
+  ] },
 ];

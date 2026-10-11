@@ -360,7 +360,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       room.addEventListener('click', (e) => {
         const d = e.target.closest(placeKey === 'cafe' ? '.decor[data-id^="cafekiosk"]' : '.decor[data-id^="kiosk"]'); if (!d) return;
         sfx.click();
-        Snacks.openKiosk({ place: placeKey, prices: house.prices || {}, admin: Places.isAdmin(),
+        Snacks.openKiosk({ place: placeKey, layout: house, prices: house.prices || {}, admin: Places.isAdmin(),
           onPaid: () => { ch.send('counter', { id: me }); setTimeout(() => { refreshCounter(); ch.send('counter', { id: me }); }, 3300); },
           onPrices: (p) => { S.get()[placeKey === 'cafe' ? 'cafePrices' : 'kioskPrices'] = p; S.save(); house.prices = p; } });
       });

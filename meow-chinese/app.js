@@ -991,7 +991,7 @@ function homeScreen(params = {}) {
         if (!kiosk || e.target.closest('button')) return;
         if (arranging) return;
         const field = place === 'cafe' ? 'cafePrices' : 'kioskPrices';
-        Snacks.openKiosk({ place, prices: S.get()[field] || {}, admin: true,
+        Snacks.openKiosk({ place, layout: Places.layoutOf(place), prices: S.get()[field] || {}, admin: true,
           onPrices: (prices) => { S.get()[field] = prices; S.save(); },
           onPaid: () => { setTimeout(refreshCounter, 3300); } });
       });
