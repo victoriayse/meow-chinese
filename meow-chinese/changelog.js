@@ -349,4 +349,7 @@ export const CHANGES = [
     'The cafe starts empty so you can design it yourself. Buy furniture and display decorations in Shop > Home > Cafe, then arrange them as admin.',
     'Removed the free starter furnishings. Your shop purchases stay yours.',
   ] },
+  { v: 134, items: [
+    'Tap Decorate in the cafe or cinema to open your furniture storage, choose an item, and drag it into place. Editing controls stay available in empty rooms too.',
+  ] },
 ];
