@@ -355,4 +355,8 @@ export const CHANGES = [
   { v: 135, items: [
     'New in Shop > Home > Cafe: a decorative wooden door and a matching blue-glass window. Buy and arrange them like other furniture; the door does not change rooms.',
   ] },
+  { v: 136, items: [
+    'Resize furniture: while decorating, tap the ↔ button on an item and choose its size. New items placed from storage appear in front.',
+    'The cafe and cinema kiosks now work in the admin furnishing view after tapping Done. Order, collect from the counter, and use your food from the buttons below.',
+  ] },
 ];

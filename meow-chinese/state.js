@@ -514,7 +514,7 @@ export function sellItem(id) {
   state.coins += got;
   // tidy up everything that remembered this piece
   state.decorHidden = (state.decorHidden || []).filter((x) => x !== id);
-  ['decorPos', 'decorRoom', 'decorLayer', 'openThings', 'powerOff', 'curtainClosed', 'framePhotos', 'facing', 'boardTexts', 'screenVideos'].forEach((k) => { if (state[k]) delete state[k][id]; });
+  ['decorPos', 'decorRoom', 'decorLayer', 'decorScale', 'openThings', 'powerOff', 'curtainClosed', 'framePhotos', 'facing', 'boardTexts', 'screenVideos'].forEach((k) => { if (state[k]) delete state[k][id]; });
   state.cageOff = (state.cageOff || []).filter((x) => x !== id);
   Object.keys(state.kitten.equipped || {}).forEach((slot) => { if (state.kitten.equipped[slot] === id) state.kitten.equipped[slot] = null; });
   Object.values(state.roomStyle || {}).forEach((st) => { if (st.wall === id) delete st.wall; if (st.floor === id) delete st.floor; });
@@ -591,6 +591,8 @@ export const roomOf = (id) => { const r = (state.decorRoom || {})[id] || (ITEMS[
 export function setDecorRoom(id, room) {
   state.decorRoom = state.decorRoom || {};
   state.decorRoom[id] = room;
+  state.decorLayer = state.decorLayer || {};
+  state.decorLayer[id] = Math.max(Date.now(), ...Object.values(state.decorLayer).map(Number).filter(Number.isFinite)) + 1;
   delete state.decorPos[id];                // start in its usual spot in the new room
   save();
 }
@@ -627,13 +629,15 @@ export function placeDecor(id, room) {
   state.decorHidden = state.decorHidden.filter((x) => x !== id);
   state.decorRoom = state.decorRoom || {};
   if (room) state.decorRoom[id] = room;
+  state.decorLayer = state.decorLayer || {};
+  state.decorLayer[id] = Math.max(Date.now(), ...Object.values(state.decorLayer).map(Number).filter(Number.isFinite)) + 1;
   delete state.decorPos[id];
   save();
 }
 export function toggleDecor(id) {
   const h = state.decorHidden;
   const i = h.indexOf(id);
-  if (i >= 0) h.splice(i, 1); else h.push(id);
+  if (i >= 0) { placeDecor(id); return; } else h.push(id);
   save();
 }
 
