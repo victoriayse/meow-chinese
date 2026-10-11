@@ -388,4 +388,8 @@ export const CHANGES = [
   { v: 145, items: [
     'Each radio now has its own uploaded song. Changing or removing the cafe radio song leaves your home radio song alone. Your existing song stays with a home radio.',
   ] },
+  { v: 146, items: [
+    'New cafe furnishings: pot, pan, chandelier, dome window, wall lantern, welcome sign, monstera plant, wooden magazine rack, and Welcome Desk.',
+    'Place a Welcome Desk at the cafe entrance: its tuxedo cat greets arrivals, recommends matcha latte, and points visitors to the self-ordering kiosk.',
+  ] },
 ];

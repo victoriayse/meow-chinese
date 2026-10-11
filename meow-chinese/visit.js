@@ -172,7 +172,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   let house = null, host = null, roomKey = startRoom, mine = { x: 30, y: 6, room: startRoom, left: false }, lockedOut = false;
   let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null;
 
-  let refreshingPlace = false;
+  let refreshingPlace = false, welcomed = false;
   async function refreshPlace() {
     if (!P || !gotHouse || refreshingPlace || !n.isConnected) return;
     refreshingPlace = true;
@@ -372,6 +372,16 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     petLayer.update(house.pets || []);
     room.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', !!(house.radio || {}).on));
     box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { roomKey = b.dataset.room; mine.room = roomKey; mine.seat = null; sfx.click(); render(); sendMine(); }; });
+    // Each arrival gets one greeting sequence, even if the layout refreshes.
+    if (placeKey === 'cafe' && roomKey === 'cafeentrance' && !welcomed && room.querySelector('.cafe-greeter')) {
+      welcomed = true;
+      ['Welcome to Meow Cafe!', 'Please try our new Matcha Latte!', 'Please order from our self ordering kiosk!'].forEach((line, i) => {
+        setTimeout(() => {
+          if (!n.isConnected || roomKey !== 'cafeentrance') return;
+          say(box.querySelector('.cafe-greeter'), line);
+        }, 500 + i * 4500);
+      });
+    }
     // 🍿 her snacks: hold one, eat it
     box.appendChild(Snacks.snackBar({ onHold: () => { if (myKv) myKv.draw(); sendMine(); } }));
     if (P) {

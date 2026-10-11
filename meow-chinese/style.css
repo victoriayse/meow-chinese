@@ -1734,3 +1734,9 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .cafe-table-number { position:absolute; left:50%; top:25%; transform:translate(-50%, -50%) scale(var(--inv, 1)); transform-origin:center; font-size:9px; line-height:1; padding:2px 3px; border:1px solid var(--ink); border-radius:2px; background:#f6ead8; color:var(--ink); pointer-events:none; z-index:5; }
 .cafe-waiter { position:absolute; pointer-events:none; z-index:220; }
 .cafe-waiter canvas { display:block; image-rendering:pixelated; }
+
+/* The receptionist belongs to the desk and scales/moves with it. */
+.decor .cafe-greeter { position:absolute; left:50%; top:0; width:128px; height:110px; transform:translateX(-50%); pointer-events:none; z-index:2; }
+.cafe-greeter .greeter-portrait { width:128px; height:110px; overflow:hidden; }
+.cafe-greeter .greeter-portrait canvas { width:128px; height:152px; }
+.cafe-greeter .chat-bubble { white-space:normal; width:230px; max-width:230px; font-size:15px; }
