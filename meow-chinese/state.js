@@ -582,9 +582,11 @@ export const ROOMS = [
   // the park (a public place on the 🗺️ map): Park ▶ Playground
   { key: 'park', zh: '公园', en: 'Park', icon: '🌳', place: 'park', outdoor: true },
   { key: 'playground', zh: '游乐场', en: 'Playground', icon: '🛝', place: 'park', outdoor: true },
+  // the stadium (a public place on the 🗺️ map): a soccer pitch, the whole room is the field
+  { key: 'stadium', zh: '体育场', en: 'Stadium', icon: '🏟️', place: 'stadium', outdoor: true, maxY: 52 },
 ];
 ROOMS.push(...MALL_ROOM_INFO);
-export const PLACE_ROOMS = { mall: MALL_ROOMS, cinema: ['theatre1', 'lobby', 'theatre2'], cafe: CAFE_ROOMS, park: ['park', 'playground'] };   // left to right
+export const PLACE_ROOMS = { mall: MALL_ROOMS, cinema: ['theatre1', 'lobby', 'theatre2'], cafe: CAFE_ROOMS, park: ['park', 'playground'], stadium: ['stadium'] };   // left to right
 // the admin (who furnishes the public places): app.js tells us who is signed in
 let adminCheck = () => false;
 export const setAdminCheck = (fn) => { adminCheck = fn; };

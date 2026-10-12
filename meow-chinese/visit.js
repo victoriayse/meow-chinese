@@ -2,6 +2,7 @@ import { wireMall, openMallDirectory } from './mall-play.js';
 import { openPoster, openVideo, openRadio, openBoard } from './media.js';
 import * as CafeTables from './cafe-tables.js';
 import { wireHomeTables } from './home-tables.js';
+import { createStadium } from './stadium.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
 //   knock  visitor -> house   { id, look, x, y, room, left }      "I'm here" (the owner answers with the house)
@@ -173,7 +174,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   const box = $('#house', n), sub = $('#vt-sub', n);
   const others = new OtherCats();
   let house = null, host = null, roomKey = startRoom, mine = { x: 30, y: 6, room: startRoom, left: false }, lockedOut = false;
-  let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null;
+  let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null;
 
   let refreshingPlace = false, welcomed = false;
   async function refreshPlace() {
@@ -192,6 +193,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     },
     onBroadcast: (ev, p) => {
       if (!p || p.id === me) return;
+      if (stadium && (ev === 'ball' || ev === 'match')) { stadium.onBroadcast(ev, p); return; }
       if (ev === 'locked' && p.to === me && !gotHouse) {
         clearInterval(kt); lockedOut = true;
         sub.innerHTML = '🔒 朋友的家锁上了 · Your friend\'s house is locked<br><small>下次再来吧 · Try again another time</small>';
@@ -250,6 +252,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       if (dx) { mine.left = dx < 0; myKv.setFacing(mine.left); }
       myKv.canvas.classList.add('walking');
       place(); sendMove({ id: me, ...mine });
+      if (stadium) stadium.step(dx, dy);
     },
     onStop: () => { if (myKv) myKv.canvas.classList.remove('walking'); sendMine(); },
   });
@@ -258,6 +261,9 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   const knock = () => ch.send('knock', { id: me, look: myLook(), ...mine });
   const sendMine = () => ch.send('pos', { id: me, look: myLook(), ...mine });
   const sendMove = throttle((p) => ch.send('pos', p));
+  // ⚽ the stadium's soccer match
+  stadium = placeKey === 'stadium' ? createStadium({ me, ch, others, getMine: () => mine, getMyEl: () => myEl,
+    teleport: (x, y) => { if (!myEl) return; mine.seat = null; mine.x = x; mine.y = y; place(); sendMine(); } }) : null;
   ch.open();
   // a public place: its furniture is saved online (people there say hello over the channel)
   if (P) Places.loadPlace(placeKey).then((h) => {
@@ -360,6 +366,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     myWrap = myEl.querySelector('.kitten-wrap');
     room.appendChild(myEl);
     others.attach(room, roomKey);
+    if (stadium && roomKey === 'stadium') stadium.attach(room);
     sizeCols(); fitHouse(box, unit); requestAnimationFrame(() => { if (unit.isConnected) { sizeCols(); fitHouse(box, unit); } });
     drawRoom($('#roombg', box), isNight(), roomKey, (house.styles || {})[roomKey]); drawRoof($('#roof', box)); studioBarre(room, roomKey === 'basement');
     room.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, room); }); stackDecor(room);
@@ -494,7 +501,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   const refit = () => { if (!n.isConnected) { window.removeEventListener('resize', refit); return; } sizeCols(); fitHouse(box, $('#hunit', box)); };
   window.addEventListener('resize', refit);
   // leaving: say goodbye and close the line
-  const leave = () => { Radio.stop(); clearInterval(kt); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
+  const leave = () => { Radio.stop(); clearInterval(kt); if (stadium) stadium.stop(); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
   $('#leave', n).onclick = () => { leave(); if (P) go('map'); else go('friend', { id: hostId }); };
   const deco = $('#vdeco', n); if (deco) deco.onclick = () => { if (!gotHouse) return; leave(); go('home', { view: 'house', room: roomKey, arrange: true, openStorage: true }); };   // the admin: furnish this room
   $('#vphone', n).onclick = () => import('./phone.js').then((P) => P.openPhone({ start: 'home' }));   // the phone works at a friend's house too

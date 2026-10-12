@@ -1807,3 +1807,28 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .arranging .display-owner .display-slot, .display-owner.arranging .display-slot { pointer-events: none; }
 .arranging .home-table-place, .arranging .home-table-food { pointer-events: none; opacity: .5; }
 .kiosk-row .art canvas { max-width: 34px; height: auto !important; }
+/* v159: ⚽ the stadium */
+.stadium-hud { position: absolute; inset: 0; z-index: 250; pointer-events: none; }
+.stadium-hud .scoreboard { position: absolute; left: 28.3%; width: 43.4%; top: 4%; height: 9.5%; display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-family: 'Courier New', monospace; font-weight: 900; color: #fff4c2; font-size: 26px; letter-spacing: 1px; }
+.stadium-hud .sb-team { font-size: 15px; }
+.stadium-hud .sb-team.red { color: #ff8a9a; } .stadium-hud .sb-team.blue { color: #9fd3ff; }
+.stadium-hud .sb-red, .stadium-hud .sb-blue { min-width: 1.4em; text-align: center; background: #000; border-radius: 4px; padding: 0 4px; }
+.stadium-hud .sb-red { color: #ff6a7d; } .stadium-hud .sb-blue { color: #6cb6f2; }
+.stadium-hud .sb-clock { font-size: 15px; color: #ffd23f; margin-left: 6px; }
+.stadium-hud .st-panel { position: absolute; left: 3%; right: 3%; top: 15.5%; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.stadium-hud .st-lobby { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; pointer-events: auto; }
+.stadium-hud .st-lobby.hidden { display: none; }
+.stadium-hud .st-lobby .btn { font-size: 21px; padding: 5px 12px; border-width: 3px; }
+.stadium-hud .st-red { background: #e8384f; color: #fff; } .stadium-hud .st-blue { background: #3d8be0; color: #fff; }
+.stadium-hud .st-info { max-width: 100%; text-align: center; font-size: 19px; line-height: 1.25; font-weight: 800; background: rgba(255, 248, 236, .94); border: 3px solid var(--ink); border-radius: 8px; padding: 3px 10px; }
+.stadium-hud .st-roster { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; font-size: 18px; font-weight: 800; color: #fff; text-shadow: 0 2px 0 #000; }
+.stadium-ball { position: absolute; transform: translateX(-50%); pointer-events: none; }
+.stadium-ball canvas { display: block; image-rendering: pixelated; }
+.stadium-ball::after { content: ''; position: absolute; left: 10%; right: 10%; bottom: -3px; height: 5px; border-radius: 50%; background: rgba(0, 0, 0, .25); z-index: -1; }
+.vcat[data-team="red"] .nametag { background: #e8384f; color: #fff; }
+.vcat[data-team="blue"] .nametag { background: #3d8be0; color: #fff; }
+.vcat[data-team="red"] .nametag .lv, .vcat[data-team="blue"] .nametag .lv { background: #fff; color: var(--ink); }
+.stadium-result .stadium-final { font-size: 34px; font-weight: 900; text-align: center; }
+.stadium-result .red { color: #e8384f; } .stadium-result .blue { color: #3d8be0; }
+.stadium-hud .sb-team { white-space: nowrap; }

@@ -9450,6 +9450,41 @@ export function drawRoom(canvas, night = false, kind = 'living', style = null) {
       R(0, floorY, W, H - floorY, '#2b2140');
       for (let y = floorY + 2; y < H; y += 6) for (let x = (y % 12 ? 0 : 6); x < W; x += 12) { R(x + 2, y, 2, 1, '#e0a524'); R(x + 1, y + 1, 4, 1, '#b8233a'); R(x + 2, y + 2, 2, 1, '#e0a524'); }
       noWindow = true;
+    } else if (kind === 'stadium') {
+      // the stadium: stands full of fans, a scoreboard, advert boards, then the whole floor is the pitch
+      R(0, 0, W, H, night ? '#14204f' : '#2d3d7a');
+      const top = Math.round(H * 0.36);
+      for (let y = 17, row = 0; y < top - 4; y += 5, row++) {            // rows of seats with fans
+        R(0, y, W, 4, row % 2 ? '#c9d3de' : '#aab6c6'); R(0, y + 4, W, 1, '#5b6170');
+        for (let x = (row * 3) % 5; x < W; x += 5) {
+          const c = ['#e8384f', '#6cb6f2', '#ffd23f', '#ff9ec4', '#7cbd52', '#ffffff', '#f2a65a'][(x * 7 + row * 3) % 7];
+          R(x, y - 1, 2, 2, (x + row) % 4 ? c : '#3a2a35'); R(x, y + 1, 2, 2, c);
+        }
+      }
+      R(0, 0, W, 16, night ? '#0d1638' : '#22305f');
+      R(33, 3, 54, 12, '#3a2a35'); R(34, 4, 52, 10, '#1c1530'); R(33, 3, 54, 1, '#ffd23f'); R(33, 14, 54, 1, '#ffd23f');   // the scoreboard
+      [[6, 3], [20, 5], [98, 4], [112, 3]].forEach(([x, y]) => { R(x, y, 4, 3, '#fff4c2'); R(x + 1, y + 3, 2, 8, '#8a8d99'); });  // floodlights
+      for (let x = 0, i = 0; x < W; x += 15, i++) { R(x, top - 4, 15, 5, ['#e8384f', '#6cb6f2', '#ffd23f', '#7cbd52', '#ff9ec4', '#c9a6ff', '#f2a65a', '#ffffff'][i % 8]); R(x, top - 4, 1, 5, '#3a2a35'); R(x + 3, top - 2, 9, 1, '#3a2a35'); }
+      R(0, top + 1, W, 1, '#3a2a35');
+      for (let x = 0; x < W; x += 10) R(x, top + 2, 10, H - top - 2, (x / 10) % 2 ? (night ? '#2f7a3c' : '#4fb348') : (night ? '#367f42' : '#5cc455'));   // mown stripes
+      const row = (b) => Math.round(H * (1 - b / 100)), WL = '#ffffff';
+      const t = row(54), bt = row(1), mid = row(26), m0 = row(38), m1 = row(14);
+      R(4, t, W - 8, 1, WL); R(4, bt, W - 8, 1, WL); R(4, t, 1, bt - t, WL); R(W - 5, t, 1, bt - t + 1, WL);
+      R(60, t, 1, bt - t, WL);                                                   // halfway line
+      for (let a = 0; a < 360; a += 4) { const r = a * Math.PI / 180; R(60 + Math.round(11 * Math.cos(r)), mid + Math.round(8 * Math.sin(r)), 1, 1, WL); }
+      R(59, mid, 3, 1, WL);
+      [[4, 1], [W - 5, -1]].forEach(([x0, d]) => {                                 // penalty boxes
+        const x1 = x0 + d * 14; R(Math.min(x0, x1), m0 - 4, 15, 1, WL); R(Math.min(x0, x1), m1 + 4, 15, 1, WL); R(x1, m0 - 4, 1, m1 - m0 + 9, WL);
+        for (let a = -60; a <= 60; a += 6) { const r = a * Math.PI / 180; R(x1 + d * Math.round(5 * Math.cos(r)), mid + Math.round(9 * Math.sin(r)), 1, 1, WL); }
+      });
+      [[0, 1], [W - 5, -1]].forEach(([x0]) => {                                  // the two goals, with nets
+        R(x0, m0, 5, m1 - m0, '#d9e4ec');
+        for (let y = m0; y < m1; y += 2) R(x0, y, 5, 1, '#9fb0c0');
+        for (let x = x0; x < x0 + 5; x += 2) R(x, m0, 1, m1 - m0, '#9fb0c0');
+        R(x0, m0 - 1, 5, 2, '#ffffff'); R(x0, m1 - 1, 5, 2, '#ffffff');
+        R(x0 === 0 ? 4 : x0, m0 - 1, 1, m1 - m0 + 2, '#ffffff');
+      });
+      open = true;
     } else if (kind === 'park') {
       // the park: open sky, tall trees and a little pond far away, grass with a winding path
       R(0, 0, W, floorY, night ? '#1d286a' : '#9fd6f7');
@@ -11879,4 +11914,32 @@ ITEMS.mappark = { cat: 'map', room: 'mallbowling', name: '公园', en: 'Park map
     'osssssssssssssssssssssso',
     'osssssssssssssssssssssso',
     '.oooooooooooooooooooooo.',
+  ] };
+// v159: the 🏟️ Stadium pin on the map (a little round stadium with a pitch inside)
+ITEMS.mapstadium = { cat: 'map', room: 'mallbowling', name: '体育场', en: 'Stadium map icon', price: 0, spot: 'back-mid-left', group: 'mall', special: true,
+  pal: { o: O, s: '#c9d3de', d: '#8a8d99', g: '#5cc455', l: '#4fb348', w: '#ffffff', r: '#e8384f', b: '#6cb6f2', y: '#ffd23f' }, art: [
+    '........................',
+    '...y..................y.',
+    '..oyo................oyo',
+    '...o.....oooooooo.....o.',
+    '...o..oooddddddddooo..o.',
+    '...ooodssrsbsrsbsssdooo.',
+    '...odssbsssrssbsssrssdo.',
+    '..odssooooooooooooossdo.',
+    '..odsoglglglglglglgosdo.',
+    '.odssoglglgwglglglgossdo',
+    '.odsowwlglgwglglglwwosdo',
+    '.odsowglglwwwlglglgwosdo',
+    '.odsowglglwgwlglglgwosdo',
+    '.odsowwlglgwglglglwwosdo',
+    '.odssoglglgwglglglgossdo',
+    '..odsoglglglglglglgosdo.',
+    '..odssooooooooooooossdo.',
+    '...odssbsssrssbsssrsdo..',
+    '...ooodssrsbsrsbsssooo..',
+    '......oooddddddddooo....',
+    '.........oooooooo.......',
+    '........................',
+    '........................',
+    '........................',
   ] };

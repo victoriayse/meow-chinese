@@ -22,6 +22,7 @@ export const PLACES = {
   cafe: { zh: '咖啡馆', en: 'Cafe', icon: '☕', rooms: S.PLACE_ROOMS.cafe, start: 'cafeentrance' },
   cinema: { zh: '电影院', en: 'Cinema', icon: '🎬', rooms: S.PLACE_ROOMS.cinema, start: 'lobby' },
   park: { zh: '公园', en: 'Park', icon: '🌳', rooms: S.PLACE_ROOMS.park, start: 'park' },
+  stadium: { zh: '体育场', en: 'Stadium', icon: '🏟️', rooms: S.PLACE_ROOMS.stadium, start: 'stadium' },
 };
 
 // the layout everyone sees: { rooms: { theatre1: [...], lobby: [...], theatre2: [...] }, open, power, styles }
@@ -158,11 +159,12 @@ const PINS = [
   { key: 'cinema', zh: '电影院', en: 'Cinema', icon: '🎬', x: 70, y: 34 },
   { key: 'cafe', zh: '咖啡馆', en: 'Cafe', icon: '☕', x: 72, y: 77 },
   { key: 'park', zh: '公园', en: 'Park', icon: '🌳', x: 49, y: 19 },
+  { key: 'stadium', zh: '体育场', en: 'Stadium', icon: '🏟️', x: 87, y: 60 },
 ];
 export function mapScreen({ go }) {
   const n = html`<section class="screen"><div class="card stack map-card">
       <div class="h-title"><span class="zh">🗺️ 地图</span><span class="en">Map</span></div>
-      <p class="help" style="margin:0">点一个地方去看看！电影院、咖啡馆、商场和公园是大家的地方，在那里可以见到所有人。<br>Tap a place to go there. The cinema, cafe, mall and park are public — you'll see everyone who is there.</p>
+      <p class="help" style="margin:0">点一个地方去看看！电影院、咖啡馆、商场、公园和体育场是大家的地方，在那里可以见到所有人。<br>Tap a place to go there. The cinema, cafe, mall, park and stadium are public — you'll see everyone who is there.</p>
       <div class="map-box"><canvas class="map-art"></canvas>
         ${PINS.map((p) => `<button class="map-pin ${p.soon ? 'pin-soon' : ''}" data-pin="${p.key}" style="left:${p.x}%;top:${p.y}%"><span class="ic">${p.icon}</span><span class="lb"><span class="zh">${p.zh}</span> ${p.en}${p.soon ? '<small>即将开放 Coming soon</small>' : ''}</span></button>`).join('')}
       </div></div></section>`;
