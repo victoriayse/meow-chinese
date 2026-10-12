@@ -295,6 +295,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       if (!await Places.savePlace(placeKey)) throw new Error('Could not save the shared layout');
       await refreshPlace();
     };
+    if (P && Places.isAdmin()) room.addEventListener('panel-toggle', (e) => { const {id,opened} = e.detail; const st = S.get(); st.openThings ||= {}; if (opened) st.openThings[id] = true; else delete st.openThings[id]; S.save(); Places.savePlace(placeKey).then(saved => { if (!saved) toast('Please reconnect to save this change.'); }); });
     wireDisplays(room, { edit: !!(P && Places.isAdmin()), changed: saveMedia });
     if (P && Places.isAdmin()) room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.board'); if (!d) return;

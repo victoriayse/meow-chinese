@@ -52,6 +52,8 @@ export async function loadPlace(place) {
         const x = /left:([\d.]+)%/.exec(e.css || ''), y = /top:([\d.]+)%/.exec(e.css || '');
         if (x && y) st.decorPos[e.id] = { x: +x[1], y: +y[1] };
         if (e.stock) (st.displayStock ||= {})[e.id] = e.stock;
+        if (e.opened) (st.openThings ||= {})[e.id] = true;
+        if (e.video) (st.screenVideos ||= {})[e.id] = e.video;
         (st.decorScale ||= {})[e.id] = e.scale || 1; (st.decorLayer ||= {})[e.id] = e.layer || 0;
       }));
       Object.assign(st.roomStyle ||= {}, layout.styles || {}); st.mallReady = true; S.save();

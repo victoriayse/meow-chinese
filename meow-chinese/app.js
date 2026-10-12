@@ -1141,6 +1141,7 @@ function homeScreen(params = {}) {
       toast(on ? '▶️ <span class="zh">开始放电影</span> Film on' : '⏹ <span class="zh">电影停了</span> Film off', { ms: 1400 });
     });
     room.addEventListener('screen-video', (e) => openVideo(e.detail.id, () => { Visit.hostResendHouse(); refreshHome(); }));
+    room.addEventListener('panel-toggle', (e) => { const {id,opened} = e.detail; s.openThings ||= {}; if (opened) s.openThings[id] = true; else delete s.openThings[id]; S.save(); Visit.hostResendHouse(); });
     wireDisplays(room, { edit: true, changed: () => { Visit.hostResendHouse(); refreshHome(); } });
     // menu boards: tap to change what's written on them
     room.addEventListener('click', (e) => {

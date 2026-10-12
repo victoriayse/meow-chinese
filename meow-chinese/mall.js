@@ -19,7 +19,7 @@ export function mallNeighbors(key) {
     ...(!i && floor ? { down: MALL_FLOORS[floor - 1][0] } : {}), ...(!i && floor < 5 ? { up: MALL_FLOORS[floor + 1][0] } : {}) };
 }
 export const MALL_VENUES = {
-  mallbakery: { name: 'Bakery', kiosk: 'mallbakerykiosk', counter: 'mallbakerycounter', fur: 'ginger', menu: ['croissant','painauchocolat','donut','canele','cakeslice','cakeloaf','pancakes','tart','cookies','bottledwater','tea'] },
+  mallbakery: { name: 'Bakery', kiosk: 'mallbakerykiosk', counter: 'mallbakerycounter', fur: 'ginger', menu: ['croissant','painauchocolat','donut','canele','cakeslice','cakeloaf','pancakes','tart','cookies','eggtart','bottledwater','tea'] },
   mallcoffee: { name: 'Coffee Shop', kiosk: 'mallcoffeekiosk', counter: 'mallcoffeecounter', fur: 'black', menu: ['coffee','tea','bubbletea','latte','cappuccino','hotchocolate','lemonade','desserttray','icedmatcha','hotmatcha','bottledwater','croissant','cakeslice'] },
   mallhotpot: { name: 'Hotpot Restaurant', kiosk: 'mallhotpotkiosk', counter: 'mallhotpotcounter', fur: 'white', menu: ['hotpotveg','hotpotmeat','hotpotseafood','hotpotfishball','hotpotmushroom','hotpotnoodles','bottledwater','tea'] },
 };
