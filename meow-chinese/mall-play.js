@@ -3,7 +3,7 @@ import { ITEMS, SNACKS, spriteCanvas, drawGrid, artGrid } from './pixel.js';
 import { rest } from './cloud.js';
 import { html, $, openModal, closeModal, toast } from './ui.js';
 import { openKiosk, showCounter, snackCanvas } from './snacks.js';
-import { MALL_VENUES, mallTables } from './mall.js';
+import { MALL_VENUES, MALL_ROOM_INFO, mallTables } from './mall.js';
 import { deliverCat } from './cafe-tables.js';
 import { openBowling } from './bowling.js';
 const action = (kind,venue,data={}) => rest('rpc/mall_action',{method:'POST',body:JSON.stringify({p_action:kind,p_venue:venue,p_data:data})});
@@ -22,7 +22,7 @@ function shop(kind, go) {
   $('.mall-search',box).oninput=draw;$('.mall-close',box).onclick=closeModal;draw();openModal(box);
 }
 export function wireMall(room, roomKey, layout, go, onChanged = () => {}) {
-  const venue=MALL_VENUES[roomKey];let busy=false;
+  const venue=MALL_VENUES[roomKey];let busy=false, cookTimer=null;
   room.querySelectorAll('.decor').forEach((d)=>{const it=ITEMS[d.dataset.id];if(it.mallShop||it.mallGame||it.hotpot)d.classList.add('mall-interactive');});
   room.addEventListener('click',(e)=>{
     const d=e.target.closest('.decor');if(!d||e.target.closest('button'))return;const it=ITEMS[d.dataset.id];
@@ -66,6 +66,9 @@ export function wireMall(room, roomKey, layout, go, onChanged = () => {}) {
   async function refresh(){
     if(!venue||busy||!room.isConnected)return;busy=true;
     try{await transfer();const data=await action('refresh',roomKey);if(!room.isConnected)return;
+      clearTimeout(cookTimer);
+      const due = (data.tables||[]).filter(r=>r.state==='pot'&&r.cookReadyAt).map(r=>Date.parse(r.cookReadyAt)-Date.now()).filter(ms=>ms>0);
+      if(due.length) cookTimer=setTimeout(refresh,Math.min(...due)+30);
       // Only this room's matching collection counter receives its queue.
       const counter=[...room.querySelectorAll('.decor[data-counter]')].find(d=>d.dataset.id.split('#')[0]===venue.counter);
       if(counter){const wrapper={querySelector:()=>counter};showCounter(wrapper,data,collect,roomKey);}
@@ -82,9 +85,20 @@ export function wireMall(room, roomKey, layout, go, onChanged = () => {}) {
         b.style.left=(loose?8:pt?pt[0]:row.state==='pot'?25+(row.slot%3)*22:25+row.slot*16)+'%';b.style.top=(loose?85:pt?pt[1]:row.state==='pot'?24+Math.floor(row.slot/3)*15:42)+'%';
         if (builtIn) b.classList.add(row.state === 'pot' ? 'built-in-ingredient' : 'hotpot-side-food');
         b.onclick=e=>{e.stopPropagation();if(row.state==='table'&&row.item.startsWith('hotpot'))potChoice(row,b);else collect(row,b);};d.append(b);
-        if(row.deliveredAt&&!served.has(row.id)&&Date.now()-Date.parse(row.deliveredAt)<12000&&!loose){served.add(row.id);deliverCat(room,d,b,row.item,{fur:venue.fur});}
+        if(row.deliveredAt&&!served.has(row.id)&&Date.now()-Date.parse(row.deliveredAt)<12000&&!loose){served.add(row.id);deliverCat(room,d,b,row.item,{fur:venue.fur,route:roomKey==='mallhotpot'?'left':null});}
       });
     }catch{ /* retry on the next poll; keep the last displayed food */ }finally{busy=false;}
   }
   if(venue){refresh();const timer=setInterval(()=>{if(!room.isConnected)return clearInterval(timer);refresh();},4000);}
+}
+
+export function openMallDirectory(current, onGo) {
+  const box = html`<div class="card stack"><div class="h-title">商场导览 Mall directory</div><div class="mall-directory-list"></div><button class="btn white directory-close">关闭 Close</button></div>`;
+  for (const info of MALL_ROOM_INFO) {
+    const b = document.createElement('button'); b.className = 'btn white'; b.dataset.destination = info.key;
+    b.textContent = `${info.icon} ${info.en} · ${info.zh}${info.key === current ? ' ✓' : ''}`;
+    b.onclick = () => { closeModal(); if (info.key !== current) onGo(info.key); };
+    $('.mall-directory-list', box).append(b);
+  }
+  $('.directory-close', box).onclick = closeModal; openModal(box);
 }

@@ -1786,3 +1786,11 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 
 .booth-controls { position:absolute; left:50%; top:100%; transform:translateX(-50%); display:flex; gap:4px; z-index:3; white-space:nowrap; }
 .arranging .booth-controls { display:none; }
+
+.decor[data-id="floorstandee"] .board-text, .decor[data-id^="floorstandee#"] .board-text { color:#3a2a35; text-shadow:none; font-size:12px; padding:3px; text-align:center; }
+
+.car-passenger { position:absolute; overflow:hidden; display:flex; justify-content:center; align-items:flex-end; pointer-events:none; }
+.car-passenger canvas { height:100%!important; width:auto!important; max-width:100%; object-fit:contain; image-rendering:pixelated; }
+
+.mall-directory-list { display:grid; gap:6px; max-height:60vh; overflow-y:auto; }
+.mall-directory-list .btn { text-align:left; font-size:14px; }

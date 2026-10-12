@@ -47,7 +47,7 @@ export function openPoster(id, changed) {
     const f = ev.target.files && ev.target.files[0]; if (!f) return;
     msg.textContent = '处理中… Making it small…';
     try {
-      const url = await compressPhoto(f, (it.maxKB || 50) * 1024);   // posters: 10 KB
+      const url = await compressPhoto(f, (it.maxKB || 50) * 1024);   // use the furniture photo limit
       S.setFramePhoto(id, url); await changed(); sfx.coin(); closeModal();
       toast(`🖼️ <span class="zh">照片放好了！</span> Photo added (${Math.round((url.length * 3) / 4 / 1024)} KB)`);
 

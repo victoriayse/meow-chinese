@@ -1,3 +1,4 @@
+import { openMallDirectory } from './mall-play.js';
 import { openPoster, openVideo, openRadio, openBoard } from './media.js';
 // 喵喵中文 Meow Chinese — app shell, router, top bar, welcome and home screen.
 import * as S from './state.js';
@@ -531,7 +532,7 @@ function homeScreen(params = {}) {
     <div class="stage ${inHouse ? 'in-house' : ''}" id="stage">
       ${inHouse ? `<div class="house" id="house"><div class="house-unit ${roomRI.outdoor ? 'outdoor' : ''} ${roomRI.bare || roomRI.noRoof ? 'bare' : ''}" id="hunit">
         <canvas class="roof" id="roof"></canvas>
-        <div class="room-name">${S.roomInfo(roomKey).icon} <span class="zh">${S.roomInfo(roomKey).zh}</span> ${S.roomInfo(roomKey).en}<button class="room-light ${S.roomDark(roomKey) ? 'off' : ''}" id="b-light" title="Lights" aria-label="Lights">💡</button></div>
+        <div class="room-name">${S.roomInfo(roomKey).icon} <span class="zh">${S.roomInfo(roomKey).zh}</span> ${S.roomInfo(roomKey).en}<button class="room-light ${S.roomDark(roomKey) ? 'off' : ''}" id="b-light" title="Lights" aria-label="Lights">💡</button>${roomRI.place === 'mall' ? '<button class="room-light mall-directory" title="Mall directory" aria-label="Mall directory">▦</button>' : ''}</div>
         <div class="room" id="room" data-room="${roomKey}">
           <canvas class="room-bg" id="roombg"></canvas>
 
@@ -792,6 +793,7 @@ function homeScreen(params = {}) {
       b.addEventListener('contextmenu', (e) => e.preventDefault());
     });
 
+    n.querySelector('.mall-directory')?.addEventListener('click', () => openMallDirectory(roomKey, (key) => go('home', { ...currentParams, view:'house', room:key }, { replace:true })));
     // ----- next room: the arrows beside the house -----
     n.querySelectorAll('.room-nav').forEach((b) => {
       b.onclick = () => {

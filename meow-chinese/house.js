@@ -230,7 +230,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
       const sc = Object.assign(document.createElement('i'), { className: 'tv-screen' });
       if (it.screen) Object.assign(sc.style, { left: `${it.screen.x * 100}%`, top: `${it.screen.y * 100}%`, width: `${it.screen.w * 100}%`, height: `${it.screen.h * 100}%` });   // e.g. the laptop's screen
       wrap.appendChild(sc);
-      if (video && video.url) {
+      if (!it.noVideo && video && video.url) {
         // a film playing on the screen: everyone sees the same part (it started at video.at); tap 🔇 for sound
         const v = document.createElement('video'); v.className = 'screen-video';
         v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'auto';
@@ -264,12 +264,12 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
         wrap.append(v, snd, play);
         requestAnimationFrame(() => { if (!wrap.classList.contains('off')) v.startFilm(); });
       }
-      if (videoPick && it.power === 'tv' && !it.panel) wrap.addEventListener('click', (e) => {
+      if (videoPick && !it.noVideo && it.power === 'tv' && !it.panel) wrap.addEventListener('click', (e) => {
         if (e.target.closest('button') || wrap.closest('.arranging')) return;
         e.stopPropagation();
         wrap.dispatchEvent(new CustomEvent('screen-video', { bubbles: true, detail: { id } }));
       });
-      if (videoPick) {
+      if (videoPick && !it.noVideo) {
         const pk = document.createElement('button'); pk.type = 'button'; pk.className = 'vid-pick'; pk.textContent = '🎞️'; pk.title = 'Choose a video';
         pk.addEventListener('pointerdown', (e) => e.stopPropagation());
         pk.onclick = (e) => { e.stopPropagation(); pk.dispatchEvent(new CustomEvent('screen-video', { bubbles: true, detail: { id } })); };
@@ -494,7 +494,7 @@ export class OtherCats {
   place(c) {
     if (!c.el) return;
     const spot = c.seat && seatSpot(this.roomEl, c.seat, c.slot);
-    boothView(this.roomEl, c.el, spot && c.seat, c.boothClosed);
+    boothView(this.roomEl, c.el, spot && c.seat, c.boothClosed, null, c.look);
     if (spot) { c.x = c.dx = spot.x; c.y = c.dy = spot.y; }
     c.el.style.left = `${c.dx}%`; c.el.style.bottom = `${c.dy}%`;
     c.el.style.zIndex = spot ? spot.z : 2 + Math.round(100 - c.dy);
@@ -761,8 +761,8 @@ export function blanket(roomEl, id, on) {
 }
 
 // Booth curtains belong to the occupant, not the saved furniture layout.
-export function boothView(room, cat, id, closed, onAction) {
-  const active = id && ITEMS[id]?.booth ? id : '';
+export function boothView(room, cat, id, closed, onAction, look = getState().kitten) {
+  const active = id && (ITEMS[id]?.booth || ITEMS[id]?.carWindow) ? id : '';
   const previous = cat.dataset.booth || '';
   const paint = (key, shut) => {
     const d = room && room.querySelector(`.decor[data-id="${key}"]`), it = ITEMS[key];
@@ -774,15 +774,25 @@ export function boothView(room, cat, id, closed, onAction) {
     }
     return d;
   };
-  if (previous && previous !== active) { const old = paint(previous, false); old?.querySelector('.booth-controls')?.remove(); }
+  if (previous && previous !== active) { const old = paint(previous, false); old?.querySelector('.booth-controls')?.remove(); old?.querySelector('.car-passenger')?.remove(); }
   cat.dataset.booth = active;
-  cat.style.visibility = active && closed ? 'hidden' : '';
+  cat.style.visibility = active && (closed || ITEMS[active].carWindow) ? 'hidden' : '';
   if (!active) return;
   const d = paint(active, !!closed);
-  if (!d || !onAction) return;
+  if (!d) return;
+  const windowBox = ITEMS[active].carWindow;
+  if (windowBox) {
+    d.querySelector('.car-passenger')?.remove();
+    const face = document.createElement('div'); face.className = 'car-passenger';
+    face.style.cssText = `left:${windowBox.x*100}%;top:${windowBox.y*100}%;width:${windowBox.w*100}%;height:${windowBox.h*100}%`;
+    const c = document.createElement('canvas');
+    drawGrid(c, kittenGrid(look.fur || 'ginger', 'happy', look.equipped || {}, 0).slice(5,25).map(row => row.slice(2,31)), 2);
+    face.append(c); d.append(face);
+  }
+  if (!onAction) return;
   d.querySelector('.booth-controls')?.remove();
   const controls = document.createElement('div'); controls.className = 'booth-controls';
-  for (const [action, text] of [['curtain', closed ? '开帘 Open' : '关帘 Close'], ['exit', '出来 Exit']]) {
+  for (const [action, text] of (windowBox ? [['exit', '下车 Exit']] : [['curtain', closed ? '开帘 Open' : '关帘 Close'], ['exit', '出来 Exit']])) {
     const b = document.createElement('button'); b.className = 'btn white small'; b.textContent = text;
     b.onclick = (e) => { e.stopPropagation(); onAction(action); }; controls.append(b);
   }
