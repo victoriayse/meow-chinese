@@ -13,7 +13,6 @@ export const FEE = 30, PRIZE = 60, WIN_AT = 10, TEAM_MAX = 4;
 // the pitch, in the room's % units (x from the left, y up from the bottom); the room is 720 × 600
 export const PITCH = { x0: 3.5, x1: 96.5, y0: 1, y1: 54, mouth: [14, 38], line: 1.5, cx: 50, cy: 26 };
 const PX = 7.2, PY = 6;                         // room px per % (x, y)
-const REACH_X = 40, REACH_Y = 30;               // how close (px) her paws must be to touch the ball
 const KICK = 420, FRICTION = 0.9, BOUNCE = 0.75;
 const TEAM = { red: { zh: '红队', en: 'Red', dot: '🔴' }, blue: { zh: '蓝队', en: 'Blue', dot: '🔵' } };
 const BALL_ART = ['..oooo..', '.owwkwo.', 'owwkkkwo', 'owwwkwwo', 'okwwwwko', 'okkwwkko', '.owwkko.', '..oooo..'];
@@ -79,18 +78,33 @@ export function createStadium({ me, ch, others, getMine, getMyEl, teleport }) {
   function sendBall() { lastSync = Date.now(); ch.send('ball', { id: me, x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy, m: match && match.id }); }
 
   // her own kicks: walking into the ball pushes it the way she is walking
+  // the lower half of the cat's body plus her name tag, as drawn on screen (in screen px)
+  function bodyBox(el) {
+    const cv = el.querySelector('.kflip canvas'), tag = el.querySelector('.nametag');
+    if (!cv) return null;
+    const c = cv.getBoundingClientRect(), t = tag ? tag.getBoundingClientRect() : c;
+    const ix = c.width * 0.1;                                   // trim the empty edges of the picture
+    return { l: Math.min(c.left + ix, t.left), r: Math.max(c.right - ix, t.right), t: c.top + c.height * 0.5, b: Math.max(c.bottom, t.bottom) };   // the lower half of her body + the name tag
+  }
+  // her own kicks: when her lower body or name tag walks into the ball, it rolls the way she is walking
   function step(dx, dy) {
-    const mine = getMine();
-    if (!playing() || !myPlayer() || pendingGoal || mine.seat || (!dx && !dy)) return;
-    const bx = (ball.x - mine.x) * PX, by = (ball.y - mine.y) * PY;
-    if ((bx / REACH_X) ** 2 + (by / REACH_Y) ** 2 > 1) return;
-    const mx = dx * 32 * PX, my = dy * 22 * PY;
-    const under = Math.abs(bx) < 18;           // the ball is right under her paws: it goes the way she walks
-    if ((!under && mx * bx + my * by <= 0) || Date.now() - lastKick < 180) return;
-    const ml = Math.hypot(mx, my) || 1, bl = Math.hypot(bx, by) || 1, pull = under ? 0 : 0.25;
-    let ux = (mx / ml) * (1 - pull) + (bx / bl) * pull, uy = (my / ml) * (1 - pull) + (by / bl) * pull;
+    const mine = getMine(), el = getMyEl();
+    if (!playing() || !myPlayer() || pendingGoal || mine.seat || (!dx && !dy) || !el || !ballEl || !ballEl.isConnected) return;
+    if (Date.now() - lastKick < 180) return;
+    const box = bodyBox(el), br = ballEl.firstChild.getBoundingClientRect();
+    if (!box || !br.width) return;
+    const cx = br.left + br.width / 2, cy = br.top + br.height / 2, rad = br.width / 2;
+    // the nearest point of her to the ball's centre: touching if it is within the ball
+    const nx = Math.max(box.l, Math.min(box.r, cx)), ny = Math.max(box.t, Math.min(box.b, cy));
+    if (Math.hypot(cx - nx, cy - ny) > rad + 2) return;
+    const mx = dx, my = -dy;                                    // her walking direction on screen (y points down)
+    const ax = cx - (box.l + box.r) / 2, ay = cy - (box.t + box.b) / 2;   // from her middle to the ball
+    const inside = nx === cx && ny === cy;
+    if (!inside && mx * ax + my * ay <= 0) return;              // walking away from it: no kick
+    const ml = Math.hypot(mx, my) || 1, al = Math.hypot(ax, ay) || 1;
+    let ux = (mx / ml) * 0.75 + (ax / al) * 0.25, uy = (my / ml) * 0.75 + (ay / al) * 0.25;
     const ul = Math.hypot(ux, uy) || 1; ux /= ul; uy /= ul;
-    ball.vx = (ux * KICK) / PX; ball.vy = (uy * KICK) / PY; ball.owner = me;
+    ball.vx = (ux * KICK) / PX; ball.vy = (-uy * KICK) / PY; ball.owner = me;
     lastKick = Date.now(); sendBall(); sfx.click(); start();
   }
   function onBall(p) {

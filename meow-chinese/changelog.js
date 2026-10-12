@@ -430,4 +430,5 @@ export const CHANGES = [
   { v: 159, items: ['New 🏟️ Stadium on the map with a soccer match for 2–8 players. Pick Red or Blue (30 coins), and tap Start when both teams have the same number of players. Walk into the ball to kick it. The first team to 10 goals wins, and each winner gets 60 coins.'] },
   { v: 160, items: ['Any player can tap ⏹ End game during a soccer match. It stops with no winner and everyone gets their 30 coins back.', 'Cats are 30% smaller on the soccer pitch.'] },
   { v: 161, items: ['The Stadium has a 🕹️ joystick instead of arrow buttons. Push the pink knob any way to run that way; push further to run faster.'] },
+  { v: 162, items: ['Soccer: the ball is now pushed by the lower half of your cat and its name tag, not just the name tag.'] },
 ];
