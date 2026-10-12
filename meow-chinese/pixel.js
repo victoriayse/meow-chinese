@@ -11338,3 +11338,6 @@ ITEMS.borderlessposter = {cat:'decor',group:'mall',room:'malllobby',spot:'wall-l
   'occcccccccccccccccco',
   'oooooooooooooooooooo',
 ]};
+
+// The rear backrest sits in front of a kitten facing away.
+ITEMS.fliptablechair.backrest = { cover: true, coverArt: 'back', blanket: [1, 24, 1, 38] };

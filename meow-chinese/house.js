@@ -724,6 +724,7 @@ export function wirePower(roomEl, onToggle) {
 export function seatSpot(roomEl, id, slot = 0) {
   const el = roomEl && roomEl.querySelector(`.decor.seat[data-id="${id}"]`), it = ITEMS[id];
   const seat = it && (el && el.dataset.facing === 'front' && it.seatFront ? it.seatFront : it.seat);
+  if (it && it.backrest) blanket(roomEl, id, false);
   if (!el || !seat) return null;
   const W = roomEl.clientWidth, H = roomEl.clientHeight;
   const flip = el.dataset.facing === 'flip';
@@ -740,7 +741,8 @@ export function seatSpot(roomEl, id, slot = 0) {
 }
 // the bed's blanket drawn over a kitten lying in it
 export function blanket(roomEl, id, on) {
-  const el = roomEl && roomEl.querySelector(`.decor.seat[data-id="${id}"]`), seat = ITEMS[id] && ITEMS[id].seat;
+  const el = roomEl && roomEl.querySelector(`.decor.seat[data-id="${id}"]`), it = ITEMS[id];
+  const seat = it && (el && el.dataset.facing === 'back' && it.backrest ? { ...it.seat, ...it.backrest } : it.seat);
   let b = roomEl && roomEl.querySelector(`.blanket[data-for="${id}"]`);
   if (seat && seat.cover) on = true;      // a table: its front is always drawn over the cats sitting behind it
   if (!on || !el || !seat || !seat.blanket) { if (b) b.remove(); return; }
@@ -753,6 +755,7 @@ export function blanket(roomEl, id, on) {
   }
   // laid over the bed, one layer above the kitten in it
   b.style.left = `${el.offsetLeft}px`; b.style.top = `${el.offsetTop}px`;
+  if (it.backrest) { b.style.width = `${el.offsetWidth}px`; b.style.height = `${el.offsetHeight}px`; }
   b.style.zIndex = (parseInt(el.style.zIndex, 10) || 50) + 2;
 }
 

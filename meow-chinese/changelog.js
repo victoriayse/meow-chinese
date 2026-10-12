@@ -422,4 +422,5 @@ export const CHANGES = [
     'Tap the screen to extend or retract it; use its film button to upload. Tap the glass doors to slide them open or closed.',
     'Egg tarts are available as decorations and as food from the bakery kiosk, with pickup, table delivery and sharing.',
   ] },
+  { v: 154, items: ['The back-facing tuition chair now shows its backrest in front of your seated kitten.'] },
 ];
