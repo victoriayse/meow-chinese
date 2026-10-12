@@ -117,7 +117,8 @@ export function deliverCat(room, table, food, item, staff = {}) {
   const arrival = waiter.animate([{ transform: `translate(${startX - x}px, ${startY - y}px)` }, { transform: 'translate(0, 0)' }], { duration: 3000, easing: 'linear', fill: 'forwards' });
   arrival.finished.then(() => {
     food.style.visibility = ''; cat.setHeld(null); say(waiter, 'Enjoy!');
-    const departure = waiter.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 500, delay: 2000, fill: 'forwards' });
+    const departure = waiter.animate([{ transform: 'translate(0, 0)' }, { transform: `translate(${startX - x}px, ${startY - y}px)` }], { duration: 3000, delay: 2000, easing: 'linear', fill: 'forwards' });
+    setTimeout(() => { if (waiter.isConnected) cat.setFacing(fromLeft); }, 2000);
     departure.finished.then(() => waiter.remove()).catch(() => waiter.remove());
   }).catch(() => { food.style.visibility = ''; waiter.remove(); });
 }

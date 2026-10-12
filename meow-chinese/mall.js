@@ -7,7 +7,7 @@ export const MALL_FLOORS = [
 const names = [
   ['地下停车场', 'B1 · Carpark', '🚗'], ['商场大堂', 'L1 · Lobby', '🛍️'], ['面包店', 'L1 · Bakery', '🥐'], ['洗手间', 'L1 · Toilet', '🚻'],
   ['服装店', 'L2 · Fashion Store', '👗'], ['更衣室', 'L2 · Changing Room', '🚪'], ['家居店', 'L3 · Home Store 1', '🛋️'], ['咖啡店', 'L3 · Coffee Shop', '☕'],
-  ['火锅店', 'L4 · Hotpot Restaurant', '🍲'], ['洗手间', 'L4 · Toilet', '🚻'], ['保龄球馆', 'L5 · Bowling Alley', '🎳'], ['补习中心入口', 'L5 · Tuition Center Entrance', '📚'], ['补习室一', 'L5 · Tuition Room 1', '✏️'],
+  ['火锅店', 'L4 · Hotpot Restaurant', '🍲'], ['洗手间', 'L4 · Toilet', '🚻'], ['游戏厅', 'L5 · Arcade', '🕹️'], ['补习中心入口', 'L5 · Tuition Center Entrance', '📚'], ['补习室一', 'L5 · Tuition Room 1', '✏️'],
 ];
 export const MALL_ROOMS = MALL_FLOORS.flat();
 export const MALL_ROOM_INFO = MALL_ROOMS.map((key, i) => ({ key, zh: names[i][0], en: names[i][1], icon: names[i][2], place: 'mall', noRoof: true }));

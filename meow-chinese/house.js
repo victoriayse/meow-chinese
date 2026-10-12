@@ -4,6 +4,7 @@ import { ITEMS, drawGrid, artGrid, ROOM_WINDOW, kittenGrid } from './pixel.js';
 import { get as getState, roomNeighbors, UNLOCKS, roomInfo, isAdmin } from './state.js';
 import { KittenView, esc, html } from './ui.js';
 import { sfx, hushMusic } from './audio.js';
+import { renderDisplay } from './display-racks.js';
 // a film's sound is on: the game's music goes quiet until it's muted again (or the screen goes away)
 let loudVideo = null;
 function screenSound(v) {
@@ -105,6 +106,14 @@ export function studioBarre(roomEl, on) {
 }
 // the furniture standing in one room: [{ id, css, kind: 'curtain' | 'flat' | 'stand' }]
 export function roomLayout(s, roomKey, roomOf) {
+  const windowRoom = !roomKey.startsWith('mall') && !['garden','playground','rooftop','theatre1','theatre2','lobby','lounge','changing','basement','cafemain','cafetoilet','cafekitchen'].includes(roomKey);
+  if (windowRoom && !s.roomStyle?.[roomKey]?.windowFurniture) {
+    const id = 'roomwindow#default-' + roomKey;
+    s.roomStyle ||= {}; s.roomStyle[roomKey] = {...s.roomStyle[roomKey], windowFurniture: true};
+    if (!(s.owned || []).includes(id)) (s.owned ||= []).push(id);
+    (s.decorRoom ||= {})[id] = roomKey;
+    (s.decorPos ||= {})[id] ||= {x:34.2,y:6};
+  }
   const pos = s.decorPos || {};
   return (s.owned || []).filter((id) => ITEMS[id] && ITEMS[id].cat === 'decor' && !(s.decorHidden || []).includes(id) && roomOf(id) === roomKey).map((id) => {
     const scale = Math.max(0.25, Math.min(2, +(s.decorScale || {})[id] || 1));
@@ -131,7 +140,7 @@ export function roomLayout(s, roomKey, roomOf) {
     const front = it.frames && it.frames.front && fv === 'front';            // facing straight into the room
     const layer = (s.decorLayer || {})[id] || 0;
     const opened = it.tapOpen && !!(s.openThings || {})[id];   // changing cubicle: curtain pulled open   // dragged on top of something: stays in front of it
-    return { id, scale, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : front ? { facing: 'front' } : {}), ...(layer ? { layer } : {}), ...(opened ? { opened } : {}), ...(text != null ? { text } : {}), ...(video ? { video } : {}) };
+    return { id, scale, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : front ? { facing: 'front' } : {}), ...(layer ? { layer } : {}), ...(opened ? { opened } : {}), ...(text != null ? { text } : {}), ...(video ? { video } : {}), ...(it.displaySlots ? { stock: (s.displayStock || {})[id] || {} } : {}) };
   }).filter(Boolean).concat(((s.roomStyle || {})[roomKey] || {}).pool ? [(() => {
     // the swimming pool (from 🎨 Renovate): she can move it like furniture
     const id = `@pool-${roomKey}`, saved = pos[id];
@@ -161,7 +170,7 @@ export function closedCurtain(g) {
   return out;
 }
 // one piece of furniture as a page element
-export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, opened, text, video, scale = 1 }, { putAway = false, videoPick = putAway && isAdmin(), videoOwner = videoPick } = {}) {
+export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, opened, text, video, stock = {}, scale = 1 }, { putAway = false, videoPick = putAway && isAdmin(), videoOwner = videoPick } = {}) {
   scale = Math.max(0.25, Math.min(2, +scale || 1));
   if (kind === 'pool') return poolEl({ id, css, scale });
   const it = ITEMS[id]; if (!it) return null;
@@ -178,6 +187,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
   if (kind === 'curtain') { wrap.style.width = parseFloat(wrap.style.width) * scale + '%'; wrap.style.height = parseFloat(wrap.style.height) * scale + '%'; }
   if (kind === 'curtain') { wrap.classList.add('curtain'); if (closed) wrap.classList.add('closed'); }
   else { wrap.classList.add('movable'); if (kind === 'flat') wrap.classList.add('flat'); }
+  if (it.displaySlots) renderDisplay(wrap, it, stock);
   if (it.playable) wrap.classList.add('playable');
   if (it.seat) wrap.classList.add('seat');
   if (it.frame) {

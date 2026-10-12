@@ -7,7 +7,7 @@ import * as Auth from './auth.js';
 import { managing } from './cloud.js';
 
 // things she can buy for a friend (not medicine); needs her own logged-in account
-const giftable = (it) => ['food', 'toiletry', 'wear', 'decor'].includes(it.cat) && !it.special && Auth.session() && !managing();
+const giftable = (it) => ['food', 'toiletry', 'wear', 'decor'].includes(it.cat) && !it.special && !it.retired && Auth.session() && !managing();
 const openRooms = () => S.ROOMS.filter((r) => S.roomOpen(r.key)).map((r) => r.key);
 const isWear = (slots) => (it) => it.cat === 'wear' && !it.special && slots.includes(it.slot);
 export const TABS = [
@@ -17,7 +17,7 @@ export const TABS = [
   { key: 'body', lock: 'body', zh: '衣服', en: 'Clothes', icon: '👕', test: isWear(['body']) },
   { key: 'feet', lock: 'feet', zh: '鞋子', en: 'Shoes', icon: '👟', test: isWear(['feet']) },
   { key: 'acc', lock: 'acc', zh: '配饰', en: 'Extras', icon: '👓', test: isWear(['face', 'neck']) },
-  { key: 'decor', lock: 'decor', zh: '家具', en: 'Home', icon: '🛋️', test: (it) => it.cat === 'decor' && !it.petacc },
+  { key: 'decor', lock: 'decor', zh: '家具', en: 'Home', icon: '🛋️', test: (it) => it.cat === 'decor' && !it.petacc && !it.retired },
   { key: 'pets', lock: 'decor', zh: '领养宠物', en: 'Adopt a Pet', icon: '🐶', test: (it) => it.cat === 'pet', order: 27 },
   { key: 'petacc', lock: 'decor', zh: '宠物用品', en: 'Pet Accessories', icon: '🦴', test: (it) => it.petacc || it.cat === 'petacc', order: 28 },
   { key: 'reno', lock: 'decor', zh: '装修', en: 'Renovate', icon: '🎨', test: (it) => it.cat === 'reno', order: 26 },
@@ -274,7 +274,7 @@ const MY_TABS = [
   { key: 'body', lock: 'body', zh: '衣服', en: 'Clothes', icon: '👕', shop: 'body', test: (it) => it.cat === 'wear' && it.slot === 'body' },
   { key: 'feet', lock: 'feet', zh: '鞋子', en: 'Shoes', icon: '👟', shop: 'feet', test: (it) => it.cat === 'wear' && it.slot === 'feet' },
   { key: 'acc', lock: 'acc', zh: '配饰', en: 'Extras', icon: '👓', shop: 'acc', test: (it) => it.cat === 'wear' && ['face', 'neck'].includes(it.slot) },
-  { key: 'decor', lock: 'decor', zh: '家具', en: 'Home', icon: '🛋️', shop: 'decor', test: (it) => it.cat === 'decor' && !it.petacc },
+  { key: 'decor', lock: 'decor', zh: '家具', en: 'Home', icon: '🛋️', shop: 'decor', test: (it) => it.cat === 'decor' && !it.petacc && !it.retired },
   { key: 'petacc', lock: 'decor', zh: '宠物用品', en: 'Pet things', icon: '🦴', shop: 'petacc', test: (it) => it.cat === 'petacc' || !!it.petacc, order: 28 },
   { key: 'reno', lock: 'decor', zh: '装修', en: 'Renovate', icon: '🎨', shop: 'reno', test: (it) => it.cat === 'reno', order: 26 },
 ];

@@ -404,4 +404,9 @@ export const CHANGES = [
     'New mall furniture includes shop displays, bakery tools, hotpot ingredients, parking items, classroom desks, and playable ten-frame bowling with scores.',
     'The bakery, coffee shop and hotpot restaurant have separate kiosks, collection staff, pickup and table delivery. Put ingredients on a table, then choose Add to Pot.',
   ] },
+  { v: 150, items: [
+    'Servers walk back out the way they came. Default room windows can be moved, resized and stored like furniture.',
+    'L5 is now a dark arcade. Buy claw, basketball, driving and dance machines, a redemption desk, lift doors and empty display racks. Bowling items are no longer sold.',
+    'Stock display racks with shop items for visitors to buy. Hotpot tables now have a built-in central pot with food placed around the sides. Map icons are smaller and distinct.',
+  ] },
 ];
