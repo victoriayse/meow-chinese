@@ -10857,3 +10857,11 @@ ITEMS.mallbreadcase.art = [
   '..oooo......................oooo..',
   '..................................',
 ];
+
+// Tuition reception uses the same counter proportions as the other mall desks.
+ITEMS.malltuitioncounter = {
+  ...ITEMS.cafecollect, group: 'mall', room: 'malltuition', name: '补习中心接待台',
+  en: 'Tuition centre counter', price: 180, one: false, label: 'Tuition',
+  staff: { fur: 'grey', name: 'Tuition receptionist' },
+  pal: { ...CAFE_PAL, t: '#7cbd52', d: '#4f9a3a', b: '#4f9a3a' },
+};

@@ -414,4 +414,7 @@ export const CHANGES = [
     'Buy five original handbag designs as furniture or wearable accessories, a printer, editable whiteboard, croissant tray, exit/toilet/lift signs and children’s toys.',
     'The new green classroom chair has a writing tablet and can face forwards or backwards using its rotate button. Cats can sit on it and face the same way as the chair.',
   ] },
+  { v: 152, items: [
+    'A tuition centre reception counter with its own grey cat receptionist is now available in Shop > Home > Shopping Mall.',
+  ] },
 ];
