@@ -286,3 +286,36 @@ export function createStadium({ me, ch, others, getMine, getMyEl, teleport }) {
   function stop() { alive = false; clearInterval(pt); if (raf) cancelAnimationFrame(raf); raf = 0; }
   return { attach, step, stop, onBroadcast: (ev, p) => { if (ev === 'ball') onBall(p); else if (ev === 'match') poll(); }, poll };
 }
+
+// 🕹️ the stadium's joystick: push the knob any way and she walks that way (further = faster)
+export const JOYSTICK = '<div class="joystick" aria-label="Joystick"><div class="joy-knob"></div></div>';
+export function joystick(base, { onStep, onStop, canWalk = () => true, isAlive }) {
+  const knob = base.querySelector('.joy-knob');
+  let vx = 0, vy = 0, raf = 0, lastT = 0, pid = null;
+  const loop = (t) => {
+    if (!isAlive()) { raf = 0; onStop(); return; }
+    const dt = Math.min(0.05, (t - (lastT || t)) / 1000); lastT = t;
+    if (vx || vy) { onStep(vx, vy, dt); raf = requestAnimationFrame(loop); }
+    else { raf = 0; lastT = 0; onStop(); }
+  };
+  const aim = (e) => {
+    const r = base.getBoundingClientRect(), R = r.width / 2;
+    let x = (e.clientX - r.left - R) / R, y = (e.clientY - r.top - R) / R;
+    const d = Math.hypot(x, y); if (d > 1) { x /= d; y /= d; }
+    const dz = Math.hypot(x, y) < 0.18;                 // a little dead zone in the middle
+    vx = dz ? 0 : x; vy = dz ? 0 : -y;
+    knob.style.transform = `translate(${x * R * 0.55}px, ${y * R * 0.55}px)`;
+    if ((vx || vy) && !raf && canWalk()) raf = requestAnimationFrame(loop);
+  };
+  const release = () => { pid = null; vx = 0; vy = 0; knob.style.transform = ''; base.classList.remove('down'); };
+  base.addEventListener('pointerdown', (e) => {
+    if (!canWalk()) return;
+    e.preventDefault(); e.stopPropagation(); pid = e.pointerId;
+    try { base.setPointerCapture(e.pointerId); } catch {}
+    base.classList.add('down'); aim(e);
+  });
+  base.addEventListener('pointermove', (e) => { if (e.pointerId === pid) { e.preventDefault(); aim(e); } });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => base.addEventListener(ev, (e) => { if (e.pointerId === pid) release(); }));
+  base.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+  base.addEventListener('contextmenu', (e) => e.preventDefault());
+}

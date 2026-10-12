@@ -1836,3 +1836,14 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .stadium-hud .st-end.hidden { display: none; }
 /* v160: cats are 30% smaller on the pitch (name tags stay readable) */
 .room[data-room="stadium"] .vcat .kflip { scale: .7; transform-origin: 50% 100%; }
+/* v161: 🕹️ the stadium's joystick (instead of the arrow buttons) */
+.joystick { position: absolute; right: 10px; bottom: 10px; z-index: 300; width: 112px; height: 112px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(29,31,69,.55) 0 55%, rgba(29,31,69,.8) 56%); border: 3px solid #fff; box-shadow: 0 4px 0 rgba(43,33,64,.4);
+  touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; display: grid; place-items: center; }
+.joystick.down { cursor: grabbing; }
+.joy-knob { width: 50px; height: 50px; border-radius: 50%; background: radial-gradient(circle at 38% 35%, #ffb3cb, #ff6f9c 60%, #d94f7c); border: 3px solid #fff;
+  box-shadow: 0 3px 0 rgba(43,33,64,.45); pointer-events: none; transition: transform .08s ease-out; }
+.joystick.down .joy-knob { transition: none; }
+@media (max-width: 600px) { .joystick { width: 96px; height: 96px; right: 6px; bottom: 6px; } .joy-knob { width: 42px; height: 42px; } }
+.visit-log .joystick { position: static; flex: none; align-self: center; width: 100px; height: 100px; }
+@media (max-width: 600px) { .visit-log .joystick { width: 88px; height: 88px; } .visit-log .joy-knob { width: 38px; height: 38px; } }

@@ -2,7 +2,7 @@ import { wireMall, openMallDirectory } from './mall-play.js';
 import { openPoster, openVideo, openRadio, openBoard } from './media.js';
 import * as CafeTables from './cafe-tables.js';
 import { wireHomeTables } from './home-tables.js';
-import { createStadium } from './stadium.js';
+import { createStadium, joystick, JOYSTICK } from './stadium.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
 //   knock  visitor -> house   { id, look, x, y, room, left }      "I'm here" (the owner answers with the house)
@@ -241,15 +241,15 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   // this visit's chat, newest at the bottom (only kept while you are in the house)
   const vlog = chatLog([]);
   $('#vlog', n).appendChild(vlog.el);
-  $('#vlog', n).insertAdjacentHTML('beforeend', DPAD);
-  // the arrows (set up once; they move whichever room she is in)
-  walker($('.dpad', n), {
+  $('#vlog', n).insertAdjacentHTML('beforeend', placeKey === 'stadium' ? JOYSTICK : DPAD);
+  // the arrows (set up once; they move whichever room she is in); the stadium uses a joystick instead
+  (placeKey === 'stadium' ? (el, o) => { joystick(el, o); walker(document.createElement('div'), o); } : walker)($(placeKey === 'stadium' ? '.joystick' : '.dpad', n), {
     isAlive: () => n.isConnected,
     canWalk: () => !!(myEl && myEl.isConnected && !myEl.dataset.sliding),
     onStep: (dx, dy, dt) => {
       if (mine.seat) { mine.seat = null; mine.slot = 0; mine.y = Math.min(mine.y, 28); }   // the arrows make her hop off
       mine.x += dx * 32 * dt; mine.y += dy * 22 * dt;
-      if (dx) { mine.left = dx < 0; myKv.setFacing(mine.left); }
+      if (Math.abs(dx) > 0.2) { mine.left = dx < 0; myKv.setFacing(mine.left); }
       myKv.canvas.classList.add('walking');
       place(); sendMove({ id: me, ...mine });
       if (stadium) stadium.step(dx, dy);
