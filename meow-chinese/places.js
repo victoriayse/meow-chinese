@@ -21,6 +21,7 @@ export const PLACES = {
   mall: { zh: '购物中心', en: 'Shopping Mall', icon: '🛍️', rooms: S.PLACE_ROOMS.mall, start: 'malllobby' },
   cafe: { zh: '咖啡馆', en: 'Cafe', icon: '☕', rooms: S.PLACE_ROOMS.cafe, start: 'cafeentrance' },
   cinema: { zh: '电影院', en: 'Cinema', icon: '🎬', rooms: S.PLACE_ROOMS.cinema, start: 'lobby' },
+  park: { zh: '公园', en: 'Park', icon: '🌳', rooms: S.PLACE_ROOMS.park, start: 'park' },
 };
 
 // the layout everyone sees: { rooms: { theatre1: [...], lobby: [...], theatre2: [...] }, open, power, styles }
@@ -57,6 +58,16 @@ export async function loadPlace(place) {
         (st.decorScale ||= {})[e.id] = e.scale || 1; (st.decorLayer ||= {})[e.id] = e.layer || 0;
       }));
       Object.assign(st.roomStyle ||= {}, layout.styles || {}); st.mallReady = true; S.save();
+    }
+    if (place === 'mall' && isAdmin() && S.get().mallReady && !S.get().mallKiosks158) {
+      // v158: the Fashion and Home Stores sell only through an ordering kiosk + collection counter.
+      const st = S.get();
+      [['mallfashion', 'mallfashioncounter', 52, 60], ['mallfashion', 'mallfashionkiosk', 85, 52], ['mallhome', 'mallhomecounter', 52, 60], ['mallhome', 'mallhomekiosk', 85, 52]].forEach(([room, id, x, y]) => {
+        if (st.owned.some((o) => o.split('#')[0] === id && (st.decorRoom[o] || room) === room && !st.decorHidden.includes(o))) return;
+        const got = S.newCopyId(id); st.owned.push(got); st.decorRoom[got] = room; st.decorPos[got] = { x, y };
+        st.decorHidden = st.decorHidden.filter((o) => o !== got);
+      });
+      st.mallKiosks158 = true; S.save();
     }
     if (place === 'cafe') {
       // Ignore old starter copies even if an older open device publishes them again.
@@ -146,11 +157,12 @@ const PINS = [
   { key: 'home', zh: '我的家', en: 'Home', icon: '🏠', x: 28, y: 34 },
   { key: 'cinema', zh: '电影院', en: 'Cinema', icon: '🎬', x: 70, y: 34 },
   { key: 'cafe', zh: '咖啡馆', en: 'Cafe', icon: '☕', x: 72, y: 77 },
+  { key: 'park', zh: '公园', en: 'Park', icon: '🌳', x: 49, y: 19 },
 ];
 export function mapScreen({ go }) {
   const n = html`<section class="screen"><div class="card stack map-card">
       <div class="h-title"><span class="zh">🗺️ 地图</span><span class="en">Map</span></div>
-      <p class="help" style="margin:0">点一个地方去看看！电影院、咖啡馆和商场是大家的地方，在那里可以见到所有人。<br>Tap a place to go there. The cinema, cafe and mall are public — you'll see everyone who is there.</p>
+      <p class="help" style="margin:0">点一个地方去看看！电影院、咖啡馆、商场和公园是大家的地方，在那里可以见到所有人。<br>Tap a place to go there. The cinema, cafe, mall and park are public — you'll see everyone who is there.</p>
       <div class="map-box"><canvas class="map-art"></canvas>
         ${PINS.map((p) => `<button class="map-pin ${p.soon ? 'pin-soon' : ''}" data-pin="${p.key}" style="left:${p.x}%;top:${p.y}%"><span class="ic">${p.icon}</span><span class="lb"><span class="zh">${p.zh}</span> ${p.en}${p.soon ? '<small>即将开放 Coming soon</small>' : ''}</span></button>`).join('')}
       </div></div></section>`;

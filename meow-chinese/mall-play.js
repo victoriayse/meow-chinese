@@ -1,8 +1,8 @@
 import * as S from './state.js';
-import { ITEMS, SNACKS, spriteCanvas, drawGrid, artGrid } from './pixel.js';
+import { ITEMS, SNACKS, spriteCanvas, drawGrid, artGrid, FASHION_EXCLUSIVE, HOME_EXCLUSIVE } from './pixel.js';
 import { rest } from './cloud.js';
-import { html, $, openModal, closeModal, toast } from './ui.js';
-import { openKiosk, showCounter, snackCanvas } from './snacks.js';
+import { html, $, openModal, closeModal, toast, coinI, hydrateIcons } from './ui.js';
+import { openKiosk, showCounter, snackCanvas, kioskConfirm } from './snacks.js';
 import { MALL_VENUES, MALL_ROOM_INFO, mallTables } from './mall.js';
 import { deliverCat } from './cafe-tables.js';
 import { openBowling } from './bowling.js';
@@ -10,28 +10,66 @@ const action = (kind,venue,data={}) => rest('rpc/mall_action',{method:'POST',bod
 const served = new Set();
 let transferBusy = false;
 
-function shop(kind, go) {
-  const candidates=Object.entries(ITEMS).filter(([id,it])=>!it.special && !it.retired && (kind==='wear'?it.cat==='wear':kind==='electronics'?['tv','laptop','radio','fridge','fan','aircon'].includes(id):it.cat==='decor'));
-  const box=html`<div class="card stack mall-shop"><div class="h-title">${kind==='wear'?'服装店 Fashion Store':'家居店 Home Store'}</div><input class="mall-search" placeholder="Search / 搜索"><div class="mall-goods"></div><button class="btn white mall-close">Close</button></div>`;
-  function draw(){const list=$('.mall-goods',box);list.replaceChildren();const q=$('.mall-search',box).value.toLowerCase();
-    candidates.filter(([,it])=>(it.name+' '+it.en).toLowerCase().includes(q)).forEach(([id,it])=>{
-      const b=document.createElement('button');b.className='btn white';const owned=it.cat==='wear'&&S.get().owned.includes(id);b.disabled=owned||S.get().coins<S.price(id);b.append(spriteCanvas(id,48),document.createTextNode(`${it.name} ${it.en} · ${owned?'Owned':S.price(id)+' coins'}`));
-      b.onclick=()=>{if(S.buy(id)){toast('Purchased! 已购买');draw();}};list.append(b);
+// Fashion / Home Store: buy only at the ordering kiosk. The cat behind the collection counter
+// brings each item out as a shopping bag (1 item = 1 bag); tap a bag to take it home.
+const GOODS = {
+  mallfashion: { kiosk: 'mallfashionkiosk', counter: 'mallfashioncounter', goods: FASHION_EXCLUSIVE, title: '👗 服装店 Fashion Store' },
+  mallhome: { kiosk: 'mallhomekiosk', counter: 'mallhomecounter', goods: HOME_EXCLUSIVE, title: '🛋️ 家居店 Home Store' },
+};
+const bags = () => (S.get().mallBags ||= []);
+const goodsArt = (id) => { const c = spriteCanvas(id, 30); c.classList.add('goods-art'); return c; };
+function openGoodsKiosk(venueKey, onPaid) {
+  const g = GOODS[venueKey], qty = {};
+  const box = html`<div class="card stack kiosk-card"><div class="h-title">${g.title}</div><div class="kiosk-list"></div><div class="kiosk-total"></div>
+    <p class="help" style="margin:0">付钱以后，去 <b>取货柜台</b> 拿购物袋。<br>After you pay, collect your shopping bag at the <b>collection counter</b>. 1 item = 1 bag.</p>
+    <div class="row" style="justify-content:flex-end"><button class="btn white k-close">关闭 Close</button><button class="btn green k-pay" disabled>💳 <span class="zh">付钱</span> Pay</button></div></div>`;
+  const list = $('.kiosk-list', box), pay = $('.k-pay', box);
+  const pending = (id) => bags().some((b) => b.item === id);
+  const maxOf = (id) => ITEMS[id].cat === 'wear' ? ((S.get().owned.includes(id) || pending(id)) ? 0 : 1) : 6;
+  const total = () => g.goods.reduce((t, k) => t + (qty[k] || 0) * S.price(k), 0);
+  const count = () => g.goods.reduce((t, k) => t + (qty[k] || 0), 0);
+  function draw() {
+    list.replaceChildren();
+    if (!g.goods.length) list.innerHTML = '<p class="help kiosk-soon">🎁 <span class="zh">新货快到了！</span><br>New exclusive items are coming soon.</p>';
+    g.goods.forEach((k) => {
+      const it = ITEMS[k], max = maxOf(k);
+      const row = html`<div class="kiosk-row"><span class="art"></span><span class="nm"><span class="zh">${it.name}</span><small>${it.en}</small></span>
+        <span class="pr">${S.price(k)}${coinI(14)}</span>${max ? `<span class="q"><button type="button" class="qty-btn" data-q="-1">−</button><b>${qty[k] || 0}</b><button type="button" class="qty-btn" data-q="1">＋</button></span>` : `<small>${pending(k) ? '🛍️ Bag waiting' : '✓ Owned'}</small>`}</div>`;
+      $('.art', row).append(goodsArt(k));
+      row.querySelectorAll('.qty-btn').forEach((b) => { b.onclick = () => { qty[k] = Math.max(0, Math.min(max, (qty[k] || 0) + +b.dataset.q)); if (count() > 12) qty[k]--; draw(); }; });
+      list.append(row);
     });
+    const t = total(), coins = S.get().coins;
+    $('.kiosk-total', box).innerHTML = `<span class="zh">合计</span> Total: <b>${t}</b>${coinI(18)} <small>· 你有 You have ${coins}${coinI(14)}</small>${t > coins ? '<br><small class="bad">金币不够 · Not enough coins</small>' : ''}`;
+    pay.disabled = !count() || t > coins; hydrateIcons(box);
   }
-  $('.mall-search',box).oninput=draw;$('.mall-close',box).onclick=closeModal;draw();openModal(box);
+  $('.k-close', box).onclick = closeModal;
+  pay.onclick = async () => {
+    const t = total(), items = g.goods.flatMap((k) => Array(qty[k] || 0).fill(k));
+    if (!items.length || S.get().coins < t) return;
+    if (!(await kioskConfirm(box, items, t, goodsArt, (k) => ITEMS[k]))) return;
+    if (S.get().coins < t) return;
+    S.get().coins -= t;
+    const now = Date.now(), last = Math.max(now, ...bags().filter((b) => b.venue === venueKey).map((b) => b.readyAt));
+    items.forEach((item, i) => bags().push({ id: crypto.randomUUID(), item, venue: venueKey, readyAt: Math.max(now + 3000, last + 1500) + i * 1500 }));
+    S.save(); closeModal();
+    toast(`🧾 <span class="zh">付好了！去取货柜台拿购物袋</span> Paid ${t} — collect your bag${items.length > 1 ? 's' : ''} at the counter`, { ms: 3500 });
+    onPaid();
+  };
+  draw(); openModal(box);
 }
 export function wireMall(room, roomKey, layout, go, onChanged = () => {}) {
   const venue=MALL_VENUES[roomKey];let busy=false, cookTimer=null;
-  room.querySelectorAll('.decor').forEach((d)=>{const it=ITEMS[d.dataset.id];if(it.mallShop||it.mallGame||it.hotpot)d.classList.add('mall-interactive');});
+  room.querySelectorAll('.decor').forEach((d)=>{const it=ITEMS[d.dataset.id];if(it.mallGame||it.hotpot)d.classList.add('mall-interactive');});
   room.addEventListener('click',(e)=>{
     const d=e.target.closest('.decor');if(!d||e.target.closest('button'))return;const it=ITEMS[d.dataset.id];
-    if(it.mallShop)return shop(it.mallShop,go);
+    const goods=GOODS[roomKey];
+    if(goods&&d.dataset.id.split('#')[0]===goods.kiosk)return openGoodsKiosk(roomKey,()=>{showBags();setTimeout(showBags,3200);});
     if(it.mallGame)return openBowling();
     if(venue&&d.dataset.id.split('#')[0]===venue.kiosk){
       const token=crypto.randomUUID();
       openKiosk({place:'mall',layout,tablesOverride:mallTables(layout,roomKey),menuOverride:venue.menu,
-        orderFn:(items,service,number)=>action('order',roomKey,{token,items,service,number}),onPaid:()=>{refresh();setTimeout(refresh,3300);}});
+        confirmPay:true,orderFn:(items,service,number)=>action('order',roomKey,{token,items,service,number}),onPaid:()=>{refresh();setTimeout(refresh,3300);}});
     }
   });
   async function collect(row,button){button.disabled=true;try{const item=await action('pick',roomKey,{id:row.id});if(item)S.addSnack(item);await refresh();}catch{button.disabled=false;toast('Please try again');}}
@@ -89,6 +127,21 @@ export function wireMall(room, roomKey, layout, go, onChanged = () => {}) {
       });
     }catch{ /* retry on the next poll; keep the last displayed food */ }finally{busy=false;}
   }
+  // shopping bags waiting on this store's collection counter (kept on her own device)
+  function showBags(){
+    const g=GOODS[roomKey];if(!g||!room.isConnected)return;
+    const counter=[...room.querySelectorAll('.decor[data-counter]')].find(d=>d.dataset.id.split('#')[0]===g.counter);if(!counter)return;
+    const mine=bags().filter(b=>b.venue===roomKey&&ITEMS[b.item]);
+    const ready=mine.filter(b=>b.readyAt<=Date.now()).slice(0,2).map(b=>({id:b.id,item:'shopbag'}));
+    const sig=ready.map(b=>b.id).join()+'|'+mine.length;if(counter.bagSig===sig)return;counter.bagSig=sig;
+    showCounter({querySelector:()=>counter},{ready,waiting:mine.length},(o,button)=>{
+      const i=bags().findIndex(b=>b.id===o.id);if(i<0)return;button.disabled=true;
+      const [bag]=bags().splice(i,1);S.grantItem(bag.item);S.save();
+      const it=ITEMS[bag.item];toast(`🛍️ <span class="zh">${it.name}</span> ${it.en} — ${it.cat==='wear'?'in your wardrobe 衣柜里':'in your storage box 储物箱里'}`,{ms:3000});
+      onChanged();showBags();
+    },roomKey);
+  }
+  if(GOODS[roomKey]){showBags();const t2=setInterval(()=>{if(!room.isConnected)return clearInterval(t2);showBags();},1000);}
   if(venue){refresh();const timer=setInterval(()=>{if(!room.isConnected)return clearInterval(timer);refresh();},4000);}
 }
 

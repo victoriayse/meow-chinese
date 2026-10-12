@@ -1,3 +1,4 @@
+import { BAKERY_EXCLUSIVE } from './pixel.js';
 // Empty public mall: each floor's main room links vertically; side rooms link horizontally.
 export const MALL_FLOORS = [
   ['mallcarpark'], ['malllobby', 'mallbakery', 'malltoilet1'],
@@ -19,7 +20,7 @@ export function mallNeighbors(key) {
     ...(!i && floor ? { down: MALL_FLOORS[floor - 1][0] } : {}), ...(!i && floor < 5 ? { up: MALL_FLOORS[floor + 1][0] } : {}) };
 }
 export const MALL_VENUES = {
-  mallbakery: { name: 'Bakery', kiosk: 'mallbakerykiosk', counter: 'mallbakerycounter', fur: 'ginger', menu: ['croissant','painauchocolat','donut','canele','cakeslice','cakeloaf','pancakes','tart','cookies','eggtart','bottledwater','tea'] },
+  mallbakery: { name: 'Bakery', kiosk: 'mallbakerykiosk', counter: 'mallbakerycounter', fur: 'ginger', menu: BAKERY_EXCLUSIVE },
   mallcoffee: { name: 'Coffee Shop', kiosk: 'mallcoffeekiosk', counter: 'mallcoffeecounter', fur: 'black', menu: ['coffee','tea','bubbletea','latte','cappuccino','hotchocolate','lemonade','desserttray','icedmatcha','hotmatcha','bottledwater','croissant','cakeslice'] },
   mallhotpot: { name: 'Hotpot Restaurant', kiosk: 'mallhotpotkiosk', counter: 'mallhotpotcounter', fur: 'white', menu: ['hotpotveg','hotpotmeat','hotpotseafood','hotpotfishball','hotpotmushroom','hotpotnoodles','bottledwater','tea'] },
 };

@@ -1,6 +1,7 @@
 import { wireMall, openMallDirectory } from './mall-play.js';
 import { openPoster, openVideo, openRadio, openBoard } from './media.js';
 import * as CafeTables from './cafe-tables.js';
+import { wireHomeTables } from './home-tables.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
 //   knock  visitor -> house   { id, look, x, y, room, left }      "I'm here" (the owner answers with the house)
@@ -405,6 +406,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       refreshCounter();
     }
     if (placeKey === 'cafe') refreshTables();
+    if (!P) wireHomeTables(room, hostId, () => { if (myKv) myKv.draw(); sendMine(); });
     if (placeKey === 'mall') wireMall(room, roomKey, house, go, () => { if (myKv) myKv.draw(); sendMine(); });
     hydrateIcons(box);
   }

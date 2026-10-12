@@ -1747,7 +1747,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .radio-listen { position:absolute; right:8px; top:50px; z-index:250; pointer-events:auto; }
 
 /* Mall displays and activities */
-.house .decor.mall-interactive, .house .decor[data-id^="mallbakerykiosk"], .house .decor[data-id^="mallcoffeekiosk"], .house .decor[data-id^="mallhotpotkiosk"] { pointer-events:auto; cursor:pointer; }
+.house .decor.mall-interactive, .house .decor[data-id^="mallbakerykiosk"], .house .decor[data-id^="mallcoffeekiosk"], .house .decor[data-id^="mallhotpotkiosk"], .house .decor[data-id^="mallfashionkiosk"], .house .decor[data-id^="mallhomekiosk"] { pointer-events:auto; cursor:pointer; }
 .mall-goods { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-height:55vh;overflow:auto; }
 .mall-goods .btn { display:flex;flex-direction:column;white-space:normal;font-size:13px; }
 .mall-food-choices,.mall-pots { display:flex;gap:8px;flex-wrap:wrap; }
@@ -1794,3 +1794,16 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 
 .mall-directory-list { display:grid; gap:6px; max-height:60vh; overflow-y:auto; }
 .mall-directory-list .btn { text-align:left; font-size:14px; }
+/* v158: confirm-before-buying panel over the kiosk, and mall goods kiosk */
+.kiosk-card { position: relative; }
+.kiosk-confirm { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; gap: 10px; justify-content: center; padding: 16px; background: rgba(255, 248, 236, 0.97); border-radius: inherit; }
+.kiosk-confirm-list { display: flex; flex-direction: column; gap: 4px; max-height: 50%; overflow: auto; }
+.kiosk-confirm-row { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.kiosk-confirm-row canvas { image-rendering: pixelated; max-width: 40px; max-height: 40px; }
+.kiosk-row .art canvas.goods-art { width: 30px; height: 30px; }
+.kiosk-soon { text-align: center; padding: 18px 8px; }
+.display-slot { pointer-events: none; cursor: default; }
+.display-owner .display-slot { pointer-events: auto; cursor: pointer; }
+.arranging .display-owner .display-slot, .display-owner.arranging .display-slot { pointer-events: none; }
+.arranging .home-table-place, .arranging .home-table-food { pointer-events: none; opacity: .5; }
+.kiosk-row .art canvas { max-width: 34px; height: auto !important; }

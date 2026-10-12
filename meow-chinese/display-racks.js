@@ -1,4 +1,4 @@
-// Empty shelving: the owner chooses merchandise; visitors buy through the usual coin shop.
+// Empty shelving: the owner chooses merchandise to show. Visitors can't tap it; they buy at the ordering kiosk.
 import * as S from './state.js';
 import { ITEMS, spriteCanvas } from './pixel.js';
 import { html, $, openModal, closeModal, toast } from './ui.js';
@@ -9,7 +9,7 @@ export function renderDisplay(wrap, it, stock) {
     const b = document.createElement('button'); b.className = 'display-slot'; b.dataset.slot = i;
     b.style.left = p.x * 100 + '%'; b.style.top = p.y * 100 + '%';
     const item = ITEMS[stock[i]];
-    if (sellable(item)) { b.append(spriteCanvas(stock[i], 42)); b.title = item.en + ' · ' + S.price(stock[i]) + ' coins'; }
+    if (sellable(item)) { b.append(spriteCanvas(stock[i], 42)); b.title = item.en; }
     else { b.classList.add('empty'); b.textContent = '+'; b.title = 'Choose a display item'; }
     wrap.append(b);
   });
@@ -20,13 +20,7 @@ export function wireDisplays(room, {edit = false, changed = () => {}} = {}) {
   room.addEventListener('click', e => {
     const slot = e.target.closest('.display-slot'), d = slot?.closest('.display-rack'); if (!d) return;
     e.stopPropagation(); const index = slot.dataset.slot, id = d.displayStock[index];
-    if (!edit) {
-      if (!sellable(ITEMS[id])) return;
-      const box = html`<div class="card stack"><div class="h-title"></div><div class="display-preview"></div><button class="btn green display-buy">Buy · ${S.price(id)} coins</button><button class="btn white display-close">Close</button></div>`;
-      $('.h-title',box).textContent = ITEMS[id].en; $('.display-preview',box).append(spriteCanvas(id,100));
-      $('.display-buy',box).onclick = () => { if (S.buy(id)) { closeModal(); toast('Purchased! 已购买'); } else toast('Not enough coins, or already owned.'); };
-      $('.display-close',box).onclick = closeModal; openModal(box); return;
-    }
+    if (!edit) return;   // shelves are just for show: buying happens at the store's ordering kiosk
     const box = html`<div class="card stack"><div class="h-title">Choose shelf item</div><input class="display-search" placeholder="Search / 搜索"><div class="display-options"></div><button class="btn white display-clear">Empty this space</button><button class="btn white display-close">Close</button></div>`;
     async function choose(value) {
       const st = S.get(); st.displayStock ||= {};

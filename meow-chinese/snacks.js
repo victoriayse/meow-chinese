@@ -44,7 +44,7 @@ export function snackBar({ onHold = () => {} } = {}) {
 }
 
 // ---------- the self-help kiosk: pick snacks, see the total, pay ----------
-export function openKiosk({ menuOverride = null, tablesOverride = null, orderFn = null, place = 'cinema', layout = null, service = null, tableNumber = null, prices = {}, admin = false, onPaid = () => {}, onPrices = () => {} } = {}) {
+export function openKiosk({ menuOverride = null, tablesOverride = null, orderFn = null, place = 'cinema', layout = null, service = null, tableNumber = null, prices = {}, admin = false, confirmPay = false, onPaid = () => {}, onPrices = () => {} } = {}) {
   if ((place === 'cafe' || orderFn) && !service) {
     const tables = tablesOverride || cafeTableList(layout || {});
     const choice = html`<div class="card stack"><div class="h-title">取餐方式 · Order type</div>
@@ -54,7 +54,7 @@ export function openKiosk({ menuOverride = null, tablesOverride = null, orderFn 
       <p class="help">${tables.map((t) => `#${t.number}`).join(' · ')}</p><button class="btn green" id="service-next">继续 Continue</button></div>
       <p class="help">自取：在取餐柜台拿。送餐：礼服猫送到桌上。<br>Pick up at the counter, or let the tuxedo cat deliver to your table. Full tables wait for space. If a table is removed, collect at the counter.</p>
       <button class="btn white" id="service-close">关闭 Close</button></div>`;
-    const next = (mode, number) => openKiosk({ menuOverride, tablesOverride, orderFn, place, layout, service: mode, tableNumber: number, prices, admin, onPaid, onPrices });
+    const next = (mode, number) => openKiosk({ menuOverride, tablesOverride, orderFn, place, layout, service: mode, tableNumber: number, prices, admin, confirmPay, onPaid, onPrices });
     $('#service-pickup', choice).onclick = () => next('pickup', null);
     $('#service-table', choice).onclick = () => { $('#service-number', choice).classList.remove('hidden'); $('#table-number', choice).focus(); };
     $('#service-next', choice).onclick = () => {
@@ -105,6 +105,7 @@ export function openKiosk({ menuOverride = null, tablesOverride = null, orderFn 
   pay.onclick = async () => {
     const t = total(), items = menu.flatMap((k) => Array(qty[k] || 0).fill(k));
     if (!items.length || S.get().coins < t) return;
+    if (confirmPay && !(await kioskConfirm(box, items, t))) return;
     pay.disabled = true; pay.textContent = '…';
     try {
       if (orderFn) await orderFn(items, service, tableNumber);
@@ -117,6 +118,20 @@ export function openKiosk({ menuOverride = null, tablesOverride = null, orderFn 
   };
   draw();
   openModal(box);
+}
+
+// a confirm step shown inside the kiosk card, so the basket is kept if she says no
+export function kioskConfirm(box, items, total, art = snackCanvas, name = (k) => SNACKS[k]) {
+  return new Promise((resolve) => {
+    const counts = {}; items.forEach((k) => { counts[k] = (counts[k] || 0) + 1; });
+    const panel = html`<div class="kiosk-confirm"><div class="h-title"><span class="zh">确定要买吗？</span><span class="en">Confirm purchase?</span></div>
+      <div class="kiosk-confirm-list"></div>
+      <p><span class="zh">合计</span> Total: <b>${total}</b>${coinI(18)}</p>
+      <div class="row" style="justify-content:flex-end"><button class="btn white" data-a="no">取消 Cancel</button><button class="btn green" data-a="yes">✓ <span class="zh">确定</span> Buy</button></div></div>`;
+    Object.entries(counts).forEach(([k, n]) => { const r = document.createElement('div'); r.className = 'kiosk-confirm-row'; r.append(art(k), document.createTextNode(`${name(k).en} × ${n}`)); $('.kiosk-confirm-list', panel).append(r); });
+    panel.addEventListener('click', (e) => { const a = e.target.closest('[data-a]'); if (!a) return; e.stopPropagation(); panel.remove(); resolve(a.dataset.a === 'yes'); });
+    box.append(panel); hydrateIcons(panel);
+  });
 }
 
 // ---------- the collection counter: two orders at a time, anyone can pick them up ----------

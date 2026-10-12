@@ -9450,6 +9450,31 @@ export function drawRoom(canvas, night = false, kind = 'living', style = null) {
       R(0, floorY, W, H - floorY, '#2b2140');
       for (let y = floorY + 2; y < H; y += 6) for (let x = (y % 12 ? 0 : 6); x < W; x += 12) { R(x + 2, y, 2, 1, '#e0a524'); R(x + 1, y + 1, 4, 1, '#b8233a'); R(x + 2, y + 2, 2, 1, '#e0a524'); }
       noWindow = true;
+    } else if (kind === 'park') {
+      // the park: open sky, tall trees and a little pond far away, grass with a winding path
+      R(0, 0, W, floorY, night ? '#1d286a' : '#9fd6f7');
+      R(0, 0, W, Math.round(floorY * 0.35), night ? '#10174a' : '#7cc2f2');
+      if (night) {
+        [[7, 6], [21, 12], [35, 4], [49, 10], [63, 3], [79, 13], [91, 7], [106, 11], [115, 4]].forEach(([x, y]) => R(x, y, 1, 1, '#ffffff'));
+        R(100, 5, 6, 6, '#fff4c2'); R(102, 4, 5, 5, '#10174a');
+      } else {
+        R(100, 6, 9, 9, '#ffe066'); R(101, 5, 7, 11, '#ffe066'); R(99, 7, 11, 7, '#ffe066');
+        [[8, 10], [36, 5], [66, 12]].forEach(([x, y]) => { R(x, y, 12, 3, '#ffffff'); R(x + 3, y - 2, 6, 2, '#ffffff'); });
+      }
+      const gy = floorY - 8;
+      R(0, gy, W, floorY - gy, night ? '#2f6b3c' : '#7ccc63');   // grass far away
+      [[4, 9], [20, 12], [44, 10], [86, 13], [108, 9]].forEach(([x, r]) => {   // tall round trees
+        for (let dy = -r; dy <= r; dy++) { const hw = Math.round(Math.sqrt(r * r - dy * dy) * 0.8); R(x + 4 - hw, gy - r * 2 + dy, hw * 2 + 1, 1, night ? '#1f4a33' : (dy < -r / 3 ? '#66b566' : '#4f9a52')); }
+        R(x + 3, gy - r, 2, r + 2, night ? '#3a2a20' : '#8a5a32');
+      });
+      // a little pond with a lily pad
+      R(58, gy + 1, 22, 5, night ? '#2a4a8a' : '#5ab4ea'); R(56, gy + 2, 26, 3, night ? '#2a4a8a' : '#5ab4ea'); R(60, gy + 1, 8, 1, night ? '#4a6aaa' : '#9fd9fb');
+      R(72, gy + 3, 3, 1, '#4f9a52');
+      R(0, floorY, W, H - floorY, night ? '#2f6b3c' : '#7ccc63');
+      for (let y = floorY + 2; y < H; y += 3) for (let x = (y % 6 ? 2 : 5); x < W; x += 6) { R(x, y, 1, 2, night ? '#3d8049' : '#93dc75'); }
+      for (let y = floorY; y < H; y++) { const cx = 60 + Math.round(10 * Math.sin((y - floorY) / 6)), w = 8 + Math.round((y - floorY) / 3); R(cx - w, y, w * 2, 1, night ? '#8d7a52' : '#e8d3a2'); }
+      if (!night) [[10, floorY + 6], [26, floorY + 14], [98, floorY + 8], [110, floorY + 18], [16, floorY + 22]].forEach(([x, y]) => { if (y < H - 1) { R(x, y, 1, 1, '#ff9ec4'); R(x + 3, y + 1, 1, 1, '#ffd23f'); } });
+      open = true;
     } else if (kind === 'playground') {
       // the playground: open sky, round trees far away, then soft sand
       R(0, 0, W, floorY, night ? '#1d286a' : '#a6dbf8');
@@ -11677,3 +11702,181 @@ ITEMS.whitefurryrug = {cat:'decor',group:'mall',room:'malllobby',name:'白色绒
   '........o...o...o...o...o...o...o...o.....',
   '..........................................',
 ]};
+
+// ---------- v158: mall exclusives (bakery food, fashion clothes), shopping bags, home dining table, kiosks ----------
+const MALL_EX_PAL = { o: O, c: '#d9a066', d: '#c08a52', l: '#f3cf95', k: '#5a3020', t: '#d99a5a', y: '#ffd23f', w: '#fff6c2', u: '#b47a3c', s: '#fff3c4', m: '#ffb020', g: '#7cbd52', p: '#f6ead8', v: '#c9a26b', e: '#5a3020', q: '#ff9ec4', r: '#e0628c', z: '#7a4a2a' };
+Object.assign(SNACKS, {
+  bkchococroissant: { zh: '巧克力牛角包', en: 'Chocolate croissant', price: 12, hunger: 20, happy: 6, size: 0.9, mallOnly: true, pal: MALL_EX_PAL,
+    art: [
+      '............',
+      '..o.ooooo.o.',
+      '.odocclddoco',
+      'odlkkkkkkccc',
+      'ddcccdddcccc',
+      'ddcckkkkcccc',
+      'oddcccdddccc',
+      '.odoccoddoco',
+    ] },
+  bkeggtart: { zh: '葡式蛋挞', en: 'Egg tart', price: 8, hunger: 16, happy: 6, size: 0.9, mallOnly: true, pal: MALL_EX_PAL,
+    art: [
+      '..........',
+      '..oooooo..',
+      '.otyyyyto.',
+      'otywyuuyto',
+      'otyyyyyyto',
+      'otttyyttto',
+      '.otttttto.',
+    ] },
+  bkmangocake: { zh: '芒果蛋糕片', en: 'Mango cake slice', price: 14, hunger: 18, happy: 8, size: 0.9, mallOnly: true, pal: MALL_EX_PAL,
+    art: [
+      'omgo........',
+      'omgmo.......',
+      'osso........',
+      'ossso.......',
+      'ommmmo......',
+      'ossssso.....',
+      'ossssssoo...',
+      'ommmmmmmmo..',
+      'ossssssssso.',
+      'osssssssssso',
+    ] },
+  bktiramisu: { zh: '提拉米苏蛋糕', en: 'Tiramisu whole cake', price: 40, hunger: 45, happy: 15, size: 0.9, mallOnly: true, pal: MALL_EX_PAL,
+    art: [
+      '..............',
+      '.oooooooooooo.',
+      'oppzppppppzppo',
+      'vppppzpzpppppv',
+      'pppppppppppppp',
+      'vvvvvvvvvvvvvv',
+      'zzzzzzzzzzzzzz',
+      'vvvvvvvvvvvvvv',
+      'pppppppppppppp',
+      'oooooooooooooo',
+    ] },
+  bkbreadloaf: { zh: '吐司面包', en: 'Bread loaf', price: 15, hunger: 35, happy: 4, size: 0.9, mallOnly: true, pal: MALL_EX_PAL,
+    art: [
+      '...oooooooo...',
+      '.oolltlltlloo.',
+      'otttttttttttto',
+      'otttttttttttto',
+      'otttttttttttto',
+      'otttttttttttto',
+      'otttttttttttto',
+      'ouuuuuuuuuuuuo',
+    ] },
+  bkbuns: { zh: '小面包', en: 'Bread buns', price: 10, hunger: 25, happy: 4, size: 0.9, mallOnly: true, pal: MALL_EX_PAL,
+    art: [
+      '.................',
+      '.................',
+      '.oooo..ooo..oooo.',
+      'olwttoolwtoolwtto',
+      'ottttotttttotttto',
+      'ottttotttttotttto',
+      'ottttootttootttto',
+      '.oooo..ooo..oooo.',
+    ] },
+  bkbaguette: { zh: '法棍', en: 'Baguette', price: 12, hunger: 30, happy: 4, size: 0.9, mallOnly: true, pal: MALL_EX_PAL,
+    art: [
+      '...........ooloo',
+      '.........oottttt',
+      '......oootltttto',
+      '...oootltttttto.',
+      '.ootlttttttooo..',
+      'ottttttttoo.....',
+      'otttttooo.......',
+      'ottooo..........',
+    ] },
+  shopbag: { zh: '购物袋', en: 'Shopping bag', price: 0, pal: MALL_EX_PAL,
+    art: [
+      '..okkkko..',
+      '..okooko..',
+      '.ookookoo.',
+      'orrrrrrrro',
+      'oqqqqqqqqo',
+      'oqqqqqqqqo',
+      'oqqqwwwqqo',
+      'oqqqwwwqqo',
+      'oqqqwwwqqo',
+      'oqqqqqqqqo',
+      'oqqqqqqqqo',
+      'orrrrrrrro',
+    ] },
+});
+SNACK_ORDER.push('bkchococroissant', 'bkeggtart', 'bkmangocake', 'bktiramisu', 'bkbreadloaf', 'bkbuns', 'bkbaguette');
+export const BAKERY_EXCLUSIVE = ['bkchococroissant', 'bkeggtart', 'bkmangocake', 'bktiramisu', 'bkbreadloaf', 'bkbuns', 'bkbaguette'];
+
+// clothes only sold by the mall's Fashion Store kiosk (not in the main shop)
+const PANTS = [
+  '..oooooooo..',
+  '..oaaaaaao..',
+  '..oaaabaao..',
+  '..oaaobaao..',
+  '..oaao.aao..',
+  '..oaao.aao..',
+  '..occo.cco..',
+  '..oooo.ooo..',
+];
+const SKIRT = [
+  '...oooooo...',
+  '..oaaaaaao..',
+  '..obabbabo..',
+  '.oaabaabaao.',
+  '.obbabbabbo.',
+  'oaabaabaabao',
+  'oooooooooooo',
+];
+Object.assign(ITEMS, Object.fromEntries([
+  wearBody('mallprincess', '闪亮公主裙', 'Sparkly princess dress', 220, { a: '#c9a6ff', b: '#ffd23f', c: '#f3e6ff', d: '#9b6bd6', w: '#ffffff' },
+    (x, y, p) => (y === 0 ? p.b : y <= 3 ? (x === 0 ? p.b : Math.abs(x) >= 4 ? p.c : p.a) : y === 4 ? p.b
+      : y >= 11 ? ((x + y) % 2 ? p.c : p.d) : ((x * 3 + y * 5) % 8 === 0 && y > 5) ? p.w : (y % 3 === 1 ? p.c : p.a)), DRESS),
+  wearBody('mallhoodie', '小熊卫衣', 'Bear hoodie', 150, { a: '#ffb3c7', b: '#e0628c', c: '#ffffff' },
+    (x, y, p) => ((Math.abs(x) === 1 && y >= 1 && y <= 3) ? p.c : (y >= 7 && y <= 9 && Math.abs(x) <= 3) ? p.b : y >= 11 ? p.b : p.a)),
+  wearBody('mallpuffer', '冬季羽绒服', 'Winter puffer jacket', 200, { a: '#5fb8ff', b: '#3f8fd8', c: '#ffffff' },
+    (x, y, p) => (y <= 1 ? p.c : x === 0 ? p.b : (y % 3 === 0 ? p.b : p.a))),
+  wearBody('malljeans', '牛仔裤', 'Jeans', 130, { a: '#4f7fc8', b: '#3a5f9c', c: '#c9d8f0' },
+    (x, y, p) => (y < 6 ? null : y === 6 ? p.b : x === 0 ? p.b : (Math.abs(x) === 3 && y === 9 ? p.c : p.a)), PANTS),
+  wearBody('mallskirt', '格子裙', 'Checkered skirt', 120, { a: '#e8384f', b: '#ffffff', c: '#b8233a' },
+    (x, y, p) => (y < 6 ? null : y === 6 ? p.c : ((x + y) % 2 ? p.a : p.b)), SKIRT),
+]));
+['mallprincess', 'mallhoodie', 'mallpuffer', 'malljeans', 'mallskirt'].forEach((id) => { ITEMS[id].special = true; ITEMS[id].mallOnly = true; });
+export const FASHION_EXCLUSIVE = ['mallprincess', 'mallhoodie', 'mallpuffer', 'malljeans', 'mallskirt'];
+export const HOME_EXCLUSIVE = [];   // the Home Store kiosk's own goods (none yet)
+
+// the Fashion Store and Home Store sell only through their own ordering kiosks
+Object.assign(ITEMS, {
+  mallfashionkiosk: { ...ITEMS.cafekiosk, group: 'mall', room: 'mallfashion', name: '服装店点单机', en: 'Fashion Store kiosk', one: false, staff: { fur: 'grey', name: 'Fashion host' }, pal: { ...CAFE_PAL, t: '#c9a6ff' }, label: 'Fashion Order' },
+  mallhomekiosk: { ...ITEMS.cafekiosk, group: 'mall', room: 'mallhome', name: '家居店点单机', en: 'Home Store kiosk', one: false, staff: { fur: 'calico', name: 'Home host' }, pal: { ...CAFE_PAL, t: '#7ec3e8' }, label: 'Home Order' },
+});
+['mallclothes', 'mallbags', 'mallelectronics', 'mallhomecounter', 'mallfashioncounter'].forEach((id) => { if (ITEMS[id]) delete ITEMS[id].mallShop; });
+
+// a dining table for home: visitors can put food on it and anyone can take it
+ITEMS.homedining4 = { ...ITEMS.cafetable4, room: 'living', group: 'living', name: '四人家用餐桌', en: '4 Seater Home Dining Table', price: 200, spot: 'front-left', one: false,
+  pal: { ...CAFE_PAL, c: '#fff3e0', t: '#b07a48', d: '#8a5a32', b: '#6b4426' }, homeTable: true };
+// v158: the 🌳 Park pin on the map (a round tree on a patch of grass, with a little bench)
+ITEMS.mappark = { cat: 'map', room: 'mallbowling', name: '公园', en: 'Park map icon', price: 0, spot: 'back-mid-left', group: 'mall', special: true,
+  pal: { o: O, g: '#66b566', v: '#4f9a52', l: '#93dc75', b: '#8a5a32', t: '#c98f58', s: '#7ccc63', p: '#ff9ec4', y: '#ffd23f' }, art: [
+    '........................',
+    '.........oooooo.........',
+    '.......oollgggvoo.......',
+    '......olllgggggvvo......',
+    '.....ollggggggggvvo.....',
+    '....olggggggggggggvo....',
+    '....olggggpgggggggvo....',
+    '...olgggggggggggyggvo...',
+    '...oggggggggggggggggo...',
+    '...ogggyggggggggpgvvo...',
+    '...oggggggggggggggvvo...',
+    '....ovgggggggggggvvo....',
+    '....ovvgggggggggvvvo....',
+    '.....oovvvvvvvvvvoo.....',
+    '.......ooovbbvooo.......',
+    '..........obbo..........',
+    '..........obbo..........',
+    '..........obbo....oooooo',
+    '..........obbo....otttto',
+    '..........obbo....oooooo',
+    '.oooooooooobbooooooboobo',
+    'osssssssssssssssssssssso',
+    'osssssssssssssssssssssso',
+    '.oooooooooooooooooooooo.',
+  ] };
