@@ -139,7 +139,7 @@ export function roomLayout(s, roomKey, roomOf) {
     const back = ((it.frames && it.frames.back) || it.flip) && fv === 'back';   // turned round (or sideways)
     const front = it.frames && it.frames.front && fv === 'front';            // facing straight into the room
     const layer = (s.decorLayer || {})[id] || 0;
-    const opened = it.tapOpen && !!(s.openThings || {})[id];   // changing cubicle: curtain pulled open   // dragged on top of something: stays in front of it
+    const opened = (it.tapOpen || it.panel) && !!(s.openThings || {})[id];   // changing cubicle: curtain pulled open   // dragged on top of something: stays in front of it
     return { id, scale, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : front ? { facing: 'front' } : {}), ...(layer ? { layer } : {}), ...(opened ? { opened } : {}), ...(text != null ? { text } : {}), ...(video ? { video } : {}), ...(it.displaySlots ? { stock: (s.displayStock || {})[id] || {} } : {}) };
   }).filter(Boolean).concat(((s.roomStyle || {})[roomKey] || {}).pool ? [(() => {
     // the swimming pool (from 🎨 Renovate): she can move it like furniture
@@ -175,7 +175,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
   if (kind === 'pool') return poolEl({ id, css, scale });
   const it = ITEMS[id]; if (!it) return null;
   const c = document.createElement('canvas');
-  const art = (cage && cage.open || opened) && it.frames && it.frames.open ? it.frames.open : facing === 'front' && it.frames && it.frames.front ? it.frames.front : facing === 'back' && !it.flip && it.frames && it.frames.back ? it.frames.back : it.art;
+  const art = it.panel === 'door' ? it.frames.open : (cage && cage.open || opened) && it.frames && it.frames.open ? it.frames.open : facing === 'front' && it.frames && it.frames.front ? it.frames.front : facing === 'back' && !it.flip && it.frames && it.frames.back ? it.frames.back : it.art;
   const flipped = facing === 'back' && it.flip;   // turned sideways: drawn the other way round
   if (flipped) c.style.scale = '-1 1';
   const g = artGrid(art, it.pal);
@@ -187,6 +187,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
   if (kind === 'curtain') { wrap.style.width = parseFloat(wrap.style.width) * scale + '%'; wrap.style.height = parseFloat(wrap.style.height) * scale + '%'; }
   if (kind === 'curtain') { wrap.classList.add('curtain'); if (closed) wrap.classList.add('closed'); }
   else { wrap.classList.add('movable'); if (kind === 'flat') wrap.classList.add('flat'); }
+  if (it.panel) { wrap.classList.add('interactive-panel', opened ? 'panel-open' : 'panel-closed'); wrap.dataset.panel = it.panel; }
   if (it.displaySlots) renderDisplay(wrap, it, stock);
   if (it.playable) wrap.classList.add('playable');
   if (it.seat) wrap.classList.add('seat');
@@ -244,7 +245,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
         const show = () => { play.textContent = v.paused ? '▶️' : '⏸️'; wrap.classList.toggle('vid-paused', v.paused); };
         v.addEventListener('play', show); v.addEventListener('pause', show);
         // start it (phones may refuse until someone taps — then the ▶️ button / a tap on the screen starts it)
-        v.startFilm = () => { if (v.dataset.stopped) return; const p = v.play(); if (p) p.catch(() => show()); };
+        v.startFilm = () => { if (v.dataset.stopped || wrap.classList.contains('panel-closed')) return; const p = v.play(); if (p) p.catch(() => show()); };
         snd.onclick = (e) => {
           e.stopPropagation();
           v.muted = !v.muted; snd.textContent = v.muted ? '🔇' : '🔊';
@@ -258,12 +259,12 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
           else { v.dataset.stopped = '1'; v.pause(); if (!v.muted) { v.muted = true; snd.textContent = '🔇'; screenSound(v); } }
         };
         // a tap on the screen itself: start the film if it isn't playing
-        wrap.addEventListener('click', (e) => { if (e.target.closest('button') || !v.paused || wrap.classList.contains('off')) return; delete v.dataset.stopped; sync(); v.play().catch(() => {}); });
+        wrap.addEventListener('click', (e) => { if (it.panel || e.target.closest('button') || !v.paused || wrap.classList.contains('off')) return; delete v.dataset.stopped; sync(); v.play().catch(() => {}); });
         wrap.classList.add('has-film', 'vid-paused');
         wrap.append(v, snd, play);
         requestAnimationFrame(() => { if (!wrap.classList.contains('off')) v.startFilm(); });
       }
-      if (videoPick && it.power === 'tv') wrap.addEventListener('click', (e) => {
+      if (videoPick && it.power === 'tv' && !it.panel) wrap.addEventListener('click', (e) => {
         if (e.target.closest('button') || wrap.closest('.arranging')) return;
         e.stopPropagation();
         wrap.dispatchEvent(new CustomEvent('screen-video', { bubbles: true, detail: { id } }));
@@ -338,6 +339,27 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
   }
   if (facing === 'back') wrap.dataset.facing = flipped ? 'flip' : 'back';
   if (facing === 'front') wrap.dataset.facing = 'front';
+  if (it.panel) {
+    let panelOpen = !!opened;
+    if (it.panel === 'door') {
+      const panes = document.createElement('div'); panes.className = 'door-viewport'; const b = it.doorBox;
+      Object.assign(panes.style, {left: b.x*100+'%', top:b.y*100+'%', width:b.w*100+'%', height:b.h*100+'%'});
+      it.doorPanels.forEach((art, i) => { const pane = document.createElement('canvas'); pane.className = 'door-pane pane-' + i; drawGrid(pane, artGrid(art,it.pal), HOUSE.decor*scale); panes.append(pane); });
+      wrap.append(panes);
+    }
+    wrap.addEventListener('click', (e) => {
+      if (e.target.closest('button') || wrap.closest('.arranging')) return;
+      e.stopPropagation(); panelOpen = !panelOpen;
+      wrap.classList.toggle('panel-open', panelOpen); wrap.classList.toggle('panel-closed', !panelOpen);
+      if (it.panel === 'screen') {
+        drawGrid(c, artGrid(panelOpen ? it.frames.open : it.art, it.pal), HOUSE.decor * (it.size || 1) * scale);
+        if (panelOpen) c.animate([{clipPath:'inset(0 0 86% 0)'},{clipPath:'inset(0)'}],{duration:300,easing:'steps(8)'});
+        const v = wrap.querySelector('video');
+        if (v) { if (panelOpen && !wrap.classList.contains('off')) v.startFilm(); else { v.pause(); v.muted = true; screenSound(v); } }
+      }
+      wrap.dispatchEvent(new CustomEvent('panel-toggle', {bubbles:true,detail:{id,opened:panelOpen}}));
+    });
+  }
   if (it.tapOpen) wrap.classList.add('tap-open');
   if (it.power === 'shower') wrap.appendChild(Object.assign(document.createElement('i'), { className: 'shower-water' }));
   if (it.belt) {     // the treadmill's moving belt
@@ -628,13 +650,13 @@ export function chatLog(entries) {
 export function applyPower(roomEl, { dark = false, off = {} } = {}) {
   if (!roomEl) return;
   roomEl.querySelectorAll('.decor[data-power]').forEach((d) => d.classList.toggle('off', !!off[d.dataset.id]));
-  roomEl.querySelectorAll('.decor .screen-video').forEach((v) => { if (v.closest('.decor').classList.contains('off')) { v.pause(); v.muted = true; screenSound(v); } else if (v.startFilm) v.startFilm(); });
+  roomEl.querySelectorAll('.decor .screen-video').forEach((v) => { if (v.closest('.decor').classList.contains('off') || v.closest('.decor').classList.contains('panel-closed')) { v.pause(); v.muted = true; screenSound(v); } else if (v.startFilm) v.startFilm(); });
   let shade = roomEl.querySelector('.room-dark');
   if (!shade) { shade = document.createElement('div'); shade.className = 'room-dark'; roomEl.appendChild(shade); }
   roomEl.classList.toggle('lights-off', !!dark);
   // lamps that are still on glow in the dark
   roomEl.querySelectorAll('.lamp-glow').forEach((g) => g.remove());
-  if (dark) roomEl.querySelectorAll('.decor[data-power="light"]:not(.off), .decor[data-power="tv"]:not(.off)').forEach((d) => {
+  if (dark) roomEl.querySelectorAll('.decor[data-power="light"]:not(.off), .decor[data-power="tv"]:not(.off):not(.panel-closed)').forEach((d) => {
     const g = document.createElement('div');
     g.className = `lamp-glow ${d.dataset.power}`;
     g.style.left = `${d.offsetLeft + d.offsetWidth / 2}px`; g.style.top = `${d.offsetTop + d.offsetHeight * (d.dataset.power === 'tv' ? 0.4 : 0.25)}px`;
@@ -692,7 +714,7 @@ export function wirePower(roomEl, onToggle) {
   roomEl.addEventListener('click', (e) => {
     const d = e.target.closest('.decor[data-power]');
     if (e.target.closest('button')) return;
-    if (!d || roomEl.classList.contains('arranging') || d.classList.contains('has-film')) return;
+    if (!d || ITEMS[d.dataset.id]?.panel || roomEl.classList.contains('arranging') || d.classList.contains('has-film')) return;
     sfx.click(); onToggle(d.dataset.id);
   });
 }

@@ -46,6 +46,8 @@ export function prepareCafe(S, layout) {
       const x = /left:([\d.]+)%/.exec(e.css), y = /top:([\d.]+)%/.exec(e.css);
       if (x && y) st.decorPos[e.id] = { x: +x[1], y: +y[1] };
       if (e.stock) (st.displayStock ||= {})[e.id] = e.stock;
+      if (e.opened) (st.openThings ||= {})[e.id] = true;
+      if (e.video) (st.screenVideos ||= {})[e.id] = e.video;
       if (e.scale) { st.decorScale = st.decorScale || {}; st.decorScale[e.id] = e.scale; }
       if (e.layer) st.decorLayer[e.id] = e.layer;
     });

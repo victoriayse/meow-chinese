@@ -417,4 +417,9 @@ export const CHANGES = [
   { v: 152, items: [
     'A tuition centre reception counter with its own grey cat receptionist is now available in Shop > Home > Shopping Mall.',
   ] },
+  { v: 153, items: [
+    'New furnishings: retractable projector screen with videos up to 10 MB, sliding glass entrance, chilled food display, five decorative whole cakes and a borderless photo poster (10 KB).',
+    'Tap the screen to extend or retract it; use its film button to upload. Tap the glass doors to slide them open or closed.',
+    'Egg tarts are available as decorations and as food from the bakery kiosk, with pickup, table delivery and sharing.',
+  ] },
 ];
