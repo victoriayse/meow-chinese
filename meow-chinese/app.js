@@ -16,7 +16,7 @@ import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
 import { wireDisplays } from './display-racks.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, boothView, catFace, freeSlot, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
 import * as Pets from './pets.js';
 import * as Radio from './radio.js';
 import * as Visit from './visit.js';
@@ -672,6 +672,11 @@ function homeScreen(params = {}) {
     if (!room) return;
     // sitting on the sofa / a chair, or lying in bed
     const st = seatNow(), spot = st && seatSpot(room, st.id, st.slot);
+    boothView(room, ground, st && st.id, st && st.boothClosed, (action) => {
+      if (action === 'exit') standUp();
+      else S.get().catSeat.boothClosed = !S.get().catSeat.boothClosed;
+      placeCat(); S.save(); Visit.hostMove(hostPos());
+    });
     ground.classList.toggle('lying', !!(spot && spot.lie)); ground.classList.toggle('seated', !!spot);
     kv.setPose(spot ? spot.pose : null); ground.dataset.pose = (spot && spot.pose) || '';
     if (spot && spot.run) { kv.setFacing(spot.flip); kv.canvas.classList.add('walking'); }   // running on the treadmill
@@ -693,7 +698,7 @@ function homeScreen(params = {}) {
     ground.style.bottom = cat.y + '%';
     ground.style.zIndex = 2 + Math.round(100 - cat.y);
   };
-  const hostPos = () => ({ x: +cat.x.toFixed(1), y: +cat.y.toFixed(1), room: roomKey, left: !!kv.left, seat: (seatNow() || {}).id || null, slot: (seatNow() || {}).slot || 0 });
+  const hostPos = () => ({ x: +cat.x.toFixed(1), y: +cat.y.toFixed(1), room: roomKey, left: !!kv.left, seat: (seatNow() || {}).id || null, slot: (seatNow() || {}).slot || 0, boothClosed: !!(seatNow() || {}).boothClosed });
   // tap the sofa, a chair, the piano bench or the bed: she hops on (the arrows make her hop off)
   const sitOn = (id) => {
     // a free place: friends visiting may already be sitting there
@@ -1162,7 +1167,7 @@ function homeScreen(params = {}) {
     });
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.seat');
-      if (!d || room.classList.contains('arranging') || md.face === 'faint') return;
+      if (!d || e.target.closest('button') || room.classList.contains('arranging') || md.face === 'faint') return;
       sitOn(d.dataset.id);
     });
     // lights: the 💡 switch darkens the room; lamps and the TV switch on and off when tapped

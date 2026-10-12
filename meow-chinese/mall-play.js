@@ -11,7 +11,6 @@ const served = new Set();
 let transferBusy = false;
 
 function shop(kind, go) {
-  if(kind==='changing'){go('wardrobe');return;}
   const candidates=Object.entries(ITEMS).filter(([id,it])=>!it.special && !it.retired && (kind==='wear'?it.cat==='wear':kind==='electronics'?['tv','laptop','radio','fridge','fan','aircon'].includes(id):it.cat==='decor'));
   const box=html`<div class="card stack mall-shop"><div class="h-title">${kind==='wear'?'服装店 Fashion Store':'家居店 Home Store'}</div><input class="mall-search" placeholder="Search / 搜索"><div class="mall-goods"></div><button class="btn white mall-close">Close</button></div>`;
   function draw(){const list=$('.mall-goods',box);list.replaceChildren();const q=$('.mall-search',box).value.toLowerCase();

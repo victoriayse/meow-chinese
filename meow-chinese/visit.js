@@ -19,7 +19,7 @@ import { drawRoom, drawRoof, ITEMS, SNACKS } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal } from './ui.js';
 import { sfx } from './audio.js';
 import { wireDisplays } from './display-racks.js';
-import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
+import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, boothView, freeSlot, hearNote, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
 import * as Radio from './radio.js';
 import * as Places from './places.js';
 import * as Snacks from './snacks.js';
@@ -345,12 +345,12 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       }, 500);
     });
     room.addEventListener('click', (e) => {
-      const d = e.target.closest('.decor.seat'); if (!d) return;
+      const d = e.target.closest('.decor.seat'); if (!d || e.target.closest('button')) return;
       if (mine.seat === d.dataset.id) return;
       const taken = others.ids().map((id) => others.m.get(id)).filter((c) => c && c.room === roomKey);
       const slot = freeSlot(d.dataset.id, taken);
       if (slot < 0) { sfx.miss(); return toast('<span class="zh">坐满了！</span> No room — someone is already there'); }
-      mine.seat = d.dataset.id; mine.slot = slot; place(); myKv.jump(); sfx.click(); sendMine();
+      mine.seat = d.dataset.id; mine.slot = slot; mine.boothClosed = false; place(); myKv.jump(); sfx.click(); sendMine();
     });
     // my kitten
     myEl = html`<div class="vcat me"><div class="kitten-wrap"><div class="kflip"></div><div class="nametag">${esc(S.get().kitten.name)}<span class="lv">Lv${S.level()}</span></div></div></div>`;
@@ -462,6 +462,11 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   }
   function place() {
     const room = $('#room', box), spot = mine.seat && seatSpot(room, mine.seat, mine.slot);
+    boothView(room, myEl, spot && mine.seat, mine.boothClosed, (action) => {
+      if (action === 'exit') { mine.seat = null; mine.y = Math.min(mine.y, 28); mine.boothClosed = false; }
+      else mine.boothClosed = !mine.boothClosed;
+      place(); sendMine();
+    });
     myEl.classList.toggle('lying', !!(spot && spot.lie)); myEl.classList.toggle('seated', !!spot);
     if (myKv) myKv.setPose(spot ? spot.pose : null); myEl.dataset.pose = (spot && spot.pose) || '';
     if (room) room.querySelectorAll('.decor.seat').forEach((d) => { if (!others.ids().some((id) => (others.m.get(id) || {}).seat === d.dataset.id)) blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === mine.seat)); });
