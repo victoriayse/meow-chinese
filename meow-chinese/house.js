@@ -467,7 +467,7 @@ export class OtherCats {
     if (c.dx == null || roomChanged || c.seat || Math.hypot(c.x - c.dx, (c.y - c.dy) * 1.5) > 25) { c.dx = c.x; c.dy = c.y; }   // first sight, new room or a big jump: just appear there
     this.m.set(id, c); this.draw(id); this.go(); return c;
   }
-  remove(id) { const c = this.m.get(id); if (c && c.el) c.el.remove(); this.m.delete(id); syncRides(this.roomEl); }
+  remove(id) { const c = this.m.get(id); if (c && c.el) { boothView(this.roomEl, c.el, null, false); c.el.remove(); } this.m.delete(id); syncRides(this.roomEl); }
   has(id) { return this.m.has(id); }
   ids() { return [...this.m.keys()]; }
   say(id, text) { const c = this.m.get(id); if (c && c.el) say($w(c.el), text); }
@@ -494,6 +494,7 @@ export class OtherCats {
   place(c) {
     if (!c.el) return;
     const spot = c.seat && seatSpot(this.roomEl, c.seat, c.slot);
+    boothView(this.roomEl, c.el, spot && c.seat, c.boothClosed);
     if (spot) { c.x = c.dx = spot.x; c.y = c.dy = spot.y; }
     c.el.style.left = `${c.dx}%`; c.el.style.bottom = `${c.dy}%`;
     c.el.style.zIndex = spot ? spot.z : 2 + Math.round(100 - c.dy);
@@ -509,7 +510,7 @@ export class OtherCats {
   draw(id) {
     const c = this.m.get(id); if (!c) return;
     const here = this.roomEl && this.roomEl.isConnected && c.room === this.roomKey && c.look;
-    if (!here) { if (c.el) { c.el.remove(); c.el = null; } return; }
+    if (!here) { if (c.el) { boothView(this.roomEl, c.el, null, false); c.el.remove(); c.el = null; } return; }
     if (!c.el || !c.el.isConnected) {
       const el = html`<div class="vcat"><div class="kitten-wrap"><div class="kflip"></div><div class="nametag">${esc(c.look.name || '🐱')}<span class="lv">Lv${c.look.level || 1}</span></div></div></div>`;
       const kv = new KittenView({ scale: HOUSE.kitten, fur: c.look.fur || 'ginger', equipped: { ...(c.look.equipped || {}) } });
@@ -757,6 +758,34 @@ export function blanket(roomEl, id, on) {
   b.style.left = `${el.offsetLeft}px`; b.style.top = `${el.offsetTop}px`;
   if (it.backrest) { b.style.width = `${el.offsetWidth}px`; b.style.height = `${el.offsetHeight}px`; }
   b.style.zIndex = (parseInt(el.style.zIndex, 10) || 50) + 2;
+}
+
+// Booth curtains belong to the occupant, not the saved furniture layout.
+export function boothView(room, cat, id, closed, onAction) {
+  const active = id && ITEMS[id]?.booth ? id : '';
+  const previous = cat.dataset.booth || '';
+  const paint = (key, shut) => {
+    const d = room && room.querySelector(`.decor[data-id="${key}"]`), it = ITEMS[key];
+    const canvas = d && d.querySelector(':scope > canvas');
+    if (canvas && it?.booth) {
+      const art = shut ? it.frames.closed : it.art;
+      drawGrid(canvas, artGrid(art, it.pal), canvas.width / art[0].length);
+    }
+    return d;
+  };
+  if (previous && previous !== active) { const old = paint(previous, false); old?.querySelector('.booth-controls')?.remove(); }
+  cat.dataset.booth = active;
+  cat.style.visibility = active && closed ? 'hidden' : '';
+  if (!active) return;
+  const d = paint(active, !!closed);
+  if (!d || !onAction) return;
+  d.querySelector('.booth-controls')?.remove();
+  const controls = document.createElement('div'); controls.className = 'booth-controls';
+  for (const [action, text] of [['curtain', closed ? '开帘 Open' : '关帘 Close'], ['exit', '出来 Exit']]) {
+    const b = document.createElement('button'); b.className = 'btn white small'; b.textContent = text;
+    b.onclick = (e) => { e.stopPropagation(); onAction(action); }; controls.append(b);
+  }
+  d.append(controls);
 }
 
 // the first free place on a piece of furniture (a sofa has two); taken = [{ seat, slot }]

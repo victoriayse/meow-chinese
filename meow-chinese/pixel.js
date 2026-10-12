@@ -7259,7 +7259,7 @@ Object.assign(ITEMS, {
     'obbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbo',
     'oooooooooooooooooooooooooooooooooooooooooooo',
   ]},
-  mallchangingbooth: {cat:'decor',room:'mallchanging',name:'试衣间',en:'Changing booth',price:140,spot:'back-mid-left',group:'mall',mallShop: 'changing', pal:CAFE_PAL,art:[
+  mallchangingbooth: {cat:'decor',room:'mallchanging',name:'试衣间',en:'Changing booth',price:140,spot:'back-mid-left',group:'mall',booth:true,seat:{x:.5,y:.9}, pal:CAFE_PAL,art:[
     '.oooooooooooooooooooooooooooooo.',
     '.otttttttttttttttttttttttttttto.',
     '.otttttttttttttttttttttttttttto.',
@@ -11341,3 +11341,50 @@ ITEMS.borderlessposter = {cat:'decor',group:'mall',room:'malllobby',spot:'wall-l
 
 // The rear backrest sits in front of a kitten facing away.
 ITEMS.fliptablechair.backrest = { cover: true, coverArt: 'back', blanket: [1, 24, 1, 38] };
+
+// The closed curtain is used only while a visitor is inside.
+ITEMS.mallchangingbooth.frames = { closed: ITEMS.mallchangingbooth.art };
+ITEMS.mallchangingbooth.art = [
+  '.oooooooooooooooooooooooooooooo.',
+  '.otttttttttttttttttttttttttttto.',
+  '.otttttttttttttttttttttttttttto.',
+  '.ottooooooooooooooooooooooootto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottoppww..............prrpotto.',
+  '.ottopppp..............ppppotto.',
+  'oooooooooooooooooooooooooooooooo',
+  'obbbbbbbbbbbbbbbbbbbbbbbbbbbbbbo',
+  'obbbbbbbbbbbbbbbbbbbbbbbbbbbbbbo',
+  'oooooooooooooooooooooooooooooooo',
+];

@@ -1783,3 +1783,6 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .door-pane {position:absolute;top:0;width:50%!important;height:100%!important;transition:transform .5s steps(8);}
 .door-pane.pane-0 {left:0;}.door-pane.pane-1 {right:0;}
 .panel-open .pane-0 {transform:translateX(-96%);}.panel-open .pane-1 {transform:translateX(96%);}
+
+.booth-controls { position:absolute; left:50%; top:100%; transform:translateX(-50%); display:flex; gap:4px; z-index:3; white-space:nowrap; }
+.arranging .booth-controls { display:none; }

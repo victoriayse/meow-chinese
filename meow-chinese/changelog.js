@@ -423,4 +423,5 @@ export const CHANGES = [
     'Egg tarts are available as decorations and as food from the bakery kiosk, with pickup, table delivery and sharing.',
   ] },
   { v: 154, items: ['The back-facing tuition chair now shows its backrest in front of your seated kitten.'] },
+  { v: 155, items: ['Tap a mall changing booth to enter. Close its curtain to hide inside, then open it or come out.'] },
 ];
