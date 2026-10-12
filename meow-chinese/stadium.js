@@ -13,7 +13,7 @@ export const FEE = 30, PRIZE = 60, WIN_AT = 10, TEAM_MAX = 4;
 // the pitch, in the room's % units (x from the left, y up from the bottom); the room is 720 × 600
 export const PITCH = { x0: 3.5, x1: 96.5, y0: 1, y1: 54, mouth: [14, 38], line: 1.5, cx: 50, cy: 26 };
 const PX = 7.2, PY = 6;                         // room px per % (x, y)
-const REACH_X = 56, REACH_Y = 42;               // how close (px) her paws must be to touch the ball
+const REACH_X = 40, REACH_Y = 30;               // how close (px) her paws must be to touch the ball
 const KICK = 420, FRICTION = 0.9, BOUNCE = 0.75;
 const TEAM = { red: { zh: '红队', en: 'Red', dot: '🔴' }, blue: { zh: '蓝队', en: 'Blue', dot: '🔵' } };
 const BALL_ART = ['..oooo..', '.owwkwo.', 'owwkkkwo', 'owwwkwwo', 'okwwwwko', 'okkwwkko', '.owwkko.', '..oooo..'];
@@ -34,9 +34,10 @@ export function createStadium({ me, ch, others, getMine, getMyEl, teleport }) {
   let match = null, offset = 0, lastKick = 0, lastSync = 0, pendingGoal = 0, busy = false, polling = false, lastScore = -1, lastStatus = null, alive = true;
 
   const myTicket = () => S.get().stadiumTicket || null;
-  const myPlayer = () => match && (match.players || []).find((p) => p.id === me);
+  const live = () => match && (match.status === 'lobby' || match.status === 'playing');
+  const myPlayer = () => live() && (match.players || []).find((p) => p.id === me);
   const playing = () => match && match.status === 'playing';
-  const count = (side) => (match && match.players || []).filter((p) => p.side === side).length;
+  const count = (side) => (live() && match.players || []).filter((p) => p.side === side).length;
 
   // ---------- the ball ----------
   function resetBall() { Object.assign(ball, { x: PITCH.cx, y: PITCH.cy, vx: 0, vy: 0, owner: null }); pendingGoal = 0; drawBall(); }
@@ -119,6 +120,7 @@ export function createStadium({ me, ch, others, getMine, getMyEl, teleport }) {
     if (!st) return;
     if (st.now) offset = Date.parse(st.now) - Date.now();
     const prev = match; match = st.match || null;
+    const hadTicket = !!(myTicket() && match && myTicket().match === match.id);
     if (st.ticket !== undefined) settle(st.ticket);
     const score = match ? match.red + match.blue : -1, status = match && match.status;
     const sameMatch = prev && match && prev.id === match.id;
@@ -128,8 +130,11 @@ export function createStadium({ me, ch, others, getMine, getMyEl, teleport }) {
       sfx.correct(); toast(`⚽ <span class="zh">进球！</span> GOAL for ${TEAM[side].dot} ${TEAM[side].en}! ${match.red} : ${match.blue}`, { ms: 2200 });
       resetBall(); if (status === 'playing') kickoff();
     }
-    if (sameMatch && status === 'done' && lastStatus === 'playing' && !(myTicket() && myTicket().match === match.id)) {
+    if (sameMatch && status === 'done' && lastStatus === 'playing' && !hadTicket) {
       toast(`🏆 ${TEAM[match.winner].dot} <span class="zh">${TEAM[match.winner].zh}赢了！</span> ${TEAM[match.winner].en} team wins ${match.red} : ${match.blue}`, { ms: 4000 });
+    }
+    if (sameMatch && status === 'cancelled' && lastStatus === 'playing' && !hadTicket) {
+      toast('⏹ <span class="zh">比赛结束了</span> The match was ended early — no winner this time', { ms: 3000 });
     }
     if (!match || status !== 'playing') { if (!sameMatch || prev.status === 'playing') resetBall(); }
     lastScore = score; lastStatus = status;
@@ -149,7 +154,7 @@ export function createStadium({ me, ch, others, getMine, getMyEl, teleport }) {
       const won = t.winner === tk.side; finish(won ? PRIZE : 0);
       showResult(t, tk.side, won);
     } else if (t.status === 'cancelled' || (t.status === 'lobby' && !t.side)) {
-      finish(FEE); toast(`↩️ <span class="zh">退回${FEE}金币</span> Match cancelled — ${FEE} coins returned`, { coins: FEE });
+      finish(FEE); toast(`⏹ <span class="zh">比赛结束，退回${FEE}金币</span> Match ended with no winner — ${FEE} coins returned`, { coins: FEE });
     }
   }
   function showResult(t, side, won) {
@@ -203,6 +208,18 @@ export function createStadium({ me, ch, others, getMine, getMyEl, teleport }) {
     finally { busy = false; drawHud(); }
   }
 
+  // any player can stop a match early: nobody wins and everyone gets their 30 coins back
+  async function end() {
+    if (busy || !playing() || !myPlayer()) return;
+    const ok = await confirmBox('⏹ <span class="zh">结束比赛？</span> End the match?',
+      `<span class="zh">比赛会停止，没有赢家。每个人拿回 ${FEE} 金币。</span><br>The match stops with no winner. Everyone gets their ${FEE} coins back.`, '结束 End', '继续踢 Keep playing');
+    if (!ok || !playing()) return;
+    busy = true;
+    try { apply(await rpc('stadium_end', { p_match: match.id })); ch.send('match', { id: me }); }
+    catch (e) { toast(errText(e)); }
+    finally { busy = false; drawHud(); }
+  }
+
   // ---------- the scoreboard and team buttons ----------
   function clock() {
     if (!match || !match.startedAt) return '00:00';
@@ -226,6 +243,7 @@ export function createStadium({ me, ch, others, getMine, getMyEl, teleport }) {
     const can = !!p && st === 'lobby' && r === b && r >= 1;
     const go = $('.st-start', hud); go.disabled = !can || busy; go.classList.toggle('hidden', !p);
     $('.st-leave', hud).classList.toggle('hidden', !p || st !== 'lobby');
+    const stop = $('.st-end', hud); stop.classList.toggle('hidden', !(p && st === 'playing')); stop.disabled = busy;
     const names = (side) => (m && m.players || []).filter((x) => x.side === side).map((x) => x.name || '🐱').join(', ');
     if (st === 'playing') info.textContent = p ? `⚽ ${TEAM[p.side].dot} 你在${TEAM[p.side].zh} · You're ${TEAM[p.side].en}: score in the ${p.side === 'red' ? 'right ▶' : '◀ left'} goal!` : '⚽ 比赛中 · Match on — cheer from the side!';
     else if (!p) info.textContent = `选一队，付 ${FEE} 金币 · Pick a team (${FEE} coins). 2–8 players, equal teams.`;
@@ -233,7 +251,7 @@ export function createStadium({ me, ch, others, getMine, getMyEl, teleport }) {
     else info.textContent = '人齐了！按开始 · Teams are ready — tap Start!';
     const roster = $('.st-roster', hud);
     roster.innerHTML = '';
-    if (m && m.players && m.players.length) ['red', 'blue'].forEach((side) => { const s = document.createElement('span'); s.className = `st-${side}-names`; s.textContent = `${TEAM[side].dot} ${names(side) || '—'}`; roster.append(s); });
+    if (live() && m.players && m.players.length) ['red', 'blue'].forEach((side) => { const s = document.createElement('span'); s.className = `st-${side}-names`; s.textContent = `${TEAM[side].dot} ${names(side) || '—'}`; roster.append(s); });
   }
   function paintTeams() {
     const team = new Map(((match && match.status !== 'done' && match.status !== 'cancelled' && match.players) || []).map((p) => [p.id, p.side]));
@@ -249,13 +267,14 @@ export function createStadium({ me, ch, others, getMine, getMyEl, teleport }) {
       <div class="scoreboard"><span class="sb-team red">🔴 RED</span><b class="sb-red">0</b><span class="sb-colon">:</span><b class="sb-blue">0</b><span class="sb-team blue">BLUE 🔵</span><span class="sb-clock">00:00</span></div>
       <div class="st-panel"><div class="st-lobby"><button type="button" class="btn small st-red"></button><button type="button" class="btn small st-blue"></button>
         <button type="button" class="btn green small st-start">▶ <span class="zh">开始</span> Start</button><button type="button" class="btn white small st-leave">↩ <span class="zh">离开</span> Leave</button></div>
-      <div class="st-info"></div><div class="st-roster"></div></div></div>`;
+      <div class="st-info"></div><button type="button" class="btn white small st-end hidden">⏹ <span class="zh">结束比赛</span> End game</button><div class="st-roster"></div></div></div>`;
     hud.addEventListener('pointerdown', (e) => e.stopPropagation());
     hud.addEventListener('click', (e) => e.stopPropagation());
     $('.st-red', hud).onclick = () => join('red');
     $('.st-blue', hud).onclick = () => join('blue');
     $('.st-start', hud).onclick = begin;
     $('.st-leave', hud).onclick = leave;
+    $('.st-end', hud).onclick = end;
     room.append(hud);
     ballEl = document.createElement('div'); ballEl.className = 'stadium-ball';
     const c = document.createElement('canvas'); drawGrid(c, artGrid(BALL_ART, BALL_PAL), 3.5); ballEl.append(c);

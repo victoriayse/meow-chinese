@@ -1832,3 +1832,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .stadium-result .stadium-final { font-size: 34px; font-weight: 900; text-align: center; }
 .stadium-result .red { color: #e8384f; } .stadium-result .blue { color: #3d8be0; }
 .stadium-hud .sb-team { white-space: nowrap; }
+.stadium-hud .st-end { pointer-events: auto; font-size: 19px; padding: 4px 12px; border-width: 3px; }
+.stadium-hud .st-end.hidden { display: none; }
+/* v160: cats are 30% smaller on the pitch (name tags stay readable) */
+.room[data-room="stadium"] .vcat .kflip { scale: .7; transform-origin: 50% 100%; }
