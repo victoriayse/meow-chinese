@@ -15,6 +15,7 @@ let pendingNotes = null, notesDismissed = false;   // a newer version is waiting
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
+import { wireDisplays } from './display-racks.js';
 import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, catFace, freeSlot, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
 import * as Pets from './pets.js';
 import * as Radio from './radio.js';
@@ -1140,6 +1141,7 @@ function homeScreen(params = {}) {
       toast(on ? '▶️ <span class="zh">开始放电影</span> Film on' : '⏹ <span class="zh">电影停了</span> Film off', { ms: 1400 });
     });
     room.addEventListener('screen-video', (e) => openVideo(e.detail.id, () => { Visit.hostResendHouse(); refreshHome(); }));
+    wireDisplays(room, { edit: true, changed: () => { Visit.hostResendHouse(); refreshHome(); } });
     // menu boards: tap to change what's written on them
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.board');

@@ -45,6 +45,7 @@ export function prepareCafe(S, layout) {
       st.decorRoom[e.id] = room;
       const x = /left:([\d.]+)%/.exec(e.css), y = /top:([\d.]+)%/.exec(e.css);
       if (x && y) st.decorPos[e.id] = { x: +x[1], y: +y[1] };
+      if (e.stock) (st.displayStock ||= {})[e.id] = e.stock;
       if (e.scale) { st.decorScale = st.decorScale || {}; st.decorScale[e.id] = e.scale; }
       if (e.layer) st.decorLayer[e.id] = e.layer;
     });

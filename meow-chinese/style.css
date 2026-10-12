@@ -1758,7 +1758,18 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .bowl-pin,.bowl-ball { position:absolute;transform:translateX(-50%); }
 .bowling-score { font-size:12px;line-height:1.8;word-spacing:4px; }
 .bowling-game input { width:100%; }
-.map-pin .ic canvas { width:44px;height:44px;image-rendering:pixelated; }
-@media(max-width:600px){.map-pin .ic canvas{width:32px;height:32px}.map-pin .lb{font-size:10px;max-width:130px;white-space:normal}.map-pin .lb .zh{display:block}.map-box{min-height:250px}}
+.map-pin .ic canvas { width:34px!important;height:34px!important;image-rendering:pixelated; }
+@media(max-width:600px){.map-pin .ic canvas{width:26px!important;height:26px!important}.map-pin .lb{font-size:10px;max-width:130px;white-space:normal}.map-pin .lb .zh{display:block}.map-box{min-height:250px}}
 
 .decor[data-id^="mallpricetag"] .board-text {font-size:10px;padding:0;text-align:center;color:#3a2a35}
+/* Shelf stock stays on its tier as furniture is resized. */
+.display-slot { position:absolute; transform:translate(-50%,-100%); width:36%; height:25%; padding:0; border:0; background:transparent; cursor:pointer; pointer-events:auto; z-index:3; display:flex; align-items:flex-end; justify-content:center; }
+.display-slot canvas { max-width:100%; max-height:100%; width:auto!important; height:auto!important; object-fit:contain; image-rendering:pixelated; }
+.display-slot.empty { visibility:hidden; color:var(--ink); font-size:14px; }
+.display-owner .display-slot.empty { visibility:visible; }
+.arranging .display-slot { pointer-events:none; }
+.display-options { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:48vh;overflow:auto; }
+.display-options .btn { font-size:12px;display:flex;align-items:center;gap:5px; }
+.hotpot-table .table-place { top:76%; }
+.hotpot-table .hotpot-side-food canvas { width:22px!important;height:auto!important; }
+.hotpot-table .built-in-ingredient canvas { width:10px!important;height:auto!important; }

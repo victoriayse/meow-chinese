@@ -12,7 +12,7 @@ let transferBusy = false;
 
 function shop(kind, go) {
   if(kind==='changing'){go('wardrobe');return;}
-  const candidates=Object.entries(ITEMS).filter(([id,it])=>!it.special && (kind==='wear'?it.cat==='wear':kind==='electronics'?['tv','laptop','radio','fridge','fan','aircon'].includes(id):it.cat==='decor'));
+  const candidates=Object.entries(ITEMS).filter(([id,it])=>!it.special && !it.retired && (kind==='wear'?it.cat==='wear':kind==='electronics'?['tv','laptop','radio','fridge','fan','aircon'].includes(id):it.cat==='decor'));
   const box=html`<div class="card stack mall-shop"><div class="h-title">${kind==='wear'?'服装店 Fashion Store':'家居店 Home Store'}</div><input class="mall-search" placeholder="Search / 搜索"><div class="mall-goods"></div><button class="btn white mall-close">Close</button></div>`;
   function draw(){const list=$('.mall-goods',box);list.replaceChildren();const q=$('.mall-search',box).value.toLowerCase();
     candidates.filter(([,it])=>(it.name+' '+it.en).toLowerCase().includes(q)).forEach(([id,it])=>{
@@ -57,10 +57,10 @@ export function wireMall(room, roomKey, layout, go, onChanged = () => {}) {
     $('.mall-close',box).onclick=closeModal;openModal(box);
   }
   function potChoice(row,button){
-    const pots=[...room.querySelectorAll('.decor')].filter(d=>ITEMS[d.dataset.id].hotpot);
+    const pots=[...room.querySelectorAll('.decor')].filter(d=>ITEMS[d.dataset.id].hotpot).sort((a,b)=>(b.dataset.id===row.furniture)-(a.dataset.id===row.furniture));
     const box=html`<div class="card stack"><div class="h-title">${SNACKS[row.item].en}</div><button class="btn green mall-pick">Pick up</button><div class="mall-pots"></div><button class="btn white mall-close">Close</button></div>`;
     $('.mall-pick',box).onclick=()=>{closeModal();collect(row,button);};
-    pots.forEach((p,i)=>{const b=document.createElement('button');b.className='btn blue';b.textContent='加到锅里 Add to Pot '+(i+1);b.onclick=async()=>{b.disabled=true;try{await action('pot',roomKey,{id:row.id,pot:p.dataset.id});closeModal();await refresh();}catch{b.disabled=false;toast('Pot full or item already taken.');}};$('.mall-pots',box).append(b);});
+    pots.forEach((p,i)=>{const b=document.createElement('button');b.className='btn blue';b.textContent='加到锅里 Add to Pot '+(p.dataset.id===row.furniture?'(this table)':i+1);b.onclick=async()=>{b.disabled=true;try{await action('pot',roomKey,{id:row.id,pot:p.dataset.id});closeModal();await refresh();}catch{b.disabled=false;toast('Pot full or item already taken.');}};$('.mall-pots',box).append(b);});
     if(!pots.length)$('.mall-pots',box).textContent='Ask the admin to place a hotpot pot.';
     $('.mall-close',box).onclick=closeModal;openModal(box);
   }
@@ -72,13 +72,16 @@ export function wireMall(room, roomKey, layout, go, onChanged = () => {}) {
       if(counter){const wrapper={querySelector:()=>counter};showCounter(wrapper,data,collect,roomKey);}
       room.querySelectorAll('.mall-table-food,.mall-place,.mall-number').forEach(n=>n.remove());
       mallTables(layout,roomKey).forEach(t=>{const d=[...room.querySelectorAll('.decor')].find(d=>d.dataset.id===t.id);if(!d)return;
-        const label=document.createElement('span');label.className='cafe-table-number mall-number';label.textContent='#'+t.number;d.append(label);
+        const label=document.createElement('span');label.className='cafe-table-number mall-number';label.textContent='#'+t.number;d.append(label);if(ITEMS[d.dataset.id].builtInPot)d.classList.add('hotpot-table');
         const b=document.createElement('button');b.className='table-place mall-place';b.textContent='+ 放食物';b.onclick=e=>{e.stopPropagation();choose(t.id);};d.append(b);
       });
       (data.tables||[]).forEach(row=>{
         let d=[...room.querySelectorAll('.decor')].find(d=>d.dataset.id===row.furniture);const loose=!d;if(loose)d=room;
         const b=document.createElement('button');b.className='table-food mall-table-food'+(row.state==='pot'?' pot-food':'');b.title=SNACKS[row.item]?.en||'Food';if(!SNACKS[row.item])return;if (row.state === 'pot' && SNACKS[row.item].potArt) { const c = document.createElement('canvas'); drawGrid(c, artGrid(SNACKS[row.item].potArt, SNACKS[row.item].pal), 3); b.append(c); } else b.append(snackCanvas(row.item,3));
-        b.style.left=(loose?8:row.state==='pot'?25+(row.slot%3)*22:25+row.slot*16)+'%';b.style.top=(loose?85:row.state==='pot'?24+Math.floor(row.slot/3)*15:42)+'%';
+        const builtIn = !loose && ITEMS[d.dataset.id]?.builtInPot;
+        const pt = builtIn ? (row.state === 'pot' ? [44 + ((row.slot - 4) % 3) * 6, 45 + Math.floor((row.slot - 4) / 3) * 7] : [[28,34],[72,34],[28,64],[72,64]][row.slot]) : null;
+        b.style.left=(loose?8:pt?pt[0]:row.state==='pot'?25+(row.slot%3)*22:25+row.slot*16)+'%';b.style.top=(loose?85:pt?pt[1]:row.state==='pot'?24+Math.floor(row.slot/3)*15:42)+'%';
+        if (builtIn) b.classList.add(row.state === 'pot' ? 'built-in-ingredient' : 'hotpot-side-food');
         b.onclick=e=>{e.stopPropagation();if(row.state==='table'&&row.item.startsWith('hotpot'))potChoice(row,b);else collect(row,b);};d.append(b);
         if(row.deliveredAt&&!served.has(row.id)&&Date.now()-Date.parse(row.deliveredAt)<12000&&!loose){served.add(row.id);deliverCat(room,d,b,row.item,{fur:venue.fur});}
       });

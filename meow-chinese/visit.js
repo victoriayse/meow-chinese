@@ -18,6 +18,7 @@ import { Channel } from './rt.js';
 import { drawRoom, drawRoof, ITEMS, SNACKS } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal } from './ui.js';
 import { sfx } from './audio.js';
+import { wireDisplays } from './display-racks.js';
 import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, freeSlot, hearNote, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
 import * as Radio from './radio.js';
 import * as Places from './places.js';
@@ -294,6 +295,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       if (!await Places.savePlace(placeKey)) throw new Error('Could not save the shared layout');
       await refreshPlace();
     };
+    wireDisplays(room, { edit: !!(P && Places.isAdmin()), changed: saveMedia });
     if (P && Places.isAdmin()) room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.board'); if (!d) return;
       openBoard(d.dataset.id, saveMedia, d.querySelector('.board-text').textContent);
