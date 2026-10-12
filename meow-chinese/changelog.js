@@ -409,4 +409,9 @@ export const CHANGES = [
     'L5 is now a dark arcade. Buy claw, basketball, driving and dance machines, a redemption desk, lift doors and empty display racks. Bowling items are no longer sold.',
     'Stock display racks with shop items for visitors to buy. Hotpot tables now have a built-in central pot with food placed around the sides. Map icons are smaller and distinct.',
   ] },
+  { v: 151, items: [
+    'Map artwork is 20% smaller and centred in its circles. Hotpot plates now show leaves, sliced meat, prawns, fishballs, mushrooms and noodles; bakery shelves show shaped breads.',
+    'Buy five original handbag designs as furniture or wearable accessories, a printer, editable whiteboard, croissant tray, exit/toilet/lift signs and children’s toys.',
+    'The new green classroom chair has a writing tablet and can face forwards or backwards using its rotate button. Cats can sit on it and face the same way as the chair.',
+  ] },
 ];
