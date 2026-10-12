@@ -1,4 +1,4 @@
-import { wireMall } from './mall-play.js';
+import { wireMall, openMallDirectory } from './mall-play.js';
 import { openPoster, openVideo, openRadio, openBoard } from './media.js';
 import * as CafeTables from './cafe-tables.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
@@ -286,7 +286,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   function render() {
     const info = S.roomInfo(roomKey), open = house.open || ['living'];
     box.innerHTML = `<div class="house-unit ${info.outdoor ? 'outdoor' : ''} ${info.bare || info.noRoof ? 'bare' : ''}" id="hunit"><canvas class="roof" id="roof"></canvas>
-        <div class="room-name">${info.icon} <span class="zh">${info.zh}</span> ${info.en}${P ? `<button class="room-light ${((house.power || {}).dark || {})[roomKey] ? 'off' : ''}" id="v-light" title="Lights" aria-label="Lights">💡</button>` : ''}</div>
+        <div class="room-name">${info.icon} <span class="zh">${info.zh}</span> ${info.en}${P ? `<button class="room-light ${((house.power || {}).dark || {})[roomKey] ? 'off' : ''}" id="v-light" title="Lights" aria-label="Lights">💡</button>` : ''}${placeKey === 'mall' ? '<button class="room-light mall-directory" title="Mall directory" aria-label="Mall directory">▦</button>' : ''}</div>
         <div class="room" id="room" data-room="${roomKey}"><canvas class="room-bg" id="roombg"></canvas></div>
       </div>${roomArrowsHtml(roomKey, (k) => open.includes(k), { showLocked: false })}`;
     const unit = $('#hunit', box), room = $('#room', box);
@@ -379,6 +379,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     petLayer = new PetLayer(room, roomKey, { onClick: (kind) => { const p = (house.pets || []).find((x) => x.kind === kind); if (p) { sfx.coin(); toast(`🤍 <span class="zh">${esc(p.name)}</span>`, { ms: 1500 }); } } });
     petLayer.update(house.pets || []);
     hearRadio();
+    box.querySelector('.mall-directory')?.addEventListener('click', () => openMallDirectory(roomKey, (key) => { roomKey=key; mine.room=key; mine.seat=null; mine.boothClosed=false; mine.x=30; mine.y=6; render(); sendMine(); }));
     box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { roomKey = b.dataset.room; mine.room = roomKey; mine.seat = null; sfx.click(); render(); sendMine(); }; });
     // Each arrival gets one greeting sequence, even if the layout refreshes.
     if (placeKey === 'cafe' && roomKey === 'cafeentrance' && !welcomed && room.querySelector('.cafe-greeter')) {

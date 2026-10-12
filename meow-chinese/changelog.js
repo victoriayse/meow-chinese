@@ -425,4 +425,5 @@ export const CHANGES = [
   { v: 154, items: ['The back-facing tuition chair now shows its backrest in front of your seated kitten.'] },
   { v: 155, items: ['Tap a mall changing booth to enter. Close its curtain to hide inside, then open it or come out.'] },
   { v: 156, items: ['Fixed changing booths growing when you enter or use their curtains on phones and Retina screens.'] },
+  { v: 157, items: ['New editable floor standee, wall mirror, digital directory photo board and white furry rug.', 'The mall has a directory button beside the light switch. Tap any room to go straight there.', 'Hotpot ingredients cook for 3 seconds and return to the table when space is free. The hotpot waiter walks in and out from the left.', 'Tap lift doors to open them. Cats can sit on toilets and peek out of car windows.', 'Poster photos now allow 500 KB. Microwaves no longer offer video uploads.'] },
 ];
