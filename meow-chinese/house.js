@@ -769,7 +769,8 @@ export function boothView(room, cat, id, closed, onAction) {
     const canvas = d && d.querySelector(':scope > canvas');
     if (canvas && it?.booth) {
       const art = shut ? it.frames.closed : it.art;
-      drawGrid(canvas, artGrid(art, it.pal), canvas.width / art[0].length);
+      // drawGrid already multiplies by the screen pixel density. Keep the CSS size.
+      drawGrid(canvas, artGrid(art, it.pal), parseFloat(canvas.style.width) / art[0].length);
     }
     return d;
   };

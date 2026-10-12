@@ -424,4 +424,5 @@ export const CHANGES = [
   ] },
   { v: 154, items: ['The back-facing tuition chair now shows its backrest in front of your seated kitten.'] },
   { v: 155, items: ['Tap a mall changing booth to enter. Close its curtain to hide inside, then open it or come out.'] },
+  { v: 156, items: ['Fixed changing booths growing when you enter or use their curtains on phones and Retina screens.'] },
 ];
