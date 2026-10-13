@@ -749,7 +749,7 @@ export function seatSpot(roomEl, id, slot = 0) {
     back: !!seat.back || el.dataset.facing === 'back', pose: point ? point.pose || null : seat.lie ? 'lie' : (seat.back || el.dataset.facing === 'back') ? 'back' : seat.side ? ((slot || 0) === 0 ? 'side-r' : 'side-l') : null,
     x: ((el.offsetLeft + el.offsetWidth * sx) / W) * 100,
     y: ((H - (el.offsetTop + el.offsetHeight * (point ? point.y : seat.y))) / H) * 100,
-    z: (parseInt(el.style.zIndex, 10) || 50) + 1, lie: !!seat.lie, el,
+    z: (parseInt(el.style.zIndex, 10) || 50) + (point && point.front ? 3 : 1), lie: !!seat.lie, el,   // front-row seats sit in front of the table
   };
 }
 // the bed's blanket drawn over a kitten lying in it

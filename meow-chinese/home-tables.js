@@ -9,7 +9,7 @@ import { html, $, openModal, closeModal, toast } from './ui.js';
 
 const rpc = (name, body = {}) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
 // tables you can share things on: the home dining table (4 spaces) and the children's desk (2 spaces)
-const isTable = (id) => ['homedining4', 'schooldesk'].includes(String(id).split('#')[0]);
+const isTable = (id) => ['homedining4', 'schooldesk', 'canteentable'].includes(String(id).split('#')[0]);
 const surfaceOf = (id) => ITEMS[String(id).split('#')[0]].surface;
 // where the table is: a friend's / my house, or a public place on the map (the school)
 const api = (scope) => scope.k === 'place'

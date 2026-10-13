@@ -3,6 +3,7 @@ import { openPoster, openVideo, openRadio, openBoard } from './media.js';
 import * as CafeTables from './cafe-tables.js';
 import { wireHomeTables, wirePlaceTables } from './home-tables.js';
 import { createStadium, joystick, JOYSTICK } from './stadium.js';
+import { wireCanteen } from './canteen.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
 //   knock  visitor -> house   { id, look, x, y, room, left }      "I'm here" (the owner answers with the house)
@@ -416,13 +417,14 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (!P) wireHomeTables(room, hostId, () => { if (myKv) myKv.draw(); sendMine(); });
     else if (!['cafe', 'mall'].includes(placeKey)) wirePlaceTables(room, placeKey, roomKey, () => { if (myKv) myKv.draw(); sendMine(); });
     if (placeKey === 'mall') wireMall(room, roomKey, house, go, () => { if (myKv) myKv.draw(); sendMine(); });
+    if (placeKey === 'school' && roomKey === 'schoolcanteen') wireCanteen(room);
     hydrateIcons(box);
   }
   // 🧾 the collection counter (public places): the first two orders that are ready; anyone can pick them up
   let counterBusy = false;
   async function refreshCounter() {
     const room = $('#room', box);
-    if (!P || placeKey === 'mall' || !room || !room.querySelector('.decor[data-counter]') || counterBusy) return;
+    if (!P || placeKey === 'mall' || placeKey === 'school' || !room || !room.querySelector('.decor[data-counter]') || counterBusy) return;
     counterBusy = true;
     const data = await Snacks.counterNow(placeKey); counterBusy = false;
     if (!data || !room.isConnected) return;

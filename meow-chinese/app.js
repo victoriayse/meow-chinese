@@ -956,7 +956,7 @@ function homeScreen(params = {}) {
       const place = roomRI.place;
       let counterBusy = false;
       const refreshCounter = async () => {
-        if (!room.isConnected || arranging || counterBusy || !room.querySelector('[data-counter]')) return;
+        if (!room.isConnected || arranging || counterBusy || place === 'school' || place === 'mall' || !room.querySelector('[data-counter]')) return;   // the mall and school counters have their own orders
         counterBusy = true;
         const data = await Snacks.counterNow(place); counterBusy = false;
         if (!data || !room.isConnected || arranging) return;
