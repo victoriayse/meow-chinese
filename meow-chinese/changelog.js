@@ -439,4 +439,5 @@ export const CHANGES = [
   { v: 168, items: ['Fixed furniture with a chair or table front (desks, cinema chairs, tables) looking doubled after you make it bigger or smaller.'] },
   { v: 169, items: ['🍱 School canteen: 3 stores (Local, Western, Drinks), each with its own ordering kiosk and a cat at its collection counter.', 'Local: Mee Siam, Laksa, Fishball Noodle, Nasi Lemak, Fried Beehoon, Fried Rice, Bak Chor Mee, Chee Cheong Fun. Western: Chicken Chop, Fish & Chips, Lasagna, Pasta, Baked Rice, Fries, Nuggets, Seaweed Chicken. Drinks: Milo, Apple Juice, Orange Juice, Water.', 'New long canteen table: seats 6 (3 behind facing you, 3 on the front bench), and you can share food on it.'] },
   { v: 170, items: ['New canteen store windows (Shop → Home → 🏫 School): a tiled wall with a serving window, a kitchen inside and a sign for Local, Western and Drinks. Put each one behind its store\'s counter.'] },
+  { v: 171, items: ['Fixed canteen orders failing ("Couldn\'t order").', 'Fixed the Pay button turning into "…" after an order fails.'] },
 ];

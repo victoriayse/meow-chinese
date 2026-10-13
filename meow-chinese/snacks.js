@@ -106,6 +106,7 @@ export function openKiosk({ menuOverride = null, tablesOverride = null, orderFn 
     const t = total(), items = menu.flatMap((k) => Array(qty[k] || 0).fill(k));
     if (!items.length || S.get().coins < t) return;
     if (confirmPay && !(await kioskConfirm(box, items, t))) return;
+    const payLabel = pay.innerHTML;
     pay.disabled = true; pay.textContent = '…';
     try {
       if (orderFn) await orderFn(items, service, tableNumber);
@@ -114,7 +115,7 @@ export function openKiosk({ menuOverride = null, tablesOverride = null, orderFn 
       sfx.coin(); closeModal();
       toast(service === 'table' ? `🧾 Paid ${t} — 送到桌号 Table #${tableNumber}` : `🧾 <span class="zh">点好了！3秒后去取餐柜台拿</span> Paid ${t} — pick it up at the collection counter`, { ms: 3500 });
       onPaid(items);
-    } catch (e) { toast('点不了，再试一次 · Couldn\'t order — try again'); draw(); }
+    } catch (e) { pay.innerHTML = payLabel; toast('点不了，再试一次 · Couldn\'t order — try again'); draw(); }   // put the Pay button back
   };
   draw();
   openModal(box);
