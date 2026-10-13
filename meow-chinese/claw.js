@@ -6,7 +6,11 @@ import { html, $, openModal, closeModal, toast, coinI, hydrateIcons } from './ui
 import { sfx } from './audio.js';
 
 export const CLAW_COST = 5, CLAW_CHANCE = 0.2;
-const HOME_X = 12, X_MIN = 10, X_MAX = 90, SPEED = 38;   // % of the glass; % per second
+// the claw moves left/right (x, % of the glass) and back/front (z: 0 = back, 1 = front)
+const HOME = { x: 12, z: 1 }, X_MIN = 8, X_MAX = 92, SPEED_X = 36, SPEED_Z = 0.7;
+const STACK = 26;                                   // px each layer of toys sits above the one below
+const baseOf = (z) => 8 + (1 - z) * 78;             // px from the bottom of the glass to a toy's feet on the floor
+const sizeOf = (z) => 0.74 + 0.26 * z;              // toys (and the claw) look smaller further back
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 function anim(ms, step) {
   return new Promise((done) => {
@@ -22,60 +26,108 @@ export function openClaw() {
       <div class="claw-marquee"><span>✦</span> 抓娃娃 <b>CLAW</b> <span>✦</span></div>
       <div class="claw-glass">
         <div class="claw-rail"></div>
-        <div class="claw" style="left:${HOME_X}%"><div class="claw-cable"></div><div class="claw-hub"></div><i class="claw-prong l"></i><i class="claw-prong r"></i><div class="claw-grip"></div></div>
         <div class="claw-pile"></div>
+        <div class="claw-aim"></div>
+        <div class="claw" style="left:${HOME.x}%"><div class="claw-cable"></div><div class="claw-head"><div class="claw-hub"></div><i class="claw-prong l"></i><i class="claw-prong r"></i><div class="claw-grip"></div></div></div>
         <div class="claw-chute"><span>PRIZE</span></div>
         <div class="claw-timer hidden"></div>
       </div>
       <div class="claw-panel">
-        <div class="claw-joy" aria-label="Joystick"><div class="claw-knob"></div></div>
+        <div class="claw-joy" aria-label="Joystick"><i class="claw-joy-arrows">▲<br>◀ &nbsp; ▶<br>▼</i><div class="claw-knob"></div></div>
         <button type="button" class="claw-go" disabled><span class="zh">抓</span><small>START / CATCH</small></button>
         <button type="button" class="claw-coin"><span class="claw-slot"></span><b>${CLAW_COST}</b>${coinI(16)}<small>投币 Coin</small></button>
       </div>
       <div class="claw-msg">投币开始 · Put a coin in to play! <small>(${CLAW_COST} coins a go)</small></div>
       <div class="row" style="justify-content:space-between;align-items:center"><span class="claw-wallet"></span><button type="button" class="btn white small claw-close">关闭 Close</button></div>
     </div>`;
-  const glass = $('.claw-glass', box), claw = $('.claw', box), cable = $('.claw-cable', box), grip = $('.claw-grip', box);
-  const pile = $('.claw-pile', box), msg = $('.claw-msg', box), go = $('.claw-go', box), coinBtn = $('.claw-coin', box);
+  const glass = $('.claw-glass', box), claw = $('.claw', box), cable = $('.claw-cable', box), head = $('.claw-head', box), grip = $('.claw-grip', box);
+  const pile = $('.claw-pile', box), msg = $('.claw-msg', box), go = $('.claw-go', box), coinBtn = $('.claw-coin', box), aimEl = $('.claw-aim', box);
   const knob = $('.claw-knob', box), joy = $('.claw-joy', box), timerEl = $('.claw-timer', box);
-  let x = HOME_X, depth = 0, dir = 0, phase = 'idle', credit = 0, left = 0, raf = 0, last = 0, tick = null, alive = true;
+  let x = HOME.x, z = HOME.z, depth = 0, vx = 0, vz = 0, phase = 'idle', credit = 0, left = 0, raf = 0, last = 0, tick = null, alive = true;
 
   const wallet = () => { $('.claw-wallet', box).innerHTML = `你有 You have <b>${S.get().coins}</b>${coinI(16)}`; hydrateIcons(box); };
   const say = (t) => { msg.innerHTML = t; };
   const setOpen = (open) => claw.classList.toggle('closed', !open);
-  const draw = () => { claw.style.left = `${x}%`; cable.style.height = `${8 + depth}px`; };
 
-  // ---------- the prizes in the machine ----------
+  // ---------- the toys: a random heap that fills the machine (the same toy can be in there more than once) ----------
   const prizes = [];
-  const SPOTS = [[26, 52], [40, 50], [54, 54], [68, 50], [83, 52], [33, 8], [47, 10], [61, 6], [75, 10], [89, 8]];   // [x %, bottom px]
   const pick = () => CLAW_PRIZES[Math.floor(Math.random() * CLAW_PRIZES.length)];
-  function place(spot, id = pick()) {
-    const el = document.createElement('div'); el.className = 'claw-prize';
-    el.append(spriteCanvas(id, 46)); el.title = ITEMS[id].en;
-    el.style.left = `${spot[0]}%`; el.style.bottom = `${spot[1]}px`; el.style.zIndex = spot[1] > 30 ? 1 : 2;
-    pile.append(el);
-    const p = { id, el, spot }; prizes.push(p); return p;
+  function put(p) {
+    const s = sizeOf(p.z);
+    p.el.style.left = `${p.x}%`; p.el.style.bottom = `${baseOf(p.z) + p.layer * STACK * s}px`;
+    p.el.style.setProperty('--s', s);
+    p.el.style.zIndex = Math.round(p.z * 10) * 10 + p.layer;      // front rows and upper layers in front
   }
-  SPOTS.forEach((s) => place(s));
+  function add(x0, z0, layer, id = pick()) {
+    const el = document.createElement('div'); el.className = 'claw-prize';
+    el.append(spriteCanvas(id, 52)); el.title = ITEMS[id].en;
+    const p = { id, el, x: x0, z: z0, layer };
+    put(p); pile.append(el); prizes.push(p); return p;
+  }
+  const topAt = (x0, z0) => prizes.filter((p) => Math.abs(p.x - x0) < 6 && Math.abs(p.z - z0) < 0.2).reduce((m, p) => Math.max(m, p.layer + 1), 0);
+  function fill() {
+    // three rows (back, middle, front), piled higher in the middle of the machine; the front-left corner is the prize chute
+    [[0, 10], [0.5, 25], [1, 27]].forEach(([z0, from]) => {
+      for (let x0 = from; x0 <= 92; x0 += 9.5) {
+        const mid = 1 - Math.abs(x0 - 55) / 50;                         // 1 in the middle, ~0.3 at the sides
+        const layers = 1 + (Math.random() < 0.35 + mid * 0.45 ? 1 : 0) + (z0 < 1 && Math.random() < mid * 0.45 ? 1 : 0);
+        for (let l = 0; l < layers; l++) add(x0 + (Math.random() * 5 - 2.5), Math.max(0, Math.min(1, z0 + (Math.random() * 0.14 - 0.07))), l);
+      }
+    });
+  }
+  fill();
 
-  // ---------- moving the claw ----------
+  // ---------- drawing the claw and where it will drop ----------
+  function draw() {
+    const s = sizeOf(z);
+    claw.style.left = `${x}%`; cable.style.height = `${8 + depth}px`;
+    head.style.transform = `scale(${s})`;
+    claw.style.zIndex = Math.round(z * 10) * 10 + 9;
+    const top = topAt(x, z);
+    aimEl.style.left = `${x}%`; aimEl.style.bottom = `${baseOf(z) + top * STACK * s + 2}px`; aimEl.style.setProperty('--s', s);
+    aimEl.classList.toggle('hidden', phase !== 'ready');
+    // a dotted line from the claw down to the ring
+    const H = glass.clientHeight, ringTop = H - (baseOf(z) + top * STACK * s + 2) - 20, clawBottom = 10 + 8 + depth + 44 * s;
+    aimEl.style.setProperty('--line', `${Math.max(0, ringTop - clawBottom)}px`);
+  }
+
+  // ---------- the round joystick: left/right moves the claw across, up/down moves it to the back/front ----------
   const loop = (t) => {
     raf = 0; if (!alive) return;
     const dt = Math.min(0.05, (t - (last || t)) / 1000); last = t;
-    if (phase === 'ready' && dir) { x = Math.max(X_MIN, Math.min(X_MAX, x + dir * SPEED * dt)); draw(); }
-    if (phase === 'ready' && dir) raf = requestAnimationFrame(loop); else last = 0;
+    if (phase === 'ready' && (vx || vz)) {
+      x = Math.max(X_MIN, Math.min(X_MAX, x + vx * SPEED_X * dt));
+      z = Math.max(0, Math.min(1, z + vz * SPEED_Z * dt));
+      draw(); raf = requestAnimationFrame(loop);
+    } else last = 0;
   };
-  const steer = (d) => { dir = d; knob.style.transform = `translate(${d * 22}px, 0) rotate(${d * 18}deg)`; if (d && !raf) raf = requestAnimationFrame(loop); };
+  const steer = (dx, dy) => {
+    vx = dx; vz = dy;                 // pushing up (dy < 0) goes to the back (z gets smaller)
+    const R = joy.clientWidth / 2 - knob.clientWidth / 2 - 4;
+    knob.style.transform = `translate(${dx * R}px, ${dy * R}px)`;
+    if ((dx || dy) && !raf) raf = requestAnimationFrame(loop);
+  };
   let pid = null;
-  const aim = (e) => { const r = joy.getBoundingClientRect(); const d = (e.clientX - r.left - r.width / 2) / (r.width / 2); steer(Math.abs(d) < 0.2 ? 0 : Math.max(-1, Math.min(1, d))); };
+  const aim = (e) => {
+    const r = joy.getBoundingClientRect(), R = r.width / 2;
+    let dx = (e.clientX - r.left - R) / R, dy = (e.clientY - r.top - R) / R;
+    const d = Math.hypot(dx, dy); if (d > 1) { dx /= d; dy /= d; }
+    if (Math.hypot(dx, dy) < 0.2) { dx = 0; dy = 0; }
+    steer(dx, dy);
+  };
   joy.addEventListener('pointerdown', (e) => { e.preventDefault(); pid = e.pointerId; try { joy.setPointerCapture(pid); } catch {} joy.classList.add('down'); aim(e); });
   joy.addEventListener('pointermove', (e) => { if (e.pointerId === pid) aim(e); });
-  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => joy.addEventListener(ev, (e) => { if (e.pointerId === pid) { pid = null; joy.classList.remove('down'); steer(0); } }));
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((ev) => joy.addEventListener(ev, (e) => { if (e.pointerId === pid) { pid = null; joy.classList.remove('down'); steer(0, 0); } }));
   joy.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
-  const kd = (e) => { if (!alive) return; if (e.key === 'ArrowLeft') { e.preventDefault(); steer(-1); } else if (e.key === 'ArrowRight') { e.preventDefault(); steer(1); } else if ((e.key === ' ' || e.key === 'Enter') && phase === 'ready') { e.preventDefault(); drop(); } };
-  const ku = (e) => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') steer(0); };
+  const keys = new Set();
+  const keySteer = () => steer((keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0), (keys.has('ArrowDown') ? 1 : 0) - (keys.has('ArrowUp') ? 1 : 0));
+  const kd = (e) => {
+    if (!alive) return;
+    if (e.key.startsWith('Arrow')) { e.preventDefault(); keys.add(e.key); keySteer(); }
+    else if ((e.key === ' ' || e.key === 'Enter') && phase === 'ready') { e.preventDefault(); drop(); }
+  };
+  const ku = (e) => { if (keys.delete(e.key)) keySteer(); };
   window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
-
   // ---------- coin in ----------
   coinBtn.onclick = () => {
     if (phase !== 'idle') return;
@@ -84,7 +136,7 @@ export function openClaw() {
     coinBtn.classList.remove('drop'); void coinBtn.offsetWidth; coinBtn.classList.add('drop');
     sfx.coin(); setTimeout(() => sfx.arcade(), 250);
     box.classList.add('lit');
-    phase = 'ready'; go.disabled = false; coinBtn.disabled = true;
+    phase = 'ready'; go.disabled = false; coinBtn.disabled = true; draw();
     say('🕹️ 用摇杆移动，按 <b>抓</b>！ Move with the joystick, then press <b>Catch</b>!');
     left = 20; timerEl.classList.remove('hidden'); timerEl.textContent = left;
     clearInterval(tick);
@@ -95,14 +147,16 @@ export function openClaw() {
   // ---------- the catch ----------
   async function drop() {
     if (phase !== 'ready') return;
-    phase = 'busy'; credit = 0; clearInterval(tick); timerEl.classList.add('hidden'); steer(0);
+    phase = 'busy'; credit = 0; clearInterval(tick); timerEl.classList.add('hidden'); steer(0, 0); draw();
     go.disabled = true; sfx.click();
-    const H = glass.clientHeight;
-    // the prize under the claw (front row first)
-    const under = prizes.filter((p) => Math.abs(p.spot[0] - x) < 7).sort((a, b) => a.spot[1] - b.spot[1] || Math.abs(a.spot[0] - x) - Math.abs(b.spot[0] - x))[0];
+    const H = glass.clientHeight, s = sizeOf(z);
+    // the toy on top of the heap right under the claw
+    const near = prizes.filter((p) => Math.abs(p.x - x) < 6 && Math.abs(p.z - z) < 0.2);
+    const under = near.sort((a, b) => b.layer - a.layer || (Math.abs(a.x - x) + Math.abs(a.z - z) * 30) - (Math.abs(b.x - x) + Math.abs(b.z - z) * 30))[0];
     const won = !!under && Math.random() < CLAW_CHANCE;
     const slipTop = !won && !!under && Math.random() < 0.5;    // it grabs it, then the claw opens at the top
-    const floor = H - 44 - (under ? under.spot[1] + 30 : 4);
+    const surface = under ? baseOf(under.z) + (under.layer + 1) * STACK * sizeOf(under.z) + 10 : baseOf(z) + 4;
+    const floor = Math.max(10, H - 20 - surface - 46 * s);
     say('⬇️ …');
     sfx.whirr(1100);
     await anim(1100, (k) => { depth = floor * ease(k); draw(); });
@@ -120,32 +174,32 @@ export function openClaw() {
       depth = floor * (1 - ease(k)); draw();
       if (slipTop && held && k > 0.82) { setOpen(true); fall(held); held = null; }
     });
+    // back to the prize chute (front-left)
+    const fx = x, fz = z, dist = Math.abs(x - HOME.x) + Math.abs(z - HOME.z) * 40;
+    if (held) sfx.whirr(dist * 20);
+    await anim(Math.max(300, dist * 18), (k) => { x = fx + (HOME.x - fx) * ease(k); z = fz + (HOME.z - fz) * ease(k); draw(); });
     if (held) {
-      sfx.whirr(Math.abs(x - HOME_X) * 20);
-      const from = x; await anim(Math.max(300, Math.abs(x - HOME_X) * 18), (k) => { x = from + (HOME_X - from) * ease(k); draw(); });
       setOpen(true);
       const el = held.el; el.classList.remove('held'); el.classList.add('into-chute');
       await wait(550); el.remove();
       celebrate(held.id);
-      place(held.spot);   // a new prize fills the gap
+      add(held.x, held.z, topAt(held.x, held.z));    // a new toy is put in the machine
     } else {
-      const from = x; await anim(Math.max(300, Math.abs(x - HOME_X) * 18), (k) => { x = from + (HOME_X - from) * ease(k); draw(); });
       setOpen(true);
-      if (!slipTop) { sfx.oops(); say(under ? '哎呀，没抓住！ So close — the claw slipped. Try again!' : '哎呀，下面没有娃娃！ Nothing under the claw — aim for a prize!'); }
+      if (!slipTop) { sfx.oops(); say(under ? '哎呀，没抓住！ So close — the claw slipped. Try again!' : '哎呀，下面没有娃娃！ Nothing under the claw — aim for a toy!'); }
     }
     if (!alive) return;
-    phase = 'idle'; coinBtn.disabled = false; box.classList.remove('lit');
+    phase = 'idle'; coinBtn.disabled = false; box.classList.remove('lit'); draw();
   }
   function fall(p) {
-    // the claw opened at the top: the prize drops back into the pile
+    // the claw opened at the top: the toy drops back onto the heap under the claw
     const el = p.el; el.classList.remove('held');
     const gr = el.getBoundingClientRect();
-    pile.append(el);
-    const spot = [Math.max(24, Math.min(90, x)), p.spot[1]];
-    el.style.left = `${spot[0]}%`; el.style.bottom = `${spot[1]}px`;
+    p.x = Math.max(24, Math.min(92, x)); p.z = z; p.layer = topAt(p.x, p.z);
+    pile.append(el); put(p);
     const nr = el.getBoundingClientRect();
-    el.animate([{ transform: `translate(-50%, ${gr.top - nr.top}px)` }, { transform: 'translate(-50%, 0)' }], { duration: 450, easing: 'cubic-bezier(.5,0,1,1)' });
-    p.spot = spot; prizes.push(p);
+    el.animate([{ translate: `0 ${gr.top - nr.top}px` }, { translate: '0 0' }], { duration: 450, easing: 'cubic-bezier(.5,0,1,1)' });
+    prizes.push(p);
     sfx.oops(); say('😮 哎呀！爪子松开了！ Oh no — the claw opened and dropped it!');
   }
   function award(id) {
@@ -164,6 +218,7 @@ export function openClaw() {
 
   $('.claw-close', box).onclick = closeModal;
   wallet(); setOpen(true); draw();
+  requestAnimationFrame(draw);
   openModal(box, { onClose: () => {
     alive = false; clearInterval(tick); window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku);
     if (credit) { S.get().coins += CLAW_COST; S.save(); toast(`↩️ ${CLAW_COST} coins returned`, { coins: CLAW_COST }); }   // paid but never played

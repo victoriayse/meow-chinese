@@ -432,4 +432,5 @@ export const CHANGES = [
   { v: 161, items: ['The Stadium has a 🕹️ joystick instead of arrow buttons. Push the pink knob any way to run that way; push further to run faster.'] },
   { v: 162, items: ['Soccer: the ball is now pushed by the lower half of your cat and its name tag, not just the name tag.'] },
   { v: 163, items: ['🕹️ The arcade claw machine is playable! 5 coins a go: move the claw with the joystick and press 抓 Catch. Win a puppy, kitty or ducky plush, a backpack, a basketball, a fluffy pillow or heart hair clips. They can\'t be bought in the shop.', 'Before a 听写 starts you can tap 👀 View words to look at the list (a parent can turn this off).', 'On phones, scrolling down on the home page shrinks the kitten so you can see more below.', 'The Park pin no longer gets cut off on the phone map.'] },
+  { v: 164, items: ['Claw machine: the toys are piled up in a random heap (back, middle and front). The round joystick moves the claw left/right and to the back/front, and a red ring shows where it will drop.'] },
 ];
