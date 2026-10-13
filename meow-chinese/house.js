@@ -1,8 +1,8 @@
 // The kitten's house, shared by her own home page and by visits to a friend's house:
 // one fixed layout size, the furniture, the cats walking around, speech bubbles and the chat bar.
-import { ITEMS, drawGrid, artGrid, ROOM_WINDOW, kittenGrid } from './pixel.js';
-import { get as getState, roomNeighbors, UNLOCKS, roomInfo, isAdmin } from './state.js';
-import { KittenView, esc, html } from './ui.js';
+import { ITEMS, SNACKS, drawGrid, artGrid, ROOM_WINDOW, kittenGrid } from './pixel.js';
+import { get as getState, roomNeighbors, UNLOCKS, roomInfo, isAdmin, snacks as snacksOf, addSnack as addSnackFn, holdSnack as holdSnackFn } from './state.js';
+import { KittenView, esc, html, toast } from './ui.js';
 import { sfx, hushMusic } from './audio.js';
 import { renderDisplay } from './display-racks.js';
 // a film's sound is on: the game's music goes quiet until it's muted again (or the screen goes away)
@@ -189,7 +189,8 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
   else { wrap.classList.add('movable'); if (kind === 'flat') wrap.classList.add('flat'); }
   if (it.panel) { wrap.classList.add('interactive-panel', opened ? 'panel-open' : 'panel-closed'); wrap.dataset.panel = it.panel; }
   if (it.displaySlots) renderDisplay(wrap, it, stock);
-  if (it.playable) wrap.classList.add('playable');
+  if (it.playable) { wrap.classList.add('playable'); if (typeof it.playable === 'string') wrap.dataset.inst = it.playable; }
+  if (it.takeHold) { wrap.classList.add('takeable'); wrap.dataset.take = it.takeHold; }
   if (it.seat) wrap.classList.add('seat');
   if (it.frame) {
     wrap.classList.add('frame');
@@ -604,24 +605,35 @@ export function wirePlayable(roomEl, onPlay) {
   roomEl.addEventListener('click', (e) => {
     const d = e.target.closest('.decor.playable');
     if (!d || roomEl.classList.contains('arranging')) return;
-    const { i, name } = sfx.piano();
-    const n = document.createElement('div');
-    n.className = 'music-note'; n.textContent = `♪ ${name}`;
-    n.style.left = `${d.offsetLeft + d.offsetWidth * (0.25 + Math.random() * 0.5)}px`; n.style.top = `${d.offsetTop}px`;
-    roomEl.appendChild(n); setTimeout(() => n.remove(), 1400);
+    // the piano plays a note; the school instruments (drum, trumpet…) play their own sound
+    const { i, name } = d.dataset.inst ? sfx.instrument(d.dataset.inst) : sfx.piano();
+    floatNote(roomEl, d, name);
     d.classList.remove('bounce'); void d.offsetWidth; d.classList.add('bounce');
     if (onPlay) onPlay(i, name);
   });
+  // 📚 textbooks / pencil cases: tap to take one to hold (they can't be eaten)
+  roomEl.addEventListener('click', (e) => {
+    const d = e.target.closest('.decor.takeable');
+    if (!d || roomEl.classList.contains('arranging') || e.target.closest('button')) return;
+    const k = d.dataset.take, sn = SNACKS[k]; if (!sn) return;
+    if (!(snacksOf()[k] > 0)) addSnackFn(k);
+    if (getState().holding !== k) holdSnackFn(k);
+    sfx.click(); d.classList.remove('bounce'); void d.offsetWidth; d.classList.add('bounce');
+    toast(`🤲 <span class="zh">拿着${sn.zh}</span> Holding a ${sn.en.toLowerCase()} — tap it at the bottom to put it away`, { ms: 2000 });
+  });
 }
-// a friend played the piano: we hear the same note, and see it float up if the piano is in this room
-export function hearNote(roomEl, i) {
-  const { name } = sfx.piano(i);
-  const d = roomEl && roomEl.isConnected && roomEl.querySelector('.decor.playable');
-  if (!d) return;
+function floatNote(roomEl, d, name) {
   const n = document.createElement('div');
   n.className = 'music-note'; n.textContent = `♪ ${name}`;
   n.style.left = `${d.offsetLeft + d.offsetWidth * (0.25 + Math.random() * 0.5)}px`; n.style.top = `${d.offsetTop}px`;
   roomEl.appendChild(n); setTimeout(() => n.remove(), 1400);
+}
+// a friend played an instrument: we hear the same note, and see it float up if that instrument is in this room
+export function hearNote(roomEl, i) {
+  const inst = typeof i === 'string' ? i.split(':')[0] : null;
+  const { name } = inst ? sfx.instrument(inst, i) : sfx.piano(i);
+  const d = roomEl && roomEl.isConnected && roomEl.querySelector(inst ? `.decor.playable[data-inst="${inst}"]` : '.decor.playable:not([data-inst])');
+  if (d) floatNote(roomEl, d, name);
 }
 
 // ---------- chat history: who said what while you are in the house ----------

@@ -102,6 +102,28 @@ export const sfx = {
     ['C4', 'G4', 'C4', 'G4', 'F4', 'A4', 'G4', 'C5'].forEach((n, i) => tone(N[n], i * 0.26, 0.22, 'triangle', 0.07));
     tone(N.C6, 16 * 0.13, 0.35, 'square', 0.04); tone(N.E6, 16 * 0.13, 0.35, 'square', 0.025);
   },
+  // 🎺 the school instruments: each tap plays one note (a friend hears the same note: pass back its id)
+  instrument(kind, id) {
+    const SCALE = [['Do', 523.25], ['Re', 587.33], ['Mi', 659.25], ['Fa', 698.46], ['Sol', 783.99], ['La', 880], ['Ti', 987.77], ['Do', 1046.5]];
+    let n = id ? +String(id).split(':')[1] : Math.floor(Math.random() * SCALE.length);
+    if (!Number.isInteger(n) || !SCALE[n]) n = 0;
+    const [name, f] = SCALE[n];
+    if (on()) {
+      if (kind === 'drum') {                               // boom (low thud) or tak (high tap)
+        const a = ac(); if (a) {
+          const t = a.currentTime, o = a.createOscillator(), g = a.createGain();
+          o.type = 'sine'; o.frequency.setValueAtTime(n % 2 ? 180 : 110, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.25);
+          g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3); o.connect(g).connect(a.destination); o.start(t); o.stop(t + 0.32);
+          const buf = a.createBuffer(1, a.sampleRate * 0.12, a.sampleRate), d = buf.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+          const src = a.createBufferSource(), ng = a.createGain(); src.buffer = buf; ng.gain.value = n % 2 ? 0.18 : 0.08; src.connect(ng).connect(a.destination); src.start(t);
+        }
+      } else if (kind === 'trumpet') { tone(f / 2, 0, 0.45, 'sawtooth', 0.05); tone(f, 0, 0.45, 'square', 0.025); }
+      else if (kind === 'xylophone') { tone(f, 0, 0.5, 'sine', 0.18); tone(f * 4, 0, 0.08, 'sine', 0.04); }
+      else if (kind === 'guitar') { tone(f / 2, 0, 0.9, 'triangle', 0.14); tone(f, 0, 0.5, 'triangle', 0.05); tone(f * 1.5 / 2, 0.02, 0.7, 'triangle', 0.05); }
+    }
+    return { i: `${kind}:${n}`, name: kind === 'drum' ? (n % 2 ? 'Tak!' : 'Boom!') : name };
+  },
   // the claw: a whirring motor
   whirr(ms = 900) { if (!on()) return; for (let i = 0; i < ms / 90; i++) tone(140 + (i % 2) * 20, i * 0.09, 0.08, 'sawtooth', 0.012); },
   fanfare() { if (on()) [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.18, 'square', 0.05)); },

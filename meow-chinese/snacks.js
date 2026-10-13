@@ -24,7 +24,7 @@ export function snackBar({ onHold = () => {} } = {}) {
       if (have[k] > 1) b.insertAdjacentHTML('beforeend', `<i class="n">${have[k]}</i>`);
       b.onclick = (e) => { e.stopPropagation(); sfx.click(); S.holdSnack(k); onHold(S.get().holding); };
       bar.appendChild(b);
-      if (held === k) {
+      if (held === k && !SNACKS[k].noEat) {
         const eat = document.createElement('button'); eat.type = 'button'; eat.className = 'snack-eat'; eat.innerHTML = '<span class="zh">吃</span> Eat';
         eat.onclick = (e) => {
           e.stopPropagation();

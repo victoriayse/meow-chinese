@@ -1928,3 +1928,6 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .claw-prize canvas { width: 50px; }
 .claw-aim { width: 58px; height: 20px; border: 4px solid #e8384f; box-shadow: 0 0 0 2px #fff, 0 0 10px #ff6f9c; background: rgba(255, 255, 255, .35); z-index: 130; }
 .claw-aim::before { content: ''; position: absolute; left: 50%; bottom: 100%; height: var(--line, 0); border-left: 3px dotted #e8384f; transform: translateX(-50%); }
+/* v166: school things — tap textbooks / pencil cases to hold one */
+.house .decor.takeable { pointer-events: auto; cursor: pointer; }
+.decor[data-id="schoolnotice"] .board-text, .decor[data-id^="schoolnotice#"] .board-text { color: #3a2a35; text-shadow: none; font-size: 12px; line-height: 1.25; padding: 4px 6px; font-weight: 700; }

@@ -419,6 +419,7 @@ export function addSnack(kind) { if (!SNACKS[kind]) return; state.snacks = state
 export function holdSnack(kind) { state.holding = kind && snacks()[kind] > 0 && state.holding !== kind ? kind : null; save(); return state.holding; }
 export function eatSnack() {
   const kind = state.holding, sn = SNACKS[kind];
+  if (sn && sn.noEat) return null;                                   // a textbook or pencil case: hold it, don't eat it
   if (!sn || !(snacks()[kind] > 0)) { state.holding = null; save(); return null; }
   state.snacks[kind] -= 1; if (!state.snacks[kind]) delete state.snacks[kind];
   state.holding = null;
