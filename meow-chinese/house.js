@@ -767,8 +767,11 @@ export function blanket(roomEl, id, on) {
     roomEl.appendChild(b);
   }
   // laid over the bed, one layer above the kitten in it
-  b.style.left = `${el.offsetLeft}px`; b.style.top = `${el.offsetTop}px`;
-  if (it.backrest) { b.style.width = `${el.offsetWidth}px`; b.style.height = `${el.offsetHeight}px`; }
+  // match the furniture's real size (it may have been made bigger or smaller) and its mirroring
+  const art = el.querySelector(':scope > canvas') || el;
+  b.style.left = `${el.offsetLeft + art.offsetLeft}px`; b.style.top = `${el.offsetTop + art.offsetTop}px`;
+  b.style.width = `${art.offsetWidth}px`; b.style.height = `${art.offsetHeight}px`;
+  b.style.scale = art.style && art.style.scale ? art.style.scale : '';
   b.style.zIndex = (parseInt(el.style.zIndex, 10) || 50) + 2;
 }
 
