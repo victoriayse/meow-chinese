@@ -70,24 +70,32 @@ export function openClaw() {
     [[0, 10], [0.5, 25], [1, 27]].forEach(([z0, from]) => {
       for (let x0 = from; x0 <= 92; x0 += 9.5) {
         const mid = 1 - Math.abs(x0 - 55) / 50;                         // 1 in the middle, ~0.3 at the sides
-        const layers = 1 + (Math.random() < 0.35 + mid * 0.45 ? 1 : 0) + (z0 < 1 && Math.random() < mid * 0.45 ? 1 : 0);
-        for (let l = 0; l < layers; l++) add(x0 + (Math.random() * 5 - 2.5), Math.max(0, Math.min(1, z0 + (Math.random() * 0.14 - 0.07))), l);
+        // the front row is one layer (so the claw can always reach it); the heap rises towards the back
+        const layers = z0 === 1 ? 1 : 1 + (Math.random() < 0.35 + mid * 0.45 ? 1 : 0) + (z0 === 0 && Math.random() < 0.3 + mid * 0.4 ? 1 : 0);
+        for (let l = 0; l < layers; l++) add(x0 + (Math.random() * 5 - 2.5), Math.max(0, Math.min(1, z0 + (z0 === 1 ? -Math.random() * 0.07 : Math.random() * 0.14 - 0.07))), l);
       }
     });
   }
   fill();
 
   // ---------- drawing the claw and where it will drop ----------
+  // the toy the claw would grab: the top one right under it
+  const bottomOf = (p) => baseOf(p.z) + p.layer * STACK * sizeOf(p.z);      // px from the glass bottom to that toy's feet
+  function targetAt(x0, z0) {
+    const near = prizes.filter((p) => Math.abs(p.x - x0) < 6 && Math.abs(p.z - z0) < 0.22);
+    return near.sort((a, b) => b.layer - a.layer || (Math.abs(a.x - x0) + Math.abs(a.z - z0) * 30) - (Math.abs(b.x - x0) + Math.abs(b.z - z0) * 30))[0] || null;
+  }
   function draw() {
     const s = sizeOf(z);
     claw.style.left = `${x}%`; cable.style.height = `${8 + depth}px`;
     head.style.transform = `scale(${s})`;
     claw.style.zIndex = Math.round(z * 10) * 10 + 9;
-    const top = topAt(x, z);
-    aimEl.style.left = `${x}%`; aimEl.style.bottom = `${baseOf(z) + top * STACK * s + 2}px`; aimEl.style.setProperty('--s', s);
+    // the ring sits on the toy that would be grabbed (or on the floor if there's none)
+    const t = targetAt(x, z), ringB = t ? bottomOf(t) + 22 * sizeOf(t.z) : baseOf(z) + 2;
+    aimEl.style.left = `${x}%`; aimEl.style.bottom = `${ringB}px`; aimEl.style.setProperty('--s', s);
     aimEl.classList.toggle('hidden', phase !== 'ready');
     // a dotted line from the claw down to the ring
-    const H = glass.clientHeight, ringTop = H - (baseOf(z) + top * STACK * s + 2) - 20, clawBottom = 10 + 8 + depth + 44 * s;
+    const H = glass.clientHeight, ringTop = H - ringB - 20, clawBottom = 10 + 8 + depth + 44 * s;
     aimEl.style.setProperty('--line', `${Math.max(0, ringTop - clawBottom)}px`);
   }
 
@@ -151,12 +159,12 @@ export function openClaw() {
     go.disabled = true; sfx.click();
     const H = glass.clientHeight, s = sizeOf(z);
     // the toy on top of the heap right under the claw
-    const near = prizes.filter((p) => Math.abs(p.x - x) < 6 && Math.abs(p.z - z) < 0.2);
-    const under = near.sort((a, b) => b.layer - a.layer || (Math.abs(a.x - x) + Math.abs(a.z - z) * 30) - (Math.abs(b.x - x) + Math.abs(b.z - z) * 30))[0];
+    const under = targetAt(x, z);
     const won = !!under && Math.random() < CLAW_CHANCE;
     const slipTop = !won && !!under && Math.random() < 0.5;    // it grabs it, then the claw opens at the top
-    const surface = under ? baseOf(under.z) + (under.layer + 1) * STACK * sizeOf(under.z) + 10 : baseOf(z) + 4;
-    const floor = Math.max(10, H - 20 - surface - 46 * s);
+    // go all the way down: the claw's prongs close around the middle of the toy (or touch the floor)
+    const aimAt = under ? bottomOf(under) + 20 * sizeOf(under.z) : baseOf(z);
+    const floor = Math.max(10, H - aimAt - 18 - 40 * s);
     say('⬇️ …');
     sfx.whirr(1100);
     await anim(1100, (k) => { depth = floor * ease(k); draw(); });

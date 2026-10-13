@@ -9450,6 +9450,50 @@ export function drawRoom(canvas, night = false, kind = 'living', style = null) {
       R(0, floorY, W, H - floorY, '#2b2140');
       for (let y = floorY + 2; y < H; y += 6) for (let x = (y % 12 ? 0 : 6); x < W; x += 12) { R(x + 2, y, 2, 1, '#e0a524'); R(x + 1, y + 1, 4, 1, '#b8233a'); R(x + 2, y + 2, 2, 1, '#e0a524'); }
       noWindow = true;
+    } else if (kind === 'schooloutdoor') {
+      // the school's outdoor area: sky, the school building far away, a green field with a running track
+      R(0, 0, W, floorY, night ? '#1d286a' : '#9fd6f7');
+      R(0, 0, W, Math.round(floorY * 0.35), night ? '#10174a' : '#7cc2f2');
+      if (!night) { R(98, 5, 9, 9, '#ffe066'); R(99, 4, 7, 11, '#ffe066'); [[10, 9], [44, 6]].forEach(([x, y]) => { R(x, y, 12, 3, '#ffffff'); R(x + 3, y - 2, 6, 2, '#ffffff'); }); }
+      else [[8, 5], [30, 10], [62, 4], [90, 9]].forEach(([x, y]) => R(x, y, 1, 1, '#ffffff'));
+      const by = floorY - 26;
+      R(20, by, 80, 26, night ? '#5a4a6a' : '#f2c9a0'); R(20, by, 80, 2, '#c98f58');                        // the school building
+      R(56, by - 8, 8, 8, night ? '#5a4a6a' : '#f2c9a0'); R(58, by - 6, 4, 4, '#ffffff'); R(60, by - 5, 1, 2, '#3a2a35');   // the clock tower
+      R(60, by - 16, 1, 8, '#8a8d99'); R(61, by - 16, 5, 3, '#e8384f');                                          // a flag
+      for (let x = 24; x < 96; x += 9) for (let y = by + 5; y < floorY - 4; y += 9) { if (x > 52 && x < 66 && y > floorY - 13) continue; R(x, y, 6, 5, night ? '#ffe08a' : '#9fd3ef'); R(x, y, 6, 1, '#ffffff'); }
+      R(55, floorY - 10, 10, 10, '#8a5a32');                                                                    // the front door
+      R(0, floorY - 2, W, 2, night ? '#2f6b3c' : '#4f9a52');
+      R(0, floorY, W, H - floorY, night ? '#2f6b3c' : '#7ccc63');
+      const ty = floorY + Math.round((H - floorY) * 0.35);
+      R(0, ty, W, Math.round((H - floorY) * 0.35), night ? '#8a4a3a' : '#d9825a');                            // the running track
+      for (let x = 0; x < W; x += 1) if ((x >> 2) % 2) R(x, ty + Math.round((H - floorY) * 0.17), 1, 1, '#ffffff');
+      R(0, ty, W, 1, '#ffffff'); R(0, ty + Math.round((H - floorY) * 0.35) - 1, W, 1, '#ffffff');
+      open = true;
+    } else if (kind.startsWith('school')) {
+      // indoor school rooms: cream walls with a mint dado rail; each room has its own floor
+      const wall = { schoolhall: '#f6e3c8', schoolmusic: '#e6dcff', schoolstaff: '#f4fbff', schoolcanteen: '#fff6e0' }[kind] || '#fbf3e4';
+      R(0, 0, W, floorY, wall);
+      const dado = Math.round(floorY * 0.62);
+      R(0, dado, W, floorY - dado, kind === 'schoolmusic' ? '#c9a6ff' : '#bfe3c9'); R(0, dado, W, 2, kind === 'schoolmusic' ? '#9b7bea' : '#7cbd52');
+      R(0, floorY - 3, W, 3, '#8a5a32');
+      if (kind === 'schoolhall') {                                       // the hall: red curtains at the back, a wooden stage floor
+        for (let x = 0; x < 10; x++) R(x, 0, 1, floorY - 3, x % 3 === 1 ? '#8e1b2e' : '#b8233a');
+        for (let x = W - 10; x < W; x++) R(x, 0, 1, floorY - 3, x % 3 === 1 ? '#8e1b2e' : '#b8233a');
+        R(0, 0, W, 4, '#b8233a');
+      }
+      if (kind === 'schoolcanteen') {                                    // canteen: washable tiles
+        for (let y = floorY, row = 0; y < H; y += 6, row++) for (let x = 0, col = 0; x < W; x += 8, col++) { R(x, y, 8, 6, (row + col) % 2 ? '#e3e8ee' : '#f6f8fa'); R(x, y, 8, 1, '#c9d3de'); }
+      } else if (kind === 'schoolclass' || kind === 'schoolstaff' || kind === 'schooloffice') {   // speckled school floor tiles
+        R(0, floorY, W, H - floorY, '#d9d3c4');
+        for (let y = floorY; y < H; y += 8) R(0, y, W, 1, '#bdb5a3');
+        for (let y = floorY, row = 0; y < H; y += 8, row++) for (let x = (row % 2) * 6; x < W; x += 12) R(x, y, 1, 8, '#bdb5a3');
+        for (let y = floorY + 2; y < H; y += 4) for (let x = (y * 7) % 9; x < W; x += 9) R(x, y, 1, 1, '#a89f8c');
+      } else {                                                          // hall and music room: polished wood
+        R(0, floorY, W, H - floorY, '#c98f58');
+        for (let y = floorY + 4; y < H; y += 5) R(0, y, W, 1, '#a8743f');
+        for (let y = floorY, row = 0; y < H; y += 5, row++) for (let x = (row % 3) * 9; x < W; x += 26) R(x, y, 1, 5, '#a8743f');
+      }
+      noWindow = kind === 'schoolhall';
     } else if (kind === 'stadium') {
       // the stadium: stands full of fans, a scoreboard, advert boards, then the whole floor is the pitch
       R(0, 0, W, H, night ? '#14204f' : '#2d3d7a');
@@ -11963,3 +12007,31 @@ ITEMS.clawclips = { cat: 'wear', slot: 'head', name: '爱心发夹', en: 'Heart 
   ], wear: { x: 3, y: 7 } };
 export const CLAW_PRIZES = ['clawdog', 'clawcat', 'clawduck', 'clawbackpack', 'clawball', 'clawpillow', 'clawclips'];
 ITEMS.arcadeclaw.mallGame = 'claw';
+// v165: the 🏫 School pin on the map (a little school with a clock and a flag)
+ITEMS.mapschool = { cat: 'map', room: 'mallbowling', name: '学校', en: 'School map icon', price: 0, spot: 'back-mid-left', group: 'mall', special: true,
+  pal: { o: O, w: '#fff6e6', b: '#f2c9a0', d: '#c98f58', r: '#e8384f', g: '#8a8d99', s: '#9fd3ef', k: '#8a5a32', c: '#ffffff' }, art: [
+    '........................',
+    '...........orrrro.......',
+    '...........orrro........',
+    '...........oo...........',
+    '...........go...........',
+    '.........ooooooo........',
+    '........obbbbbbbo.......',
+    '.......obbbocccobo......',
+    '......obbbbocgcobbo.....',
+    '.....ooooooooooooooo....',
+    '....odddddddddddddddo...',
+    '...ooooooooooooooooooo..',
+    '...obbbbbbbbbbbbbbbbbo..',
+    '...obsscbsscbsscbsscbo..',
+    '...obssobssobssobssobo..',
+    '...obbbbbbbbbbbbbbbbbo..',
+    '...obsscbbbookobsscbbo..',
+    '...obssobbbokkobssobbo..',
+    '...obbbbbbbokkobbbbbbo..',
+    '...obbbbbbbokkobbbbbbo..',
+    '..oooooooooooooooooooooo',
+    '..ogggggggggggggggggggo.',
+    '..oooooooooooooooooooo..',
+    '........................',
+  ] };

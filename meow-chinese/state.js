@@ -586,7 +586,27 @@ export const ROOMS = [
   { key: 'stadium', zh: '体育场', en: 'Stadium', icon: '🏟️', place: 'stadium', outdoor: true, maxY: 52 },
 ];
 ROOMS.push(...MALL_ROOM_INFO);
-export const PLACE_ROOMS = { mall: MALL_ROOMS, cinema: ['theatre1', 'lobby', 'theatre2'], cafe: CAFE_ROOMS, park: ['park', 'playground'], stadium: ['stadium'] };   // left to right
+// the school (a public place on the 🗺️ map), laid out as a little grid [column, row]:
+//                          [Staff Room]
+//      [Music Room] [Hall] [Classroom]
+// [General Office] [Outdoor] [Canteen]
+export const SCHOOL_GRID = { schoolstaff: [2, 0], schoolmusic: [0, 1], schoolhall: [1, 1], schoolclass: [2, 1], schooloffice: [0, 2], schooloutdoor: [1, 2], schoolcanteen: [2, 2] };
+ROOMS.push(
+  { key: 'schooloffice', zh: '办公室', en: 'General Office', icon: '🏢', place: 'school', noRoof: true },
+  { key: 'schooloutdoor', zh: '户外', en: 'Outdoor', icon: '🌳', place: 'school', outdoor: true },
+  { key: 'schoolcanteen', zh: '食堂', en: 'Canteen', icon: '🍱', place: 'school', noRoof: true },
+  { key: 'schoolmusic', zh: '音乐室', en: 'Music Room', icon: '🎵', place: 'school', noRoof: true },
+  { key: 'schoolhall', zh: '礼堂', en: 'Hall', icon: '🎤', place: 'school', noRoof: true },
+  { key: 'schoolclass', zh: '教室', en: 'Classroom', icon: '✏️', place: 'school', noRoof: true },
+  { key: 'schoolstaff', zh: '教师办公室', en: 'Staff Room', icon: '☕', place: 'school', noRoof: true },
+);
+function schoolNeighbors(key) {
+  const [c, r] = SCHOOL_GRID[key] || [], at = (cc, rr) => Object.keys(SCHOOL_GRID).find((k) => SCHOOL_GRID[k][0] === cc && SCHOOL_GRID[k][1] === rr);
+  const out = {}, l = at(c - 1, r), rt = at(c + 1, r), u = at(c, r - 1), d = at(c, r + 1);
+  if (l) out.left = roomInfo(l); if (rt) out.right = roomInfo(rt); if (u) out.up = roomInfo(u); if (d) out.down = roomInfo(d);
+  return out;
+}
+export const PLACE_ROOMS = { mall: MALL_ROOMS, cinema: ['theatre1', 'lobby', 'theatre2'], cafe: CAFE_ROOMS, park: ['park', 'playground'], stadium: ['stadium'], school: ['schooloffice', 'schooloutdoor', 'schoolcanteen', 'schoolmusic', 'schoolhall', 'schoolclass', 'schoolstaff'] };   // left to right
 // the admin (who furnishes the public places): app.js tells us who is signed in
 let adminCheck = () => false;
 export const setAdminCheck = (fn) => { adminCheck = fn; };
@@ -597,6 +617,7 @@ const DOWNSTAIRS = ['lounge', 'basement', 'changing'];   // left to right
 // the rooms next to this one: ◀ ▶ along the row of rooms, ▲ ▼ only from the living room
 export function roomNeighbors(key) {
   const row = ROOMS.filter((r) => !r.vert && !r.below && !r.place), i = row.findIndex((r) => r.key === key), me = roomInfo(key);
+  if (me.place === 'school') return schoolNeighbors(key);
   if (me.place === 'mall') return Object.fromEntries(Object.entries(mallNeighbors(key)).map(([d,k]) => [d,roomInfo(k)]));
   if (me.place === 'cafe') return Object.fromEntries(Object.entries(CAFE_NEIGHBORS[key] || {}).map(([d, k]) => [d, roomInfo(k)]));
   if (me.place) { const p = PLACE_ROOMS[me.place], j = p.indexOf(key); return { left: j > 0 ? roomInfo(p[j - 1]) : null, right: j < p.length - 1 ? roomInfo(p[j + 1]) : null }; }
