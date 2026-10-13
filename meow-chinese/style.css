@@ -1932,3 +1932,5 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .house .decor.takeable { pointer-events: auto; cursor: pointer; }
 .decor[data-id="schoolnotice"] .board-text, .decor[data-id^="schoolnotice#"] .board-text { color: #3a2a35; text-shadow: none; font-size: 12px; line-height: 1.25; padding: 4px 6px; font-weight: 700; }
 .room.arranging .blanket { display: none; }   /* moving furniture: hide the over-the-cat layers so nothing looks doubled */
+/* v170: canteen store window signs */
+.decor .screen-label.stall { animation: none; color: #3a2a35; font-weight: 900; font-size: 15px; display: flex; align-items: center; justify-content: flex-start; padding-left: 4px; text-shadow: none; white-space: nowrap; letter-spacing: .5px; }
