@@ -93,6 +93,17 @@ export const sfx = {
   miss() { if (on()) tone(200, 0, 0.08, 'triangle', 0.05); },
   purr() { if (on()) for (let i = 0; i < 6; i++) tone(90 + (i % 2) * 10, i * 0.07, 0.07, 'sawtooth', 0.02); },
   yum() { if (on()) { tone(587, 0, 0.08, 'triangle', 0.07); tone(784, 0.1, 0.12, 'triangle', 0.07); } },
+  // 🕹️ a bouncy little arcade tune (coin in the claw machine)
+  arcade() {
+    if (!on()) return;
+    const N = { C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880, B5: 987.77, C6: 1046.5, D6: 1174.66, E6: 1318.5, G4: 392, C4: 261.63, F4: 349.23, A4: 440 };
+    const mel = ['E5', 'G5', 'C6', 'G5', 'E5', 'G5', 'C6', 'E6', 'D6', 'C6', 'A5', 'F5', 'G5', 'A5', 'B5', 'C6'];
+    mel.forEach((n, i) => tone(N[n], i * 0.13, 0.12, 'square', 0.035));
+    ['C4', 'G4', 'C4', 'G4', 'F4', 'A4', 'G4', 'C5'].forEach((n, i) => tone(N[n], i * 0.26, 0.22, 'triangle', 0.07));
+    tone(N.C6, 16 * 0.13, 0.35, 'square', 0.04); tone(N.E6, 16 * 0.13, 0.35, 'square', 0.025);
+  },
+  // the claw: a whirring motor
+  whirr(ms = 900) { if (!on()) return; for (let i = 0; i < ms / 90; i++) tone(140 + (i % 2) * 20, i * 0.09, 0.08, 'sawtooth', 0.012); },
   fanfare() { if (on()) [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.12, 0.18, 'square', 0.05)); },
   // the toy piano: one random note from a C-major scale, with a soft piano-like fade; returns its name
   // pass a note number to play that exact note (a friend's piano), or nothing for a random one; returns { i, name }

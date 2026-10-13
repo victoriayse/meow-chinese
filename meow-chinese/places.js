@@ -158,7 +158,7 @@ const PINS = [
   { key: 'home', zh: '我的家', en: 'Home', icon: '🏠', x: 28, y: 34 },
   { key: 'cinema', zh: '电影院', en: 'Cinema', icon: '🎬', x: 70, y: 34 },
   { key: 'cafe', zh: '咖啡馆', en: 'Cafe', icon: '☕', x: 72, y: 77 },
-  { key: 'park', zh: '公园', en: 'Park', icon: '🌳', x: 49, y: 19 },
+  { key: 'park', zh: '公园', en: 'Park', icon: '🌳', x: 49, y: 36 },
   { key: 'stadium', zh: '体育场', en: 'Stadium', icon: '🏟️', x: 87, y: 60 },
 ];
 export function mapScreen({ go }) {

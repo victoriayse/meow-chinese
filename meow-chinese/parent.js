@@ -613,6 +613,7 @@ function settingsView(rerender, go) {
       <button class="btn white" id="tv" style="align-self:flex-start">🔊 Test: 我们去公园玩</button>
       <h3>Practice</h3>
       <div class="toggle">Shuffle word order<button class="switch ${set.shuffle !== false ? 'on' : ''}" id="sh"></button></div>
+      <div class="toggle"><span>👀 Let her view the word list before a 听写 starts<br><small class="help">Shows a "View words" button before the first word. Turn off for a surprise test.</small></span><button class="switch ${set.wordPreview !== false ? 'on' : ''}" id="wpv"></button></div>
       <div class="toggle">Sound effects<button class="switch ${set.sound !== false ? 'on' : ''}" id="sd"></button></div>
       <h3>Coins</h3>
       <p class="help">Reward extra effort (e.g. a good score at school). She has <b id="have">${s.coins}</b> coins.</p>
@@ -671,6 +672,7 @@ function settingsView(rerender, go) {
   $('#rate', n).oninput = (e) => { set.rate = +e.target.value; };
   $('#tv', n).onclick = () => speak('我们去公园玩');
   $('#sh', n).onclick = () => { set.shuffle = set.shuffle === false; S.save(); rerender(); };
+  $('#wpv', n).onclick = () => { set.wordPreview = set.wordPreview === false; S.save(); rerender(); };
   $('#sd', n).onclick = () => { set.sound = set.sound === false; S.save(); rerender(); };
   const amt = () => Math.round(Math.abs(Number($('#coin-amt', n).value)));
   n.addEventListener('click', (e) => { const q = e.target.closest('[data-q]'); if (q) $('#coin-amt', n).value = q.dataset.q; });

@@ -383,6 +383,33 @@ export function spellingScreen({ mode = 'list', go }) {
     drawDots();
   }
 
-  root._mounted = () => next();
+  // 👀 before a 听写 starts she can look over the words (a parent can turn this off)
+  function intro() {
+    const words = mode === 'list' && list ? list.words : source;
+    main.innerHTML = '';
+    const card = html`<div class="feedback spell-intro">
+        <div class="big-msg">准备好了吗？</div>
+        <div class="sub">Ready? ${items.length} words. You can look at them first.</div>
+        <div class="row" style="justify-content:center;flex-wrap:wrap;gap:10px">
+          <button class="btn white" id="peek">👀 <span class="zh">看词语</span> View words</button>
+          <button class="btn green" id="go">▶ <span class="zh">开始听写</span> Start</button>
+        </div>
+        <div class="preview-words hidden" id="pw"></div>
+      </div>`;
+    const pw = $('#pw', card);
+    words.forEach((x) => {
+      const w = document.createElement('div'); w.className = 'preview-word';
+      w.innerHTML = `<small>${pinyinOf(x.w)}</small><b class="zh"></b>`; w.querySelector('b').textContent = x.w;
+      w.onclick = () => { if (canSpeak()) speak(x.w); };
+      pw.append(w);
+    });
+    $('#peek', card).onclick = (e) => {
+      const open = pw.classList.toggle('hidden') === false;
+      e.currentTarget.innerHTML = open ? '🙈 <span class="zh">收起</span> Hide words' : '👀 <span class="zh">看词语</span> View words';
+    };
+    $('#go', card).onclick = () => next();
+    main.append(card);
+  }
+  root._mounted = () => (st.settings.wordPreview !== false && mode !== 'play' ? intro() : next());
   return root;
 }

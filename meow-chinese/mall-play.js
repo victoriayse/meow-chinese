@@ -6,6 +6,7 @@ import { openKiosk, showCounter, snackCanvas, kioskConfirm } from './snacks.js';
 import { MALL_VENUES, MALL_ROOM_INFO, mallTables } from './mall.js';
 import { deliverCat } from './cafe-tables.js';
 import { openBowling } from './bowling.js';
+import { openClaw } from './claw.js';
 const action = (kind,venue,data={}) => rest('rpc/mall_action',{method:'POST',body:JSON.stringify({p_action:kind,p_venue:venue,p_data:data})});
 const served = new Set();
 let transferBusy = false;
@@ -65,7 +66,7 @@ export function wireMall(room, roomKey, layout, go, onChanged = () => {}) {
     const d=e.target.closest('.decor');if(!d||e.target.closest('button'))return;const it=ITEMS[d.dataset.id];
     const goods=GOODS[roomKey];
     if(goods&&d.dataset.id.split('#')[0]===goods.kiosk)return openGoodsKiosk(roomKey,()=>{showBags();setTimeout(showBags,3200);});
-    if(it.mallGame)return openBowling();
+    if(it.mallGame)return it.mallGame==='claw'?openClaw():openBowling();
     if(venue&&d.dataset.id.split('#')[0]===venue.kiosk){
       const token=crypto.randomUUID();
       openKiosk({place:'mall',layout,tablesOverride:mallTables(layout,roomKey),menuOverride:venue.menu,

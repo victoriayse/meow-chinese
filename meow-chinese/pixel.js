@@ -11943,3 +11943,23 @@ ITEMS.mapstadium = { cat: 'map', room: 'mallbowling', name: '体育场', en: 'St
     '........................',
     '........................',
   ] };
+
+// v163: 🕹️ claw machine prizes — only won from the arcade's claw machine (not sold in the shop)
+ITEMS.clawdog = { cat: 'decor', name: '小狗毛绒玩具', en: 'Puppy plush', price: 60, spot: 'front-right', special: true, clawPrize: true, pal: { o: O, ...{"b": "#e8c59a", "d": "#b07a48", "w": "#fff6e6", "k": "#3a2a35", "p": "#ff9ec4", "r": "#e8384f"} }, art: ["...oo........oo...", "..oddo......oddo..", ".oddddooooooddddo.", ".odddbbbbbbbbdddo.", ".oddbbbbbbbbbbddo.", "..odbbkbbbbkbbdo..", "...obbbbbbbbbbo...", "...obpbwwwwbpbo...", "...obbbwkkwbbbo...", "....obbwwwwbbo....", "....oorrrrrroo....", "...obbbbbbbbbbo...", "..obbbbwwwwbbbbo..", "..obbbwwwwwwbbbo..", "..obbbwwwwwwbbbo..", "..obwbbbbbbbbwbo..", "..owwwoooooowwwo..", "...ooo......ooo..."] };
+ITEMS.clawcat = { cat: 'decor', name: '小猫毛绒玩具', en: 'Kitty plush', price: 60, spot: 'front-right', special: true, clawPrize: true, pal: { o: O, ...{"b": "#d9dde6", "g": "#8a8d99", "w": "#ffffff", "k": "#3a2a35", "p": "#ff9ec4", "y": "#ffd23f"} }, art: ["...o..........o...", "..obo........obo..", ".obpboooooooobpbo.", ".obppbbbbbbbbppbo.", ".obbbgbbbbbbgbbbo.", ".obbbbbbbbbbbbbbo.", ".obbkbbbbbbbbkbbo.", ".obbbbbbppbbbbbbo.", ".obpbbbkbbkbbbpbo.", "..obbbbbbbbbbbbo..", "...oyyyyyyyyyyo...", "..obbbbbbbbbbbbo..", ".obbbbwwwwwwbbbbo.", ".obbbwwwwwwwwbbgo.", ".obbbwwwwwwwwbggo.", "..obbbbbbbbbbbbgo.", "..owwoooooooowwo..", "...oo........oo..."] };
+ITEMS.clawduck = { cat: 'decor', name: '小黄鸭毛绒玩具', en: 'Ducky plush', price: 60, spot: 'front-left', special: true, clawPrize: true, pal: { o: O, ...{"y": "#ffd23f", "d": "#e0a524", "k": "#3a2a35", "r": "#f2a65a", "p": "#ff9ec4", "w": "#fff6c2"} }, art: ["......oooo........", ".....oyyyyo.......", "....oyyyyyyo......", "...oyyyyyyyyo.....", "...oyykyyyyyo.....", ".oooypyyyyyyo.....", "orrrryyyyyyyo.....", "orrrryyyyyyo......", ".ooooyyyyyyyoo....", "...oyyyyyyyyyyooo.", "..oyyyyyyyyyyyyyyo", "..oyyywwyyyyyyyyo.", "..oyywwwwyyyyyyyo.", "..oyyyywwwyyyyyo..", "...oyyyyyyyyyydo..", "....oddyyyyyddo...", ".....orrooorro....", "......oo...oo....."] };
+ITEMS.clawbackpack = { cat: 'decor', name: '可爱小背包', en: 'Cute backpack', price: 60, spot: 'front-left', special: true, clawPrize: true, pal: { o: O, ...{"p": "#ff9ec4", "d": "#e0628c", "w": "#ffffff", "y": "#ffd23f", "b": "#8a5a32"} }, art: ["......oooooo......", ".....oddddddo.....", "...ooddooooddoo...", "..oppppppppppppo..", ".oppppppppppppppo.", ".oppwppppppppwppo.", ".oppppppppppppppo.", ".oppppppppppppppo.", ".opppdddddddddppo.", ".oppdppppppppdppo.", ".oppdppyyyyppdppo.", ".oppdppyyyyppdppo.", ".oppdppppppppdppo.", ".oppdddddddddddpo.", ".oppppppppppppppo.", "..oppppppppppppo..", "...oddooooooddo...", "....oo......oo...."] };
+ITEMS.clawball = { cat: 'decor', name: '篮球', en: 'Basketball', price: 60, spot: 'toy-right', special: true, clawPrize: true, pal: { o: O, ...{"r": "#f2803a", "d": "#c45a1c", "k": "#3a2a35", "l": "#ffb070"} }, art: ["......oooooo......", "....oorrrrrroo....", "...orrrlrkrrrro...", "..orrllrrkrrrkro..", ".orrlrrrrkrrrrkro.", ".orkrrrrrkrrrrrko.", "orrrkrrrrkrrrrkrro", "orrrrkkrrkrrkkrrro", "okkkkkkkkkkkkkkkko", "orrrrkkrrkrrkkrrro", "orrrkrrrrkrrrrkrro", ".orkrrrrrkrrrrrko.", ".orrkrrrrkrrrrkdo.", "..orrkrrrkrrrkdo..", "...orrrrrkrrddo...", "....ooddddddoo....", "......oooooo......"] };
+ITEMS.clawpillow = { cat: 'decor', name: '毛绒绒枕头', en: 'Fluffy pillow', price: 60, spot: 'front-right', special: true, clawPrize: true, pal: { o: O, ...{"v": "#c9a6ff", "l": "#e6d6ff", "d": "#9b7bea", "w": "#ffffff", "p": "#ff9ec4", "k": "#3a2a35"} }, art: ["...o.oo.oo.oo.o...", "..ovovvovvovvovo..", ".ovvvvvvvvvvvvvvo.", "ovvllvvvvvvvvvvvvo", ".ovlvvvvvvvvvvvvo.", "ovvvvvvvvvvvvvvvvo", ".ovvvvkvvvvkvvvvo.", "ovvvvpvvvvvvpvvvvo", ".ovvvvvvkkvvvvvvo.", "ovvvvvvvvvvvvvvdvo", ".ovvvvvvvvvvvvddo.", "..ovovvovvovvovo..", "...o.oo.oo.oo.o..."] };
+ITEMS.clawclips = { cat: 'wear', slot: 'head', name: '爱心发夹', en: 'Heart hair clips', price: 60, special: true, clawPrize: true,
+  pal: { o: O, p: '#ff8fb3', w: '#ffd3e2', y: '#ffd23f', l: '#fff6c2' },
+  art: [
+    '.oo.oo...oo.oo.',
+    'oppowpo.oyyolyo',
+    'opppppo.oyyyyyo',
+    '.opppo...oyyyo.',
+    '..opo.....oyo..',
+    '...o.......o...',
+  ], wear: { x: 3, y: 7 } };
+export const CLAW_PRIZES = ['clawdog', 'clawcat', 'clawduck', 'clawbackpack', 'clawball', 'clawpillow', 'clawclips'];
+ITEMS.arcadeclaw.mallGame = 'claw';

@@ -1091,6 +1091,19 @@ function homeScreen(params = {}) {
   // a parent has checked a composition: show the stars, coins and comment once
   // (a checked composition now arrives as a phone notification instead of a pop-up)
   const bh = $('#b-house', n); if (bh) bh.onclick = () => (inHouse ? goBack() : go('home', { view: 'house' }));
+  // phones: scrolling down the list shrinks the kitten's picture so more of the list shows; scrolling back up at the top grows it again
+  if (!inHouse) {
+    const sideEl = $('.side', n), narrow = () => matchMedia('(orientation: portrait), (max-width: 900px)').matches;
+    const setCompact = (on) => { if (n.classList.contains('compact') !== on) n.classList.toggle('compact', on); };
+    let touchY = null;
+    if (sideEl) {
+      sideEl.addEventListener('scroll', () => { if (narrow() && sideEl.scrollTop > 30) setCompact(true); }, { passive: true });
+      sideEl.addEventListener('wheel', (e) => { if (e.deltaY < 0 && sideEl.scrollTop <= 0) setCompact(false); }, { passive: true });
+      sideEl.addEventListener('touchstart', (e) => { touchY = e.touches[0].clientY; }, { passive: true });
+      sideEl.addEventListener('touchmove', (e) => { if (touchY != null && sideEl.scrollTop <= 0 && e.touches[0].clientY - touchY > 24) setCompact(false); }, { passive: true });
+    }
+    const stageEl = $('#stage', n); if (stageEl) stageEl.addEventListener('click', (e) => { if (n.classList.contains('compact') && !e.target.closest('button')) setCompact(false); });
+  }
   const bm = $('#b-map', n); if (bm) bm.onclick = () => go('map');
   // something chosen in My items (feed / bath / play)
   const care = S.takePendingCare();
