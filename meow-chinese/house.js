@@ -409,7 +409,7 @@ export function stackDecor(roomEl) {
       els.forEach((b) => {
         if (a === b || !overlap(A, box(b))) return;
         const za = +a.style.zIndex || 0, zb = +b.style.zIndex || 0;
-        if (lay(a) > lay(b) && za <= zb) a.style.zIndex = zb + 1;
+        if (lay(a) > lay(b) && za <= zb + 2) a.style.zIndex = zb + 3;   // +3: also in front of a desk's front (drawn 2 above it, over a seated cat)
         else if (lay(a) < lay(b) && za >= zb) a.style.zIndex = Math.max(2, zb - 1);
       });
     });

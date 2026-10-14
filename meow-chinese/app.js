@@ -987,11 +987,20 @@ function homeScreen(params = {}) {
       b.onclick = (e) => {
         e.stopPropagation();
         remember();
-        const d = b.closest('.decor'), id = d.dataset.id, front = b.classList.contains('up');
-        s.decorLayer = s.decorLayer || {}; s.decorLayer[id] = front ? Date.now() : -Date.now(); d.dataset.layer = s.decorLayer[id];
+        const d = b.closest('.decor'), front = b.classList.contains('up');
+        // one step at a time: swap places with the next thing it overlaps (in front of it / behind it)
+        const box = (el) => ({ l: el.offsetLeft, t: el.offsetTop, r: el.offsetLeft + el.offsetWidth, b: el.offsetTop + el.offsetHeight });
+        const D = box(d), hits = (x) => { const X = box(x); return D.l < X.r && X.l < D.r && D.t < X.b && X.t < D.b; };
+        const z = (el) => +el.style.zIndex || 0;
+        const order = [d, ...decorEls.filter((x) => x !== d && x.isConnected && hits(x))].sort((a, b2) => z(a) - z(b2));
+        const i = order.indexOf(d), j = front ? i + 1 : i - 1;
+        if (j < 0 || j >= order.length) { sfx.miss(); toast(front ? '已经在最前面 · Already at the very front' : '已经在最后面 · Already at the very back', { ms: 1400 }); return; }
+        [order[i], order[j]] = [order[j], order[i]];
+        s.decorLayer = s.decorLayer || {};
+        const t = Date.now(); order.forEach((el, k) => { const v = t - (order.length - k); s.decorLayer[el.dataset.id] = v; el.dataset.layer = v; });
         decorEls.forEach((x) => { x.style.zIndex = depth(x); }); stackDecor(room);
         S.saveQuiet(); sfx.click(); Visit.hostResendHouse();
-        toast(front ? '⬆ <span class="zh">放到前面</span> In front' : '⬇ <span class="zh">放到后面</span> Behind', { ms: 1200 });
+        toast(front ? '⬆ <span class="zh">往前一层</span> One step forward' : '⬇ <span class="zh">往后一层</span> One step back', { ms: 1200 });
       };
     });
     // 🔄 on the study chair / laptop: turn it to face the front or the back
