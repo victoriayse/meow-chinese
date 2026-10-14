@@ -62,3 +62,20 @@ export async function signOut() {
   signOutLocal();
   if (s) fetch(`${API}/auth/v1/logout`, { method: 'POST', headers: { apikey: KEY, Authorization: `Bearer ${s.access_token}` } }).catch(() => {});
 }
+
+// ---------- 🔑 "forgot password" email: the link brings her back here with a one-time login ----------
+// (#access_token=…&type=recovery in the address). She then chooses a new password.
+export function takeRecoveryLink() {
+  const h = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+  if (h.get('type') !== 'recovery' && !h.get('error_description')) return null;
+  history.replaceState(null, '', location.pathname + location.search);
+  if (h.get('error_description')) return { error: h.get('error_description') };
+  return { access_token: h.get('access_token'), refresh_token: h.get('refresh_token'), expires_in: +h.get('expires_in') || 3600 };
+}
+export async function setNewPassword(link, password) {
+  const r = await fetch(`${API}/auth/v1/user`, { method: 'PUT', headers: { 'Content-Type': 'application/json', apikey: KEY, Authorization: `Bearer ${link.access_token}` }, body: JSON.stringify({ password }) }).catch(() => null);
+  if (!r) throw new Error(friendly('failed to fetch'));
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(friendly(j.msg || j.error_description || j.message || `Error ${r.status}`));
+  return store({ ...link, user: { id: j.id, email: j.email } });
+}

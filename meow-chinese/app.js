@@ -1528,8 +1528,39 @@ Cloud.init(() => {
   if (!REDRAW_PAGES.includes(current) || (m && !m.classList.contains('hidden')) || document.querySelector('.room.arranging') || homeRedrawWaits()) return;
   go(current, currentParams, { replace: true });
 });
-if (!Auth.session()) go('login');
+const recovery = Auth.takeRecoveryLink();
+if (recovery) setPasswordScreen(recovery);
+else if (!Auth.session()) go('login');
 else { go(S.get().onboarded ? 'home' : 'welcome'); Cloud.pull(); }
+
+// 🔑 opened from a "reset your password" email: choose a new password, then carry on logged in
+function setPasswordScreen(link) {
+  go('login');
+  const box = html`<div class="card stack">
+      <div class="h-title">🔑 <span class="zh">设置新密码</span> Set a new password</div>
+      ${link.error ? `<p class="bad">这个链接用过了或过期了 · This link has expired or was already used. Ask for a new one.</p>` : `
+      <label class="field">新密码 New password<span class="pw"><input type="password" id="np" minlength="6" autocomplete="new-password"></span></label>
+      <label class="field">再输入一次 Type it again<span class="pw"><input type="password" id="np2" minlength="6" autocomplete="new-password"></span></label>
+      <p class="help">至少6个字 · At least 6 characters</p><p class="bad hidden" id="nperr"></p>`}
+      <div class="row" style="justify-content:flex-end"><button type="button" class="btn white" id="npc">关闭 Close</button>${link.error ? '' : '<button type="button" class="btn green" id="npok">✓ <span class="zh">保存</span> Save</button>'}</div>
+    </div>`;
+  $('#npc', box).onclick = closeModal;
+  const ok = $('#npok', box);
+  if (ok) ok.onclick = async () => {
+    const a = $('#np', box).value, b = $('#np2', box).value, err = $('#nperr', box);
+    const fail = (m) => { err.textContent = m; err.classList.remove('hidden'); sfx.oops(); };
+    if (a.length < 6) return fail('密码至少要6个字 · Password needs at least 6 characters');
+    if (a !== b) return fail('两次不一样 · The two passwords are different');
+    ok.disabled = true;
+    try {
+      await Auth.setNewPassword(link, a);
+      try { await Cloud.afterLogin(); } catch (x) { console.warn('first sync failed', x); }
+      closeModal(); sfx.fanfare(); toast('🔑 <span class="zh">密码改好了！</span> Password changed — you\'re logged in', { ms: 3000 });
+      go(S.get().onboarded ? 'home' : 'setup');
+    } catch (x) { ok.disabled = false; fail(x.message); }
+  };
+  setTimeout(() => openModal(box), 100);
+}
 
 // ---------- "New version — tap to update" ----------
 // every minute (and whenever the app comes back to the front) look at the live version number
