@@ -5,7 +5,7 @@ import { ITEMS, spriteCanvas, CLAW_PRIZES } from './pixel.js';
 import { html, $, openModal, closeModal, toast, coinI, hydrateIcons } from './ui.js';
 import { sfx } from './audio.js';
 
-export const CLAW_COST = 5, CLAW_CHANCE = 0.2;
+export const CLAW_COST = 5, CLAW_CHANCE = 0.35;
 // the claw moves left/right (x, % of the glass) and back/front (z: 0 = back, 1 = front)
 const HOME = { x: 12, z: 1 }, X_MIN = 8, X_MAX = 92, SPEED_X = 36, SPEED_Z = 0.7;
 const STACK = 26;                                   // px each layer of toys sits above the one below
@@ -161,7 +161,7 @@ export function openClaw() {
     // the toy on top of the heap right under the claw
     const under = targetAt(x, z);
     const won = !!under && Math.random() < CLAW_CHANCE;
-    const slipTop = !won && !!under && Math.random() < 0.5;    // it grabs it, then the claw opens at the top
+    const slipTop = !won && !!under && Math.random() < 0.5;    // it grabs it, carries it almost to the prize hole… then the claw opens
     // go all the way down: the claw's prongs close around the middle of the toy (or touch the floor)
     const aimAt = under ? bottomOf(under) + 20 * sizeOf(under.z) : baseOf(z);
     const floor = Math.max(10, H - aimAt - 18 - 40 * s);
@@ -180,12 +180,15 @@ export function openClaw() {
     sfx.whirr(1100);
     await anim(1100, (k) => {
       depth = floor * (1 - ease(k)); draw();
-      if (slipTop && held && k > 0.82) { setOpen(true); fall(held); held = null; }
     });
-    // back to the prize chute (front-left)
+    // back to the prize chute (front-left), slowly while carrying a toy… a slipping claw lets go just before it gets there
     const fx = x, fz = z, dist = Math.abs(x - HOME.x) + Math.abs(z - HOME.z) * 40;
-    if (held) sfx.whirr(dist * 20);
-    await anim(Math.max(300, dist * 18), (k) => { x = fx + (HOME.x - fx) * ease(k); z = fz + (HOME.z - fz) * ease(k); draw(); });
+    const letGo = slipTop ? 0.72 + Math.random() * 0.2 : 2;
+    if (held) sfx.whirr(dist * 26);
+    await anim(held ? Math.max(1200, dist * 26) : Math.max(300, dist * 18), (k) => {
+      x = fx + (HOME.x - fx) * ease(k); z = fz + (HOME.z - fz) * ease(k); draw();
+      if (held && k >= letGo) { setOpen(true); fall(held); held = null; }
+    });
     if (held) {
       setOpen(true);
       const el = held.el; el.classList.remove('held'); el.classList.add('into-chute');
@@ -208,7 +211,7 @@ export function openClaw() {
     const nr = el.getBoundingClientRect();
     el.animate([{ translate: `0 ${gr.top - nr.top}px` }, { translate: '0 0' }], { duration: 450, easing: 'cubic-bezier(.5,0,1,1)' });
     prizes.push(p);
-    sfx.oops(); say('😮 哎呀！爪子松开了！ Oh no — the claw opened and dropped it!');
+    sfx.oops(); say('😮 哎呀！差一点点！ Oh no — it dropped just before the prize hole! So close!');
   }
   function award(id) {
     const it = ITEMS[id];
