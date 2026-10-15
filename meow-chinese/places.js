@@ -35,7 +35,7 @@ export function layoutOf(place) {
   Object.entries(st.powerOff || {}).forEach(([id, v]) => { if (v && ids.has(id)) off[id] = true; });
   keys.forEach((k) => { if ((st.lightsOff || {})[k]) dark[k] = true; });
   const radios = {};
-  if (place === 'cafe') keys.forEach((room) => rooms[room].forEach(({ id }) => {
+  keys.forEach((room) => rooms[room].forEach(({ id }) => {   // every place's radios can play (anyone there can switch them on / off)
     if (id.split('#')[0] !== 'radio') return;
     const song = Radio.mySong(id);
     if (song) radios[id] = { path: song.path, name: song.name, on: song.on !== false, startedAt: song.startedAt || 0, room };

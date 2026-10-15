@@ -229,6 +229,9 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
         logLine((c && c.look && c.look.name) || '朋友', emoteIcon(p.mood), false);
       } else if (ev === 'table-food' && placeKey === 'cafe') { refreshTables();
       } else if (ev === 'counter') { refreshCounter();
+      } else if (ev === 'ctl' && P && p.c) { takeCtl(p.c);
+      } else if (ev === 'ctl?' && P) { const all = Object.values(shared); if (all.length) ch.send('ctl-state', { id: me, to: p.id, all });
+      } else if (ev === 'ctl-state' && P && p.to === me) { (p.all || []).forEach(takeCtl);
       } else if (ev === 'bye') others.remove(p.id);
     },
     onPresence: (present, joins, leaves) => {
@@ -248,8 +251,29 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     isAlive: () => n.isConnected,
     canWalk: () => !!(myEl && myEl.isConnected && !myEl.dataset.sliding),
     onStep: (dx, dy, dt) => {
-      if (mine.seat) { mine.seat = null; mine.slot = 0; mine.y = Math.min(mine.y, 28); }   // the arrows make her hop off
+      const room0 = $('#room', box), st = mine.seat && stageOf(mine.seat);
+      if (st && dy >= 0) {
+        // 🎭 on the stage: walk left / right along it (down steps off the front)
+        const d = room0 && room0.querySelector(`.decor.seat[data-id="${mine.seat}"]`), w = st.walk;
+        const span = d ? (d.offsetWidth * (w.x1 - w.x0) / room0.clientWidth) * 100 : 50;
+        mine.slot = Math.max(0, Math.min(1, (+mine.slot || 0) + (dx * 32 * dt) / Math.max(5, span)));
+        if (Math.abs(dx) > 0.2) { mine.left = dx < 0; myKv.setFacing(mine.left); }
+        myKv.canvas.classList.add('walking'); place(); sendMove({ id: me, ...mine });
+        return;
+      }
+      if (st) { const sp = seatSpot(room0, mine.seat, mine.slot); mine.seat = null; mine.slot = 0; if (sp) { mine.x = sp.x; mine.y = Math.max(1, sp.y - (sp.el.offsetHeight / room0.clientHeight) * 100 * 0.3); } }
+      else if (mine.seat) { mine.seat = null; mine.slot = 0; mine.y = Math.min(mine.y, 28); }   // the arrows make her hop off
       mine.x += dx * 32 * dt; mine.y += dy * 22 * dt;
+      if (dy > 0 && room0) {   // walking up into the front of a stage: climb on
+        const H = room0.clientHeight, W = room0.clientWidth;
+        for (const d of room0.querySelectorAll('.decor.seat')) {
+          const it = stageOf(d.dataset.id); if (!it) continue;
+          const w = it.walk, left = ((d.offsetLeft + d.offsetWidth * w.x0) / W) * 100, right = ((d.offsetLeft + d.offsetWidth * w.x1) / W) * 100;
+          const front = ((H - (d.offsetTop + d.offsetHeight)) / H) * 100;
+          const top = Math.min(front, S.roomMaxY(roomKey)) - 1;   // the floor may end before the stage's front edge
+          if (mine.x >= left && mine.x <= right && mine.y >= top && mine.y <= front + 6) { mine.seat = d.dataset.id; mine.slot = (mine.x - left) / Math.max(1, right - left); break; }
+        }
+      }
       if (Math.abs(dx) > 0.2) { mine.left = dx < 0; myKv.setFacing(mine.left); }
       myKv.canvas.classList.add('walking');
       place(); sendMove({ id: me, ...mine });
@@ -270,6 +294,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   if (P) Places.loadPlace(placeKey).then((h) => {
     if (gotHouse || !n.isConnected) return;
     house = h; gotHouse = true; roomKey = startRoom; mine.room = roomKey; sub.textContent = ''; sfx.coin(); render(); sendMine();
+    setTimeout(() => { if (n.isConnected) ch.send('ctl?', { id: me }); }, 1200);   // what have the others switched on / off?
   }).catch(() => { if (n.isConnected) sub.textContent = '加载不了，请返回地图重试 · Could not load — return to the map and try again'; });
   // cats whose app closed without saying goodbye: gone from the line twice in a row → gone from here
   const gone2 = new Map();
@@ -298,7 +323,8 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
         <div class="room" id="room" data-room="${roomKey}"><canvas class="room-bg" id="roombg"></canvas></div>
       </div>${roomArrowsHtml(roomKey, (k) => open.includes(k), { showLocked: false })}`;
     const unit = $('#hunit', box), room = $('#room', box);
-    (house.rooms[roomKey] || []).forEach((e) => { const el = decorEl(e, { videoPick: !!(P && Places.isAdmin()), videoOwner: !!(P && Places.isAdmin()) }); if (el) room.appendChild(el); });
+    if (P) reapplyShared();
+    (house.rooms[roomKey] || []).forEach((e) => { const el = decorEl(e, { videoPick: !!(P && Places.isAdmin()), videoOwner: !!P }); if (el) room.appendChild(el); });
     const saveMedia = async () => {
       if (!await Places.savePlace(placeKey)) throw new Error('Could not save the shared layout');
       await refreshPlace();
@@ -311,13 +337,27 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     });
     if (P && Places.isAdmin()) room.addEventListener('screen-video', (e) => openVideo(e.detail.id, saveMedia));
     // the cinema owner can switch a projector screen's film on / off from here too (everyone sees it)
-    if (P && Places.isAdmin()) room.addEventListener('screen-power', (e) => {
-      const id = e.detail.id, on = S.togglePower(id); sfx.click();
-      house.power = house.power || {}; house.power.off = { ...(house.power.off || {}) };
-      if (on) delete house.power.off[id]; else house.power.off[id] = true;
-      applyPower(room, { dark: !!((house.power.dark || {})[roomKey]), off: house.power.off });
-      toast(on ? '▶️ <span class="zh">开始放电影</span> Film on' : '⏹ <span class="zh">电影停了</span> Film off', { ms: 1400 });
+    // ▶️ / ⏸ on a screen, or a tap on a TV: on / off for everyone in this place
+    if (P) room.addEventListener('screen-power', (e) => {
+      const id = e.detail.id, on = !!((house.power || {}).off || {})[id]; sfx.click();
+      setCtl('power', id, on);
+      toast(on ? '▶️ <span class="zh">开始播放</span> Playing for everyone' : '⏹ <span class="zh">停了</span> Stopped for everyone', { ms: 1400 });
     });
+    if (P) room.addEventListener('click', (e) => {
+      if (e.target.closest('button') || room.classList.contains('arranging')) return;
+      const tv = e.target.closest('.decor[data-power="tv"]');
+      const tvIt = tv && ITEMS[tv.dataset.id.split('#')[0]];
+      if (tv && tvIt && !tvIt.noVideo && !/kiosk/.test(tv.dataset.id) && !tv.classList.contains('has-film') && !tv.dataset.panel) { tv.dispatchEvent(new CustomEvent('screen-power', { bubbles: true, detail: { id: tv.dataset.id } })); return; }
+      const rd = e.target.closest('.decor.radio');
+      if (rd && !Places.isAdmin()) {
+        const r = (house.radios || {})[rd.dataset.id];
+        if (!r) return toast('📻 <span class="zh">这个收音机还没有歌</span> No song on this radio yet', { ms: 1600 });
+        sfx.click(); setCtl('radio', rd.dataset.id, !r.on);
+        toast(!r.on ? '⏹ <span class="zh">音乐停了</span> Music off for everyone' : `🎵 <span class="zh">放音乐</span> Playing ${esc(r.name || '')}`, { ms: 1600 });
+      }
+    });
+    // curtains / pull-down screens: everyone sees them open or close (the 🎭 stage too)
+    if (P) room.addEventListener('panel-toggle', (e) => { setCtl('panel', e.detail.id, e.detail.opened, { dom: false }); });
     // Public-place uploads use the admin's existing private radio library.
     if (P && Places.isAdmin()) {
       room.querySelectorAll('.decor.radio').forEach((d) => d.classList.add('radio-editable'));
@@ -356,7 +396,9 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       const d = e.target.closest('.decor.seat'); if (!d || e.target.closest('button')) return;
       if (mine.seat === d.dataset.id) return;
       const taken = others.ids().map((id) => others.m.get(id)).filter((c) => c && c.room === roomKey);
-      const slot = freeSlot(d.dataset.id, taken);
+      let slot = freeSlot(d.dataset.id, taken);
+      const stg = stageOf(d.dataset.id);
+      if (stg) { const r = d.getBoundingClientRect(), fx = (e.clientX - r.left) / r.width; slot = Math.max(0, Math.min(1, (fx - stg.walk.x0) / (stg.walk.x1 - stg.walk.x0))); }
       if (slot < 0) { sfx.miss(); return toast('<span class="zh">坐满了！</span> No room — someone is already there'); }
       mine.seat = d.dataset.id; mine.slot = slot; mine.boothClosed = false; place(); myKv.jump(); sfx.click(); sendMine();
     });
@@ -457,15 +499,14 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   }
   // the friend's radio: play it here too (same song, same part of it)
   function hearRadio() {
-    if (P && placeKey !== 'cafe' && Places.isAdmin()) return;
     let r = (house && house.radio) || { on: false };
-    if (placeKey === 'cafe') {
+    if (P) {
       // One soundtrack per room, chosen deterministically from its placed radios.
       const entry = Object.entries(house.radios || {}).filter(([, song]) => song.room === roomKey && song.on).sort(([a], [b]) => a.localeCompare(b))[0];
       r = entry ? { ...entry[1], radioId: entry[0] } : { on: false };
     }
     box.querySelector('.radio-listen')?.remove();
-    if (placeKey === 'cafe' && r.on) {
+    if (P && r.on) {
       const button = document.createElement('button'); button.className = 'btn small radio-listen'; button.textContent = '🔊 Tap to hear music';
       button.onclick = async () => { if (await Radio.listen(r)) button.remove(); else button.textContent = '🔊 Tap to retry music'; };
       box.appendChild(button);
@@ -473,6 +514,47 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     } else Radio.listen(r);
     box.querySelectorAll('.decor.radio').forEach((d) => d.classList.toggle('playing', !!r.on && (!r.radioId || r.radioId === d.dataset.id)));
   }
+  // ---------- 🎛 shared controls in a public place: screens, TVs, radios, curtains ----------
+  // Anyone can switch them; everyone in the place sees / hears the change at once. A newcomer asks the others
+  // what has been changed. The admin's changes are also saved, so they last after everyone leaves.
+  const shared = {};
+  const stageOf = (id) => { const it = ITEMS[String(id).split('#')[0]]; return it && it.seat && it.seat.walk ? it.seat : null; };
+  function ctlData(c) {
+    if (!house) return;
+    if (c.kind === 'power') { house.power = house.power || {}; house.power.off = { ...(house.power.off || {}) }; if (c.val) delete house.power.off[c.id]; else house.power.off[c.id] = true; }
+    else if (c.kind === 'panel') Object.values(house.rooms || {}).forEach((list) => (list || []).forEach((e) => { if (e.id === c.id) e.opened = !!c.val; }));
+    else if (c.kind === 'radio') { const r = (house.radios || {})[c.id]; if (r) { r.on = !!c.val; if (c.val) r.startedAt = c.at || r.startedAt || Date.now(); } }
+  }
+  function ctlShow(c, { dom = true } = {}) {
+    const room = $('#room', box); if (!room) return;
+    if (c.kind === 'power') applyPower(room, { dark: !!(((house.power || {}).dark || {})[roomKey]), off: (house.power || {}).off || {} });
+    else if (c.kind === 'radio') hearRadio();
+    else if (c.kind === 'panel') {
+      const d = [...room.querySelectorAll('.decor')].find((x) => x.dataset.id === c.id);
+      if (dom && d && d.classList.contains('panel-open') !== !!c.val) {
+        const entry = (house.rooms[roomKey] || []).find((x) => x.id === c.id);
+        const ne = entry && decorEl(entry, { videoPick: !!(P && Places.isAdmin()), videoOwner: !!P });
+        if (ne) { ne.style.cssText = d.style.cssText; d.replaceWith(ne); }
+      }
+      place(); others.m.forEach((o) => { if (o.el && o.room === roomKey) others.place(o); });
+    }
+  }
+  function setCtl(kind, id, val, opts = {}) {
+    const c = { kind, id, val: !!val, t: Date.now(), at: Date.now() };
+    shared[`${kind}:${id}`] = c; ctlData(c); ctlShow(c, opts);
+    ch.send('ctl', { id: me, c });
+    if (Places.isAdmin()) {   // the admin's switches are kept in the saved layout too
+      if (kind === 'power' && !!(S.get().powerOff || {})[id] === !!val) S.togglePower(id);
+      if (kind === 'radio') Radio.setSharedOn(id, !!val);
+      if (kind !== 'panel') Places.savePlace(placeKey);
+    }
+  }
+  function takeCtl(c) {
+    const k = `${c.kind}:${c.id}`; if (shared[k] && shared[k].t >= c.t) return;
+    shared[k] = c; ctlData(c); ctlShow(c);
+  }
+  const reapplyShared = () => Object.values(shared).forEach(ctlData);
+
   function place() {
     const room = $('#room', box), spot = mine.seat && seatSpot(room, mine.seat, mine.slot);
     boothView(room, myEl, spot && mine.seat, mine.boothClosed, (action) => {
@@ -480,7 +562,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       else mine.boothClosed = !mine.boothClosed;
       place(); sendMine();
     });
-    myEl.classList.toggle('lying', !!(spot && spot.lie)); myEl.classList.toggle('seated', !!spot);
+    myEl.classList.toggle('lying', !!(spot && spot.lie)); myEl.classList.toggle('seated', !!(spot && !spot.walk));
     if (myKv) myKv.setPose(spot ? spot.pose : null); myEl.dataset.pose = (spot && spot.pose) || '';
     if (room) room.querySelectorAll('.decor.seat').forEach((d) => { if (!others.ids().some((id) => (others.m.get(id) || {}).seat === d.dataset.id)) blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === mine.seat)); });
     if (spot) { myEl.classList.remove('swimming'); mine.x = spot.x; mine.y = spot.y; myEl.style.left = `${spot.x}%`; myEl.style.bottom = `${spot.y}%`; myEl.style.zIndex = spot.z; rideFx(room, myEl, mine.seat); return; }

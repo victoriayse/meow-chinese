@@ -482,4 +482,9 @@ export const CHANGES = [
     'Drinks now say 喝 Drink instead of 吃 Eat.',
     'Food and drinks bought at a place stay there when you leave.',
   ] },
+  { v: 187, items: [
+    '🎭 Walk on the stage: walk up to it (or tap it) to climb on, ◀ ▶ to walk along it, ▼ to step down.',
+    'When the stage curtains are closed, cats on the stage are hidden behind them.',
+    'In places, anyone can now start / stop screens, TVs and radios, and open / close curtains — everyone there sees and hears it.',
+  ] },
 ];

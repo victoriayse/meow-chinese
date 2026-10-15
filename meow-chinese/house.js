@@ -509,7 +509,7 @@ export class OtherCats {
     if (spot) { c.x = c.dx = spot.x; c.y = c.dy = spot.y; }
     c.el.style.left = `${c.dx}%`; c.el.style.bottom = `${c.dy}%`;
     c.el.style.zIndex = spot ? spot.z : 2 + Math.round(100 - c.dy);
-    c.el.classList.toggle('lying', !!(spot && spot.lie)); c.el.classList.toggle('seated', !!spot);
+    c.el.classList.toggle('lying', !!(spot && spot.lie)); c.el.classList.toggle('seated', !!(spot && !spot.walk));
     c.el.classList.toggle('swimming', !spot && inPool(this.roomEl, c.dx, c.dy));
     if (c.kv) { c.kv.setPose(spot ? spot.pose : null); c.kv.setHeld(c.look && c.look.hold); } c.el.dataset.pose = (spot && spot.pose) || '';
     if (c.kv && spot && spot.run) { c.kv.setFacing(spot.flip); c.kv.canvas.classList.add('walking'); }
@@ -749,6 +749,14 @@ export function seatSpot(roomEl, id, slot = 0) {
   const seat = it && (el && el.dataset.facing === 'front' && it.seatFront ? it.seatFront : it.seat);
   if (it && it.backrest) blanket(roomEl, id, false);
   if (!el || !seat) return null;
+  if (seat.walk) {
+    // 🎭 a stage: she stands anywhere along it (slot = how far along, 0…1). With the curtains closed she is behind them.
+    const W = roomEl.clientWidth, H = roomEl.clientHeight, w = seat.walk, f = Math.max(0, Math.min(1, +slot || 0));
+    const z = (parseInt(el.style.zIndex, 10) || 50) + (el.classList.contains('panel-open') ? -1 : 1);
+    return { walk: true, flip: false, back: false, pose: null, lie: false, el, z,
+      x: ((el.offsetLeft + el.offsetWidth * (w.x0 + (w.x1 - w.x0) * f)) / W) * 100,
+      y: ((H - (el.offsetTop + el.offsetHeight * w.y)) / H) * 100 };
+  }
   const W = roomEl.clientWidth, H = roomEl.clientHeight;
   const flip = el.dataset.facing === 'flip';
   const point = seat.points && seat.points[Math.min(slot || 0, seat.points.length - 1)];
@@ -826,7 +834,8 @@ export function boothView(room, cat, id, closed, onAction, look = getState().kit
 
 // the first free place on a piece of furniture (a sofa has two); taken = [{ seat, slot }]
 export function freeSlot(id, taken) {
-  const seat = ITEMS[id] && ITEMS[id].seat; const n = seat && seat.points ? seat.points.length : seat && seat.spots ? seat.spots.length : 1;
+  const seat = ITEMS[id] && ITEMS[id].seat;
+  if (seat && seat.walk) return 0.5;   // a stage has room for everyone const n = seat && seat.points ? seat.points.length : seat && seat.spots ? seat.spots.length : 1;
   for (let i = 0; i < n; i++) if (!taken.some((t) => t && t.seat === id && (t.slot || 0) === i)) return i;
   return -1;   // full
 }
