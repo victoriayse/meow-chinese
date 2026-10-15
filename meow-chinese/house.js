@@ -835,7 +835,8 @@ export function boothView(room, cat, id, closed, onAction, look = getState().kit
 // the first free place on a piece of furniture (a sofa has two); taken = [{ seat, slot }]
 export function freeSlot(id, taken) {
   const seat = ITEMS[id] && ITEMS[id].seat;
-  if (seat && seat.walk) return 0.5;   // a stage has room for everyone const n = seat && seat.points ? seat.points.length : seat && seat.spots ? seat.spots.length : 1;
+  if (seat && seat.walk) return 0.5;   // a stage has room for everyone
+  const n = seat && seat.points ? seat.points.length : seat && seat.spots ? seat.spots.length : 1;
   for (let i = 0; i < n; i++) if (!taken.some((t) => t && t.seat === id && (t.slot || 0) === i)) return i;
   return -1;   // full
 }

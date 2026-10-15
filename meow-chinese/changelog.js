@@ -495,4 +495,5 @@ export const CHANGES = [
     '👜 New Bags tab in My Items (and the shop). Bags now have their own spot, so you can wear a bag AND a scarf or bow tie.',
     'Bags are smaller, and your kitten holds them in her paw.',
   ] },
+  { v: 190, items: ['Fixed swings, see-saws, the merry-go-round, chairs, sofas and beds not letting you sit or play on them.'] },
 ];
