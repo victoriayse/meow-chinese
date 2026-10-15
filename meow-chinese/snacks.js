@@ -10,6 +10,8 @@ import { cafeTableList } from './cafe.js';
 
 const rpc = (name, body = {}) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
 export const priceOf = (kind, prices = {}) => { const v = (prices || {})[kind]; return v != null && v !== '' && Number.isFinite(+v) ? Math.max(0, Math.round(+v)) : SNACKS[kind].price; };
+// a drink (more water than food in it) says 喝 Drink instead of 吃 Eat
+export const isDrink = (k) => { const s = SNACKS[k] || {}; return (s.water || 0) > (s.hunger || 0); };
 export function snackCanvas(kind, scale = 4) { const c = document.createElement('canvas'); c.className = 'snack-art'; drawGrid(c, artGrid(SNACKS[kind].art, SNACKS[kind].pal), scale * (SNACKS[kind].size || 1)); return c; }
 
 // ---------- the buttons at the bottom: tap one to hold it, tap again to put it away; 吃 eats what's held ----------
@@ -24,12 +26,19 @@ export function snackBar({ onHold = () => {} } = {}) {
       if (have[k] > 1) b.insertAdjacentHTML('beforeend', `<i class="n">${have[k]}</i>`);
       b.onclick = (e) => { e.stopPropagation(); sfx.click(); S.holdSnack(k); onHold(S.get().holding); };
       bar.appendChild(b);
+      // a book or pencil case she is holding: put it back in her bag
+      if (held === k && SNACKS[k].noEat) {
+        const put = document.createElement('button'); put.type = 'button'; put.className = 'snack-eat put-away-held'; put.innerHTML = '🎒 <span class="zh">放进书包</span> Put away';
+        put.onclick = (e) => { e.stopPropagation(); sfx.click(); S.holdSnack(null); onHold(null); };
+        bar.appendChild(put);
+      }
       if (held === k && !SNACKS[k].noEat) {
-        const eat = document.createElement('button'); eat.type = 'button'; eat.className = 'snack-eat'; eat.innerHTML = '<span class="zh">吃</span> Eat';
+        const drink = isDrink(k);
+        const eat = document.createElement('button'); eat.type = 'button'; eat.className = 'snack-eat'; eat.innerHTML = drink ? '<span class="zh">喝</span> Drink' : '<span class="zh">吃</span> Eat';
         eat.onclick = (e) => {
           e.stopPropagation();
           const got = S.eatSnack(); if (!got) return;
-          sfx.coin(); toast(`😋 <span class="zh">${SNACKS[got].zh}真好${SNACKS[got].water ? '喝' : '吃'}！</span> Yum!`, { ms: 1800 });
+          sfx.coin(); toast(`😋 <span class="zh">${SNACKS[got].zh}真好${isDrink(got) ? '喝' : '吃'}！</span> Yum!`, { ms: 1800 });
           onHold(null);
         };
         bar.appendChild(eat);

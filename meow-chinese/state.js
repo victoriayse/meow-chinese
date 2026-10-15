@@ -417,6 +417,14 @@ export function feed(id) {
 // ---------- cinema snacks: in her bag (snacks), one held in her paw (holding) ----------
 export const snacks = () => state.snacks || {};
 export function addSnack(kind) { if (!SNACKS[kind]) return; state.snacks = state.snacks || {}; state.snacks[kind] = (state.snacks[kind] || 0) + 1; save(); }
+// 🚪 leaving a public place: food and drinks from there can't be taken away (books, pencil cases and shopping bags stay)
+export function dropPlaceFood() {
+  const have = snacks(); let n = 0;
+  Object.keys(have).forEach((k) => { const sn = SNACKS[k]; if (!sn || sn.noEat || k === 'shopbag') return; n += have[k]; delete state.snacks[k]; });
+  if (state.holding && !state.snacks[state.holding]) state.holding = null;
+  if (n) save();
+  return n;
+}
 export function holdSnack(kind) { state.holding = kind && snacks()[kind] > 0 && state.holding !== kind ? kind : null; save(); return state.holding; }
 export function eatSnack() {
   const kind = state.holding, sn = SNACKS[kind];

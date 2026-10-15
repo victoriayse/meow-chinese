@@ -1972,3 +1972,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .pr-nav { justify-content: center; gap: 10px; }
 .pr-reviewing { align-self: center; background: #e9f7ec; border: 2px solid var(--green-d); color: var(--green-d); font-weight: 800; border-radius: 999px; padding: 4px 12px; font-size: 14px; }
 .pr-opt.right:disabled, .pr-word.right:disabled { opacity: 1; }
+/* 🎭 stage curtains button */
+.stage-curtain-btn { position: absolute; left: 50%; top: 1.5%; transform: translateX(-50%) scale(var(--inv, 1)); transform-origin: center top; z-index: 6; pointer-events: auto; cursor: pointer; white-space: nowrap; font: 800 11px/1.2 inherit; font-family: inherit; color: var(--ink); background: var(--yellow); border: 2px solid var(--ink); border-radius: 999px; padding: 2px 8px; box-shadow: 0 2px 0 var(--ink); }
+.arranging .stage-curtain-btn { pointer-events: none; opacity: .5; }
+.snack-eat.put-away-held { background: #e7f0ff; }

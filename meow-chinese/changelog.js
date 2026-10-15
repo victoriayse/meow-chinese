@@ -475,4 +475,11 @@ export const CHANGES = [
   { v: 183, items: ['Word choice and Word match: new ◀ Back button to look at questions you already finished. The right answer shows in green, and it is not read out again.'] },
   { v: 184, items: ['New 🏠 Home button after finishing the questions and after handing in the shading sheet.'] },
   { v: 185, items: ['Word choice and Word match: the results page now shows after you hand in the shading sheet or skip it. While shading, the Questions tab stays on the last question so you can look back at your answers.'] },
+  { v: 186, items: [
+    'New 🎭 Stage for the school hall. Tap the stage to sit on it; tap 🎭 Close / Open to draw the curtains.',
+    'Holding a book or pencil case? Tap 🎒 Put away to put it back in your bag (or put it on a table).',
+    'Tapping the pile of textbooks no longer gives you a book.',
+    'Drinks now say 喝 Drink instead of 吃 Eat.',
+    'Food and drinks bought at a place stay there when you leave.',
+  ] },
 ];

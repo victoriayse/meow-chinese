@@ -348,9 +348,19 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
       it.doorPanels.forEach((art, i) => { const pane = document.createElement('canvas'); pane.className = 'door-pane pane-' + i; drawGrid(pane, artGrid(art,it.pal), HOUSE.decor*scale); panes.append(pane); });
       wrap.append(panes);
     }
-    wrap.addEventListener('click', (e) => {
-      if (e.target.closest('button') || wrap.closest('.arranging')) return;
+    // 🎭 the stage: a small button pulls the curtains (tapping the stage itself lets her sit on it)
+    let curtainBtn = null;
+    if (it.panel === 'stage') {
+      curtainBtn = document.createElement('button'); curtainBtn.type = 'button'; curtainBtn.className = 'stage-curtain-btn';
+      const label = () => { curtainBtn.innerHTML = panelOpen ? '🎭 <span class="zh">拉开幕</span> Open' : '🎭 <span class="zh">拉上幕</span> Close'; };
+      label(); curtainBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
+      wrap.append(curtainBtn); curtainBtn.relabel = label;
+    }
+    (curtainBtn || wrap).addEventListener('click', (e) => {
+      if ((!curtainBtn && e.target.closest('button')) || wrap.closest('.arranging')) return;
       e.stopPropagation(); panelOpen = !panelOpen;
+      if (curtainBtn) { curtainBtn.relabel(); drawGrid(c, artGrid(panelOpen ? it.frames.open : it.art, it.pal), HOUSE.decor * (it.size || 1) * scale);
+        c.animate(panelOpen ? [{ clipPath: 'inset(0 0 0 0)', opacity: .6 }, { opacity: 1 }] : [{ opacity: .6 }, { opacity: 1 }], { duration: 300 }); }
       wrap.classList.toggle('panel-open', panelOpen); wrap.classList.toggle('panel-closed', !panelOpen);
       if (it.panel === 'screen') {
         drawGrid(c, artGrid(panelOpen ? it.frames.open : it.art, it.pal), HOUSE.decor * (it.size || 1) * scale);

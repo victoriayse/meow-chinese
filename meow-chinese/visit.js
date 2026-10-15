@@ -504,7 +504,11 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   const refit = () => { if (!n.isConnected) { window.removeEventListener('resize', refit); return; } sizeCols(); fitHouse(box, $('#hunit', box)); };
   window.addEventListener('resize', refit);
   // leaving: say goodbye and close the line
-  const leave = () => { Radio.stop(); clearInterval(kt); if (stadium) stadium.stop(); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
+  let left = false;
+  const leave = () => {
+    if (left) return; left = true;
+    if (P && S.dropPlaceFood()) toast('🍽️ <span class="zh">吃的喝的不能带走哦</span> Food and drinks stay behind when you leave', { ms: 2600 });
+    Radio.stop(); clearInterval(kt); if (stadium) stadium.stop(); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
   $('#leave', n).onclick = () => { leave(); if (P) go('map'); else go('friend', { id: hostId }); };
   const deco = $('#vdeco', n); if (deco) deco.onclick = () => { if (!gotHouse) return; leave(); go('home', { view: 'house', room: roomKey, arrange: true, openStorage: true }); };   // the admin: furnish this room
   $('#vphone', n).onclick = () => import('./phone.js').then((P) => P.openPhone({ start: 'home' }));   // the phone works at a friend's house too
