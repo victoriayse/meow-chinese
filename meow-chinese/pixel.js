@@ -265,10 +265,18 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
     }
   }
   // accessories
-  ['back', 'neck', 'face', 'head'].forEach((slot) => {
+  ['back', 'neck', 'bag', 'face', 'head'].forEach((slot) => {
     const id = equipped[slot];
     const item = id && ITEMS[id];
     if (item && item.wear) stamp(out, item.art, item.pal, item.wear.x, item.wear.y);
+    // 👜 a handbag hangs from her raised front paw: draw the paw over the top of the handle
+    if (slot === 'bag' && item && item.wear) {
+      const px = item.wear.x + Math.floor(item.art[0].length / 2) - 2, py = item.wear.y - 1;
+      ['.ooo.', 'owwwo', 'owowo', '.o.o.'].forEach((row, y) => [...row].forEach((ch, x) => {
+        if (ch === '.' || !out[py + y] || px + x < 0 || px + x >= out[py + y].length) return;
+        out[py + y][px + x] = ch === 'o' ? P.o : P.w;
+      }));
+    }
   });
   return out;
 }
@@ -1431,6 +1439,7 @@ export const WEAR_SLOTS = [
   ['face', '眼镜', 'Glasses'],
   ['neck', '围巾领结', 'Neckwear'],
   ['back', '书包', 'Backpack'],
+  ['bag', '包包', 'Bag'],
 ];
 
 // ---------- the kitten's home: cut-away house on the meadow ----------
@@ -12163,3 +12172,12 @@ const shrinkArt = (art, f) => { const h = Math.round(art.length * f), w = Math.r
   const art = shrinkArt(it.art, 0.7), w = art[0].length, h = art.length;
   ITEMS[id] = { ...it, art, wear: { x: 16 + Math.floor((13 - w) / 2), y: 37 - h } };
 });
+
+// v189: 👜 handbags have their own spot (so she can wear a bag AND a scarf / bow tie)
+['fxpinkfurbag', 'fxlilactote', 'fxblackcatbag', 'fxbrowntote', 'fxcrescentbag', 'fxbarrelbag', 'fxquiltblack', 'fxquiltpink',
+  'luxetotewear', 'luxeflapwear', 'luxebucketwear', 'luxesaddlewear', 'luxeclutchwear'].forEach((id) => { if (ITEMS[id]) ITEMS[id].slot = 'bag'; });
+
+// v189: bags are drawn even smaller (about 7×6) so they look like a little bag at her side
+Object.entries({"fxpinkfurbag": ["..fff..", ".f...f.", "odddddo", "opdydpo", "opqpqpo", ".ooooo."], "fxlilactote": [".m...m.", "..m.m..", "olllllo", "olhlhlo", "ollhllo", ".ooooo."], "fxblackcatbag": ["..ooo..", "ko...ok", "okkkkko", "owkkkwo", "okkhkko", ".ooooo."], "fxbrowntote": ["..ttt..", ".t...t.", "obbbbbo", "obybybo", "obbybbo", ".ooooo."], "fxcrescentbag": [".y.y.y.", "y.....y", "obbybbo", ".obbbo.", "..ooo.."], "fxbarrelbag": ["..k.k..", ".ok.ko.", "okkkkko", "oynynyo", "okkkkko", ".oyoyo."], "fxquiltblack": ["..kkk..", ".k...k.", "okkkkko", "onkykno", "oknknko", ".ooooo."], "fxquiltpink": [".y.y.y.", "y.....y", "opppppo", "oqpypqo", "opqpqpo", ".ooooo."], "luxetotewear": ["..ddd..", ".d...d.", "oaaaaao", "oaadaao", "oaaaaao", ".ooooo."], "luxeflapwear": ["..ddd..", ".d...d.", "opppppo", "oqpypqo", "opqpqpo", ".ooooo."], "luxebucketwear": ["..d.d..", "..ddd..", ".occco.", "occdcco", "occccco", ".ooooo."], "luxesaddlewear": ["..ooo..", ".o...o.", "orrrrro", "orrdrro", ".orrro.", "..ooo.."], "luxeclutchwear": ["opppppo", "okpppko", "okkykko", "okkkkko", ".ooooo."]}).forEach(([id, art]) => { const it = ITEMS[id]; if (!it) return;
+  const extra = {"luxetotewear": {"a": "#d9a066", "d": "#8a5a32"}, "luxeflapwear": {"d": "#e6c25a", "p": "#f6b6c8", "q": "#e391a8", "y": "#e6c25a"}, "luxebucketwear": {"c": "#f3e6cf", "d": "#c9a27a"}, "luxesaddlewear": {"r": "#d8434e", "d": "#8e1b2e"}, "luxeclutchwear": {"p": "#2f3a6b", "k": "#1f2547", "y": "#e6c25a"}}[id] || {};
+  ITEMS[id] = { ...it, art, pal: { ...it.pal, ...extra, o: O }, wear: { x: 21, y: 29 } }; });

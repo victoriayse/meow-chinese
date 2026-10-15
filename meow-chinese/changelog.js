@@ -491,4 +491,8 @@ export const CHANGES = [
     '👜 New at the mall Fashion Store kiosk only: 8 handbags, a lilac hearts backpack and 2 tulle dresses.',
     'Handbags you wear are now 30% smaller so they fit your kitten better.',
   ] },
+  { v: 189, items: [
+    '👜 New Bags tab in My Items (and the shop). Bags now have their own spot, so you can wear a bag AND a scarf or bow tie.',
+    'Bags are smaller, and your kitten holds them in her paw.',
+  ] },
 ];

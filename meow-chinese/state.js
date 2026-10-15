@@ -113,6 +113,11 @@ function migrate(s) {
   out.owned = [...new Set(out.owned || [])];
   // anything she is wearing is hers (repairs saves where an older app version dropped new items)
   Object.values(out.kitten.equipped || {}).forEach((id) => { if (id && !out.owned.includes(id)) out.owned.push(id); });
+  // something worn in the wrong spot (e.g. a handbag from when bags used the neckwear spot): move it to its own spot
+  Object.entries({ ...out.kitten.equipped }).forEach(([slot, id]) => {
+    const it = id && ITEMS[id]; if (!it || !it.slot || it.slot === slot) return;
+    out.kitten.equipped[slot] = null; if (!out.kitten.equipped[it.slot]) out.kitten.equipped[it.slot] = id;
+  });
   if (typeof out.kitten.water !== 'number') out.kitten.water = 75;
   if (typeof out.daily.tried !== 'number') { out.daily.tried = 0; out.daily.right = 0; }
   if (!out.lists || !out.lists.length) { const l = sampleList(); out.lists = [l]; out.activeListId = l.id; }
