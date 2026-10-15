@@ -474,4 +474,5 @@ export const CHANGES = [
   ] },
   { v: 183, items: ['Word choice and Word match: new ◀ Back button to look at questions you already finished. The right answer shows in green, and it is not read out again.'] },
   { v: 184, items: ['New 🏠 Home button after finishing the questions and after handing in the shading sheet.'] },
+  { v: 185, items: ['Word choice and Word match: the results page now shows after you hand in the shading sheet or skip it. While shading, the Questions tab stays on the last question so you can look back at your answers.'] },
 ];

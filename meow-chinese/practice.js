@@ -152,7 +152,7 @@ export function practiceScreen({ go, kind, id }) {
   const counts = parsed.items.map((it) => (kind === 'choice' ? it.opts.length : parsed.bank ? parsed.bank.length : 0));
   const per = () => S.rewardFor('shadeq').coins;
   const tabs = $('.pr-tabs', n), spane = $('#spane', n);
-  let sheet = null, sheetDone = false;
+  let sheet = null, sheetDone = false, summaryReady = false, shadeRes = null;
   const showTab = (t) => {
     tabs.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.t === t));
     main.hidden = t !== 'q'; spane.hidden = t !== 's';
@@ -193,12 +193,13 @@ export function practiceScreen({ go, kind, id }) {
     if (sheetDone || i < total) return;
     const bad = new Set(sheet.problems(answers).map((p) => p.r));
     const good = answers.filter((_, r) => !bad.has(r) && firstTry[r]).length;
-    const res = S.payShadeBonus(kind, set.id, good);
+    const res = shadeRes = S.payShadeBonus(kind, set.id, good);
     sheetDone = true; sheet.lock();
     $('.sp-actions', spane).style.display = 'none';
     const home = html`<div class="row" style="justify-content:center"><button type="button" class="btn blue">🏠 <span class="zh">回到主页</span> Home</button></div>`;
     $('button', home).onclick = () => { sfx.click(); go('home'); };
     spane.appendChild(home);
+    setTimeout(() => { if (n.isConnected) toResults(); }, 2200);   // then the results page (on the Questions tab)
     const all = !bad.size;
     if (all) { sfx.fanfare(); confetti(); } else sfx.coin();
     say(`${all ? '🎉 <span class="zh">全部涂对了！</span> All shaded correctly!' : `✏️ <span class="zh">涂对 ${total - bad.size}/${total} 题</span> ${total - bad.size}/${total} shaded correctly.`}
@@ -207,7 +208,7 @@ export function practiceScreen({ go, kind, id }) {
   }
   // after the last question: offer the shading sheet
   function offerShading() {
-    if (!mcq || sheetDone) return;
+    if (!mcq || sheetDone || summaryReady) return;
     const c = per(), open = S.shadeBonusOpen(kind, set.id);
     const box = html`<div class="card stack" style="align-items:center;text-align:center">
         <div style="font-size:44px">✏️</div>
@@ -217,7 +218,7 @@ export function practiceScreen({ go, kind, id }) {
         <div class="row" style="justify-content:center"><button type="button" class="btn white" id="sh-skip">⏭ <span class="zh">跳过</span> Skip</button><button type="button" class="btn green" id="sh-now">✏️ <span class="zh">现在涂</span> Shade Now</button></div>
       </div>`;
     $('#sh-now', box).onclick = () => { closeModal(); showTab('s'); };
-    $('#sh-skip', box).onclick = closeModal;
+    $('#sh-skip', box).onclick = () => { closeModal(); toResults(); };
     openModal(box); hydrateIcons(box);
   }
 
@@ -249,8 +250,9 @@ export function practiceScreen({ go, kind, id }) {
       main.appendChild(html`<div class="pr-q zh">${esc(before)}<span class="pr-blank paren filled">（${esc(it.ans)}）</span>${esc(after || '')}</div>`);
     }
     // forward: the next finished question, then back to where she was (the current question, or the results)
-    const fwd = k + 1 < i ? () => review(k + 1) : () => (i >= total ? showSummary() : render());
-    main.appendChild(navRow(k > 0 ? () => review(k - 1) : null, fwd, k + 1 < i ? '下一题</span> Next ▶' : i >= total ? '回到成绩</span> Results ▶' : '继续做题</span> Continue ▶'));
+    // (after the last question the results only show once the shading is handed in or skipped)
+    const fwd = k + 1 < i ? () => review(k + 1) : i < total ? () => render() : summaryReady ? () => showSummary() : sheetDone ? null : () => offerShading();
+    main.appendChild(navRow(k > 0 ? () => review(k - 1) : null, fwd, k + 1 < i ? '下一题</span> Next ▶' : i < total ? '继续做题</span> Continue ▶' : summaryReady ? '回到成绩</span> Results ▶' : '完成</span> Finish ▶'));
     hydrateIcons(main);
   }
 
@@ -334,9 +336,13 @@ export function practiceScreen({ go, kind, id }) {
   function finish() {
     res = S.finishPracticeSet(kind, set.id, right, total);
     S.checkDaily().forEach((g, k) => setTimeout(() => toast(g.label, { coins: g.coins }), 1200 + k * 700));
-    showSummary(true);
-    setTimeout(() => { if (n.isConnected) offerShading(); }, right === total ? 1400 : 600);
+    if (!mcq) { summaryReady = true; showSummary(true); return; }
+    // Word choice / Word match: stay on the last question (answer in green) and offer the shading sheet first
+    review(total - 1);
+    setTimeout(() => { if (n.isConnected) offerShading(); }, 900);
   }
+  // the results page: after the shading is handed in, or skipped
+  function toResults() { summaryReady = true; showTab('q'); showSummary(true); }
   function showSummary(first = false) {
     const great = right === total;
     main.innerHTML = `<div class="summary stack" style="align-items:center;text-align:center">
@@ -344,6 +350,7 @@ export function practiceScreen({ go, kind, id }) {
         <div class="big-msg" style="font-family:var(--zh);font-size:34px">${great ? '全对了！🎉' : right / total >= 0.6 ? '做得好！' : '继续加油！'}</div>
         <div class="kpis"><div class="kpi"><b style="color:var(--green-d)">${right}/${total}</b><span>一次做对 Right first time</span></div></div>
         ${!res.paid ? '<p class="help" style="margin:0">今天这一组的奖励已经领过了。 Today\'s reward for this set was already given.</p>' : res.coins || res.xp ? `<div class="price" style="font-size:24px">${res.coins ? `+${res.coins} ${coinI(22)}` : ''}${res.coins && res.xp ? ' · ' : ''}${res.xp ? `+${res.xp} XP` : ''}</div>` : ''}
+        ${shadeRes && shadeRes.coins ? `<div class="price" style="font-size:20px">✏️ <span class="zh">涂卡</span> BONUS +${shadeRes.coins} ${coinI(20)}</div>` : ''}
         ${mcq ? `<div class="pr-review"><b>📋 <span class="zh">答案</span> Answers</b>${parsed.items.map((it, k) => `<div><b>${k + 1}.</b> <span class="zh">${esc(kind === 'choice' ? it.q.replace(BLANK, `【${it.opts[it.ans]}】`) : it.p.replace(BLANK, `【${it.ans}】`))}</span> → <b>${answers[k] + 1}</b></div>`).join('')}</div>` : ''}
         <div class="row" style="justify-content:center">${mcq && !sheetDone ? '<button class="btn yellow" id="goshade">✏️ <span class="zh">涂卡</span> Shading</button>' : ''}${S.canDo(kind, set).ok ? '<button class="btn white" id="again">↺ <span class="zh">再做一次</span> Again</button>' : ''}<button class="btn green" id="more">${K.icon} <span class="zh">别的练习</span> More sets</button><button class="btn blue" id="home">🏠 <span class="zh">回到主页</span> Home</button></div>
       </div>`;
