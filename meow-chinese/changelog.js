@@ -487,4 +487,8 @@ export const CHANGES = [
     'When the stage curtains are closed, cats on the stage are hidden behind them.',
     'In places, anyone can now start / stop screens, TVs and radios, and open / close curtains — everyone there sees and hears it.',
   ] },
+  { v: 188, items: [
+    '👜 New at the mall Fashion Store kiosk only: 8 handbags, a lilac hearts backpack and 2 tulle dresses.',
+    'Handbags you wear are now 30% smaller so they fit your kitten better.',
+  ] },
 ];
