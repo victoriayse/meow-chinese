@@ -473,4 +473,5 @@ export const CHANGES = [
     'After the last question you can choose to do the shading for extra coins: BONUS +4 for each question shaded right (and answered right first time).',
   ] },
   { v: 183, items: ['Word choice and Word match: new ◀ Back button to look at questions you already finished. The right answer shows in green, and it is not read out again.'] },
+  { v: 184, items: ['New 🏠 Home button after finishing the questions and after handing in the shading sheet.'] },
 ];

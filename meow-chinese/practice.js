@@ -196,6 +196,9 @@ export function practiceScreen({ go, kind, id }) {
     const res = S.payShadeBonus(kind, set.id, good);
     sheetDone = true; sheet.lock();
     $('.sp-actions', spane).style.display = 'none';
+    const home = html`<div class="row" style="justify-content:center"><button type="button" class="btn blue">🏠 <span class="zh">回到主页</span> Home</button></div>`;
+    $('button', home).onclick = () => { sfx.click(); go('home'); };
+    spane.appendChild(home);
     const all = !bad.size;
     if (all) { sfx.fanfare(); confetti(); } else sfx.coin();
     say(`${all ? '🎉 <span class="zh">全部涂对了！</span> All shaded correctly!' : `✏️ <span class="zh">涂对 ${total - bad.size}/${total} 题</span> ${total - bad.size}/${total} shaded correctly.`}
@@ -342,12 +345,13 @@ export function practiceScreen({ go, kind, id }) {
         <div class="kpis"><div class="kpi"><b style="color:var(--green-d)">${right}/${total}</b><span>一次做对 Right first time</span></div></div>
         ${!res.paid ? '<p class="help" style="margin:0">今天这一组的奖励已经领过了。 Today\'s reward for this set was already given.</p>' : res.coins || res.xp ? `<div class="price" style="font-size:24px">${res.coins ? `+${res.coins} ${coinI(22)}` : ''}${res.coins && res.xp ? ' · ' : ''}${res.xp ? `+${res.xp} XP` : ''}</div>` : ''}
         ${mcq ? `<div class="pr-review"><b>📋 <span class="zh">答案</span> Answers</b>${parsed.items.map((it, k) => `<div><b>${k + 1}.</b> <span class="zh">${esc(kind === 'choice' ? it.q.replace(BLANK, `【${it.opts[it.ans]}】`) : it.p.replace(BLANK, `【${it.ans}】`))}</span> → <b>${answers[k] + 1}</b></div>`).join('')}</div>` : ''}
-        <div class="row" style="justify-content:center">${mcq && !sheetDone ? '<button class="btn yellow" id="goshade">✏️ <span class="zh">涂卡</span> Shading</button>' : ''}${S.canDo(kind, set).ok ? '<button class="btn white" id="again">↺ <span class="zh">再做一次</span> Again</button>' : ''}<button class="btn green" id="more">${K.icon} <span class="zh">别的练习</span> More sets</button></div>
+        <div class="row" style="justify-content:center">${mcq && !sheetDone ? '<button class="btn yellow" id="goshade">✏️ <span class="zh">涂卡</span> Shading</button>' : ''}${S.canDo(kind, set).ok ? '<button class="btn white" id="again">↺ <span class="zh">再做一次</span> Again</button>' : ''}<button class="btn green" id="more">${K.icon} <span class="zh">别的练习</span> More sets</button><button class="btn blue" id="home">🏠 <span class="zh">回到主页</span> Home</button></div>
       </div>`;
     $('.kv', main).replaceWith(kv.canvas); kv.setMood('happy');
     if (great && first) { sfx.fanfare(); confetti(); }
     const ag = $('#again', main); if (ag) ag.onclick = () => go('practice', { kind, id }, { replace: true });
     $('#more', main).onclick = () => go('practiceList', { kind }, { replace: true });
+    $('#home', main).onclick = () => go('home');
     const gs = $('#goshade', main); if (gs) gs.onclick = () => { sfx.click(); showTab('s'); gs.remove(); };
     if (mcq) main.appendChild(navRow(() => review(total - 1), null));
     hydrateIcons(main);
