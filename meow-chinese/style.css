@@ -1940,7 +1940,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 /* ✏️ optional answer-sheet shading under multiple-choice questions */
 .sh-sheet { border: 3px solid var(--ink); border-radius: 12px; background: repeating-linear-gradient(#fff 0 39px, #e7eefc 39px 40px); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
 .sh-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.sh-head small { color: var(--ink-2); font-weight: 700; display: inline-flex; align-items: center; gap: 3px; }
+.sh-head small { color: #9a5b00; font-weight: 800; display: inline-flex; align-items: center; gap: 3px; }
 .sh-row { display: flex; align-items: center; gap: 10px; }
 .sh-qn { min-width: 22px; font-size: 18px; }
 .sh-bubbles { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -1948,6 +1948,10 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .sh-bubble canvas { display: block; }
 .sh-bubble:focus-visible { outline: 3px solid var(--pink); }
 .sh-sheet.locked .sh-bubble { cursor: default; }
+.sh-sheet.waiting { opacity: .45; filter: grayscale(1); }
+.sh-sheet.waiting .sh-bubble { cursor: not-allowed; }
+.sh-actions:empty { display: none; }
+.sh-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .sh-msg:empty { display: none; }
 .sh-msg { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .sh-msg.good { color: var(--green-d); }

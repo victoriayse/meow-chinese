@@ -135,31 +135,56 @@ export function practiceScreen({ go, kind, id }) {
   const head = () => `<div class="pr-head"><span class="zh">${K.icon} ${esc(set.name)}</span><div class="dots">${parsed.items.map((_, k) => `<i class="${k < i ? 'done' : k === i ? 'cur' : ''}"></i>`).join('')}</div></div>`;
   // right answer: move on only after the sentence has been read out in full (and at least 1 second)
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  const good = (after, reading, note = false) => {
+  const good = (after, reading) => {
     sfx.correct(); if (tries === 0) right++; kv.flash('happy', 900);
     const here = i;
-    Promise.all([Promise.resolve(reading).catch(() => {}), wait(note ? 2200 : 1000)]).then(() => wait(reading ? 400 : 0)).then(() => { if (i === here && n.isConnected) after(); });
+    Promise.all([Promise.resolve(reading).catch(() => {}), wait(1000)]).then(() => wait(reading ? 400 : 0)).then(() => { if (i === here && n.isConnected) after(); });
   };
   const bad = (el) => { sfx.oops(); tries++; if (el) { el.classList.add('shake', 'wrong'); setTimeout(() => el.classList.remove('shake'), 500); } };
   const next = () => { i++; tries = 0; if (i >= total) finish(); else render(); };
 
-  // ✏️ optional answer sheet under multiple-choice questions: shading the right bubble neatly earns a little extra
+  // ✏️ optional answer sheet under multiple-choice questions. It stays greyed out until she picks the right answer;
+  // then she can shade it (and check it) or skip it, and Continue moves on. Shading the right bubble neatly earns a BONUS
+  // (only when the answer was right first time).
   const shadeCoins = () => S.rewardFor('shading').coins;
+  let ansIdx = -1;
   function shadeRow(count) {
     const c = shadeCoins();
-    sheet = answerRow(i + 1, count, { note: `<span class="zh">可以不涂</span> Optional${c ? ` · <span class="zh">涂对</span> +${c}${coinI(14)}` : ''}` });
+    sheet = answerRow(i + 1, count, { note: c ? `BONUS +${c}${coinI(14)}` : '', onChange: () => { if (sheet && !sheet.locked) { sheet.say('', true); shadeButtons(); } } });
     return sheet.el;
   }
-  // called when she picks the right answer: see how her shading went (before the next question appears)
-  function judgeShading(ans) {
-    if (!sheet) return;
-    const r = sheet.check(ans), c = shadeCoins(); sheet.lock();
-    if (r === 'none') return;
-    if (r === 'good' && tries === 0) { shaded++; sheet.say(`✏️ <span class="zh">涂得又对又整齐！</span> Neatly shaded!${c ? ` +${c}${coinI(14)}` : ''}`, true); }
-    else if (r === 'good') sheet.say('✏️ <span class="zh">涂得很整齐！</span> Neat shading — get the answer right first time to earn the extra.', false);
-    else sheet.say({ wrong: '✏️ <span class="zh">涂的不是这个答案哦。</span> The shaded bubble isn\'t this answer.', multi: '✏️ <span class="zh">涂了不止一个圆圈。</span> More than one bubble is shaded.',
-      thin: '✏️ <span class="zh">圆圈还没涂满。</span> The bubble needs more shading.', messy: '✏️ <span class="zh">涂到圆圈外面太多了。</span> Too much shading outside the circle.' }[r], false);
-    hydrateIcons(sheet.el);
+  const btn = (cls, label, fn) => { const b = document.createElement('button'); b.type = 'button'; b.className = `btn ${cls}`; b.innerHTML = label; b.onclick = fn; return b; };
+  function shadeButtons() {
+    const a = sheet.actions; a.innerHTML = '';
+    if (sheet.locked) { a.append(btn('green', '➡️ <span class="zh">继续</span> Continue', () => { sfx.click(); next(); })); return; }
+    if (sheet.check(ansIdx) !== 'none') a.append(btn('green', '✔ <span class="zh">检查涂卡</span> Check shading', checkShading));
+    a.append(btn('white', '⏭ <span class="zh">跳过涂卡</span> Skip shading', () => { sfx.click(); sheet.lock(); sheet.say('', true); shadeButtons(); }));
+  }
+  function checkShading() {
+    const r = sheet.check(ansIdx), c = shadeCoins();
+    if (r === 'good') {
+      sheet.lock();
+      if (tries === 0) { shaded++; sfx.coin(); sheet.say(`✏️ <span class="zh">涂得又对又整齐！</span> Neatly shaded!${c ? ` BONUS +${c}${coinI(14)}` : ''}`, true); }
+      else { sfx.correct(); sheet.say('✏️ <span class="zh">涂得很整齐！</span> Neat shading!', true); }
+    } else {
+      sfx.oops();
+      sheet.say({ wrong: '✏️ <span class="zh">涂的不是这个答案哦，擦掉再涂。</span> That bubble isn\'t the answer — rub it out and shade the right one.',
+        multi: '✏️ <span class="zh">涂了不止一个圆圈，擦掉多的。</span> More than one bubble is shaded — rub out the extra one.',
+        thin: '✏️ <span class="zh">圆圈还没涂满。</span> The bubble needs more shading.',
+        messy: '✏️ <span class="zh">涂到圆圈外面太多了，擦一擦。</span> Too much shading outside the circle — rub it out.' }[r], false);
+    }
+    hydrateIcons(sheet.el); shadeButtons();
+  }
+  // the right answer was picked: read the sentence out, then open the answer sheet (no moving on until Continue)
+  function rightAnswer(ans, reading) {
+    sfx.correct(); if (tries === 0) right++; kv.flash('happy', 900);
+    Promise.resolve(reading).catch(() => {});
+    ansIdx = ans; sheet.enable();
+    const c = shadeCoins();
+    if (tries > 0 && c) sheet.say('<span class="zh">这题没有 BONUS（第一次就答对才有）。也可以练习涂卡。</span> No bonus on this one (the answer has to be right first time) — you can still practise.', false);
+    else sheet.say('✏️ <span class="zh">把答案涂在答题纸上吧！</span> Now shade your answer on the answer sheet.', true);
+    hydrateIcons(sheet.el); shadeButtons();
+    sheet.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
   function render() {
@@ -178,8 +203,7 @@ export function practiceScreen({ go, kind, id }) {
       if (+b.dataset.k === it.ans) {
         $('#blank', q).textContent = it.opts[it.ans]; $('#blank', q).classList.add('filled');
         b.classList.add('right'); opts.querySelectorAll('button').forEach((x) => { x.disabled = true; });
-        judgeShading(it.ans);
-        good(next, speak(it.q.replace(BLANK, it.opts[it.ans])), !!(sheet && sheet.check(it.ans) !== 'none'));
+        rightAnswer(it.ans, speak(it.q.replace(BLANK, it.opts[it.ans])));
       } else { bad(b); b.disabled = true; }
     };
     main.appendChild(q); main.appendChild(opts); main.appendChild(shadeRow(it.opts.length));
@@ -198,8 +222,7 @@ export function practiceScreen({ go, kind, id }) {
         $('#blank', q).textContent = `（${it.ans}）`; $('#blank', q).classList.add('filled');
         b.classList.add('right'); usedWords.add(it.ans);
         box.querySelectorAll('button').forEach((x) => { x.disabled = true; });
-        judgeShading(parsed.bank.indexOf(it.ans));
-        good(next, speak((before || '') + it.ans + (after || '')), !!(sheet && sheet.check(parsed.bank.indexOf(it.ans)) !== 'none'));
+        rightAnswer(parsed.bank.indexOf(it.ans), speak((before || '') + it.ans + (after || '')));
       } else { bad(b); b.disabled = true; }
     };
     main.appendChild(html`<p class="help" style="margin:0">从表中选出能和这一题搭配的词语。 Pick the word that goes with it.</p>`);

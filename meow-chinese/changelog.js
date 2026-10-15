@@ -462,4 +462,9 @@ export const CHANGES = [
     'Word choice and Word match now have an answer sheet under each question. Shading is optional.',
     'Shade the right bubble neatly (and get the answer right first time) for +2 extra coins per question.',
   ] },
+  { v: 181, items: [
+    'The answer sheet is greyed out until you pick the right answer — then you can shade it.',
+    'New buttons: ✔ Check shading, ⏭ Skip shading and ➡️ Continue.',
+    'Shading the right bubble neatly now shows as BONUS +2.',
+  ] },
 ];

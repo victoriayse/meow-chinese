@@ -77,12 +77,14 @@ function openBubble(g, { title, label, onBack }) {
 //   'none'  — she didn't shade (that's fine, it's optional)
 //   'good'  — only the right bubble, filled in, not much outside the circle
 //   'wrong' / 'multi' / 'thin' / 'messy' — shaded, but not quite
-export function answerRow(qNo, count, { note = '' } = {}) {
+export function answerRow(qNo, count, { note = '', onChange = () => {} } = {}) {
   const grids = Array.from({ length: count }, newGrid);
-  const el = html`<div class="sh-sheet">
+  // it starts greyed out ("waiting") until she has picked the right answer
+  const el = html`<div class="sh-sheet waiting">
       <div class="sh-head"><b>📝 <span class="zh">答题纸</span> Answer sheet</b><small>${note}</small></div>
       <div class="sh-row"><b class="sh-qn">${qNo}</b><div class="sh-bubbles"></div></div>
       <div class="sh-msg" aria-live="polite"></div>
+      <div class="sh-actions"></div>
     </div>`;
   if (el.ownerDocument !== document) document.adoptNode(el);   // canvases can only draw their numbers inside the real page
   const row = $('.sh-bubbles', el);
@@ -92,9 +94,9 @@ export function answerRow(qNo, count, { note = '' } = {}) {
     b.setAttribute('aria-label', `Question ${qNo} option ${o + 1}`);
     b.append(document.createElement('canvas')); row.append(b); paint(o);
     b.onclick = () => {
-      if (el.classList.contains('locked')) return;
+      if (el.classList.contains('locked') || el.classList.contains('waiting')) return;
       sfx.click();
-      openBubble(grids[o], { title: `<span class="zh">第${qNo}题 · 选项${o + 1}</span><br>Question ${qNo} · Option ${o + 1}`, label: String(o + 1), onBack: () => paint(o) });
+      openBubble(grids[o], { title: `<span class="zh">第${qNo}题 · 选项${o + 1}</span><br>Question ${qNo} · Option ${o + 1}`, label: String(o + 1), onBack: () => { paint(o); onChange(); } });
     };
   }
   const marked = () => grids.map((g, o) => (coverage(g) >= MARKED ? o : -1)).filter((o) => o >= 0);
@@ -111,5 +113,8 @@ export function answerRow(qNo, count, { note = '' } = {}) {
     },
     say(text, good) { const msg = $('.sh-msg', el); msg.innerHTML = text; msg.className = `sh-msg ${good ? 'good' : 'meh'}`; },
     lock() { el.classList.add('locked'); },
+    enable() { el.classList.remove('waiting'); },
+    get locked() { return el.classList.contains('locked'); },
+    actions: $('.sh-actions', el),
   };
 }
