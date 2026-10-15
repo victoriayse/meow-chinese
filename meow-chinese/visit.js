@@ -501,8 +501,12 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     room.querySelectorAll('.ap-start').forEach((b) => { if (b.dataset.for !== seatId) b.remove(); });
     if (!seatId || !(ITEMS[String(seatId).split('#')[0]] || {}).practice) { if (mine.act) { mine.act = null; myEl.classList.remove('practicing'); } return; }
     const d = [...room.querySelectorAll('.decor')].find((el) => el.dataset.id === seatId);
-    if (!d || d.querySelector('.ap-start')) return;
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn yellow small ap-start'; b.dataset.for = seatId;
+    if (!d) return;
+    // the button lives on the room's top layer (not inside the desk), so desk fronts and other desks can't cover it
+    const at = () => { b.style.left = `${((d.offsetLeft + d.offsetWidth / 2) / room.clientWidth) * 100}%`; b.style.top = `${(Math.max(0, d.offsetTop - d.offsetHeight * 0.55) / room.clientHeight) * 100}%`; };
+    let b = room.querySelector('.ap-start');
+    if (b) return at();
+    b = document.createElement('button'); b.type = 'button'; b.className = 'btn yellow small ap-start'; b.dataset.for = seatId;
     b.innerHTML = '✏️ <span class="zh">开始练习</span> Start';
     b.addEventListener('pointerdown', (e) => e.stopPropagation());
     b.onclick = (e) => {
@@ -511,7 +515,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
         mine.act = busy ? 'practice' : null; myEl.classList.toggle('practicing', busy); b.hidden = busy; sendMine();
       } });
     };
-    d.appendChild(b);
+    room.appendChild(b); at();
   }
   // chat
   $('#vchat', n).appendChild(chatBar((text) => {

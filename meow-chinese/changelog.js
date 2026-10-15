@@ -450,4 +450,5 @@ export const CHANGES = [
     'Pause any time and carry on later. Longer sheets unlock as you practise.',
     'New Teacher cat at her desk — tap her to hear how it works.',
   ] },
+  { v: 177, items: ['Fixed the ✏️ 开始练习 Start button on the practice desk not responding when other desks were in front of it.'] },
 ];
