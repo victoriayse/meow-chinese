@@ -4,7 +4,6 @@ import * as CafeTables from './cafe-tables.js';
 import { wireHomeTables, wirePlaceTables } from './home-tables.js';
 import { createStadium, joystick, JOYSTICK } from './stadium.js';
 import { wireCanteen } from './canteen.js';
-import { openAnswerPractice, teacherIntro } from './answer-practice.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
 //   knock  visitor -> house   { id, look, x, y, room, left }      "I'm here" (the owner answers with the house)
@@ -354,10 +353,6 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       }, 500);
     });
     room.addEventListener('click', (e) => {
-      if (!e.target.closest('.decor.npc-desk') || e.target.closest('button')) return;
-      sfx.click(); teacherIntro();
-    });
-    room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.seat'); if (!d || e.target.closest('button')) return;
       if (mine.seat === d.dataset.id) return;
       const taken = others.ids().map((id) => others.m.get(id)).filter((c) => c && c.room === roomKey);
@@ -488,34 +483,11 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     myEl.classList.toggle('lying', !!(spot && spot.lie)); myEl.classList.toggle('seated', !!spot);
     if (myKv) myKv.setPose(spot ? spot.pose : null); myEl.dataset.pose = (spot && spot.pose) || '';
     if (room) room.querySelectorAll('.decor.seat').forEach((d) => { if (!others.ids().some((id) => (others.m.get(id) || {}).seat === d.dataset.id)) blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === mine.seat)); });
-    practiceButton(room, spot && mine.seat);
     if (spot) { myEl.classList.remove('swimming'); mine.x = spot.x; mine.y = spot.y; myEl.style.left = `${spot.x}%`; myEl.style.bottom = `${spot.y}%`; myEl.style.zIndex = spot.z; rideFx(room, myEl, mine.seat); return; }
     rideFx(room, myEl, null);
     Object.assign(mine, clampPos(mine));
     myEl.style.left = `${mine.x}%`; myEl.style.bottom = `${mine.y}%`; myEl.style.zIndex = 2 + Math.round(100 - mine.y);
     myEl.classList.toggle('swimming', inPool(room, mine.x, mine.y));
-  }
-  // ✏️ 答题练习: sitting at a practice desk shows a Start button on that desk
-  function practiceButton(room, seatId) {
-    if (!room) return;
-    room.querySelectorAll('.ap-start').forEach((b) => { if (b.dataset.for !== seatId) b.remove(); });
-    if (!seatId || !(ITEMS[String(seatId).split('#')[0]] || {}).practice) { if (mine.act) { mine.act = null; myEl.classList.remove('practicing'); } return; }
-    const d = [...room.querySelectorAll('.decor')].find((el) => el.dataset.id === seatId);
-    if (!d) return;
-    // the button lives on the room's top layer (not inside the desk), so desk fronts and other desks can't cover it
-    const at = () => { b.style.left = `${((d.offsetLeft + d.offsetWidth / 2) / room.clientWidth) * 100}%`; b.style.top = `${(Math.max(0, d.offsetTop - d.offsetHeight * 0.55) / room.clientHeight) * 100}%`; };
-    let b = room.querySelector('.ap-start');
-    if (b) return at();
-    b = document.createElement('button'); b.type = 'button'; b.className = 'btn yellow small ap-start'; b.dataset.for = seatId;
-    b.innerHTML = '✏️ <span class="zh">开始练习</span> Start';
-    b.addEventListener('pointerdown', (e) => e.stopPropagation());
-    b.onclick = (e) => {
-      e.stopPropagation(); sfx.click();
-      openAnswerPractice({ onBusy: (busy) => {
-        mine.act = busy ? 'practice' : null; myEl.classList.toggle('practicing', busy); b.hidden = busy; sendMine();
-      } });
-    };
-    room.appendChild(b); at();
   }
   // chat
   $('#vchat', n).appendChild(chatBar((text) => {

@@ -2,6 +2,7 @@
 import * as S from './state.js';
 import { $, html, esc, coinI, toast, confetti, hydrateIcons, KittenView } from './ui.js';
 import { speak, sfx } from './audio.js';
+import { answerRow } from './shade.js';
 
 export const KINDS = {
   choice: { zh: '词语选择', en: 'Word choice', icon: '🔤', how: '选出适当的词语填进句子里。 Pick the right word for the blank.' },
@@ -128,22 +129,41 @@ export function practiceScreen({ go, kind, id }) {
     return n;
   }
   const total = parsed.items.length;
-  let i = 0, right = 0, tries = 0;
+  let i = 0, right = 0, tries = 0, shaded = 0, sheet = null;
   const kv = new KittenView({ scale: 3 }); kv.canvas.classList.remove('bob');
 
   const head = () => `<div class="pr-head"><span class="zh">${K.icon} ${esc(set.name)}</span><div class="dots">${parsed.items.map((_, k) => `<i class="${k < i ? 'done' : k === i ? 'cur' : ''}"></i>`).join('')}</div></div>`;
   // right answer: move on only after the sentence has been read out in full (and at least 1 second)
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  const good = (after, reading) => {
+  const good = (after, reading, note = false) => {
     sfx.correct(); if (tries === 0) right++; kv.flash('happy', 900);
     const here = i;
-    Promise.all([Promise.resolve(reading).catch(() => {}), wait(1000)]).then(() => wait(reading ? 400 : 0)).then(() => { if (i === here && n.isConnected) after(); });
+    Promise.all([Promise.resolve(reading).catch(() => {}), wait(note ? 2200 : 1000)]).then(() => wait(reading ? 400 : 0)).then(() => { if (i === here && n.isConnected) after(); });
   };
   const bad = (el) => { sfx.oops(); tries++; if (el) { el.classList.add('shake', 'wrong'); setTimeout(() => el.classList.remove('shake'), 500); } };
   const next = () => { i++; tries = 0; if (i >= total) finish(); else render(); };
 
+  // ✏️ optional answer sheet under multiple-choice questions: shading the right bubble neatly earns a little extra
+  const shadeCoins = () => S.rewardFor('shading').coins;
+  function shadeRow(count) {
+    const c = shadeCoins();
+    sheet = answerRow(i + 1, count, { note: `<span class="zh">可以不涂</span> Optional${c ? ` · <span class="zh">涂对</span> +${c}${coinI(14)}` : ''}` });
+    return sheet.el;
+  }
+  // called when she picks the right answer: see how her shading went (before the next question appears)
+  function judgeShading(ans) {
+    if (!sheet) return;
+    const r = sheet.check(ans), c = shadeCoins(); sheet.lock();
+    if (r === 'none') return;
+    if (r === 'good' && tries === 0) { shaded++; sheet.say(`✏️ <span class="zh">涂得又对又整齐！</span> Neatly shaded!${c ? ` +${c}${coinI(14)}` : ''}`, true); }
+    else if (r === 'good') sheet.say('✏️ <span class="zh">涂得很整齐！</span> Neat shading — get the answer right first time to earn the extra.', false);
+    else sheet.say({ wrong: '✏️ <span class="zh">涂的不是这个答案哦。</span> The shaded bubble isn\'t this answer.', multi: '✏️ <span class="zh">涂了不止一个圆圈。</span> More than one bubble is shaded.',
+      thin: '✏️ <span class="zh">圆圈还没涂满。</span> The bubble needs more shading.', messy: '✏️ <span class="zh">涂到圆圈外面太多了。</span> Too much shading outside the circle.' }[r], false);
+    hydrateIcons(sheet.el);
+  }
+
   function render() {
-    main.innerHTML = head();
+    main.innerHTML = head(); sheet = null;
     if (kind === 'choice') renderChoice(); else if (kind === 'match') renderMatch(); else renderOrder();
     hydrateIcons(main);
   }
@@ -158,10 +178,11 @@ export function practiceScreen({ go, kind, id }) {
       if (+b.dataset.k === it.ans) {
         $('#blank', q).textContent = it.opts[it.ans]; $('#blank', q).classList.add('filled');
         b.classList.add('right'); opts.querySelectorAll('button').forEach((x) => { x.disabled = true; });
-        good(next, speak(it.q.replace(BLANK, it.opts[it.ans])));
+        judgeShading(it.ans);
+        good(next, speak(it.q.replace(BLANK, it.opts[it.ans])), !!(sheet && sheet.check(it.ans) !== 'none'));
       } else { bad(b); b.disabled = true; }
     };
-    main.appendChild(q); main.appendChild(opts);
+    main.appendChild(q); main.appendChild(opts); main.appendChild(shadeRow(it.opts.length));
   }
 
   // word match: the word box stays on top; one phrase at a time
@@ -177,11 +198,12 @@ export function practiceScreen({ go, kind, id }) {
         $('#blank', q).textContent = `（${it.ans}）`; $('#blank', q).classList.add('filled');
         b.classList.add('right'); usedWords.add(it.ans);
         box.querySelectorAll('button').forEach((x) => { x.disabled = true; });
-        good(next, speak((before || '') + it.ans + (after || '')));
+        judgeShading(parsed.bank.indexOf(it.ans));
+        good(next, speak((before || '') + it.ans + (after || '')), !!(sheet && sheet.check(parsed.bank.indexOf(it.ans)) !== 'none'));
       } else { bad(b); b.disabled = true; }
     };
     main.appendChild(html`<p class="help" style="margin:0">从表中选出能和这一题搭配的词语。 Pick the word that goes with it.</p>`);
-    main.appendChild(box); main.appendChild(q);
+    main.appendChild(box); main.appendChild(q); main.appendChild(shadeRow(parsed.bank.length));
   }
 
   // sentence builder: drag (or tap) the words into the sentence line; they can be moved around or put back
@@ -225,14 +247,14 @@ export function practiceScreen({ go, kind, id }) {
   }
 
   function finish() {
-    const res = S.finishPracticeSet(kind, set.id, right, total);
+    const res = S.finishPracticeSet(kind, set.id, right, total, shaded);
     S.checkDaily().forEach((g, k) => setTimeout(() => toast(g.label, { coins: g.coins }), 1200 + k * 700));
     const great = right === total;
     main.innerHTML = `<div class="summary stack" style="align-items:center;text-align:center">
         <div class="kv"></div>
         <div class="big-msg" style="font-family:var(--zh);font-size:34px">${great ? '全对了！🎉' : right / total >= 0.6 ? '做得好！' : '继续加油！'}</div>
-        <div class="kpis"><div class="kpi"><b style="color:var(--green-d)">${right}/${total}</b><span>一次做对 Right first time</span></div></div>
-        ${!res.paid ? '<p class="help" style="margin:0">今天这一组的奖励已经领过了。 Today\'s reward for this set was already given.</p>' : res.coins || res.xp ? `<div class="price" style="font-size:24px">${res.coins ? `+${res.coins} ${coinI(22)}` : ''}${res.coins && res.xp ? ' · ' : ''}${res.xp ? `+${res.xp} XP` : ''}</div>` : ''}
+        <div class="kpis"><div class="kpi"><b style="color:var(--green-d)">${right}/${total}</b><span>一次做对 Right first time</span></div>${kind !== 'order' ? `<div class="kpi"><b style="color:#7a5bd6">${shaded}/${total}</b><span>✏️ 涂对答题纸 Shaded neatly</span></div>` : ''}</div>
+        ${!res.paid ? '<p class="help" style="margin:0">今天这一组的奖励已经领过了。 Today\'s reward for this set was already given.</p>' : res.coins || res.xp || res.shadeCoins ? `<div class="price" style="font-size:24px">${res.coins ? `+${res.coins} ${coinI(22)}` : ''}${res.coins && res.xp ? ' · ' : ''}${res.xp ? `+${res.xp} XP` : ''}</div>${res.shadeCoins ? `<div class="price" style="font-size:18px">✏️ <span class="zh">涂卡奖励</span> Shading extra +${res.shadeCoins} ${coinI(18)}</div>` : ''}` : ''}
         <div class="row" style="justify-content:center">${S.canDo(kind, set).ok ? '<button class="btn white" id="again">↺ <span class="zh">再做一次</span> Again</button>' : ''}<button class="btn green" id="more">${K.icon} <span class="zh">别的练习</span> More sets</button></div>
       </div>`;
     $('.kv', main).replaceWith(kv.canvas); kv.setMood('happy');

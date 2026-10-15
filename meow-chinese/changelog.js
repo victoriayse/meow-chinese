@@ -457,4 +457,9 @@ export const CHANGES = [
     'Answer Practice: new 📚 Lessons button to go back to the lesson list (your sheet is kept so you can continue it later).',
     'Each practice paper now explains what to do at the top.',
   ] },
+  { v: 180, items: [
+    'The classroom Answer Practice desk and teacher cat have been removed.',
+    'Word choice and Word match now have an answer sheet under each question. Shading is optional.',
+    'Shade the right bubble neatly (and get the answer right first time) for +2 extra coins per question.',
+  ] },
 ];

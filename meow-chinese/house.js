@@ -217,15 +217,6 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
     tw.appendChild(tkv.canvas); tux.appendChild(tw); wrap.insertBefore(tux, wrap.firstChild);
     wrap.tux = { el: tux, wrap: tw, kv: tkv };
   }
-  if (it.npc) {
-    // the teacher cat sitting behind her desk (tap her for help with Answer Practice)
-    const t = document.createElement('div'); t.className = 'tux-cat npc-cat';
-    const tw = document.createElement('div'); tw.className = 'kitten-wrap';
-    const tkv = new KittenView({ scale: HOUSE.kitten, fur: it.npc.fur, equipped: { ...it.npc.equipped } });
-    tkv.setMood('happy'); tkv.canvas.classList.remove('bob');
-    tw.appendChild(tkv.canvas); t.appendChild(tw); wrap.insertBefore(t, wrap.firstChild);
-    wrap.npc = { el: t, wrap: tw, kv: tkv }; wrap.classList.add('npc-desk');
-  }
   if (it.board) {
     // a menu board: chalk writing she can change (tap it)
     wrap.classList.add('board');
@@ -509,7 +500,6 @@ export class OtherCats {
     c.el.style.left = `${c.dx}%`; c.el.style.bottom = `${c.dy}%`;
     c.el.style.zIndex = spot ? spot.z : 2 + Math.round(100 - c.dy);
     c.el.classList.toggle('lying', !!(spot && spot.lie)); c.el.classList.toggle('seated', !!spot);
-    c.el.classList.toggle('practicing', !!(spot && c.act === 'practice'));   // ✏️ working at a practice desk (answers stay private)
     c.el.classList.toggle('swimming', !spot && inPool(this.roomEl, c.dx, c.dy));
     if (c.kv) { c.kv.setPose(spot ? spot.pose : null); c.kv.setHeld(c.look && c.look.hold); } c.el.dataset.pose = (spot && spot.pose) || '';
     if (c.kv && spot && spot.run) { c.kv.setFacing(spot.flip); c.kv.canvas.classList.add('walking'); }
