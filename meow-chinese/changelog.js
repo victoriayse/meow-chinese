@@ -444,4 +444,10 @@ export const CHANGES = [
   { v: 173, items: ['⬆ ⬇ now move furniture one layer at a time: in front of (or behind) the next thing it overlaps.', 'Fixed things put in front of a desk or table (like a laptop on the teacher\'s desk) still showing behind it.'] },
   { v: 174, items: ['Claw machine: when the catch slips, the claw now carries the toy almost all the way to the prize hole before dropping it. So close!', 'Claw machine: catches now succeed 35% of the time (was 20%).'] },
   { v: 175, items: ['Password reset emails now work: the link opens the app and asks for a new password.'] },
+  { v: 176, items: [
+    'School: new Answer Practice desk — sit down and tap ✏️ 开始练习 Start.',
+    'Shade the bubbles on your answer sheet; the teacher cat helps you check one row at a time.',
+    'Pause any time and carry on later. Longer sheets unlock as you practise.',
+    'New Teacher cat at her desk — tap her to hear how it works.',
+  ] },
 ];
