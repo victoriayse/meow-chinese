@@ -1969,3 +1969,6 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .sh-zoom-tools { display: flex; gap: 8px; }
 .sh-zoom-tools .btn { opacity: .6; }
 .sh-zoom-tools .btn.on { opacity: 1; background: var(--yellow); }
+.pr-nav { justify-content: center; gap: 10px; }
+.pr-reviewing { align-self: center; background: #e9f7ec; border: 2px solid var(--green-d); color: var(--green-d); font-weight: 800; border-radius: 999px; padding: 4px 12px; font-size: 14px; }
+.pr-opt.right:disabled, .pr-word.right:disabled { opacity: 1; }

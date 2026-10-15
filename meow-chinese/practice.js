@@ -221,6 +221,33 @@ export function practiceScreen({ go, kind, id }) {
   function render() {
     main.innerHTML = head();
     if (kind === 'choice') renderChoice(); else if (kind === 'match') renderMatch(); else renderOrder();
+    if (mcq && i > 0) main.appendChild(navRow(() => review(i - 1), null));
+    hydrateIcons(main);
+  }
+  // ◀ looking back at questions she has already finished: the right answer shows in green, nothing is read out,
+  // and nothing changes her score. Handy while shading the answer sheet.
+  function navRow(back, fwd, fwdLabel = '下一题</span> Next ▶') {
+    const r = html`<div class="row pr-nav"></div>`;
+    if (back) { const b = html`<button type="button" class="btn white small">◀ <span class="zh">上一题</span> Back</button>`; b.onclick = () => { sfx.click(); back(); }; r.appendChild(b); }
+    if (fwd) { const b = html`<button type="button" class="btn white small"><span class="zh">${fwdLabel}</button>`; b.onclick = () => { sfx.click(); fwd(); }; r.appendChild(b); }
+    return r;
+  }
+  function review(k) {
+    const it = parsed.items[k];
+    main.innerHTML = `<div class="pr-head"><span class="zh">${K.icon} ${esc(set.name)}</span><div class="dots">${parsed.items.map((_, x) => `<i class="${x === k ? 'cur' : x < i ? 'done' : ''}"></i>`).join('')}</div></div>
+      <div class="pr-reviewing">👀 <span class="zh">回顾第${k + 1}题</span> Looking back at question ${k + 1}</div>`;
+    if (kind === 'choice') {
+      const [before, after] = it.q.split(BLANK);
+      main.appendChild(html`<div class="pr-q zh">${esc(before)}<span class="pr-blank filled">${esc(it.opts[it.ans])}</span>${esc(after || '')}</div>`);
+      main.appendChild(html`<div class="pr-opts">${it.opts.map((o, x) => `<button class="pr-opt zh ${x === it.ans ? 'right' : ''}" disabled><small>${x + 1}.</small> ${word('choice', o)}</button>`).join('')}</div>`);
+    } else {
+      main.appendChild(html`<div class="pr-wordbox">${parsed.bank.map((w, x) => `<button class="pr-word zh ${w === it.ans ? 'right' : ''}" disabled><small>${x + 1}.</small> ${word('match', w)}</button>`).join('')}</div>`);
+      const [before, after] = it.p.split(BLANK);
+      main.appendChild(html`<div class="pr-q zh">${esc(before)}<span class="pr-blank paren filled">（${esc(it.ans)}）</span>${esc(after || '')}</div>`);
+    }
+    // forward: the next finished question, then back to where she was (the current question, or the results)
+    const fwd = k + 1 < i ? () => review(k + 1) : () => (i >= total ? showSummary() : render());
+    main.appendChild(navRow(k > 0 ? () => review(k - 1) : null, fwd, k + 1 < i ? '下一题</span> Next ▶' : i >= total ? '回到成绩</span> Results ▶' : '继续做题</span> Continue ▶'));
     hydrateIcons(main);
   }
 
@@ -300,9 +327,14 @@ export function practiceScreen({ go, kind, id }) {
     main.appendChild(ui);
   }
 
+  let res = null;
   function finish() {
-    const res = S.finishPracticeSet(kind, set.id, right, total);
+    res = S.finishPracticeSet(kind, set.id, right, total);
     S.checkDaily().forEach((g, k) => setTimeout(() => toast(g.label, { coins: g.coins }), 1200 + k * 700));
+    showSummary(true);
+    setTimeout(() => { if (n.isConnected) offerShading(); }, right === total ? 1400 : 600);
+  }
+  function showSummary(first = false) {
     const great = right === total;
     main.innerHTML = `<div class="summary stack" style="align-items:center;text-align:center">
         <div class="kv"></div>
@@ -313,12 +345,12 @@ export function practiceScreen({ go, kind, id }) {
         <div class="row" style="justify-content:center">${mcq && !sheetDone ? '<button class="btn yellow" id="goshade">✏️ <span class="zh">涂卡</span> Shading</button>' : ''}${S.canDo(kind, set).ok ? '<button class="btn white" id="again">↺ <span class="zh">再做一次</span> Again</button>' : ''}<button class="btn green" id="more">${K.icon} <span class="zh">别的练习</span> More sets</button></div>
       </div>`;
     $('.kv', main).replaceWith(kv.canvas); kv.setMood('happy');
-    if (great) { sfx.fanfare(); confetti(); }
+    if (great && first) { sfx.fanfare(); confetti(); }
     const ag = $('#again', main); if (ag) ag.onclick = () => go('practice', { kind, id }, { replace: true });
     $('#more', main).onclick = () => go('practiceList', { kind }, { replace: true });
     const gs = $('#goshade', main); if (gs) gs.onclick = () => { sfx.click(); showTab('s'); gs.remove(); };
+    if (mcq) main.appendChild(navRow(() => review(total - 1), null));
     hydrateIcons(main);
-    setTimeout(() => { if (n.isConnected) offerShading(); }, great ? 1400 : 600);
   }
   render();
   return n;

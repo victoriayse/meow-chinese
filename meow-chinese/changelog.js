@@ -472,4 +472,5 @@ export const CHANGES = [
     'The Shading tab is a real answer sheet with oval bubbles. Shade each answer, then tap Check.',
     'After the last question you can choose to do the shading for extra coins: BONUS +4 for each question shaded right (and answered right first time).',
   ] },
+  { v: 183, items: ['Word choice and Word match: new ◀ Back button to look at questions you already finished. The right answer shows in green, and it is not read out again.'] },
 ];
