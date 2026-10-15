@@ -282,7 +282,7 @@ export const REWARD_ACTS = {
   choice: { zh: '🔤 词语选择', en: 'Word choice', per: 'each question right first time (once a day per set)', coins: 1, xp: 1 },
   match: { zh: '🧩 词语搭配', en: 'Word match', per: 'each question right first time (once a day per set)', coins: 1, xp: 1 },
   order: { zh: '🧱 排句子', en: 'Sentence builder', per: 'each sentence right first time (once a day per set)', coins: 1, xp: 1 },
-  shading: { zh: '✏️ 涂答题纸', en: 'Answer-sheet shading (optional extra)', per: 'each Word choice / Word match question answered right first time AND shaded neatly on the matching bubble (once a day per set)', coins: 2, xp: 0 },
+  shadeq: { zh: '✏️ 涂卡 BONUS', en: 'Shading sheet bonus (optional extra)', per: 'each Word choice / Word match question shaded correctly on the shading sheet AND answered right first time (once a day per set) — on top of the usual reward', coins: 4, xp: 0 },
   essay: { zh: '✍️ 看图作文', en: 'Picture writing', per: 'each composition (starting amount — you can change it when checking)', coins: 30, xp: 10 },
   play: { zh: '🎮 陪我玩', en: 'Play with me', per: 'each round with 8/10 or more right', coins: 15, xp: 0 },
   listen: { zh: '🎧 听一听', en: 'Listen & pick (phone game)', per: 'each round with 8/10 or more right', coins: 3, xp: 0 },
@@ -906,22 +906,27 @@ export function restoreBuiltins(kind) {
   save(); return n;
 }
 // finishing a set: 1 coin + XP for each question right first time — paid once a day per set
-export function finishPracticeSet(kind, id, right, total, shaded = 0) {
+export function finishPracticeSet(kind, id, right, total) {
   const x = practiceSets(kind).find((y) => y.id === id);
   if (!x) return { coins: 0, xp: 0, paid: false };
   const t = todayStr();
   x.best = Math.max(x.best || 0, total ? Math.round((right / total) * 100) : 0);
   x.lastDone = t;
   countDone(kind, x); markTask(kind);
-  let coins = 0, gotXp = 0, paid = false, shadeCoins = 0;
-  if (x.lastPaid !== t) {
-    paid = true; x.lastPaid = t; const r = rewardFor(kind), sh = rewardFor('shading');
-    coins = right * r.coins; gotXp = right * r.xp;
-    shadeCoins = shaded * sh.coins; gotXp += shaded * sh.xp;   // ✏️ the optional answer-sheet shading extra
-    state.coins += coins + shadeCoins; addXp(gotXp);
-  }
+  let coins = 0, gotXp = 0, paid = false;
+  if (x.lastPaid !== t) { paid = true; x.lastPaid = t; const r = rewardFor(kind); coins = right * r.coins; gotXp = right * r.xp; state.coins += coins; addXp(gotXp); }
   markActive(); save();
-  return { coins, xp: gotXp, paid, shadeCoins };
+  return { coins, xp: gotXp, paid };
+}
+// ✏️ the optional shading sheet: a bonus for each question shaded right (and answered right first time), once a day per set
+export function shadeBonusOpen(kind, id) { const x = practiceSets(kind).find((y) => y.id === id); return !!x && x.lastShadePaid !== todayStr(); }
+export function payShadeBonus(kind, id, goodRows) {
+  const x = practiceSets(kind).find((y) => y.id === id);
+  if (!x || x.lastShadePaid === todayStr()) return { coins: 0, xp: 0, paid: false };
+  x.lastShadePaid = todayStr();
+  const r = rewardFor('shadeq'), coins = goodRows * r.coins, gotXp = goodRows * r.xp;
+  state.coins += coins; addXp(gotXp); save();
+  return { coins, xp: gotXp, paid: true };
 }
 // ---------- daily limits: how many times a day (0 = no limit) ----------
 export const LIMIT_ACTS = {

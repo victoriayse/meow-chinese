@@ -467,4 +467,9 @@ export const CHANGES = [
     'New buttons: ✔ Check shading, ⏭ Skip shading and ➡️ Continue.',
     'Shading the right bubble neatly now shows as BONUS +2.',
   ] },
+  { v: 182, items: [
+    'Word choice and Word match now have two tabs: 📝 Questions and ✏️ Shading.',
+    'The Shading tab is a real answer sheet with oval bubbles. Shade each answer, then tap Check.',
+    'After the last question you can choose to do the shading for extra coins: BONUS +4 for each question shaded right (and answered right first time).',
+  ] },
 ];

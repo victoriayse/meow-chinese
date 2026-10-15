@@ -1937,29 +1937,35 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 
 .btn[hidden] { display: none !important; }
 
-/* ✏️ optional answer-sheet shading under multiple-choice questions */
-.sh-sheet { border: 3px solid var(--ink); border-radius: 12px; background: repeating-linear-gradient(#fff 0 39px, #e7eefc 39px 40px); padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
-.sh-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-.sh-head small { color: #9a5b00; font-weight: 800; display: inline-flex; align-items: center; gap: 3px; }
-.sh-row { display: flex; align-items: center; gap: 10px; }
-.sh-qn { min-width: 22px; font-size: 18px; }
-.sh-bubbles { display: flex; gap: 8px; flex-wrap: wrap; }
-.sh-bubble { padding: 0; border: 0; background: none; cursor: pointer; border-radius: 50%; line-height: 0; }
-.sh-bubble canvas { display: block; }
-.sh-bubble:focus-visible { outline: 3px solid var(--pink); }
-.sh-sheet.locked .sh-bubble { cursor: default; }
-.sh-sheet.waiting { opacity: .45; filter: grayscale(1); }
-.sh-sheet.waiting .sh-bubble { cursor: not-allowed; }
-.sh-actions:empty { display: none; }
-.sh-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-.sh-msg:empty { display: none; }
-.sh-msg { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-.sh-msg.good { color: var(--green-d); }
-.sh-msg.meh { color: #9a5b00; }
+/* ✏️ 涂卡 shading sheet tab (Word choice / Word match) */
+.pr-tabs { display: flex; gap: 8px; }
+.pr-tabs[hidden] { display: none; }
+.pr-tabs button { flex: 1; font: inherit; font-weight: 800; padding: 9px 6px; border: 3px solid var(--ink); border-radius: 12px; background: #fff; color: var(--ink); cursor: pointer; }
+.pr-tabs button.on { background: var(--yellow); box-shadow: inset 0 -3px 0 var(--yellow-d); }
+#main[hidden], #spane[hidden] { display: none; }
+.sp-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 18px; }
+.sp-bonus { color: #9a5b00; font-weight: 800; display: inline-flex; align-items: center; gap: 3px; font-size: 15px; }
+.sp-msg:empty { display: none; }
+.sp-msg { font-weight: 700; text-align: center; line-height: 1.45; }
+.sp-msg.good { color: var(--green-d); }
+.sp-msg.meh { color: #9a5b00; }
+.sp-msg b { display: inline-flex; align-items: center; gap: 3px; }
+.omr { display: grid; grid-template-columns: auto auto; justify-content: center; align-self: center; margin: 6px 0; font-family: system-ui, sans-serif; }
+.omr-n { font-size: 17px; font-weight: 800; padding-right: 12px; align-self: center; text-align: right; color: #111; }
+.omr-cells { background: #c3d3ee; display: flex; gap: 14px; padding: 4px 12px; align-items: center; }
+.omr-cells.first { padding-top: 10px; }
+.omr-cells.last { padding-bottom: 10px; }
+.omr-oval { padding: 0; border: 0; background: none; cursor: pointer; line-height: 0; border-radius: 50%; }
+.omr-oval canvas { display: block; }
+.omr-oval:focus-visible { outline: 3px solid var(--pink); }
+.omr.locked .omr-oval { cursor: default; }
+.omr-flash { animation: omr-flash 1.4s ease-out 2; }
+@keyframes omr-flash { 0%, 100% { box-shadow: none; } 30% { box-shadow: 0 0 0 3px #f2b705 inset, 0 0 0 3px #f2b705; background-color: #fff1a8; } }
+.pr-review { text-align: left; align-self: stretch; background: #fff; border: 2px dashed #c9bda4; border-radius: 12px; padding: 8px 12px; display: grid; gap: 4px; font-size: 15px; }
 .sh-zoom { position: fixed; inset: 0; z-index: 1600; display: grid; place-items: center; background: rgba(15, 16, 41, .5); padding: 12px; }
 .sh-zoom-card { background: var(--paper); border: 3px solid var(--ink); border-radius: 18px; box-shadow: 0 5px 0 var(--ink); padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 100%; }
 .sh-zoom-label { font-weight: 800; text-align: center; font-size: 18px; }
-.sh-zoom-canvas { touch-action: none; background: #fff; border-radius: 12px; cursor: crosshair; }
+.sh-zoom-canvas { touch-action: none; background: #c3d3ee; border-radius: 12px; cursor: crosshair; }
 .sh-zoom-tools { display: flex; gap: 8px; }
 .sh-zoom-tools .btn { opacity: .6; }
 .sh-zoom-tools .btn.on { opacity: 1; background: var(--yellow); }
