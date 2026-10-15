@@ -49,6 +49,12 @@ function drawBubble(c, g, label, { size = 40, ring = false } = {}) {
 }
 
 // ---------- the lessons ----------
+const HOW = {
+  shade: ['把三个圆圈都涂满。点一个圆圈，把它放大来涂。', 'Fill all three circles. Tap a circle to make it big, then colour it in.'],
+  find: ['题目纸上已经写好答案了。找到答题纸上同一个题号，把那个答案涂好。', 'Each question already shows its answer. Find the same number on the answer sheet and shade that bubble.'],
+  checker: ['① 把答案涂到答题纸上。② 当检查员：每一行都和题目纸对一对，对了就勾「查过」。③ 按检查。', '① Shade each answer on the answer sheet. ② Be the checker: compare every row with the paper and tick "Checked". ③ Tap Check.'],
+  quiz: ['先在题目纸上圈出答案，再到答题纸上涂同一个答案。', 'Circle your answer on the paper first, then shade the same answer on the answer sheet.'],
+};
 const FOLDERS = {
   shade: { zh: '涂一涂', en: 'Shade carefully', icon: '🖍️', about: 'Three big bubbles to fill in neatly. No matching.', sizes: [3] },
   find: { zh: '找一找', en: 'Find and transfer', icon: '🔎', about: 'Copy the answers from the paper onto the answer sheet.', sizes: [3, 5, 8, 10] },
@@ -113,7 +119,7 @@ const bubbleCount = (sh) => (sh.folder === 'shade' ? 1 : 4);
 export function openAnswerPractice({ onBusy = () => {} } = {}) {
   const ov = html`<div class="ap-overlay" role="dialog" aria-label="Answer practice"><div class="ap-wrap">
       <div class="ap-top"><div class="ap-teacher"></div><div class="ap-say"></div>
-        <div class="ap-tools"><button type="button" class="btn white small ap-hint">💡 <span class="zh">提示</span> Hint</button><button type="button" class="btn yellow small ap-pause">⏸ <span class="zh">暂停，稍后继续</span> Pause</button></div></div>
+        <div class="ap-tools"><button type="button" class="btn white small ap-lessons" hidden>📚 <span class="zh">换练习</span> Lessons</button><button type="button" class="btn white small ap-hint">💡 <span class="zh">提示</span> Hint</button><button type="button" class="btn yellow small ap-pause">⏸ <span class="zh">暂停，稍后继续</span> Pause</button></div></div>
       <div class="ap-body"></div>
     </div></div>`;
   document.body.append(ov);
@@ -135,16 +141,19 @@ export function openAnswerPractice({ onBusy = () => {} } = {}) {
     if (sheet && !sheet.done) { save(); toast('⏸ <span class="zh">保存好了，下次继续</span> Saved — carry on any time', { ms: 2200 }); }
     close();
   };
+  // back to the lesson list: the sheet is kept as a paused sheet, so nothing is lost
+  $('.ap-lessons', ov).onclick = () => { sfx.click(); if (sheet && !sheet.done) save(); chooser(); };
   $('.ap-hint', ov).onclick = () => {
     if (!sheet) return say('先选一个练习。', 'Pick a lesson to start.');
     if (sheet.folder === 'shade') return say('把整个圆圈涂满，小空隙没关系。', 'Fill the whole circle — tiny gaps are okay.');
+    if (sheet.folder === 'checker' && sheet.questions.some((q, r) => !sheet.inspected[r]) && Object.keys(grids).length >= sheet.size) return say('每一行都和题目纸对一对，对了就勾「查过」。', 'Compare each row with the paper. If it matches, tick "Checked".');
     if (focusRow != null) return say(`你在涂第${focusRow + 1}题。回去看看题目纸上的第${focusRow + 1}题。`, `You're shading question ${focusRow + 1}. Look back at question ${focusRow + 1} on your paper.`);
     say('先看题号，再涂答案。', 'Check the question number before shading.');
   };
 
   // ---------- 1. choose a lesson ----------
   function chooser() {
-    sheet = null; body.innerHTML = '';
+    sheet = null; body.innerHTML = ''; $('.ap-lessons', ov).hidden = true;
     say('选一个练习吧！', 'Choose a lesson folder.');
     const prog = progress();
     const box = html`<div class="ap-choose"></div>`;
@@ -175,8 +184,8 @@ export function openAnswerPractice({ onBusy = () => {} } = {}) {
     sheet = sh; grids = {};
     Object.entries(sh.bubbles || {}).forEach(([k, v]) => { grids[k] = unpack(v); });
     focusRow = null; tab = 'paper'; scrolls = { paper: 0, sheet: 0 };
-    if (sh.folder === 'shade') say('把三个圆圈涂满，涂在圆圈里面。', 'Fill all three circles — stay inside the lines.');
-    else say('先看题号，再涂答案。', 'Check the question number before shading.');
+    if (sh.folder === 'shade') say(...HOW.shade); else say('先看题号，再涂答案。', 'Check the question number before shading.');
+    $('.ap-lessons', ov).hidden = false;
     if (sh.folder === 'shade') tab = 'sheet';
     layout(); save();
   }
@@ -187,11 +196,13 @@ export function openAnswerPractice({ onBusy = () => {} } = {}) {
     const view = html`<div class="ap-desk">
         <div class="ap-tabs"><button type="button" data-tab="paper">📄 <span class="zh">题目</span> Paper</button><button type="button" data-tab="sheet">📝 <span class="zh">答题纸</span> Answer Sheet</button></div>
         <div class="ap-papers">
-          <div class="ap-paper" style="background:${t.bg}"><div class="ap-paper-head">${t.icon} <span class="zh">${FOLDERS[sheet.folder].zh}</span> · ${t.en}</div><div class="ap-qs"></div></div>
+          <div class="ap-paper" style="background:${t.bg}"><div class="ap-paper-head">${t.icon} <span class="zh">${FOLDERS[sheet.folder].zh}</span> · ${t.en}</div><p class="ap-how"></p><div class="ap-qs"></div></div>
           <div class="ap-sheet"><div class="ap-paper-head">📝 <span class="zh">答题纸</span> Answer sheet</div><div class="ap-rows"></div></div>
         </div>
         <div class="ap-foot"><button type="button" class="btn green ap-check">✅ <span class="zh">检查</span> Check my sheet</button></div>
       </div>`;
+    $('.ap-how', view).innerHTML = `<span class="zh">${HOW[sheet.folder][0]}</span><br>${HOW[sheet.folder][1]}`;
+    if (sheet.folder === 'shade') $('.ap-rows', view).before($('.ap-how', view));   // no question paper here
     if (sheet.folder === 'shade') { $('.ap-tabs', view).style.display = 'none'; $('.ap-paper', view).style.display = 'none'; view.classList.add('only-sheet'); }
     // the question paper
     const qs = $('.ap-qs', view);
@@ -334,7 +345,7 @@ export function openAnswerPractice({ onBusy = () => {} } = {}) {
     const prog = progress(), first = !prog.rewarded.includes(sheet.id), coins = rewardFor(sheet);
     sheet.done = true; prog.paused = null;
     if (first) { prog.rewarded.push(sheet.id); prog.rewarded = prog.rewarded.slice(-50); prog.done[sheet.folder] = (prog.done[sheet.folder] || 0) + 1; S.addCoins(coins); }
-    S.save(); sfx.fanfare(); confetti();
+    S.save(); sfx.fanfare(); confetti(); $('.ap-lessons', ov).hidden = true;
     say('全部都对了，涂得也很整齐！', 'Every row is right and neatly shaded — well done!');
     const f = FOLDERS[sheet.folder];
     body.innerHTML = '';

@@ -1935,7 +1935,8 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 /* v170: canteen store window signs */
 .decor .screen-label.stall { animation: none; color: #3a2a35; font-weight: 900; font-size: 15px; display: flex; align-items: center; justify-content: flex-start; padding-left: 4px; text-shadow: none; white-space: nowrap; letter-spacing: .5px; }
 /* v176: ✏️ Answer Practice — the teacher cat behind her desk */
-.decor.npc-desk .npc-cat { bottom: 52%; }
+.decor.npc-desk .npc-cat { bottom: 27%; z-index: 0; }
+.decor.npc-desk > canvas { position: relative; z-index: 1; }   /* the desk sits in front of the teacher */
 .house .decor.npc-desk { pointer-events: auto; cursor: pointer; }
 
 /* ✏️ 答题练习 Answer Practice */
@@ -2008,8 +2009,13 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .ap-wrap { padding: 8px; border-radius: 14px; }
   .ap-teacher { width: 52px; height: 52px; }
   .ap-say { flex-basis: 150px; font-size: 14px; }
-  .ap-tools { width: 100%; justify-content: flex-end; }
+  .ap-tools { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+  .ap-tools .btn { flex: 1 1 auto; padding-left: 8px; padding-right: 8px; }
   .ap-tabs { display: flex; }
   .ap-desk:not(.only-sheet) .ap-papers { grid-template-columns: 1fr; }
   .ap-desk[data-tab="paper"]:not(.only-sheet) .ap-sheet, .ap-desk[data-tab="sheet"]:not(.only-sheet) .ap-paper { display: none; }
 }
+
+.ap-how { margin: 0 0 6px; padding: 7px 10px; background: #fffbe6; border: 2px dashed var(--yellow-d); border-radius: 10px; font-size: 14px; line-height: 1.35; }
+.ap-how .zh { font-weight: 700; }
+.btn[hidden] { display: none !important; }

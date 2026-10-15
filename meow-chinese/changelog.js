@@ -452,4 +452,9 @@ export const CHANGES = [
   ] },
   { v: 177, items: ['Fixed the ✏️ 开始练习 Start button on the practice desk not responding when other desks were in front of it.'] },
   { v: 178, items: ['Fixed the ✏️ 开始练习 Start button jumping away when tapped on phones and tablets.'] },
+  { v: 179, items: [
+    'The teacher cat now sits behind her desk.',
+    'Answer Practice: new 📚 Lessons button to go back to the lesson list (your sheet is kept so you can continue it later).',
+    'Each practice paper now explains what to do at the top.',
+  ] },
 ];
