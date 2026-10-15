@@ -451,4 +451,5 @@ export const CHANGES = [
     'New Teacher cat at her desk — tap her to hear how it works.',
   ] },
   { v: 177, items: ['Fixed the ✏️ 开始练习 Start button on the practice desk not responding when other desks were in front of it.'] },
+  { v: 178, items: ['Fixed the ✏️ 开始练习 Start button jumping away when tapped on phones and tablets.'] },
 ];
