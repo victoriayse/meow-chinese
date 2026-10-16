@@ -524,4 +524,5 @@ export const CHANGES = [
     '🔄 Queue poles can be turned to run from the front of the room to the back (tap 🔄 while arranging).',
     'Cats in the Buffet are 30% smaller.',
   ] },
+  { v: 197, items: ['The Buffet host and server cats are 30% smaller too.'] },
 ];
