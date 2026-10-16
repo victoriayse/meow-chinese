@@ -532,4 +532,8 @@ export const CHANGES = [
     'The admin can tap the gate to hold it open for everyone, and tap again to close it.',
   ] },
   { v: 199, items: ['Fixed: tapping the Buffet gate (admin) now really opens / closes it.'] },
+  { v: 200, items: [
+    '🚧 You can no longer walk through any furniture (rugs, mats and pools you can still walk on). You can still tap a seat to sit on it.',
+    '🍱 Buffet: every visit needs paying again — the host asks as soon as you come in. The admin walks in and out for free.',
+  ] },
 ];

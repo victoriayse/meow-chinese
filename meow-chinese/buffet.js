@@ -15,8 +15,15 @@ const base = (id) => String(id).split('#')[0];
 export const hasPass = () => !!S.get().buffetPass;
 const orders = () => (S.get().buffetOrders ||= []);
 
-// counters, kiosks and anything marked "block" can't be walked through
-export function isBlocker(id) { const b = base(id), it = ITEMS[b]; return !!it && it.cat === 'decor' && (!!it.block || /kiosk|counter/i.test(b)); }
+// furniture can't be walked through — except things lying flat on the floor (rugs, mats, pools), curtains,
+// doorways, and the stage (she climbs onto that)
+export function isBlocker(id, el) {
+  const b = base(id), it = ITEMS[b];
+  if (!it || it.cat !== 'decor' || it.walkOver) return false;
+  if (el && (el.classList.contains('flat') || el.classList.contains('curtain') || el.classList.contains('pool-el'))) return false;
+  if (it.spot === 'rug' || it.spot === 'under' || it.spot === 'curtain' || it.panel === 'door' || (it.seat && it.seat.walk)) return false;
+  return true;
+}
 
 // leaving the buffet: its food and drinks stay behind, and the pass ends
 export function leaveBuffet() {
@@ -40,7 +47,7 @@ export function setGate(el, open) {
   }
 }
 
-function payHost(onChanged) {
+export function payHost(onChanged) {
   if (hasPass()) { toast('🍱 <span class="zh">已经付过了，请进！</span> You\'ve paid — go on in and enjoy!', { ms: 2200 }); return; }
   const box = html`<div class="card stack" style="align-items:center;text-align:center">
       <div style="font-size:44px">🍱</div>
