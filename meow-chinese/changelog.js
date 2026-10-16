@@ -513,4 +513,11 @@ export const CHANGES = [
     '🎵 The basketball machine plays arcade music while it is open, and the crowd cheers 🎉 for every goal.',
     'The leaderboard is now only shown inside the basketball game.',
   ] },
+  { v: 195, items: [
+    '🍱 New L2 Buffet in the shopping mall (left of the Fashion Store): pay the host cat 100 coins, walk through the gate, then order as much as you like for free!',
+    'Collect food at the 🍱 Food counter and drinks at the 🥤 Drinks counter. Share them on the buffet tables. Buffet food stays at the buffet when you leave.',
+    '🚧 You can no longer walk through counters, kiosks, queue poles or the buffet gate.',
+    '🏀 Basketball games now last 60 seconds.',
+    'Fixed the cinema ordering kiosk asking to upload a video.',
+  ] },
 ];

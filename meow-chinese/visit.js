@@ -4,6 +4,7 @@ import * as CafeTables from './cafe-tables.js';
 import { wireHomeTables, wirePlaceTables } from './home-tables.js';
 import { createStadium, joystick, JOYSTICK } from './stadium.js';
 import { wireCanteen } from './canteen.js';
+import { wireBuffet, leaveBuffet, hasPass, isBlocker, setGate, BUFFET_ROOM } from './buffet.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
 //   knock  visitor -> house   { id, look, x, y, room, left }      "I'm here" (the owner answers with the house)
@@ -229,6 +230,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
         logLine((c && c.look && c.look.name) || '朋友', emoteIcon(p.mood), false);
       } else if (ev === 'table-food' && placeKey === 'cafe') { refreshTables();
       } else if (ev === 'counter') { refreshCounter();
+      } else if (ev === 'gate' && P && p.room === roomKey) { const g = [...($('#room', box) || document).querySelectorAll('.decor')].find((x) => x.dataset.id === p.gate); if (g) { setGate(g, true); clearTimeout(g.shutT); g.shutT = setTimeout(() => setGate(g, false), 1300); }
       } else if (ev === 'ctl' && P && p.c) { takeCtl(p.c);
       } else if (ev === 'ctl?' && P) { const all = Object.values(shared); if (all.length) ch.send('ctl-state', { id: me, to: p.id, all });
       } else if (ev === 'ctl-state' && P && p.to === me) { (p.all || []).forEach(takeCtl);
@@ -263,7 +265,14 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       }
       if (st) { const sp = seatSpot(room0, mine.seat, mine.slot); mine.seat = null; mine.slot = 0; if (sp) { mine.x = sp.x; mine.y = Math.max(1, sp.y - (sp.el.offsetHeight / room0.clientHeight) * 100 * 0.3); } }
       else if (mine.seat) { mine.seat = null; mine.slot = 0; mine.y = Math.min(mine.y, 28); }   // the arrows make her hop off
-      mine.x += dx * 32 * dt; mine.y += dy * 22 * dt;
+      {
+        // 🚧 counters, kiosks, queue poles and the buffet gate can't be walked through (slide along them instead)
+        let nx = mine.x + dx * 32 * dt, ny = mine.y + dy * 22 * dt;
+        if (!blockedAt(mine.x, mine.y) && blockedAt(nx, ny)) {
+          if (!blockedAt(nx, mine.y)) ny = mine.y; else if (!blockedAt(mine.x, ny)) nx = mine.x; else { nx = mine.x; ny = mine.y; }
+        }
+        mine.x = nx; mine.y = ny; gateWatch();
+      }
       if (dy > 0 && room0) {   // walking up into the front of a stage: climb on
         const H = room0.clientHeight, W = room0.clientWidth;
         for (const d of room0.querySelectorAll('.decor.seat')) {
@@ -316,7 +325,10 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (tries >= 4 && !P) { sub.innerHTML = '朋友现在不在家 · Your friend isn\'t home right now<br><small>朋友要打开喵喵中文才可以串门 · They need to have the app open</small>'; }
   }, 3000);
 
+  let lastRoom = null;
   function render() {
+    if (P && lastRoom === BUFFET_ROOM && roomKey !== BUFFET_ROOM) { const n2 = leaveBuffet(); if (n2) toast('🍱 <span class="zh">自助餐的食物留在餐厅里</span> Buffet food stays at the buffet', { ms: 2400 }); if (myKv) myKv.draw(); }
+    lastRoom = roomKey;
     const info = S.roomInfo(roomKey), open = house.open || ['living'];
     box.innerHTML = `<div class="house-unit ${info.outdoor ? 'outdoor' : ''} ${info.bare || info.noRoof ? 'bare' : ''}" id="hunit"><canvas class="roof" id="roof"></canvas>
         <div class="room-name">${info.icon} <span class="zh">${info.zh}</span> ${info.en}${P ? `<button class="room-light ${((house.power || {}).dark || {})[roomKey] ? 'off' : ''}" id="v-light" title="Lights" aria-label="Lights">💡</button>` : ''}${placeKey === 'mall' ? '<button class="room-light mall-directory" title="Mall directory" aria-label="Mall directory">▦</button>' : ''}</div>
@@ -395,6 +407,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.seat'); if (!d || e.target.closest('button')) return;
       if (mine.seat === d.dataset.id) return;
+      if (roomKey === BUFFET_ROOM && !hasPass()) { sfx.miss(); return toast('🎟️ <span class="zh">请先在门口付款</span> Please pay the host at the entrance first', { ms: 2200 }); }
       const taken = others.ids().map((id) => others.m.get(id)).filter((c) => c && c.room === roomKey);
       let slot = freeSlot(d.dataset.id, taken);
       const stg = stageOf(d.dataset.id);
@@ -457,7 +470,9 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     }
     if (placeKey === 'cafe') refreshTables();
     if (!P) wireHomeTables(room, hostId, () => { if (myKv) myKv.draw(); sendMine(); });
-    else if (!['cafe', 'mall'].includes(placeKey)) wirePlaceTables(room, placeKey, roomKey, () => { if (myKv) myKv.draw(); sendMine(); });
+    else if (!['cafe', 'mall'].includes(placeKey) || roomKey === BUFFET_ROOM) wirePlaceTables(room, placeKey, roomKey, () => { if (myKv) myKv.draw(); sendMine(); });
+    if (P && roomKey === BUFFET_ROOM) wireBuffet(room, { onChanged: () => { if (myKv) myKv.draw(); sendMine(); } });
+    measureBlockers(room); requestAnimationFrame(() => measureBlockers(room));
     if (placeKey === 'mall') wireMall(room, roomKey, house, go, () => { if (myKv) myKv.draw(); sendMine(); });
     if (placeKey === 'school' && roomKey === 'schoolcanteen') wireCanteen(room);
     hydrateIcons(box);
@@ -555,6 +570,31 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   }
   const reapplyShared = () => Object.values(shared).forEach(ctlData);
 
+  // ---------- 🚧 things you can't walk through ----------
+  // Each counter / kiosk / pole / gate blocks a strip of floor at its base (in room %: x from its left to right edge,
+  // y from its bottom edge a little way back). The buffet gate lets a pass-holder through — it opens for her and
+  // closes again right behind her (and the others see it open as she goes through).
+  let foot = [], myGate = null;
+  function measureBlockers(room) {
+    foot = [];
+    if (!room || stadium) return;
+    const W = room.clientWidth, H = room.clientHeight; if (!W || !H) return;
+    room.querySelectorAll('.decor').forEach((d) => {
+      if (!isBlocker(d.dataset.id) || d.classList.contains('seat')) return;
+      const it = ITEMS[d.dataset.id.split('#')[0]], x0 = (d.offsetLeft / W) * 100, x1 = ((d.offsetLeft + d.offsetWidth) / W) * 100;
+      const bottom = ((H - (d.offsetTop + d.offsetHeight)) / H) * 100, hPct = (d.offsetHeight / H) * 100;
+      const depth = it.blockDepth || Math.max(3, Math.min(10, hPct * 0.3));
+      foot.push({ el: d, gate: !!it.gate, x0, x1, y0: bottom - 1, y1: bottom + depth });
+    });
+  }
+  const inFoot = (f, x, y) => x >= f.x0 - 2 && x <= f.x1 + 2 && y >= f.y0 && y <= f.y1;
+  function blockedAt(x, y) { return foot.some((f) => inFoot(f, x, y) && !(f.gate && hasPass())); }
+  function gateWatch() {
+    const g = foot.find((f) => f.gate && hasPass() && inFoot(f, mine.x, mine.y));
+    if (g && myGate !== g.el) { myGate = g.el; clearTimeout(g.el.shutT); setGate(g.el, true); sfx.click(); ch.send('gate', { id: me, room: roomKey, gate: g.el.dataset.id }); }
+    if (!g && myGate) { const el = myGate; myGate = null; clearTimeout(el.shutT); el.shutT = setTimeout(() => setGate(el, false), 250); }   // shut right behind her
+  }
+
   function place() {
     const room = $('#room', box), spot = mine.seat && seatSpot(room, mine.seat, mine.slot);
     boothView(room, myEl, spot && mine.seat, mine.boothClosed, (action) => {
@@ -589,6 +629,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   let left = false;
   const leave = () => {
     if (left) return; left = true;
+    if (P) leaveBuffet();
     if (P && S.dropPlaceFood()) toast('🍽️ <span class="zh">吃的喝的不能带走哦</span> Food and drinks stay behind when you leave', { ms: 2600 });
     Radio.stop(); clearInterval(kt); if (stadium) stadium.stop(); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
   $('#leave', n).onclick = () => { leave(); if (P) go('map'); else go('friend', { id: hostId }); };

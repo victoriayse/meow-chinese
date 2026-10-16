@@ -1,5 +1,5 @@
 // 🏀 The arcade's basketball machine and 🎟️ prize counter.
-// Basketball: 5 coins a game, 30 seconds, as many shots as she can. The hoop slides left and right; every 3 goals is
+// Basketball: 5 coins a game, 60 seconds, as many shots as she can. The hoop slides left and right; every 3 goals is
 // the next level (5 levels), and the hoop gets faster. Tap the ball to shoot it straight up — no aiming lines.
 // Every ball through the hoop is 1 point. Tickets (kept on the server, can't be traded), by goals in one game:
 // 5 → 1 · 8 → 3 · 15 → 4 · 25 → 6.
@@ -13,7 +13,7 @@ import { sfx, basketMusic, cheer } from './audio.js';
 
 const rpc = (name, body = {}) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
 export const BASKET_COST = 5;
-const TIME = 30, LEVELS = 5, PER_LEVEL = 3;
+const TIME = 60, LEVELS = 5, PER_LEVEL = 3;
 export const TIERS = [[5, 1], [8, 3], [15, 4], [25, 6]];   // goals in one game → tickets (the server decides)
 const SPEED = [16, 24, 33, 44, 56];        // how fast the hoop slides at each level (% of the court a second)
 const TICKET = '🎟️';
