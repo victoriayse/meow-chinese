@@ -238,11 +238,15 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
         v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', ''); v.setAttribute('autoplay', ''); v.setAttribute('loop', '');
         v.src = video.url;
         Object.assign(v.style, { left: sc.style.left, top: sc.style.top, width: sc.style.width, height: sc.style.height });
-        const sync = () => { if (v.duration > 0) { try { v.currentTime = ((Date.now() - (video.at || 0)) / 1000) % v.duration; } catch {} } };
+        const sync = () => { if (v.duration > 0) { try { v.currentTime = ((Date.now() - (v.filmAt || video.at || 0)) / 1000) % v.duration; } catch {} } };
         v.addEventListener('loadedmetadata', sync);
         v.addEventListener('play', sync, { once: true });
         const btn = (cls, txt, title) => { const x = document.createElement('button'); x.type = 'button'; x.className = cls; x.textContent = txt; x.title = title; x.addEventListener('pointerdown', (e) => e.stopPropagation()); return x; };
         const snd = btn('vid-sound', '🔇', 'Sound'), play = btn(`vid-play ${videoOwner ? 'owner' : ''}`, '▶️', 'Play / stop');
+        // ⏮ restart: the film starts again from the beginning (in a public place / her home: for everyone watching)
+        const rs = btn('vid-restart', '⏮️', 'Restart');
+        v.restartFilm = (at = Date.now()) => { v.filmAt = at; delete v.dataset.stopped; sync(); v.play().catch(() => {}); };
+        rs.onclick = (e) => { e.stopPropagation(); const ev = new CustomEvent('screen-restart', { bubbles: true, cancelable: true, detail: { id } }); rs.dispatchEvent(ev); if (!ev.defaultPrevented) v.restartFilm(); };
         const show = () => { play.textContent = v.paused ? '▶️' : '⏸️'; wrap.classList.toggle('vid-paused', v.paused); };
         v.addEventListener('play', show); v.addEventListener('pause', show);
         // start it (phones may refuse until someone taps — then the ▶️ button / a tap on the screen starts it)
@@ -262,7 +266,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
         // a tap on the screen itself: start the film if it isn't playing
         wrap.addEventListener('click', (e) => { if (it.panel || e.target.closest('button') || !v.paused || wrap.classList.contains('off')) return; delete v.dataset.stopped; sync(); v.play().catch(() => {}); });
         wrap.classList.add('has-film', 'vid-paused');
-        wrap.append(v, snd, play);
+        wrap.append(v, snd, play, rs);
         requestAnimationFrame(() => { if (!wrap.classList.contains('off')) v.startFilm(); });
       }
       if (videoPick && !it.noVideo && it.power === 'tv' && !it.panel) wrap.addEventListener('click', (e) => {

@@ -565,4 +565,8 @@ export const CHANGES = [
   { v: 208, items: [
     'Going into the cinema, mall or another public place now updates the app first if a new version is out, so everyone sees the same gates and furniture.',
   ] },
+  { v: 209, items: [
+    '⏮️ New restart button beside ▶️ on screens — the film starts again from the beginning for everyone watching.',
+    '🎬 New Now Showing board for the cinema — tap it to write what’s on.',
+  ] },
 ];

@@ -1172,6 +1172,13 @@ function homeScreen(params = {}) {
       toast(on ? '▶️ <span class="zh">开始放电影</span> Film on' : '⏹ <span class="zh">电影停了</span> Film off', { ms: 1400 });
     });
     room.addEventListener('screen-video', (e) => openVideo(e.detail.id, () => { Visit.hostResendHouse(); refreshHome(); }));
+    // ⏮ restart the film at home (friends visiting see it restart too)
+    room.addEventListener('screen-restart', (e) => {
+      const sv = (S.get().screenVideos || {})[e.detail.id]; if (!sv) return;
+      e.preventDefault(); sv.at = Date.now(); S.save(); sfx.click();
+      const v = e.target.closest('.decor')?.querySelector('.screen-video'); if (v && v.restartFilm) v.restartFilm(sv.at);
+      Visit.hostResendHouse();
+    });
     room.addEventListener('panel-toggle', (e) => { const {id,opened} = e.detail; s.openThings ||= {}; if (opened) s.openThings[id] = true; else delete s.openThings[id]; S.save(); Visit.hostResendHouse(); });
     wireDisplays(room, { edit: true, changed: () => { Visit.hostResendHouse(); refreshHome(); } });
     // 🍽️ the home dining table: food anyone in the house can share

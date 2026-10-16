@@ -362,6 +362,8 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (P && Places.isAdmin()) room.addEventListener('screen-video', (e) => openVideo(e.detail.id, saveMedia));
     // the cinema owner can switch a projector screen's film on / off from here too (everyone sees it)
     // ▶️ / ⏸ on a screen, or a tap on a TV: on / off for everyone in this place
+    // ⏮ restart a screen's film from the beginning — for everyone in this place
+    if (P) room.addEventListener('screen-restart', (e) => { e.preventDefault(); sfx.click(); setCtl('restart', e.detail.id, true); toast('⏮️ <span class="zh">从头开始播放</span> Restarted for everyone', { ms: 1400 }); });
     if (P) room.addEventListener('screen-power', (e) => {
       const id = e.detail.id, on = !!((house.power || {}).off || {})[id]; sfx.click();
       setCtl('power', id, on);
@@ -587,12 +589,14 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (!house) return;
     if (c.kind === 'power') { house.power = house.power || {}; house.power.off = { ...(house.power.off || {}) }; if (c.val) delete house.power.off[c.id]; else house.power.off[c.id] = true; }
     else if (c.kind === 'panel' || c.kind === 'gate') Object.values(house.rooms || {}).forEach((list) => (list || []).forEach((e) => { if (e.id === c.id) e.opened = !!c.val; }));
+    else if (c.kind === 'restart') Object.values(house.rooms || {}).forEach((list) => (list || []).forEach((e) => { if (e.id === c.id && e.video) e.video = { ...e.video, at: c.at }; }));
     else if (c.kind === 'radio') { const r = (house.radios || {})[c.id]; if (r) { r.on = !!c.val; if (c.val) r.startedAt = c.at || r.startedAt || Date.now(); } }
   }
   function ctlShow(c, { dom = true } = {}) {
     const room = $('#room', box); if (!room) return;
     if (c.kind === 'power') applyPower(room, { dark: !!(((house.power || {}).dark || {})[roomKey]), off: (house.power || {}).off || {} });
     else if (c.kind === 'radio') hearRadio();
+    else if (c.kind === 'restart') { const d = [...room.querySelectorAll('.decor')].find((x) => x.dataset.id === c.id), v = d && d.querySelector('.screen-video'); if (v && v.restartFilm && !d.classList.contains('off')) v.restartFilm(c.at); }
     else if (c.kind === 'gate') {
       const g = [...room.querySelectorAll('.decor')].find((x) => x.dataset.id === c.id);
       if (g) { g.classList.toggle('gate-held', !!c.val); if (c.val) setGate(g, true); else { g.classList.remove('gate-held'); setGate(g, false); } }
@@ -615,6 +619,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (Places.isAdmin()) {   // the admin's switches are kept in the saved layout too
       if (kind === 'power' && !!(S.get().powerOff || {})[id] === !!val) S.togglePower(id);
       if (kind === 'radio') Radio.setSharedOn(id, !!val);
+      if (kind === 'restart') { const sv = (S.get().screenVideos || {})[id]; if (sv) { sv.at = c.at; S.save(); } }
       if (kind !== 'panel') Places.savePlace(placeKey);
     }
   }

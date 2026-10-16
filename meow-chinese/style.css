@@ -2039,3 +2039,10 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .decor .screen-label.gate-sign { font-size: 10px; color: #ffd23f; background: #5a1220; border: 2px solid #e6c25a; border-radius: 4px; box-sizing: border-box; }
 /* v204: the lit "Theatre 1" / "Theatre 2" signs over the doors */
 .decor .screen-label.theatre-sign { font-size: 10px; color: #ffe08a; text-shadow: 0 0 4px rgba(255, 210, 63, .8); }
+/* v209: ⏮ restart, just left of ▶️/⏸ on a screen */
+.decor .vid-restart { position: absolute; left: 50%; bottom: 14%; transform: translateX(calc(-150% - 6px)); width: 40px; height: 40px; font-size: 20px; border: 3px solid var(--ink); border-radius: 50%; background: rgba(255,255,255,.92); cursor: pointer; pointer-events: auto; display: grid; place-items: center; padding: 0; z-index: 2; }
+.room.arranging .decor .vid-restart, .decor.off .vid-restart, .panel-closed[data-panel="screen"] .vid-restart { display: none; }
+/* 🎬 the Now Showing board */
+.decor .screen-label.now-showing { font-size: 10px; color: #ffe08a; letter-spacing: .5px; text-shadow: 0 0 4px rgba(255,210,63,.8); }
+.decor[data-id^="nowshowing"] .board-text { font-size: 13px; line-height: 1.35; color: #fff6dc; padding: 4px 8px; }
+.decor .vid-restart { width: calc(18px * var(--inv, 1)); height: calc(18px * var(--inv, 1)); font-size: calc(9px * var(--inv, 1)); border-width: calc(2px * var(--inv, 1)); transform: translateX(calc(-150% - 4px)); }
