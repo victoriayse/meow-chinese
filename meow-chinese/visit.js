@@ -583,7 +583,8 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       if (!isBlocker(d.dataset.id) || d.classList.contains('seat')) return;
       const it = ITEMS[d.dataset.id.split('#')[0]], x0 = (d.offsetLeft / W) * 100, x1 = ((d.offsetLeft + d.offsetWidth) / W) * 100;
       const bottom = ((H - (d.offsetTop + d.offsetHeight)) / H) * 100, hPct = (d.offsetHeight / H) * 100;
-      const depth = it.blockDepth || Math.max(3, Math.min(10, hPct * 0.3));
+      const turned = d.dataset.facing === 'back' && it.blockDepthTurned;
+      const depth = turned ? hPct * it.blockDepthTurned : it.blockDepth || Math.max(3, Math.min(10, hPct * 0.3));
       foot.push({ el: d, gate: !!it.gate, x0, x1, y0: bottom - 1, y1: bottom + depth });
     });
   }

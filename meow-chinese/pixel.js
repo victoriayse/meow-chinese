@@ -12246,3 +12246,7 @@ Object.assign(ITEMS, {
   buffetdrinkcounter: { ...ITEMS.cafecollect, group: 'mall', room: 'mallbuffet', name: '自助餐取餐柜台（饮料）', en: 'Buffet collection counter — Drinks', one: false, label: '🥤 Drinks', staff: { fur: 'grey', name: 'Drinks server' }, buffetCounter: 'drink' },
   buffettable4: { ...ITEMS.homedining4, room: 'mallbuffet', group: 'mall', name: '自助餐四人桌椅', en: 'Buffet table for 4' },
 });
+
+// v196: 🔄 queue poles can be turned to run from the front of the room to the back (so a rope line can go either way)
+ITEMS.qpole.frames = { back: ["......................", "......................", "...............ooo....", "..............oyyyo...", "..............orro....", "..............oRRo....", ".............orRso....", "............orRoso....", "............oRRoso....", "...........orRooso....", ".oooo.....orRRooso....", "oyyyyo...orRRo.oso....", "oyyyyoooorRRo..oso....", ".oSsrrrrrRRo..oosoo...", ".ossRRRRRoo..ossssso..", ".ossooooo.....ooooo...", ".osso.................", ".osso.................", ".osso.................", ".osso.................", ".osso.................", ".osso.................", ".osso.................", ".osso.................", ".osso.................", ".osso.................", ".osso.................", "oossoo................", "sssssso...............", "SSSSSSo...............", "oooooo................", "......................"] };
+ITEMS.qpole.blockDepthTurned = 0.55;   // turned: it blocks a strip from its front pole back to its far pole

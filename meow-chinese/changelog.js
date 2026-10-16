@@ -520,4 +520,8 @@ export const CHANGES = [
     '🏀 Basketball games now last 60 seconds.',
     'Fixed the cinema ordering kiosk asking to upload a video.',
   ] },
+  { v: 196, items: [
+    '🔄 Queue poles can be turned to run from the front of the room to the back (tap 🔄 while arranging).',
+    'Cats in the Buffet are 30% smaller.',
+  ] },
 ];
