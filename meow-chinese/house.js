@@ -139,7 +139,7 @@ export function roomLayout(s, roomKey, roomOf) {
     const back = ((it.frames && it.frames.back) || it.flip) && fv === 'back';   // turned round (or sideways)
     const front = it.frames && it.frames.front && fv === 'front';            // facing straight into the room
     const layer = (s.decorLayer || {})[id] || 0;
-    const opened = (it.tapOpen || it.panel) && !!(s.openThings || {})[id];   // changing cubicle: curtain pulled open   // dragged on top of something: stays in front of it
+    const opened = (it.tapOpen || it.panel || it.gate) && !!(s.openThings || {})[id];   // (the buffet gate: held open by the admin)   // changing cubicle: curtain pulled open   // dragged on top of something: stays in front of it
     return { id, scale, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : front ? { facing: 'front' } : {}), ...(layer ? { layer } : {}), ...(opened ? { opened } : {}), ...(text != null ? { text } : {}), ...(video ? { video } : {}), ...(it.displaySlots ? { stock: (s.displayStock || {})[id] || {} } : {}) };
   }).filter(Boolean).concat(((s.roomStyle || {})[roomKey] || {}).pool ? [(() => {
     // the swimming pool (from 🎨 Renovate): she can move it like furniture
@@ -372,6 +372,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
     });
   }
   if (it.tapOpen) wrap.classList.add('tap-open');
+  if (it.gate) { wrap.classList.add('buffet-gate'); if (opened) wrap.classList.add('gate-held', 'gate-open'); }
   if (it.power === 'shower') wrap.appendChild(Object.assign(document.createElement('i'), { className: 'shower-water' }));
   if (it.belt) {     // the treadmill's moving belt
     const bt = document.createElement('i'); bt.className = 'belt';

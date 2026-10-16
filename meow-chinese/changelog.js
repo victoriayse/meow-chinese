@@ -525,4 +525,10 @@ export const CHANGES = [
     'Cats in the Buffet are 30% smaller.',
   ] },
   { v: 197, items: ['The Buffet host and server cats are 30% smaller too.'] },
+  { v: 198, items: [
+    '🚪 Buffet: the gate now senses paid guests coming, opens, and shuts behind them — paid guests can walk in and out as they like.',
+    'You can order, collect food and sit down once you are inside the gate.',
+    'Coming into the Buffet, you start just in front of the gate.',
+    'The admin can tap the gate to hold it open for everyone, and tap again to close it.',
+  ] },
 ];

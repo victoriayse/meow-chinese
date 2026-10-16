@@ -31,6 +31,7 @@ export function leaveBuffet() {
 
 export function setGate(el, open) {
   if (!el || el.classList.contains('gate-open') === !!open) return;
+  if (!open && el.classList.contains('gate-held')) return;   // the admin is holding it open
   const it = ITEMS[base(el.dataset.id)], c = el.querySelector('canvas');
   el.classList.toggle('gate-open', !!open);
   if (c && it && it.frames && it.frames.open) {
@@ -58,7 +59,7 @@ function payHost(onChanged) {
   openModal(box); hydrateIcons(box);
 }
 
-function orderFood(onChanged) {
+function orderFood(onChanged, isInside) {
   const qty = {}, all = [...BUFFET_FOOD, ...BUFFET_DRINKS];
   const box = html`<div class="card stack kiosk-card"><div class="h-title">🍱 <span class="zh">自助餐点餐</span> Buffet order <small>· <span class="zh">免费</span> Free</small></div>
       <div class="kiosk-list"></div><div class="kiosk-total"></div>
@@ -85,7 +86,7 @@ function orderFood(onChanged) {
   }
   $('#bk-close', box).onclick = closeModal;
   go.onclick = () => {
-    if (!hasPass()) { closeModal(); return toast('请先在门口付款 · Please pay the host at the entrance first'); }
+    if (!isInside()) { closeModal(); return toast('请先走进闸门 · Walk in through the gate first'); }
     const now = Date.now(), list2 = orders();
     let tf = Math.max(now, ...list2.filter((o) => o.kind === 'food').map((o) => o.readyAt)), td = Math.max(now, ...list2.filter((o) => o.kind === 'drink').map((o) => o.readyAt));
     all.forEach((k) => { for (let i = 0; i < (qty[k] || 0); i++) {
@@ -101,13 +102,14 @@ function orderFood(onChanged) {
 }
 
 // Call after the buffet room is drawn.
-export function wireBuffet(room, { onChanged = () => {} } = {}) {
+// isInside(): is she on the food side of the gate? (ordering, collecting and sitting only work in there)
+export function wireBuffet(room, { onChanged = () => {}, isInside = hasPass } = {}) {
   room.querySelectorAll('.decor').forEach((d) => { const it = ITEMS[base(d.dataset.id)]; if (it && (it.buffetHost || it.buffetKiosk || it.buffetCounter)) d.classList.add('mall-interactive'); });
   room.addEventListener('click', (e) => {
     const d = e.target.closest('.decor'); if (!d || e.target.closest('button') || room.classList.contains('arranging')) return;
     const it = ITEMS[base(d.dataset.id)]; if (!it) return;
     if (it.buffetHost) { sfx.click(); if (d.tux) { say(d.tux.wrap, hasPass() ? '请慢用！Enjoy!' : `${BUFFET_FEE}金币一位 · ${BUFFET_FEE} coins each`); d.tux.kv.jump(); } return payHost(onChanged); }
-    if (it.buffetKiosk) { sfx.click(); if (!hasPass()) return toast('🎟️ <span class="zh">请先在门口付款</span> Please pay the host at the entrance first', { ms: 2200 }); return orderFood(() => { onChanged(); show(); }); }
+    if (it.buffetKiosk) { sfx.click(); if (!isInside()) return toast(hasPass() ? '🚪 <span class="zh">请先走进闸门</span> Walk in through the gate first' : '🎟️ <span class="zh">请先在门口付款</span> Please pay the host at the entrance first', { ms: 2200 }); return orderFood(() => { onChanged(); show(); }, isInside); }
   });
   // the two collection counters: up to 2 ready orders each
   const counters = { food: null, drink: null };
@@ -121,7 +123,7 @@ export function wireBuffet(room, { onChanged = () => {} } = {}) {
       const ready = mine.filter((o) => o.readyAt <= Date.now()).slice(0, 2).map((o) => ({ id: o.id, item: o.item }));
       const s = ready.map((o) => o.id).join() + '|' + mine.length; if (sig[kind] === s) return; sig[kind] = s;
       showCounter({ querySelector: () => counter }, { ready, waiting: mine.length }, (o, button) => {
-        if (!hasPass()) return toast('请先在门口付款 · Please pay the host first');
+        if (!isInside()) return toast(hasPass() ? '请先走进闸门 · Walk in through the gate first' : '请先在门口付款 · Please pay the host first');
         const list = orders(), i = list.findIndex((x) => x.id === o.id); if (i < 0) return;
         button.disabled = true; const [got] = list.splice(i, 1); S.addSnack(got.item); S.save();
         sfx.coin(); toast(`😋 <span class="zh">拿到${SNACKS[got.item].zh}了</span> Tap it at the bottom to hold it`, { ms: 1800 });
