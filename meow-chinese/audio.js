@@ -312,3 +312,69 @@ export function stopMusic(keepPending = false) {
   music.playing = false; clearInterval(music.timer);
   if (music.gain && ctx) { music.gain.gain.cancelScheduledValues(ctx.currentTime); music.gain.gain.setValueAtTime(music.gain.gain.value, ctx.currentTime); music.gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.6); }
 }
+
+// ---------- 🏀 the basketball machine: a looping chiptune while the game window is open, and a cheer for each goal ----------
+function noteAt(a, out, freq, t, dur, type, vol) {
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(out); o.start(t); o.stop(t + dur + 0.02);
+}
+function noiseAt(a, out, t, dur, vol, hp = 6000) {
+  const buf = a.createBuffer(1, Math.ceil(a.sampleRate * dur), a.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  src.buffer = buf; f.type = 'highpass'; f.frequency.value = hp;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(f).connect(g).connect(out); src.start(t);
+}
+// returns stop(): call it when the window closes
+export function basketMusic() {
+  const a = ac(); if (!a || !on()) return () => {};
+  hushMusic(true);
+  const out = a.createGain(); out.gain.value = 0.55; out.connect(a.destination);
+  const F = (n) => 440 * 2 ** ((n - 69) / 12);                       // MIDI note → Hz
+  const STEP = 60 / 140 / 4;                                          // 16th notes at 140 bpm
+  // 4 bars, 16 steps each: C – Am – F – G, a bouncy lead, a bass, kick + hats
+  const chords = [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]];
+  const lead = [72, null, 76, 79, 76, null, 72, 74, 76, null, 79, null, 81, 79, 76, 74,
+    69, null, 72, 76, 72, null, 69, 71, 72, null, 76, null, 77, 76, 72, 71,
+    69, null, 72, 77, 72, null, 69, 72, 77, null, 81, null, 79, 77, 76, 74,
+    71, null, 74, 79, 74, null, 71, 74, 79, null, 83, 81, 79, 77, 76, 74];
+  let step = 0, next = a.currentTime + 0.08, live = true;
+  const tick = () => {
+    if (!live) return;
+    while (next < a.currentTime + 0.25) {
+      const bar = Math.floor(step / 16) % 4, s = step % 16, ch = chords[bar];
+      const l = lead[(step % 64)];
+      if (l) noteAt(a, out, F(l), next, STEP * 1.6, 'square', 0.035);
+      if (s % 4 === 0) noteAt(a, out, F(ch[0] - 24), next, STEP * 3.2, 'triangle', 0.16);              // bass on the beat
+      if (s % 4 === 2) noteAt(a, out, F(ch[0] - 12), next, STEP * 1.2, 'triangle', 0.09);
+      if (s % 2 === 1) noteAt(a, out, F(ch[(s >> 1) % 3]), next, STEP * 0.9, 'square', 0.012);         // chord arpeggio
+      if (s % 4 === 0) { const o = a.createOscillator(), g = a.createGain(); o.frequency.setValueAtTime(140, next); o.frequency.exponentialRampToValueAtTime(45, next + 0.12);
+        g.gain.setValueAtTime(0.28, next); g.gain.exponentialRampToValueAtTime(0.0001, next + 0.14); o.connect(g).connect(out); o.start(next); o.stop(next + 0.16); }   // kick
+      if (s % 2 === 0) noiseAt(a, out, next, 0.04, s % 8 === 4 ? 0.09 : 0.035);                         // hats (a snap on 2 and 4)
+      next += STEP; step++;
+    }
+  };
+  const timer = setInterval(tick, 60); tick();
+  return () => { if (!live) return; live = false; clearInterval(timer); out.gain.setTargetAtTime(0.0001, a.currentTime, 0.08); setTimeout(() => { out.disconnect(); hushMusic(false); }, 400); };
+}
+// 🎉 a crowd cheer: a swell of voices (filtered noise), a couple of "woo!" whistles and some claps
+export function cheer() {
+  const a = ac(); if (!a || !on()) return;
+  const t = a.currentTime, out = a.createGain(); out.gain.value = 0.9; out.connect(a.destination);
+  const dur = 1.3, buf = a.createBuffer(1, Math.ceil(a.sampleRate * dur), a.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const src = a.createBufferSource(), bp = a.createBiquadFilter(), g = a.createGain();
+  src.buffer = buf; bp.type = 'bandpass'; bp.frequency.setValueAtTime(900, t); bp.frequency.linearRampToValueAtTime(1500, t + 0.35); bp.Q.value = 0.7;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.22, t + 0.15); g.gain.setValueAtTime(0.22, t + 0.5); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  src.connect(bp).connect(g).connect(out); src.start(t); src.stop(t + dur);
+  [[0.05, 700, 1250], [0.22, 820, 1500], [0.4, 650, 1100]].forEach(([s, f0, f1]) => {        // "woo!"
+    const o = a.createOscillator(), og = a.createGain(); o.type = 'sine';
+    o.frequency.setValueAtTime(f0, t + s); o.frequency.exponentialRampToValueAtTime(f1, t + s + 0.28); o.frequency.exponentialRampToValueAtTime(f1 * 0.85, t + s + 0.5);
+    og.gain.setValueAtTime(0.0001, t + s); og.gain.exponentialRampToValueAtTime(0.06, t + s + 0.06); og.gain.exponentialRampToValueAtTime(0.0001, t + s + 0.55);
+    o.connect(og).connect(out); o.start(t + s); o.stop(t + s + 0.6);
+  });
+  for (let i = 0; i < 9; i++) noiseAt(a, out, t + 0.1 + i * 0.11 + Math.random() * 0.04, 0.05, 0.12, 1800);   // claps
+}

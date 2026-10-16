@@ -9,7 +9,7 @@ import * as Places from './places.js';
 import { ITEMS, spriteCanvas, ARCADE_PRIZES } from './pixel.js';
 import { rest } from './cloud.js';
 import { html, $, esc, openModal, closeModal, toast, coinI, hydrateIcons, confetti } from './ui.js';
-import { sfx } from './audio.js';
+import { sfx, basketMusic, cheer } from './audio.js';
 
 const rpc = (name, body = {}) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
 export const BASKET_COST = 5;
@@ -55,6 +55,7 @@ export function openBasket(onDone = () => {}) {
   const court = $('.bb-court', box), hoop = $('.bb-hoop', box), ball = $('.bb-ball', box), msg = $('.bb-msg', box);
   const coinBtn = $('.bb-coin', box), boardBox = $('.bb-boardbox', box);
   let state = 'idle', hoopX = 50, dir = 1, score = 0, shots = 0, level = 1, flying = false, timeLeft = TIME, raf = 0, last = 0, alive = true, endT = 0;
+  const stopMusic = basketMusic();   // 🎵 arcade music while the machine is open
   const say = (t) => { msg.innerHTML = t; hydrateIcons(msg); };
   const showBoard = (d) => { boardBox.innerHTML = boardHtml(d); };
   showBoard(boardCache); loadBoard().then((d) => { if (alive) showBoard(d); });
@@ -113,7 +114,7 @@ export function openBasket(onDone = () => {}) {
       const sx = bx, net = $('.bb-net', hoop);
       net.classList.remove('swish'); void net.offsetWidth; net.classList.add('swish');
       await animate(420, (k) => { bx = sx + (rimX() - sx) * Math.min(1, k * 2); by = rimY + 58 * k; sc = S1 - 0.06 * k; draw(); });
-      score++; sfx.coin(); flash('✨ <b>NICE!</b>'); hud();
+      score++; cheer(); flash('✨ <b>NICE!</b>'); hud();
       ball.style.zIndex = '';
       const fx = bx, fy = by, floorY = y0 + 6;
       await animate(420, (k) => { bx = fx; by = fy + (floorY - fy) * k * k; sc = S1 - 0.06 + (0.8 - S1 + 0.06) * k; draw(); });
@@ -152,8 +153,8 @@ export function openBasket(onDone = () => {}) {
     coinBtn.disabled = false; state = 'idle'; hoop.style.left = '50%';
     onDone();
   }
-  $('.bb-close', box).onclick = () => { if (state === 'playing') { toast('游戏进行中 · Finish this game first'); return; } alive = false; cancelAnimationFrame(raf); closeModal(); };
-  openModal(box); hydrateIcons(box);
+  $('.bb-close', box).onclick = () => { if (state === 'playing') { toast('游戏进行中 · Finish this game first'); return; } alive = false; cancelAnimationFrame(raf); stopMusic(); closeModal(); };
+  openModal(box, { onClose: () => { alive = false; cancelAnimationFrame(raf); stopMusic(); } }); hydrateIcons(box);
 }
 
 // ---------- 🎟️ the prize counter: swap tickets for prizes (the admin can change the costs here) ----------

@@ -1,5 +1,5 @@
 import * as S from './state.js';
-import { openBasket, openPrizes, machineBoard } from './arcade.js';
+import { openBasket, openPrizes } from './arcade.js';
 import { ITEMS, SNACKS, spriteCanvas, drawGrid, artGrid, FASHION_EXCLUSIVE, HOME_EXCLUSIVE } from './pixel.js';
 import { rest } from './cloud.js';
 import { html, $, openModal, closeModal, toast, coinI, hydrateIcons } from './ui.js';
@@ -62,13 +62,13 @@ function openGoodsKiosk(venueKey, onPaid) {
 }
 export function wireMall(room, roomKey, layout, go, onChanged = () => {}) {
   const venue=MALL_VENUES[roomKey];let busy=false, cookTimer=null;
-  room.querySelectorAll('.decor').forEach((d)=>{const it=ITEMS[d.dataset.id.split('#')[0]];if(!it)return;if(it.mallGame||it.hotpot||it.prizeDesk)d.classList.add('mall-interactive');if(it.mallGame==='basketball')machineBoard(d);});
+  room.querySelectorAll('.decor').forEach((d)=>{const it=ITEMS[d.dataset.id.split('#')[0]];if(!it)return;if(it.mallGame||it.hotpot||it.prizeDesk)d.classList.add('mall-interactive');});
   room.addEventListener('click',(e)=>{
     const d=e.target.closest('.decor');if(!d||e.target.closest('button'))return;const it=ITEMS[d.dataset.id.split('#')[0]];if(!it)return;
     const goods=GOODS[roomKey];
     if(goods&&d.dataset.id.split('#')[0]===goods.kiosk)return openGoodsKiosk(roomKey,()=>{showBags();setTimeout(showBags,3200);});
     if(it.prizeDesk)return openPrizes();
-    if(it.mallGame==='basketball')return openBasket(()=>room.querySelectorAll('.decor').forEach((x)=>{if(ITEMS[x.dataset.id.split('#')[0]]?.mallGame==='basketball')machineBoard(x);}));
+    if(it.mallGame==='basketball')return openBasket();
     if(it.mallGame)return it.mallGame==='claw'?openClaw():openBowling();
     if(venue&&d.dataset.id.split('#')[0]===venue.kiosk){
       const token=crypto.randomUUID();

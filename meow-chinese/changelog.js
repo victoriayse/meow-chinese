@@ -509,4 +509,8 @@ export const CHANGES = [
     '🎟️ New tickets: 5 goals = 1, 8 goals = 3, 15 goals = 4, 25 goals = 6.',
   ] },
   { v: 193, items: ['🏀 Basketball: you can now see each goal drop through the net (swish!) and bounce on the floor.'] },
+  { v: 194, items: [
+    '🎵 The basketball machine plays arcade music while it is open, and the crowd cheers 🎉 for every goal.',
+    'The leaderboard is now only shown inside the basketball game.',
+  ] },
 ];
