@@ -542,4 +542,9 @@ export const CHANGES = [
     'Cinema: new Left door and Right door — walk into a door to go to the next room.',
     'Shop: Shopping Mall and Cinema furniture is sorted by room.',
   ] },
+  { v: 202, items: [
+    'Cinema: cats are 30% smaller.',
+    'Cinema: buy movie tickets at the self-help kiosk (10 coins for each theatre). Tickets are gone when you leave the cinema.',
+    'Cinema: Gate 1 opens for Theatre 1 tickets, Gate 2 for Theatre 2 tickets.',
+  ] },
 ];

@@ -145,15 +145,16 @@ export function wireBuffet(room, { onChanged = () => {}, isInside = hasPass } = 
 // ---------- 🎬 the cinema: a ticket for each theatre (10 coins each — a Theatre 1 ticket doesn't open Theatre 2) ----------
 export const CINEMA_FEE = 10, THEATRES = ['theatre1', 'theatre2'];
 const tickets = () => (S.get().cinemaTickets ||= {});
-export const hasTicket = (theatre) => !!tickets()[theatre];
+// 'cinema' = a ticket for either theatre (what a theatre gate looks for); a theatre door wants that theatre's own ticket
+export const hasTicket = (theatre) => (theatre === 'cinema' ? THEATRES.some((k) => tickets()[k]) : !!tickets()[theatre]);
 export function leaveCinema() { if (Object.keys(S.get().cinemaTickets || {}).length) { S.get().cinemaTickets = {}; S.save(); } }
 
 export function payCinema(onChanged, want) {
   const nm = (k) => S.roomInfo(k);
   const box = html`<div class="card stack" style="align-items:center;text-align:center">
       <div style="font-size:44px">🎟️</div>
-      <div class="h-title" style="justify-content:center"><span class="zh">欢迎来看电影！</span></div>
-      <p style="margin:0"><span class="zh">每个影厅${CINEMA_FEE}金币</span><br>Welcome! Tickets are <b>${CINEMA_FEE} coins</b> for each theatre.<br><small class="help">A ticket opens the gate for that theatre only.</small></p>
+      <div class="h-title" style="justify-content:center"><span class="zh">买电影票</span> Movie tickets</div>
+      <p style="margin:0"><span class="zh">每个影厅${CINEMA_FEE}金币</span><br>Tickets are <b>${CINEMA_FEE} coins</b> for each theatre.<br><small class="help">With a ticket the gate opens for you — and the door only lets you into the theatre on your ticket.</small></p>
       <p class="help" style="margin:0"><span class="zh">你有</span> You have <b class="cn-coins">${S.get().coins}</b> coins</p>
       <div class="stack cn-list" style="width:100%"></div>
       <div class="row" style="justify-content:center"><button type="button" class="btn white" id="cn-close">关闭 Close</button></div>
@@ -167,7 +168,7 @@ export function payCinema(onChanged, want) {
       if (!got) b.onclick = () => {
         if (hasTicket(k) || S.get().coins < CINEMA_FEE) return;
         S.get().coins -= CINEMA_FEE; tickets()[k] = Date.now(); S.save(); sfx.coin();
-        toast(`🎟️ <span class="zh">${info.zh}的票买好了！</span> Ticket for ${info.en} — walk through its gate`, { ms: 2800 });
+        toast(`🎟️ <span class="zh">${info.zh}的票买好了！</span> Ticket for ${info.en} — walk through the gate`, { ms: 2800 });
         $('.cn-coins', box).textContent = S.get().coins; onChanged(); draw(); hydrateIcons(list);
       };
       list.append(b);
@@ -177,12 +178,3 @@ export function payCinema(onChanged, want) {
   draw(); openModal(box); hydrateIcons(box);
 }
 
-export function wireCinema(room, { onChanged = () => {} } = {}) {
-  room.querySelectorAll('.decor').forEach((d) => { const it = ITEMS[base(d.dataset.id)]; if (it && it.cinemaHost) d.classList.add('mall-interactive'); });
-  room.addEventListener('click', (e) => {
-    const d = e.target.closest('.decor'); if (!d || e.target.closest('button') || room.classList.contains('arranging')) return;
-    const it = ITEMS[base(d.dataset.id)]; if (!it || !it.cinemaHost) return;
-    sfx.click(); if (d.tux) { say(d.tux.wrap, `${CINEMA_FEE}金币一个影厅 · ${CINEMA_FEE} coins a theatre`); d.tux.kv.jump(); }
-    payCinema(onChanged);
-  });
-}

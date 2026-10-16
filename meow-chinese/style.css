@@ -2031,3 +2031,9 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 /* v201: the shop's room chips under a place (Shopping Mall › Buffet, Cinema › Lobby…) */
 .subrooms .subcat { font-size: 12px; padding: 3px 9px; background: #ffe2b8; border-width: 2px; }
 .subrooms .subcat.on { background: #ffd23f; }
+/* v202: 🎬 cats in the cinema are 30% smaller (like the buffet), and so are the cinema's host and waiter */
+.room[data-room="theatre1"] .vcat .kflip, .room[data-room="lobby"] .vcat .kflip, .room[data-room="theatre2"] .vcat .kflip { scale: .7; transform-origin: 50% 100%; }
+.room[data-room="theatre1"] .decor .tux-cat .kitten-wrap, .room[data-room="lobby"] .decor .tux-cat .kitten-wrap, .room[data-room="theatre2"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
+/* the ticket host stands behind her stand (only her head and shoulders show over it) */
+/* v202: the cinema gates' "Gate 1" / "Gate 2" sign, standing on the gate's top bar */
+.decor .screen-label.gate-sign { font-size: 10px; color: #ffd23f; background: #5a1220; border: 2px solid #e6c25a; border-radius: 4px; box-sizing: border-box; }
