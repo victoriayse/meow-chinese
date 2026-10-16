@@ -536,4 +536,10 @@ export const CHANGES = [
     '🚧 You can no longer walk through any furniture (rugs, mats and pools you can still walk on). You can still tap a seat to sit on it.',
     '🍱 Buffet: every visit needs paying again — the host asks as soon as you come in. The admin walks in and out for free.',
   ] },
+  { v: 201, items: [
+    'Cinema: a ticket host cat sells tickets — 10 coins for each theatre.',
+    'Cinema: theatre gates open only for a ticket to that theatre.',
+    'Cinema: new Left door and Right door — walk into a door to go to the next room.',
+    'Shop: Shopping Mall and Cinema furniture is sorted by room.',
+  ] },
 ];

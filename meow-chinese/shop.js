@@ -85,11 +85,15 @@ export function shopScreen({ go, tab = 'food' }) {
           </div>
         </div>
         <div class="aisles" id="tabs"></div>
-        <div class="shop-find"><input type="search" id="q" placeholder="🔍 搜索 Search the shop…" autocomplete="off"><div class="subcats" id="subcats"></div></div>
+        <div class="shop-find"><input type="search" id="q" placeholder="🔍 搜索 Search the shop…" autocomplete="off"><div class="subcats" id="subcats"></div><div class="subcats subrooms" id="subrooms"></div></div>
       </div>
       <div class="shelves" id="list"></div>
     </div></section>`;
-  let subcat = 'all';
+  let subcat = 'all', subroom = 'all';
+  // 🛍️ Shopping Mall / 🎬 Cinema / ☕ Cafe / 🏫 School: a second row of chips, one per room of that place
+  const PLACE_GROUPS = ['mall', 'cinema', 'cafe', 'school'];
+  const ROOM_ORDER = Object.values(S.PLACE_ROOMS).flat(), order = (k) => (k === 'other' ? 1e3 : ROOM_ORDER.indexOf(k));
+  const roomOfItem = (it) => (it.room && S.roomInfo(it.room).key === it.room ? it.room : 'other');
   const mini = $('#mini', n);
   mini.style.position = 'relative';
   let kv;
@@ -114,7 +118,12 @@ export function shopScreen({ go, tab = 'food' }) {
     const query = ($('#q', n).value || '').trim().toLowerCase();
     // furniture aisle: little sub-aisles by room (living room, bedroom, kitchen…)
     const subs = !query && def.key === 'decor' ? DECOR_GROUPS.filter((g) => g.key === 'all' || Object.values(ITEMS).some((it) => def.test(it) && decorGroup(it) === g.key)) : [];
+    const inGroup = (it) => def.test(it) && decorGroup(it) === subcat;
+    const rooms = subs.length && PLACE_GROUPS.includes(subcat) ? [...new Set(Object.values(ITEMS).filter(inGroup).map(roomOfItem))] : [];
+    if (rooms.length < 2) subroom = 'all';
+    const roomChip = (k) => { const r = k === 'other' ? { icon: '✨', zh: '其他', en: 'Other' } : S.roomInfo(k); return `<button class="subcat room ${k === subroom ? 'on' : ''}" data-room="${k}">${r.icon} <span class="zh">${r.zh}</span> <small>${r.en}</small></button>`; };
     $('#subcats', n).innerHTML = subs.map((g) => `<button class="subcat ${g.key === subcat ? 'on' : ''}" data-sub="${g.key}">${g.icon} <span class="zh">${g.zh}</span> <small>${g.en}</small></button>`).join('');
+    $('#subrooms', n).innerHTML = (rooms.length > 1 ? `${[`<button class="subcat room ${subroom === 'all' ? 'on' : ''}" data-room="all">✨ <span class="zh">全部</span> <small>All</small></button>`, ...rooms.sort((a, b) => order(a) - order(b)).map(roomChip)].join('')}` : '');
     if (query) {
       // searching: everything in the shop she can buy (any aisle that's open), matching the Chinese or English name
       const found = Object.entries(ITEMS).filter(([, it]) => TABS.some((t) => t.test(it) && !(t.lock && !S.unlocked(t.lock)))
@@ -131,7 +140,7 @@ export function shopScreen({ go, tab = 'food' }) {
         <div class="bar" style="max-width:320px;margin:0 auto"><i style="width:${Math.min(100, (lv / need) * 100)}%;--c:#6cb6f2"></i></div></div>`;
       return;
     }
-    shelf(Object.entries(ITEMS).filter(([, it]) => def.test(it) && (def.key !== 'decor' || subcat === 'all' || decorGroup(it) === subcat)).sort((a, b) => S.price(a[0]) - S.price(b[0])));
+    shelf(Object.entries(ITEMS).filter(([, it]) => def.test(it) && (def.key !== 'decor' || subcat === 'all' || decorGroup(it) === subcat && (subroom === 'all' || roomOfItem(it) === subroom))).sort((a, b) => S.price(a[0]) - S.price(b[0])));
   }
   function shelf(entries) {
     const s = S.get(), list = $('#list', n);
@@ -258,8 +267,9 @@ export function shopScreen({ go, tab = 'food' }) {
       : `📦 <span class="zh">${it.name}放进收纳箱了！</span> In your storage box — place it in your home with 🪑 Move furniture`);
     render();
   }
-  $('#tabs', n).onclick = (e) => { const t = e.target.closest('[data-tab]'); if (t) { tab = t.dataset.tab; subcat = 'all'; $('#q', n).value = ''; render(); } };
-  $('#subcats', n).onclick = (e) => { const b = e.target.closest('[data-sub]'); if (b) { subcat = b.dataset.sub; sfx.click(); render(); } };
+  $('#tabs', n).onclick = (e) => { const t = e.target.closest('[data-tab]'); if (t) { tab = t.dataset.tab; subcat = 'all'; subroom = 'all'; $('#q', n).value = ''; render(); } };
+  $('#subrooms', n).onclick = (e) => { const r = e.target.closest('[data-room]'); if (r) { subroom = r.dataset.room; sfx.click(); render(); } };
+  $('#subcats', n).onclick = (e) => { const b = e.target.closest('[data-sub]'); if (b) { subcat = b.dataset.sub; subroom = 'all'; sfx.click(); render(); } };
   $('#q', n).addEventListener('input', () => render());
   $('#reset', n).onclick = () => { tryOn = { ...S.get().kitten.equipped }; drawKitten(); render(); };
   n._mounted = () => { drawKitten(); render(); };

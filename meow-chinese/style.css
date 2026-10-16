@@ -2028,3 +2028,6 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .room[data-room="mallbuffet"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
 /* the buffet gate can be tapped (the admin holds it open / closes it) */
 .house .decor.buffet-gate { pointer-events: auto; cursor: pointer; }
+/* v201: the shop's room chips under a place (Shopping Mall › Buffet, Cinema › Lobby…) */
+.subrooms .subcat { font-size: 12px; padding: 3px 9px; background: #ffe2b8; border-width: 2px; }
+.subrooms .subcat.on { background: #ffd23f; }

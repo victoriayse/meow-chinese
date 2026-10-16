@@ -4,7 +4,7 @@ import * as CafeTables from './cafe-tables.js';
 import { wireHomeTables, wirePlaceTables } from './home-tables.js';
 import { createStadium, joystick, JOYSTICK } from './stadium.js';
 import { wireCanteen } from './canteen.js';
-import { wireBuffet, leaveBuffet, hasPass, isBlocker, setGate, payHost, BUFFET_ROOM } from './buffet.js';
+import { wireBuffet, leaveBuffet, hasPass, isBlocker, setGate, payHost, BUFFET_ROOM, wireCinema, leaveCinema, hasTicket, payCinema, THEATRES } from './buffet.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
 //   knock  visitor -> house   { id, look, x, y, room, left }      "I'm here" (the owner answers with the house)
@@ -272,6 +272,9 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
           if (!blockedAt(nx, mine.y)) ny = mine.y; else if (!blockedAt(mine.x, ny)) nx = mine.x; else { nx = mine.x; ny = mine.y; }
         }
         mine.x = nx; mine.y = ny; gateWatch();
+        // just came through a door and still holding ▲: don't bounce straight back (re-arm once she lets go or turns)
+        const now = Date.now(); if (!doorArmed && (dy <= 0 || now - lastStepAt > 400)) doorArmed = true; lastStepAt = now;
+        if (dy > 0 && doorArmed && placeKey === 'cinema' && room0 && walkIntoDoor(room0)) return;
       }
       if (dy > 0 && room0) {   // walking up into the front of a stage: climb on
         const H = room0.clientHeight, W = room0.clientWidth;
@@ -330,6 +333,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (P && lastRoom === BUFFET_ROOM && roomKey !== BUFFET_ROOM) { const n2 = leaveBuffet(); if (n2) toast('🍱 <span class="zh">自助餐的食物留在餐厅里</span> Buffet food stays at the buffet', { ms: 2400 }); if (myKv) myKv.draw(); }
     const justEntered = P && roomKey === BUFFET_ROOM && lastRoom !== BUFFET_ROOM;
     if (justEntered) leaveBuffet();   // a fresh visit: any old pass (or buffet food) from an earlier visit is gone — pay again
+    if (P && placeKey === 'cinema' && lastRoom === null) leaveCinema();   // 🎟️ a new trip to the cinema: buy new tickets
     lastRoom = roomKey;
     const info = S.roomInfo(roomKey), open = house.open || ['living'];
     box.innerHTML = `<div class="house-unit ${info.outdoor ? 'outdoor' : ''} ${info.bare || info.noRoof ? 'bare' : ''}" id="hunit"><canvas class="roof" id="roof"></canvas>
@@ -446,6 +450,8 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     petLayer.update(house.pets || []);
     hearRadio();
     box.querySelector('.mall-directory')?.addEventListener('click', () => openMallDirectory(roomKey, (key) => { roomKey=key; mine.room=key; mine.seat=null; mine.boothClosed=false; mine.x=30; mine.y=6; render(); sendMine(); }));
+    // 🚪 the cinema: a Left door / Right door takes the place of that side's arrow (walk into the door to go through)
+    if (placeKey === 'cinema') box.querySelectorAll('.room-nav.left, .room-nav.right').forEach((b) => { const side = b.classList.contains('left') ? 'left' : 'right'; if (doorEl(room, side)) b.remove(); });
     box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { roomKey = b.dataset.room; mine.room = roomKey; mine.seat = null; sfx.click(); render(); sendMine(); }; });
     // Each arrival gets one greeting sequence, even if the layout refreshes.
     if (placeKey === 'cafe' && roomKey === 'cafeentrance' && !welcomed && room.querySelector('.cafe-greeter')) {
@@ -475,7 +481,8 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     else if (!['cafe', 'mall'].includes(placeKey) || roomKey === BUFFET_ROOM) wirePlaceTables(room, placeKey, roomKey, () => { if (myKv) myKv.draw(); sendMine(); });
     if (P && roomKey === BUFFET_ROOM) wireBuffet(room, { onChanged: () => { if (myKv) myKv.draw(); sendMine(); }, isInside: insideBuffet });
     // 🚪 the admin can hold the buffet gate open (anyone may walk through) or close it again — for everyone
-    if (P && roomKey === BUFFET_ROOM && Places.isAdmin()) room.addEventListener('click', (e) => {
+    if (P && placeKey === 'cinema') wireCinema(room, { onChanged: () => sendMine() });
+    if (P && (roomKey === BUFFET_ROOM || placeKey === 'cinema') && Places.isAdmin()) room.addEventListener('click', (e) => {
       const g = e.target.closest('.decor.buffet-gate'); if (!g || e.target.closest('button')) return;
       const open = !g.classList.contains('gate-held'), st = S.get(); st.openThings ||= {};
       if (open) st.openThings[g.dataset.id] = true; else delete st.openThings[g.dataset.id];
@@ -488,6 +495,11 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       // 🍱 coming into the buffet: she starts just in front of the gate (on the entrance side)
       const g = justEntered && foot.find((f) => f.gate);
       if (g && myEl) { mine.seat = null; mine.x = (g.x0 + g.x1) / 2; mine.y = Math.max(1, g.y0 - 6); place(); sendMine(); }
+      // 🚪 came through a door: she steps out in front of the matching door on this side (left door → arrive at the right door)
+      if (arriveBy && myEl) {
+        const d = doorEl(room, arriveBy === 'left' ? 'right' : 'left'); arriveBy = null;
+        if (d) { const r = doorRect(room, d); mine.seat = null; mine.x = (r.x0 + r.x1) / 2; mine.y = Math.max(1, Math.min(r.bottom, S.roomMaxY(roomKey)) - 6); place(); sendMine(); }
+      }
       // …and the host asks her to pay (the admin walks in for free)
       if (justEntered && !Places.isAdmin() && room.querySelector('.decor[data-id^="buffethost"]')) setTimeout(() => { if (room.isConnected && !hasPass()) payHost(() => { if (myKv) myKv.draw(); sendMine(); }); }, 500);
     });
@@ -597,7 +609,31 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   // Each counter / kiosk / pole / gate blocks a strip of floor at its base (in room %: x from its left to right edge,
   // y from its bottom edge a little way back). The buffet gate lets a pass-holder through — it opens for her and
   // closes again right behind her (and the others see it open as she goes through).
-  let foot = [], myGate = null;
+  let foot = [], myGate = null, arriveBy = null, doorToastAt = 0, doorArmed = true, lastStepAt = 0;
+  // ---------- 🚪 cinema doors: walking up into the Left door / Right door takes her to the room on that side ----------
+  const doorEl = (room, side) => room && [...room.querySelectorAll('.decor')].find((d) => { const it = ITEMS[d.dataset.id.split('#')[0]]; return it && it.door === side; });
+  function doorRect(room, d) {
+    const W = room.clientWidth, H = room.clientHeight;
+    return { x0: (d.offsetLeft / W) * 100, x1: ((d.offsetLeft + d.offsetWidth) / W) * 100, bottom: ((H - (d.offsetTop + d.offsetHeight)) / H) * 100 };
+  }
+  function walkIntoDoor(room) {
+    for (const side of ['left', 'right']) {
+      const d = doorEl(room, side); if (!d) continue;
+      const r = doorRect(room, d), pad = -1.5;   // anywhere across the doorway (a little either side counts)
+      if (mine.x < r.x0 + pad || mine.x > r.x1 - pad || mine.y < Math.min(r.bottom, S.roomMaxY(roomKey)) - 1.5) continue;
+      const nb = S.roomNeighbors(roomKey)[side], to = nb && (nb.key || nb); if (!to) continue;
+      // into a theatre: she needs that theatre's ticket (once the cinema has a ticket host; the admin goes in free)
+      const sold = Object.values(house.rooms || {}).some((list) => (list || []).some((e) => e.id.split('#')[0] === 'cinemahost'));
+      if (THEATRES.includes(to) && sold && !Places.isAdmin() && !hasTicket(to)) {
+        mine.y -= 3; place();
+        if (Date.now() - doorToastAt > 3000) { doorToastAt = Date.now(); sfx.miss(); const info = S.roomInfo(to); toast(`🎟️ <span class="zh">请先买${info.zh}的票</span> You need a ${info.en} ticket — ask the host`, { ms: 2600 }); }
+        return true;
+      }
+      sfx.click(); arriveBy = side; doorArmed = false; roomKey = to; mine.room = to; mine.seat = null; render(); sendMine();
+      return true;
+    }
+    return false;
+  }
   function measureBlockers(room) {
     foot = [];
     if (!room || stadium) return;
@@ -608,22 +644,37 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       const bottom = ((H - (d.offsetTop + d.offsetHeight)) / H) * 100, hPct = (d.offsetHeight / H) * 100;
       const turned = d.dataset.facing === 'back' && it.blockDepthTurned;
       const depth = turned ? hPct * it.blockDepthTurned : it.blockDepth || Math.max(3, Math.min(10, hPct * 0.3));
-      foot.push({ el: d, gate: !!it.gate, x0, x1, y0: bottom - 1, y1: bottom + depth });
+      foot.push({ el: d, gate: !!it.gate, venue: it.gate ? gateVenue(room, x0, x1) : null, x0, x1, y0: bottom - 1, y1: bottom + depth });
     });
   }
   const inFoot = (f, x, y) => x >= f.x0 - 2 && x <= f.x1 + 2 && y >= f.y0 && y <= f.y1;
-  const gatePass = () => hasPass() || Places.isAdmin();   // the admin goes through for free
-  function blockedAt(x, y) { return foot.some((f) => inFoot(f, x, y) && !(f.gate && (gatePass() || f.el.classList.contains('gate-held')))); }
+  // the buffet gate wants a buffet pass; a cinema gate wants a ticket for its own theatre (the admin goes through free)
+  const gatePass = (f) => Places.isAdmin() || (f && f.venue ? hasTicket(f.venue) : hasPass());
+  // which theatre a cinema gate guards: the theatre it stands in, else the room behind the nearest door, else by side
+  function gateVenue(room, x0, x1) {
+    if (placeKey !== 'cinema') return null;
+    if (THEATRES.includes(roomKey)) return roomKey;
+    const nb = S.roomNeighbors(roomKey), cx = (x0 + x1) / 2;
+    const doors = ['left', 'right'].map((side) => { const d = doorEl(room, side); return d && { side, r: doorRect(room, d) }; }).filter(Boolean);
+    const near = doors.sort((a, b) => Math.abs((a.r.x0 + a.r.x1) / 2 - cx) - Math.abs((b.r.x0 + b.r.x1) / 2 - cx))[0];
+    const side = near ? near.side : cx < 50 ? 'left' : 'right', r = nb[side];
+    return (r && (r.key || r)) || null;
+  }
+  let gateToastAt = 0;
+  function blockedAt(x, y) { return foot.some((f) => inFoot(f, x, y) && !(f.gate && (gatePass(f) || f.el.classList.contains('gate-held')))); }
   // the food side of the buffet: behind the gate's line (no gate in the room: having paid is enough)
   function insideBuffet() {
     const g = foot.find((f) => f.gate);
     if (mine.seat) return true;
-    return g ? mine.y > (g.y0 + g.y1) / 2 : gatePass();
+    return g ? mine.y > (g.y0 + g.y1) / 2 : gatePass(g);
   }
   // the gate "sees" a paid guest coming (a little before she reaches it), opens, and shuts once she's through
   const nearGate = (f, x, y) => x >= f.x0 - 3 && x <= f.x1 + 3 && y >= f.y0 - 5 && y <= f.y1 + 5;
   function gateWatch() {
-    const g = foot.find((f) => f.gate && gatePass() && nearGate(f, mine.x, mine.y));
+    const g = foot.find((f) => f.gate && gatePass(f) && nearGate(f, mine.x, mine.y));
+    // bumping into a theatre gate without its ticket: the host sells them
+    const shut = !g && foot.find((f) => f.gate && f.venue && !gatePass(f) && !f.el.classList.contains('gate-held') && nearGate(f, mine.x, mine.y));
+    if (shut && Date.now() - gateToastAt > 4000) { gateToastAt = Date.now(); const info = S.roomInfo(shut.venue); toast(`🎟️ <span class="zh">请先向检票猫买${info.zh}的票</span> Buy a ${info.en} ticket from the host first (10 coins)`, { ms: 2600 }); }
     if (g && myGate !== g.el) { myGate = g.el; clearTimeout(g.el.shutT); setGate(g.el, true); sfx.click(); ch.send('gate', { id: me, room: roomKey, gate: g.el.dataset.id }); }
     if (!g && myGate) { const el = myGate; myGate = null; clearTimeout(el.shutT); el.shutT = setTimeout(() => setGate(el, false), 250); }   // shut right behind her
   }
@@ -662,7 +713,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   let left = false;
   const leave = () => {
     if (left) return; left = true;
-    if (P) leaveBuffet();
+    if (P) { leaveBuffet(); if (placeKey === 'cinema') leaveCinema(); }
     if (P && S.dropPlaceFood()) toast('🍽️ <span class="zh">吃的喝的不能带走哦</span> Food and drinks stay behind when you leave', { ms: 2600 });
     Radio.stop(); clearInterval(kt); if (stadium) stadium.stop(); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
   $('#leave', n).onclick = () => { leave(); if (P) go('map'); else go('friend', { id: hostId }); };

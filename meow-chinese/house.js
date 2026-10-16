@@ -208,7 +208,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
     wrap.appendChild(lb);
   }
   if (it.counter) {
-    wrap.dataset.counter = '1';
+    if (!it.noCollect) wrap.dataset.counter = '1';
     // the waiter: a white cat in a tuxedo who always stands behind the collection counter
     const tux = document.createElement('div'); tux.className = 'tux-cat';
     const tw = document.createElement('div'); tw.className = 'kitten-wrap';
