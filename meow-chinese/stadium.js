@@ -9,7 +9,7 @@ import { sfx } from './audio.js';
 import { drawGrid, artGrid } from './pixel.js';
 
 const rpc = (name, body = {}) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
-export const FEE = 30, PRIZE = 60, WIN_AT = 10, TEAM_MAX = 4;
+export const FEE = 10, PRIZE = 20, WIN_AT = 10, TEAM_MAX = 4;   // each winner gets 2× their fee back, however many play
 // the pitch, in the room's % units (x from the left, y up from the bottom); the room is 720 × 600
 export const PITCH = { x0: 3.5, x1: 96.5, y0: 1, y1: 54, mouth: [14, 38], line: 1.5, cx: 50, cy: 26 };
 const PX = 7.2, PY = 6;                         // room px per % (x, y)
@@ -159,7 +159,7 @@ export function createStadium({ me, ch, others, getMine, getMyEl, teleport }) {
     const p = myPlayer(); if (!p) return;
     teleport(p.side === 'red' ? 30 : 70, PITCH.cy - 3 + Math.random() * 6);
   }
-  // pay-out: the winners get their 30 coins back plus 30 more; a cancelled match refunds everyone
+  // pay-out: each winner gets their coins back doubled (FEE → PRIZE); a cancelled match refunds everyone
   function settle(t) {
     const tk = myTicket(); if (!tk) return;
     if (!t || t.id !== tk.match) return;
@@ -222,7 +222,7 @@ export function createStadium({ me, ch, others, getMine, getMyEl, teleport }) {
     finally { busy = false; drawHud(); }
   }
 
-  // any player can stop a match early: nobody wins and everyone gets their 30 coins back
+  // any player can stop a match early: nobody wins and everyone gets their coins back
   async function end() {
     if (busy || !playing() || !myPlayer()) return;
     const ok = await confirmBox('⏹ <span class="zh">结束比赛？</span> End the match?',

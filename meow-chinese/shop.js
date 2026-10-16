@@ -18,7 +18,7 @@ export const TABS = [
   { key: 'feet', lock: 'feet', zh: '鞋子', en: 'Shoes', icon: '👟', test: isWear(['feet']) },
   { key: 'acc', lock: 'acc', zh: '配饰', en: 'Extras', icon: '👓', test: isWear(['face', 'neck']) },
   { key: 'bags', lock: 'acc', zh: '包包', en: 'Bags', icon: '👜', test: isWear(['bag', 'back']) },
-  { key: 'decor', lock: 'decor', zh: '家具', en: 'Home', icon: '🛋️', test: (it) => it.cat === 'decor' && !it.petacc && !it.retired },
+  { key: 'decor', lock: 'decor', zh: '家具', en: 'Home', icon: '🛋️', test: (it) => it.cat === 'decor' && !it.petacc && !it.retired && !it.special },
   { key: 'pets', lock: 'decor', zh: '领养宠物', en: 'Adopt a Pet', icon: '🐶', test: (it) => it.cat === 'pet', order: 27 },
   { key: 'petacc', lock: 'decor', zh: '宠物用品', en: 'Pet Accessories', icon: '🦴', test: (it) => it.petacc || it.cat === 'petacc', order: 28 },
   { key: 'reno', lock: 'decor', zh: '装修', en: 'Renovate', icon: '🎨', test: (it) => it.cat === 'reno', order: 26 },

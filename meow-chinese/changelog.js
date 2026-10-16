@@ -496,4 +496,11 @@ export const CHANGES = [
     'Bags are smaller, and your kitten holds them in her paw.',
   ] },
   { v: 190, items: ['Fixed swings, see-saws, the merry-go-round, chairs, sofas and beds not letting you sit or play on them.'] },
+  { v: 191, items: [
+    '🏀 The arcade basketball machine is playable! 5 coins, 30 seconds, 5 levels — the hoop gets faster each level. Tap the ball to shoot.',
+    '🏆 Leaderboard on the machine. 🎟️ Score 5+ goals for 1 ticket; take 1st place for 5 tickets.',
+    '🎟️ New prize counter and prize kiosk in the arcade: swap tickets for 7 cute plush prizes (tickets only — not coins, not tradeable).',
+    '⚽ Stadium soccer now costs 10 coins; each winner gets 20 coins back.',
+    'Books and pencil cases you put away no longer stay in the bar at the bottom.',
+  ] },
 ];
