@@ -108,10 +108,16 @@ export function openBasket(onDone = () => {}) {
     await animate(110, (k) => { by = peakY + (rimY - peakY) * k * k; draw(); });
     const r = R0 * S1, dx = bx - rimX(), clean = Math.abs(dx) <= rimHalf - r * 0.8, onRim = !clean && Math.abs(dx) <= rimHalf + r;
     if (clean) {
-      ball.style.zIndex = '1';                                            // behind the net now
-      const sx = bx;
-      await animate(300, (k) => { bx = sx + (rimX() - sx) * Math.min(1, k * 1.6); by = rimY + 46 * k; sc = S1 - 0.08 * k; ball.style.opacity = k > 0.75 ? String(1 - (k - 0.75) * 4) : '1'; draw(); });
+      // 🏀 swish: down through the rim, behind the net (it ripples), out underneath, then a bounce on the floor
+      ball.style.zIndex = '1';                                            // behind the rim and net now
+      const sx = bx, net = $('.bb-net', hoop);
+      net.classList.remove('swish'); void net.offsetWidth; net.classList.add('swish');
+      await animate(420, (k) => { bx = sx + (rimX() - sx) * Math.min(1, k * 2); by = rimY + 58 * k; sc = S1 - 0.06 * k; draw(); });
       score++; sfx.coin(); flash('✨ <b>NICE!</b>'); hud();
+      ball.style.zIndex = '';
+      const fx = bx, fy = by, floorY = y0 + 6;
+      await animate(420, (k) => { bx = fx; by = fy + (floorY - fy) * k * k; sc = S1 - 0.06 + (0.8 - S1 + 0.06) * k; draw(); });
+      await animate(320, (k) => { by = floorY - 30 * Math.sin(Math.PI * k); ball.style.opacity = k > 0.6 ? String(1 - (k - 0.6) * 2.5) : '1'; draw(); });
     } else if (onRim) {
       sfx.miss(); flash('😮 <span class="zh">碰到篮框了</span> Off the rim!');
       const dir = dx >= 0 ? 1 : -1, sx = bx, sy = by;

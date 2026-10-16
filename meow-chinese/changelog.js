@@ -508,4 +508,5 @@ export const CHANGES = [
     '🏀 Shoot as many balls as you can in 30 seconds; every 3 goals is the next level.',
     '🎟️ New tickets: 5 goals = 1, 8 goals = 3, 15 goals = 4, 25 goals = 6.',
   ] },
+  { v: 193, items: ['🏀 Basketball: you can now see each goal drop through the net (swish!) and bounce on the floor.'] },
 ];

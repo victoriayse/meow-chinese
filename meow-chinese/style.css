@@ -2022,3 +2022,5 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .prize-row .cost { font-weight: 800; white-space: nowrap; }
 .prize-top { justify-content: space-between; align-items: center; gap: 8px; }
 .prize-row .cost input { width: 64px; font: inherit; padding: 4px; border: 2px solid var(--ink); border-radius: 6px; }
+.bb-net.swish { animation: bb-swish .55s ease-out; transform-origin: top center; }
+@keyframes bb-swish { 0% { transform: scaleY(1); } 35% { transform: scaleY(1.35) scaleX(.86); } 70% { transform: scaleY(.92); } 100% { transform: scaleY(1); } }
