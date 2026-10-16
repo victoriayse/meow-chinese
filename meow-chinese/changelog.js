@@ -559,4 +559,7 @@ export const CHANGES = [
   { v: 206, items: [
     'Fixed: you can no longer squeeze sideways out of furniture to sneak round a gate.',
   ] },
+  { v: 207, items: [
+    'Fixed: standing in front of an angled queue pole rope now shows you in front of it, not behind.',
+  ] },
 ];

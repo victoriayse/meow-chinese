@@ -437,6 +437,10 @@ export function stackDecor(roomEl) {
   }
 }
 // things lower down the room stand in front of things further back
+// how far forward a walking cat is drawn; a page can refine it (e.g. a cat in front of a turned queue pole's rope)
+let zHook = null;
+export const setCatZ = (f) => { zHook = f; };
+export const catZ = (x, y) => { const z = 2 + Math.round(100 - y); return zHook ? zHook(x, y, z) : z; };
 export function depthOf(el, room) {
   if (el.classList.contains('flat')) return 1;
   return 2 + Math.round(((el.offsetTop + el.offsetHeight) / room.clientHeight) * 100);
@@ -509,7 +513,7 @@ export class OtherCats {
     boothView(this.roomEl, c.el, spot && c.seat, c.boothClosed, null, c.look);
     if (spot) { c.x = c.dx = spot.x; c.y = c.dy = spot.y; }
     c.el.style.left = `${c.dx}%`; c.el.style.bottom = `${c.dy}%`;
-    c.el.style.zIndex = spot ? spot.z : 2 + Math.round(100 - c.dy);
+    c.el.style.zIndex = spot ? spot.z : catZ(c.dx, c.dy);
     c.el.classList.toggle('lying', !!(spot && spot.lie)); c.el.classList.toggle('seated', !!(spot && !spot.walk));
     c.el.classList.toggle('swimming', !spot && inPool(this.roomEl, c.dx, c.dy));
     if (c.kv) { c.kv.setPose(spot ? spot.pose : null); c.kv.setHeld(c.look && c.look.hold); } c.el.dataset.pose = (spot && spot.pose) || '';

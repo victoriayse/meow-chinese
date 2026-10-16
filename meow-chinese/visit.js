@@ -23,7 +23,7 @@ import { drawRoom, drawRoof, ITEMS, SNACKS } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal } from './ui.js';
 import { sfx } from './audio.js';
 import { wireDisplays } from './display-racks.js';
-import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, boothView, freeSlot, hearNote, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
+import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, boothView, freeSlot, hearNote, PetLayer, roomArrowsHtml, catZ, setCatZ, inPool, stackDecor, studioBarre, rideFx } from './house.js';
 import * as Radio from './radio.js';
 import * as Places from './places.js';
 import * as Snacks from './snacks.js';
@@ -670,6 +670,16 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       foot.push({ el: d, gate: !!it.gate, venue: it.gate ? it.gateFor || gateVenue(room, x0, x1) : null, x0, x1, y0: bottom - 1, y1: bottom + depth, diag });
     });
   }
+  // 🔄 a turned queue pole is drawn at the depth of its front pole, but its rope runs back across the floor: a cat
+  // standing in front of the rope (at her x) is drawn in front of the whole pole, a cat behind it stays behind
+  setCatZ((x, y, z) => {
+    for (const f of foot) {
+      if (!f.diag || x < f.x0 || x > f.x1 || y < f.y0 - 1 || y > f.y1) continue;
+      const t = Math.max(0, Math.min(1, ((x - f.x0) / Math.max(0.1, f.x1 - f.x0) - f.diag.f) / (f.diag.b - f.diag.f)));
+      if (y < f.y0 + t * (f.y1 - f.y0)) z = Math.max(z, (parseInt(f.el.style.zIndex, 10) || 0) + 1);
+    }
+    return z;
+  });
   const inFoot = (f, x, y) => {
     if (y < f.y0 || y > f.y1) return false;
     if (f.diag) { const t = (y - f.y0) / Math.max(0.1, f.y1 - f.y0), xc = f.x0 + (f.x1 - f.x0) * (f.diag.f + (f.diag.b - f.diag.f) * t); return Math.abs(x - xc) < 2.5; }
@@ -719,7 +729,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (spot) { myEl.classList.remove('swimming'); mine.x = spot.x; mine.y = spot.y; myEl.style.left = `${spot.x}%`; myEl.style.bottom = `${spot.y}%`; myEl.style.zIndex = spot.z; rideFx(room, myEl, mine.seat); return; }
     rideFx(room, myEl, null);
     Object.assign(mine, clampPos(mine));
-    myEl.style.left = `${mine.x}%`; myEl.style.bottom = `${mine.y}%`; myEl.style.zIndex = 2 + Math.round(100 - mine.y);
+    myEl.style.left = `${mine.x}%`; myEl.style.bottom = `${mine.y}%`; myEl.style.zIndex = catZ(mine.x, mine.y);
     myEl.classList.toggle('swimming', inPool(room, mine.x, mine.y));
   }
   // chat
@@ -741,6 +751,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   const leave = () => {
     if (left) return; left = true;
     if (P) { leaveBuffet(); if (placeKey === 'cinema') leaveCinema(); }
+    setCatZ(null);
     if (P && S.dropPlaceFood()) toast('🍽️ <span class="zh">吃的喝的不能带走哦</span> Food and drinks stay behind when you leave', { ms: 2600 });
     Radio.stop(); clearInterval(kt); if (stadium) stadium.stop(); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
   $('#leave', n).onclick = () => { leave(); if (P) go('map'); else go('friend', { id: hostId }); };
