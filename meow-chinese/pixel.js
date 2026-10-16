@@ -12258,3 +12258,8 @@ const CINEMA_GATE = { ...ITEMS.buffetgate, room: 'lobby', group: 'cinema', price
 // v202: Gate 1 opens for a Theatre 1 ticket, Gate 2 for a Theatre 2 ticket
 ITEMS.cinemagate1 = { ...CINEMA_GATE, name: '1号闸门', en: 'Gate 1 (Theatre 1 tickets)', gateFor: 'theatre1', label: 'Gate 1' };
 ITEMS.cinemagate2 = { ...CINEMA_GATE, name: '2号闸门', en: 'Gate 2 (Theatre 2 tickets)', gateFor: 'theatre2', label: 'Gate 2' };
+
+// v204: 🎬 a lit sign to hang above each theatre door
+const THEATRE_SIGN = { cat: 'decor', room: 'lobby', group: 'cinema', price: 40, spot: 'wall-mid', size: 0.6, labelBox: { x: 3 / 44, y: 3 / 14, w: 38 / 44, h: 8 / 14 }, labelStyle: 'plaque theatre-sign', pal: { o: O, f: '#c99a2e', k: '#2a0c14', y: '#fff2b8' }, art: ["oooooooooooooooooooooooooooooooooooooooooooo", "offyffyffyffyffyffyffyffyffyffyffyffyffyfffo", "ofkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkfo", "oykkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkyo", "ofkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkfo", "ofkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkfo", "oykkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkyo", "ofkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkfo", "ofkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkfo", "oykkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkyo", "ofkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkfo", "ofkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkfo", "offyffyffyffyffyffyffyffyffyffyffyffyffyfffo", "oooooooooooooooooooooooooooooooooooooooooooo"] };
+ITEMS.theatresign1 = { ...THEATRE_SIGN, name: '1号影厅牌子', en: 'Theatre 1 sign', label: '1号影厅 Theatre 1' };
+ITEMS.theatresign2 = { ...THEATRE_SIGN, name: '2号影厅牌子', en: 'Theatre 2 sign', label: '2号影厅 Theatre 2' };

@@ -550,4 +550,7 @@ export const CHANGES = [
   { v: 203, items: [
     'Fixed: a turned queue pole no longer blocks the gate next to it — only its rope does.',
   ] },
+  { v: 204, items: [
+    'Cinema: new lit Theatre 1 and Theatre 2 signs to hang above the doors.',
+  ] },
 ];

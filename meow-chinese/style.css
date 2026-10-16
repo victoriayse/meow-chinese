@@ -2037,3 +2037,5 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 /* the ticket host stands behind her stand (only her head and shoulders show over it) */
 /* v202: the cinema gates' "Gate 1" / "Gate 2" sign, standing on the gate's top bar */
 .decor .screen-label.gate-sign { font-size: 10px; color: #ffd23f; background: #5a1220; border: 2px solid #e6c25a; border-radius: 4px; box-sizing: border-box; }
+/* v204: the lit "Theatre 1" / "Theatre 2" signs over the doors */
+.decor .screen-label.theatre-sign { font-size: 10px; color: #ffe08a; text-shadow: 0 0 4px rgba(255, 210, 63, .8); }
