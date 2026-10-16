@@ -503,4 +503,9 @@ export const CHANGES = [
     '⚽ Stadium soccer now costs 10 coins; each winner gets 20 coins back.',
     'Books and pencil cases you put away no longer stay in the bar at the bottom.',
   ] },
+  { v: 192, items: [
+    '🏀 Basketball: the ball now really drops through the hoop — it only counts if it goes in (it can bounce off the rim or miss).',
+    '🏀 Shoot as many balls as you can in 30 seconds; every 3 goals is the next level.',
+    '🎟️ New tickets: 5 goals = 1, 8 goals = 3, 15 goals = 4, 25 goals = 6.',
+  ] },
 ];
