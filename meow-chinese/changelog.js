@@ -531,4 +531,5 @@ export const CHANGES = [
     'Coming into the Buffet, you start just in front of the gate.',
     'The admin can tap the gate to hold it open for everyone, and tap again to close it.',
   ] },
+  { v: 199, items: ['Fixed: tapping the Buffet gate (admin) now really opens / closes it.'] },
 ];

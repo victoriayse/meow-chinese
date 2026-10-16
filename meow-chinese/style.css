@@ -2026,3 +2026,5 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 @keyframes bb-swish { 0% { transform: scaleY(1); } 35% { transform: scaleY(1.35) scaleX(.86); } 70% { transform: scaleY(.92); } 100% { transform: scaleY(1); } }
 /* the buffet's host and server cats: 30% smaller too (like the guests) */
 .room[data-room="mallbuffet"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
+/* the buffet gate can be tapped (the admin holds it open / closes it) */
+.house .decor.buffet-gate { pointer-events: auto; cursor: pointer; }
