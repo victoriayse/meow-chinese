@@ -268,8 +268,14 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       {
         // 🚧 counters, kiosks, queue poles and the buffet gate can't be walked through (slide along them instead)
         let nx = mine.x + dx * 32 * dt, ny = mine.y + dy * 22 * dt;
-        if (!blockedAt(mine.x, mine.y) && blockedAt(nx, ny)) {
-          if (!blockedAt(nx, mine.y)) ny = mine.y; else if (!blockedAt(mine.x, ny)) nx = mine.x; else { nx = mine.x; ny = mine.y; }
+        if (blockedAt(nx, ny)) {
+          if (!blockedAt(mine.x, mine.y)) {
+            if (!blockedAt(nx, mine.y)) ny = mine.y; else if (!blockedAt(mine.x, ny)) nx = mine.x; else { nx = mine.x; ny = mine.y; }
+          } else {
+            // somehow standing inside something (the room was resized, a gate shut on her…): she may only step out
+            // towards the front — never sideways or further back, which could sneak her round a gate
+            nx = mine.x; ny = Math.min(ny, mine.y);
+          }
         }
         mine.x = nx; mine.y = ny; gateWatch();
         // just came through a door and still holding ▲: don't bounce straight back (re-arm once she lets go or turns)

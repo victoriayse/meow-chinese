@@ -556,4 +556,7 @@ export const CHANGES = [
   { v: 205, items: [
     'Queue poles: tap 🔄 again to turn them straight (the rope runs straight back).',
   ] },
+  { v: 206, items: [
+    'Fixed: you can no longer squeeze sideways out of furniture to sneak round a gate.',
+  ] },
 ];
