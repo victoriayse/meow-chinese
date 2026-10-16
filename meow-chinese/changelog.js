@@ -553,4 +553,7 @@ export const CHANGES = [
   { v: 204, items: [
     'Cinema: new lit Theatre 1 and Theatre 2 signs to hang above the doors.',
   ] },
+  { v: 205, items: [
+    'Queue poles: tap 🔄 again to turn them straight (the rope runs straight back).',
+  ] },
 ];

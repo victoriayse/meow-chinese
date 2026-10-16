@@ -655,7 +655,8 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       const it = ITEMS[d.dataset.id.split('#')[0]], x0 = (d.offsetLeft / W) * 100, x1 = ((d.offsetLeft + d.offsetWidth) / W) * 100;
       const bottom = ((H - (d.offsetTop + d.offsetHeight)) / H) * 100, hPct = (d.offsetHeight / H) * 100;
       const turned = d.dataset.facing === 'back' && it.blockDepthTurned;
-      const depth = turned ? hPct * it.blockDepthTurned : it.blockDepth || Math.max(3, Math.min(10, hPct * 0.3));
+      const straight = d.dataset.facing === 'front' && it.blockDepthFront;   // turned to run straight back: a narrow strip going back
+      const depth = turned ? hPct * it.blockDepthTurned : straight ? hPct * it.blockDepthFront : it.blockDepth || Math.max(3, Math.min(10, hPct * 0.3));
       // a turned queue pole is a rope running diagonally from its front pole (left) back to its far pole (right):
       // only that diagonal line blocks, not the whole box around it (so she can walk past its far end into a gate)
       const flip = getComputedStyle(d).transform.startsWith('matrix(-1');
