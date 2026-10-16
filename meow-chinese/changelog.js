@@ -547,4 +547,7 @@ export const CHANGES = [
     'Cinema: buy movie tickets at the self-help kiosk (10 coins for each theatre). Tickets are gone when you leave the cinema.',
     'Cinema: Gate 1 opens for Theatre 1 tickets, Gate 2 for Theatre 2 tickets.',
   ] },
+  { v: 203, items: [
+    'Fixed: a turned queue pole no longer blocks the gate next to it — only its rope does.',
+  ] },
 ];

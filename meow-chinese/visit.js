@@ -656,10 +656,18 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       const bottom = ((H - (d.offsetTop + d.offsetHeight)) / H) * 100, hPct = (d.offsetHeight / H) * 100;
       const turned = d.dataset.facing === 'back' && it.blockDepthTurned;
       const depth = turned ? hPct * it.blockDepthTurned : it.blockDepth || Math.max(3, Math.min(10, hPct * 0.3));
-      foot.push({ el: d, gate: !!it.gate, venue: it.gate ? it.gateFor || gateVenue(room, x0, x1) : null, x0, x1, y0: bottom - 1, y1: bottom + depth });
+      // a turned queue pole is a rope running diagonally from its front pole (left) back to its far pole (right):
+      // only that diagonal line blocks, not the whole box around it (so she can walk past its far end into a gate)
+      const flip = getComputedStyle(d).transform.startsWith('matrix(-1');
+      const diag = turned ? (flip ? { f: 1 - 2.5 / 22, b: 1 - 16 / 22 } : { f: 2.5 / 22, b: 16 / 22 }) : null;
+      foot.push({ el: d, gate: !!it.gate, venue: it.gate ? it.gateFor || gateVenue(room, x0, x1) : null, x0, x1, y0: bottom - 1, y1: bottom + depth, diag });
     });
   }
-  const inFoot = (f, x, y) => x >= f.x0 - 2 && x <= f.x1 + 2 && y >= f.y0 && y <= f.y1;
+  const inFoot = (f, x, y) => {
+    if (y < f.y0 || y > f.y1) return false;
+    if (f.diag) { const t = (y - f.y0) / Math.max(0.1, f.y1 - f.y0), xc = f.x0 + (f.x1 - f.x0) * (f.diag.f + (f.diag.b - f.diag.f) * t); return Math.abs(x - xc) < 2.5; }
+    return x >= f.x0 - 2 && x <= f.x1 + 2;
+  };
   // the buffet gate wants a buffet pass; a cinema gate wants a ticket for its own theatre (the admin goes through free)
   const gatePass = (f) => Places.isAdmin() || (f && f.venue ? hasTicket(f.venue) : hasPass());
   // which theatre a cinema gate guards: the theatre it stands in, else the room behind the nearest door, else by side
