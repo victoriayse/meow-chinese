@@ -562,4 +562,7 @@ export const CHANGES = [
   { v: 207, items: [
     'Fixed: standing in front of an angled queue pole rope now shows you in front of it, not behind.',
   ] },
+  { v: 208, items: [
+    'Going into the cinema, mall or another public place now updates the app first if a new version is out, so everyone sees the same gates and furniture.',
+  ] },
 ];

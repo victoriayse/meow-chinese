@@ -68,7 +68,7 @@ const screens = {
   spell: (p) => spellingScreen({ ...p, go }),
   shop: (p) => shopScreen({ go, ...p }),
   wardrobe: (p) => wardrobeScreen({ ...p, go }),
-  visit: (p) => Visit.visitScreen({ ...p, go }),
+  visit: (p) => { if (p.place) updateBeforePublicPlace(); return Visit.visitScreen({ ...p, go }); },
   parent: (p) => { p.go = go; return parentScreen(p); },
   grave: graveScreen,
   essay: (p) => essayScreen({ ...p, go }),
@@ -1586,6 +1586,19 @@ async function checkForUpdate() {
       if (current === 'home' && !notesDismissed) showUpdateNotice(); else showUpdateBar();
     }
   } catch { /* offline: try again later */ }
+}
+// 🌍 public places (cinema, mall…) need everyone on the same version — an old app wouldn't know the newest gates and
+// furniture, and could walk straight through them. Going into one with an update waiting: update first.
+async function updateBeforePublicPlace() {
+  if (!navigator.onLine) return;
+  try {
+    const t = await (await fetch('version.js', { cache: 'no-cache' })).text();
+    const live = (t.match(/APP_VERSION\s*=\s*'([^']+)'/) || [])[1];
+    if (live && verNum(live) > verNum(APP_VERSION)) {
+      toast('✨ <span class="zh">正在更新到最新版本…</span> Updating to the newest version first…', { ms: 4000 });
+      setTimeout(() => updateNow(), 900);
+    }
+  } catch { /* offline: go in as is */ }
 }
 async function updateNow(btn) {
   if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
