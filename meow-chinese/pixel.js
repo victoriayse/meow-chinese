@@ -9549,6 +9549,41 @@ export function drawRoom(canvas, night = false, kind = 'living', style = null) {
         R(x0 === 0 ? 4 : x0, m0 - 1, 1, m1 - m0 + 2, '#ffffff');
       });
       open = true;
+    } else if (kind === 'carnivalsquare' || kind === 'carnivalwheel') {
+      // 🎪 the carnival: open sky, striped tents (the square) or the big Ferris wheel (its own area), string lights
+      R(0, 0, W, floorY, night ? '#1a1f5c' : '#9fd6f7');
+      R(0, 0, W, Math.round(floorY * 0.35), night ? '#0f1442' : '#7cc2f2');
+      if (night) [[6, 5], [19, 11], [33, 3], [52, 8], [70, 4], [88, 10], [103, 6], [114, 12]].forEach(([x, y]) => R(x, y, 1, 1, '#ffffff'));
+      else [[10, 8], [58, 4], [92, 10]].forEach(([x, y]) => { R(x, y, 12, 3, '#ffffff'); R(x + 3, y - 2, 6, 2, '#ffffff'); });
+      const gy = floorY;
+      if (kind === 'carnivalsquare') {
+        // three striped tents and a little carousel far away
+        [[6, 22, '#e8384f'], [44, 28, '#6cb6f2'], [86, 24, '#ffb020']].forEach(([x, w, c]) => {
+          const top = gy - Math.round(w * 0.9);
+          for (let i = 0; i <= Math.round(w / 2); i++) R(x + Math.round(w / 2) - i, top + Math.round(i * 0.7), i * 2 + 1, 1, i % 2 ? c : '#ffffff');
+          const roofB = top + Math.round(w / 2 * 0.7);
+          for (let xx = x; xx < x + w; xx += 4) R(xx, roofB, 2, gy - roofB, c), R(xx + 2, roofB, 2, gy - roofB, '#ffffff');
+          R(x + Math.round(w / 2) - 3, gy - 8, 6, 8, '#3a2418');                     // the door
+          R(x + Math.round(w / 2), top - 3, 1, 3, '#8a5a32'); R(x + Math.round(w / 2) + 1, top - 3, 3, 2, '#ffd23f');   // a flag
+        });
+      } else {
+        // the Ferris wheel: a big ring with spokes and little cabins, on an A-frame stand
+        const cx = 60, cy = Math.round(gy * 0.46), r = Math.round(Math.min(gy * 0.42, 34));
+        for (let a = 0; a < 360; a += 2) { const t = a * Math.PI / 180; R(cx + Math.round(r * Math.cos(t)), cy + Math.round(r * Math.sin(t)), 1, 1, night ? '#ffd23f' : '#e8384f'); }
+        for (let a = 0; a < 360; a += 3) { const t = a * Math.PI / 180; R(cx + Math.round((r - 4) * Math.cos(t)), cy + Math.round((r - 4) * Math.sin(t)), 1, 1, night ? '#ff9ec4' : '#ffffff'); }
+        for (let k = 0; k < 12; k++) { const t = k * Math.PI / 6; for (let d = 2; d < r; d += 1) R(cx + Math.round(d * Math.cos(t)), cy + Math.round(d * Math.sin(t)), 1, 1, night ? '#c9b8f0' : '#c9d3de'); }
+        const CAB = ['#e8384f', '#6cb6f2', '#ffd23f', '#7cbd52', '#ff9ec4', '#a77fd6'];
+        for (let k = 0; k < 12; k++) { const t = k * Math.PI / 6 + 0.26, x = cx + Math.round(r * Math.cos(t)), y = cy + Math.round(r * Math.sin(t)); R(x, y, 1, 2, '#5b6170'); R(x - 2, y + 2, 5, 4, CAB[k % CAB.length]); R(x - 1, y + 3, 3, 1, night ? '#fff2b8' : '#d7f0ff'); }
+        R(cx - 2, cy - 2, 5, 5, '#5b6170'); R(cx - 1, cy - 1, 3, 3, '#ffd23f');
+        for (let y = cy; y < gy; y++) { const k = (y - cy) / (gy - cy); R(cx - Math.round(k * 16) - 1, y, 2, 1, '#8a8d99'); R(cx + Math.round(k * 16), y, 2, 1, '#8a8d99'); }
+        R(cx - 20, gy - 3, 41, 3, '#5b6170');
+      }
+      // string lights across the top
+      for (let x = 0; x < W; x++) { const y = 3 + Math.round(3 * Math.sin((x % 30) / 30 * Math.PI)); R(x, y, 1, 1, '#3a2418'); if (x % 5 === 2) R(x, y + 1, 1, 2, ['#ff6f9c', '#ffd23f', '#6cb6f2', '#7cbd52'][Math.floor(x / 5) % 4]); }
+      // the ground: warm paving stones
+      R(0, floorY, W, H - floorY, night ? '#6b5a6e' : '#e3c9a3');
+      for (let y = floorY + 2; y < H; y += 4) for (let x = (y % 8 ? 0 : 4); x < W; x += 8) R(x, y, 7, 3, night ? '#776478' : '#ecd6b4');
+      open = true;
     } else if (kind === 'park') {
       // the park: open sky, tall trees and a little pond far away, grass with a winding path
       R(0, 0, W, floorY, night ? '#1d286a' : '#9fd6f7');
@@ -12273,3 +12308,6 @@ ITEMS.nowshowing = { cat: 'decor', room: 'lobby', group: 'cinema', name: '正在
 
 // v210: 🔨 the arcade's mole machine (an original design) — tap it to play
 ITEMS.arcademole = { cat: 'decor', room: 'mallbowling', group: 'mall', name: '打地鼠机', en: 'Mole Bop machine', price: 260, spot: 'back-mid-right', mallGame: 'mole', pal: { o: O, n: '#ff7a1a', g: '#96d23c', G: '#d6f05a', y: '#ffd23f', b: '#8c5634', B: '#5a3622', w: '#ffffff', k: '#1e1a28', p: '#ff9ec4', R: '#e8384f', r: '#e8384f', v: '#62be3c', l: '#a0e66e', P: '#785adc', s: '#c9d3de', a: '#8a8d99', D: '#467828' }, art: ["...onnnnnnnnnnnnnnnnnnnnnnnnnnnno...", "...onnnnnnnnnnnnnnnnnnnnnnnnnnnno...", "...onnggggggggggggggggggggggggnno...", "...onngGGGGGGGGGGGyGGGGGGGGGGgnno...", "...onngGyGGGGGGGGGGGGGGGGGGGGgnno...", "...onngGGGGGGGGGGGGGGGGGGGGyGgnno...", "...onngGGGGGGGGGGGGGGGGGGGGGGgnno...", "...onngGGGGGGGGGbbbbGGGGGGGGGgnno...", "...onngGGGGGGGbbbbbbbbGGGGGGGgnno...", "...onngGGGGGGGbwwbbwwbGGGGGGGgnno...", "...onngGGGGGGGbbkbbkbbGGGGGGGgnno...", "...onngGGGGGGGbbbppbbbbGGGGGGgnno...", "...onngGGGGGGGbbbppbbbbGGGyGGgnno...", "...onngGGyGGGGbbbwwbbbbGGGGGGgnno...", "...onngGGGGGBBBBBBBBBBBBGGGGGgnno...", "...onnggggggggggggggggggggggggnno...", "...onnnnnnnnnnnnnnnnnnnnnnnnnnnno...", "..oonnnnnnnnnnnnnnnnnnnnnnnnnnnnoo..", ".onoookkkkkkkkkkkkkkkkkkkkkkkkooono.", ".ono.okRRRRRRkkRRRRRRkkRRRRRRko.ono.", ".ono.okRRRRRRkkRRRRRRkkRRRRRRkooono.", ".onoookkkkkkkkkkkkkkkkkkkkkPPPPPPno.", ".onllllllllllllllllllllllssPPPPPPno.", ".onvvvvvvvvvvvvvvvvvvvvvvvvPPPPPPno.", ".onvvvvkkkkvvvvvkkkkvvvvvkkkkvvvvno.", ".onvvvvkrrkvvvvvkrrkvvvvvkrrkvvvvno.", ".onvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvno.", ".onvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvno.", ".onvvvvvvvvkkkkvvvvvvkkkkvvvvvvvvno.", ".onvvvvvvvvkrrkvvvvvvkrrkvvvvvvvvno.", ".onvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvno.", ".onvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvno.", ".onnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnno.", ".onyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyno.", ".onyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyno.", ".onyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyno.", ".onvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvno.", ".onvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvno.", ".onvvvvvvvvvvkkkkkkkkkkvvvvvvvvvvno.", ".onvvvvvvvvvvkknnkknnkkvvvvvvvvvvno.", ".onvvvvvvvvvvkknnkknnkkvvvvvvvvvvno.", ".onvvvvvvvvvvkknnkknnkkvvvvvvvvvvno.", ".onvvvvvvvvvvkkkkkkkkkkvvvvvvvvvvno.", ".onvvvvvvvvvvkkkkkkkkkkvvvvvvvvvvno.", ".onvvvvvvvvvvkaaaaaaaakvvvvvvvvvvno.", ".onvvvvvvvvvvkkkkkkkkkkvvvvvvvvvvno.", ".onvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvno.", ".onvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvno.", "..oDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDo..", "..oDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDo.."] };
+
+// v218: 🎡 the Carnival's map pin
+ITEMS.mapcarnival = { cat: 'map', room: 'mallbowling', name: '嘉年华', en: 'Carnival map icon', price: 0, spot: 'back-mid-left', group: 'mall', special: true, pal: { o: O, r: '#e8384f', s: '#c9d3de', b: '#6cb6f2', y: '#ffd23f', g: '#7cbd52', p: '#ff9ec4', a: '#8a8d99', k: '#5b6170' }, art: ["........................", "..........ooooo.........", "........oorrrrroo.......", "......oorroosoorroo.....", ".....orryyyosogggrro....", ".....orsyyyosogggsro....", "....oroosooosooosooro...", "...orro.osoosooso.orro..", "...obbbo.osososo.opppo..", "...obbboooosssoooopppo..", "...orsssssssasssssssro..", "...orooooooasaooooooro..", "...oro...osasaso...oro..", "...orro.osaosoaso.orro..", "...oppposoaosoaosobbbo..", "...opppsoaoosooaosbbbo..", "....oorroaoosooaorroo...", "......ooaroosooraoo.....", ".......oaggrrryyao......", "......oagggoooyyyao.....", "....oooaoooooooooaooo...", "...oaaaaaaaaaaaaaaaaao..", "...okkkkkkkkkkkkkkkkko..", "....ooooooooooooooooo..."] };

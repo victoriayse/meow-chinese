@@ -4,6 +4,7 @@ import { ITEMS, spriteCanvas } from './pixel.js';
 import { $, html, esc, toast, openModal, closeModal, confetti, coinI, hydrateIcons } from './ui.js';
 import { sfx, speak } from './audio.js';
 import * as Visit from './visit.js';
+import * as Gallery from './gallery.js';
 import { acceptedFriends, refreshFriends, sendLetter, onInbox, markRead, refreshSeen, onSeen, errorText, LETTER_MAX, setActivity, isOnline, doingText, lastSeen, friendName } from './friends.js';
 
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -26,6 +27,7 @@ const APPS = [
   { key: 'calc', icon: '🧮', zh: '计算器', en: 'Calc' },
   { key: 'clock', icon: '⏰', zh: '时钟', en: 'Clock' },
   { key: 'notes', icon: '📒', zh: '记事本', en: 'Notes' },
+  { key: 'gallery', icon: '🖼️', zh: '相册', en: 'Gallery' },
   { key: 'bank', icon: '🏦', zh: '银行', en: 'Bank' },
   { key: 'ttt', icon: '⭕', zh: '井字棋', en: 'Tic-tac-toe' },
   { key: 'listen', icon: '👂', zh: '听一听', en: 'Listen & pick' },
@@ -137,6 +139,23 @@ export function openPhone({ start = 'home', after } = {}) {
     const prev = history[history.length - 1];
     if (prev) show(prev[0], ...prev[1]); else { history.length = 0; go('home'); }
   }
+  // a photo in a chat, shown big; a friend's photo can be kept in my own gallery
+  function viewSent(path) {
+    const mineP = Gallery.photos().some((p) => p.path === path);
+    const c = html`<div class="ph-dialog ph-bigphoto"><img><div class="ph-row">${mineP ? '' : '<button class="ph-btn green" data-a="keep">💾 <span class="zh">存到相册</span> Save</button>'}<button class="ph-btn" data-a="close">关闭 Close</button></div></div>`;
+    Gallery.fillImg($('img', c), path);
+    c.onclick = async (e) => {
+      const a = e.target.closest('[data-a]'); if (!a) return;
+      if (a.dataset.a === 'keep') {
+        try {
+          const img = $('img', c); const cv = document.createElement('canvas'); cv.width = img.naturalWidth; cv.height = img.naturalHeight; cv.getContext('2d').drawImage(img, 0, 0);
+          await Gallery.savePhoto(cv, '朋友的照片 From a friend'); toast('💾 <span class="zh">存好了</span> Saved to your Gallery');
+        } catch (er) { toast(er.message === 'full' ? `相册满了（${Gallery.GALLERY_MAX}张）· Gallery is full — delete some photos first` : '没存好 · Could not save'); }
+      }
+      closePop();
+    };
+    popup(c);
+  }
   function header(title) {
     const h = html`<div class="ph-head"><button class="ph-back">◀</button><b>${title}</b></div>`;
     $('.ph-back', h).onclick = back;
@@ -190,6 +209,58 @@ export function openPhone({ start = 'home', after } = {}) {
       // fetch who is online, then redraw once
       if (!this._fetched) { this._fetched = true; refreshFriends().then(() => { if (body.isConnected && history[history.length - 1] && history[history.length - 1][0] === 'mail') show('mail'); }); }
     },
+    // ----- 🖼️ the gallery: every photo she took (100 at most) -----
+    gallery() {
+      const list = Gallery.photos();
+      header(`🖼️ 相册 Gallery <small class="ph-count">${list.length}/${Gallery.GALLERY_MAX}</small>`);
+      if (!list.length) { body.appendChild(html`<p class="ph-empty">还没有照片。<br>No photos yet.<br><br>坐摩天轮的时候可以拍纪念照！<br>Take a souvenir photo on the 🎡 Ferris wheel at the Carnival!</p>`); return; }
+      const grid = html`<div class="ph-gallery"></div>`;
+      list.forEach((p) => {
+        const b = html`<button class="ph-thumb" aria-label="Photo"><img></button>`;
+        Gallery.fillImg($('img', b), p.path);
+        b.onclick = () => go('photo', p.path);
+        grid.appendChild(b);
+      });
+      body.appendChild(grid);
+    },
+    photo(path) {
+      const p = Gallery.photos().find((x) => x.path === path);
+      header('🖼️ 照片 Photo');
+      if (!p) { body.appendChild(html`<p class="ph-empty">照片不见了。 This photo was deleted.</p>`); return; }
+      const v = html`<div class="ph-photo"><img><p class="ph-photo-cap">${esc(p.title || '')}<small>${new Date(p.at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' })}</small></p>
+          <button class="ph-btn green block" id="ph-send">💬 <span class="zh">发给朋友</span> Send to a friend</button>
+          <button class="ph-btn red block" id="ph-del">🗑 <span class="zh">删除</span> Delete</button></div>`;
+      Gallery.fillImg($('img', v), path);
+      $('#ph-send', v).onclick = () => go('sendphoto', path);
+      $('#ph-del', v).onclick = async () => {
+        if (!(await ask('要删除这张照片吗？<br>Delete this photo?'))) return;
+        await Gallery.deletePhoto(path); toast('🗑 已删除 Deleted'); back();
+      };
+      body.appendChild(v);
+    },
+    // pick a friend to send a photo to (it goes into your chat with them)
+    sendphoto(path) {
+      header('💬 发照片给… Send to…');
+      const list = html`<div class="ph-list"></div>`;
+      body.appendChild(list);
+      const fill = () => {
+        const fs = acceptedFriends();
+        list.innerHTML = '';
+        if (!fs.length) { list.appendChild(html`<p class="ph-empty">还没有朋友。<br>No friends yet — add friends on the 👫 Friends page.</p>`); return; }
+        fs.forEach((f) => {
+          const on = isOnline(f);
+          const r = html`<button class="ph-item chat-row"><span class="avatar">🐱${on ? '<i class="ph-online" title="Online"></i>' : ''}</span><span class="txt"><b class="zh">${esc(friendName(f))}</b><span class="prev">📷 发送 Send photo</span></span></button>`;
+          r.onclick = async () => {
+            r.disabled = true;
+            try { await sendLetter(f.other, '📷 照片 Photo', friendName(f), path); sfx.coin(); toast('📷 <span class="zh">照片发出去了！</span> Photo sent', { ms: 2000 }); history.pop(); go('chat', f.other); }
+            catch (e) { r.disabled = false; toast(errorText(e.message) || '没寄出，请再试。 Could not send — try again.'); }
+          };
+          list.appendChild(r);
+        });
+      };
+      fill();
+      refreshFriends().then(() => { if (list.isConnected) fill(); }).catch(() => {});
+    },
     // pick a friend to write to (a friend you already chat with opens that chat)
     newchat() {
       header('✏️ 新信息 New message');
@@ -229,8 +300,11 @@ export function openPhone({ start = 'home', after } = {}) {
         if (day !== lastDay) { lastDay = day; log.appendChild(html`<div class="chat-day">${day}</div>`); }
         // ✓ sent · ✓✓ read (like WhatsApp)
         const tick = m.mine ? (m.seen ? '<i class="tick two" title="Read">✓✓</i>' : '<i class="tick" title="Sent">✓</i>') : '';
-        const b = html`<button class="bubble-msg ${m.mine ? 'mine' : 'theirs'}" ${m.ev != null ? `data-ev="${m.ev}"` : ''}><span class="zh">${esc(m.text)}</span><small>${new Date(m.at).toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' })}${tick}</small></button>`;
-        b.onclick = async () => {
+        const b = html`<button class="bubble-msg ${m.mine ? 'mine' : 'theirs'} ${m.photo ? 'has-photo' : ''}" ${m.ev != null ? `data-ev="${m.ev}"` : ''}>${m.photo ? '<img class="msg-photo">' : `<span class="zh">${esc(m.text)}</span>`}<small>${new Date(m.at).toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' })}${tick}</small></button>`;
+        if (m.photo) Gallery.fillImg($('.msg-photo', b), m.photo);
+        b.onclick = async (e) => {
+          // tap a photo to see it big (and keep a copy in your own gallery)
+          if (m.photo && e.target.closest('.msg-photo')) return viewSent(m.photo);
           if (!(await ask('要删除这条信息吗？<br>Delete this message?'))) return;
           if (!(await ask('真的要删除吗？删除了就找不回来了。<br>Are you sure? It can\'t be brought back.', '确定删除 Yes, delete'))) return;
           if (m.mine) S.deleteSent(m.id); else S.deleteLetter(m.id);

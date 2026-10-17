@@ -2111,3 +2111,35 @@ img.gone { min-height: 40px; font-size: 11px; }
 .vcat.riding-away { display: none !important; }
 /* v217 fix: a normal mole never shows the evil mole's pictures (bopped or not) */
 .mole-hole:not(.evil) .mole canvas.evil { display: none !important; }
+/* ---------- v218: 🎡 the Carnival ---------- */
+.carn-booth { position: absolute; left: 4%; bottom: 6%; z-index: 40; padding: 0; border: 0; background: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
+.carn-booth canvas { display: block; image-rendering: pixelated; filter: drop-shadow(0 3px 0 rgba(0,0,0,.25)); }
+.carn-sign { margin-top: -6px; background: #fff8ec; border: 2px solid var(--ink); border-radius: 999px; padding: 1px 8px; font: 800 11px/1.3 system-ui, sans-serif; white-space: nowrap; animation: carn-bob 1.6s ease-in-out infinite; }
+@keyframes carn-bob { 50% { transform: translateY(-3px); } }
+.carn-exit { position: absolute; right: 3%; bottom: 34%; z-index: 3; background: #2c9c3a; color: #fff; border: 2px solid #0f3b16; border-radius: 6px; padding: 2px 8px; font: 800 11px/1.3 system-ui, sans-serif; pointer-events: none; }
+.room.arranging .carn-booth { pointer-events: none; opacity: .6; }
+.carn-card { width: min(440px, 100%); }
+.carn-price { margin: 0; font-weight: 700; }
+.carn-have { font-size: 14px; }
+.carn-buy-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.carn-near { display: flex; flex-direction: column; gap: 6px; }
+.carn-person { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #fff8ec; border: 2px solid var(--ink); border-radius: 10px; padding: 4px 8px; }
+.carn-person small { display: block; opacity: .75; }
+.carn-waiting { color: #2c9c3a; opacity: 1 !important; font-weight: 700; }
+.carn-ride { width: min(400px, 100%); display: flex; flex-direction: column; gap: 6px; background: #2b2140; color: #fff; border: 4px solid var(--ink); padding: 10px; }
+.carn-ride-top { display: flex; justify-content: space-between; font-weight: 800; font-size: 15px; }
+.carn-view { position: relative; border-radius: 12px; overflow: hidden; border: 3px solid #000; }
+.carn-view canvas { display: block; width: 100%; height: auto; }
+.carn-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.carn-flash.go { animation: carn-flash .5s ease-out; }
+@keyframes carn-flash { 0% { opacity: .95; } 100% { opacity: 0; } }
+.carn-bar { height: 8px; background: rgba(255,255,255,.2); border-radius: 999px; overflow: hidden; }
+.carn-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffd23f, #ff6f9c); }
+.carn-photo-row { display: flex; flex-direction: column; gap: 6px; }
+.carn-frames { display: flex; flex-wrap: wrap; gap: 4px; }
+.carn-fchip { font: 700 12px/1.2 system-ui, sans-serif; padding: 3px 8px; border-radius: 999px; border: 2px solid #fff; background: rgba(255,255,255,.12); color: #fff; cursor: pointer; }
+.carn-fchip.on { background: #ffd23f; color: #2b2140; border-color: #ffd23f; }
+.carn-fchip.locked { opacity: .8; border-style: dashed; }
+.carn-snap small { opacity: .7; font-weight: 600; }
+.carn-view { align-self: center; max-width: 100%; }
+.carn-view canvas { width: auto; max-width: 100%; max-height: min(56vh, 480px); margin: 0 auto; }

@@ -324,11 +324,11 @@ function writeLetter(f) {
   setTimeout(() => tx.focus(), 50);
 }
 
-export async function sendLetter(to, text, toName) {
+export async function sendLetter(to, text, toName, photo = null) {
   const t = String(text).slice(0, LETTER_MAX);
-  const r = await sendEvent(to, 'letter', { text: t });
+  const r = await sendEvent(to, 'letter', { text: t, ...(photo ? { photo } : {}) });
   const row = friends.find((f) => f.other === to);
-  S.recordSent(to, toName || (row ? friendName(row) : '朋友'), t, r && r.id != null ? r.id : null);
+  S.recordSent(to, toName || (row ? friendName(row) : '朋友'), t, r && r.id != null ? r.id : null, photo);
   return r;
 }
 // ---------- read receipts (✓ sent · ✓✓ read) ----------

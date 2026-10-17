@@ -606,6 +606,9 @@ export const ROOMS = [
   { key: 'playground', zh: '游乐场', en: 'Playground', icon: '🛝', place: 'park', outdoor: true },
   // the stadium (a public place on the 🗺️ map): a soccer pitch, the whole room is the field
   { key: 'stadium', zh: '体育场', en: 'Stadium', icon: '🏟️', place: 'stadium', outdoor: true, maxY: 52 },
+  // 🎪 the carnival (a public place on the 🗺️ map): Main Square ▶ Ferris Wheel
+  { key: 'carnivalsquare', zh: '嘉年华广场', en: 'Main Square', icon: '🎪', place: 'carnival', outdoor: true },
+  { key: 'carnivalwheel', zh: '摩天轮', en: 'Ferris Wheel', icon: '🎡', place: 'carnival', outdoor: true },
 ];
 ROOMS.push(...MALL_ROOM_INFO);
 // the school (a public place on the 🗺️ map), laid out as a little grid [column, row]:
@@ -628,7 +631,7 @@ function schoolNeighbors(key) {
   if (l) out.left = roomInfo(l); if (rt) out.right = roomInfo(rt); if (u) out.up = roomInfo(u); if (d) out.down = roomInfo(d);
   return out;
 }
-export const PLACE_ROOMS = { mall: MALL_ROOMS, cinema: ['theatre1', 'lobby', 'theatre2'], cafe: CAFE_ROOMS, park: ['park', 'playground'], stadium: ['stadium'], school: ['schooloffice', 'schooloutdoor', 'schoolcanteen', 'schoolmusic', 'schoolhall', 'schoolclass', 'schoolstaff'] };   // left to right
+export const PLACE_ROOMS = { mall: MALL_ROOMS, cinema: ['theatre1', 'lobby', 'theatre2'], cafe: CAFE_ROOMS, park: ['park', 'playground'], stadium: ['stadium'], carnival: ['carnivalsquare', 'carnivalwheel'], school: ['schooloffice', 'schooloutdoor', 'schoolcanteen', 'schoolmusic', 'schoolhall', 'schoolclass', 'schoolstaff'] };   // left to right
 // the admin (who furnishes the public places): app.js tells us who is signed in
 let adminCheck = () => false;
 export const setAdminCheck = (fn) => { adminCheck = fn; };
@@ -856,7 +859,9 @@ export function receiveFriendEvent(ev, fromName) {
     state.friendNews = [out, ...(state.friendNews || [])].slice(0, 30);
     state.notifications = [{ id: 'n' + id, kind: 'feed', title: `${fromName}喂了你的小猫`, body: `A friend fed your kitten ${it.en}`, item: p.item, at, read: false }, ...(state.notifications || [])].slice(0, 200);
   } else if (ev.kind === 'letter' && p.text) {
-    out = { id, kind: 'letter', from: ev.from_user, fromName, text: String(p.text).slice(0, 300), at, read: false };
+    // a 📷 photo message: the picture lives in the sender's gallery folder (only friends can open it)
+    const photo = typeof p.photo === 'string' && /^[0-9a-f-]{36}\/[0-9a-z-]{8,40}\.jpg$/i.test(p.photo) && p.photo.startsWith(ev.from_user + '/') ? p.photo : null;
+    out = { id, kind: 'letter', from: ev.from_user, fromName, text: String(p.text).slice(0, 300), at, read: false, ...(photo ? { photo } : {}) };
     state.letters = [out, ...(state.letters || [])].slice(0, 100);
   } else if (ev.kind === 'gift' && ITEMS[p.item]) {
     out = { id, kind: 'gift', from: ev.from_user, fromName, item: p.item, message: String(p.message || '').slice(0, 300), at, opened: false };
@@ -1060,8 +1065,8 @@ export function purgeOldMessages() {
   const a2 = a.filter((x) => x.at >= cut), b2 = b.filter((x) => x.at >= cut), n2 = n.filter((x) => (x.at || 0) >= cut);
   if (a2.length !== a.length || b2.length !== b.length || n2.length !== n.length) { state.letters = a2; state.sentLetters = b2; state.notifications = n2; save(); }
 }
-export function recordSent(to, toName, text, eventId = null) {
-  state.sentLetters = [{ id: uid(), to, toName, text: String(text).slice(0, 300), at: Date.now(), ev: eventId, seen: false }, ...(state.sentLetters || [])].slice(0, 300);
+export function recordSent(to, toName, text, eventId = null, photo = null) {
+  state.sentLetters = [{ id: uid(), to, toName, text: String(text).slice(0, 300), at: Date.now(), ev: eventId, seen: false, ...(photo ? { photo } : {}) }, ...(state.sentLetters || [])].slice(0, 300);
   save();
 }
 // read receipts: my friend has read these sent messages (event ids)

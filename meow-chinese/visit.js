@@ -4,6 +4,7 @@ import * as CafeTables from './cafe-tables.js';
 import { wireHomeTables, wirePlaceTables } from './home-tables.js';
 import { createStadium, joystick, JOYSTICK } from './stadium.js';
 import { wireCanteen } from './canteen.js';
+import { createCarnival } from './carnival.js';
 import { wireBuffet, leaveBuffet, hasPass, isBlocker, setGate, payHost, BUFFET_ROOM, leaveCinema, hasTicket, payCinema, THEATRES } from './buffet.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
@@ -178,7 +179,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   const box = $('#house', n), sub = $('#vt-sub', n);
   const others = new OtherCats();
   let house = null, host = null, roomKey = startRoom, mine = { x: 30, y: 6, room: startRoom, left: false }, lockedOut = false;
-  let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null;
+  let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null, carnival = null;
 
   let refreshingPlace = false, welcomed = false;
   async function refreshPlace() {
@@ -198,6 +199,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     onBroadcast: (ev, p) => {
       if (!p || p.id === me) return;
       if (stadium && (ev === 'ball' || ev === 'match')) { stadium.onBroadcast(ev, p); return; }
+      if (carnival && ev.startsWith('wheel-')) { carnival.onBroadcast(ev, p); return; }
       if (ev === 'locked' && p.to === me && !gotHouse) {
         clearInterval(kt); lockedOut = true;
         sub.innerHTML = '🔒 朋友的家锁上了 · Your friend\'s house is locked<br><small>下次再来吧 · Try again another time</small>';
@@ -312,6 +314,9 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   // ⚽ the stadium's soccer match
   stadium = placeKey === 'stadium' ? createStadium({ me, ch, others, getMine: () => mine, getMyEl: () => myEl,
     teleport: (x, y) => { if (!myEl) return; mine.seat = null; mine.x = x; mine.y = y; place(); sendMine(); } }) : null;
+  // 🎡 the carnival's Ferris wheel (ticket booth, rides together, souvenir photos)
+  carnival = placeKey === 'carnival' ? createCarnival({ me, ch, others, getMine: () => mine, myLook, sendMine, getRoomKey: () => roomKey,
+    landAtExit: (together) => { mine.seat = null; mine.x = together ? 84 : 86; mine.y = 6; mine.left = true; if (myEl) { place(); myKv && myKv.jump(); } } }) : null;
   ch.open();
   // a public place: its furniture is saved online (people there say hello over the channel)
   if (P) Places.loadPlace(placeKey).then((h) => {
@@ -442,6 +447,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     room.appendChild(myEl);
     others.attach(room, roomKey);
     if (stadium && roomKey === 'stadium') stadium.attach(room);
+    if (carnival) carnival.attach(room);
     sizeCols(); fitHouse(box, unit); requestAnimationFrame(() => { if (unit.isConnected) { sizeCols(); fitHouse(box, unit); } });
     drawRoom($('#roombg', box), isNight(), roomKey, (house.styles || {})[roomKey]); drawRoof($('#roof', box)); studioBarre(room, roomKey === 'basement');
     room.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, room); }); stackDecor(room);
