@@ -2081,3 +2081,16 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
   .toast.online-toast .toast-actions { display: none; }
 }
 .ttt-note { margin: 2px 0 4px; text-align: center; font-size: 11px; line-height: 1.3; opacity: .75; }
+/* v216: ⤴ the jump button sits top-right of the arrows (phones; on a computer it's the space bar) */
+.dpad [data-jump] { grid-column: 3; grid-row: 1; background: rgba(255, 111, 156, .85); font-size: 20px; font-weight: 900; }
+/* v216: 😈 evil moles */
+.mole canvas.evil { display: none; }
+.mole-hole.evil .mole canvas:not(.evil) { display: none !important; }
+.mole-hole.evil .mole canvas.evil:not(.bopped) { display: block; }
+.mole-hole.evil.hit .mole canvas.evil:not(.bopped) { display: none; }
+.mole-hole.evil.hit .mole canvas.evil.bopped { display: block; }
+.mole-hole.evil.hit::after { content: '😈'; }
+.mole-field.oops { animation: mole-oops .35s ease-out; }
+@keyframes mole-oops { 0%, 100% { box-shadow: none; } 30% { box-shadow: inset 0 0 0 6px #e8384f; } }
+.mole-evil-tip { display: flex; align-items: center; gap: 8px; justify-content: center; margin-top: 6px; background: rgba(0,0,0,.25); border-radius: 8px; padding: 4px 8px; font-size: 13px; text-align: left; }
+.mole-evil-pic canvas { display: block; image-rendering: pixelated; }

@@ -491,6 +491,7 @@ export class OtherCats {
   has(id) { return this.m.has(id); }
   ids() { return [...this.m.keys()]; }
   say(id, text) { const c = this.m.get(id); if (c && c.el) say($w(c.el), text); }
+  hop(id) { const c = this.m.get(id); if (c && c.kv) c.kv.jump(); }
   emote(id, mood) { const c = this.m.get(id); if (c && c.kv && EMOTES.some((e) => e[0] === mood)) { c.kv.flash(mood, 3000); c.kv.jump(); } }
   go() { if (!this.raf) { this.last = 0; this.raf = requestAnimationFrame((t) => this.tick(t)); } }
   tick(t) {
@@ -577,7 +578,7 @@ export function chatBar(onSend, onEmote) {
 
 // ---------- walking: arrow keys and the on-screen arrows ----------
 // onStep(dx, dy, dt) is called every frame while a direction is held; onStop() when she lets go
-export function walker(dpad, { onStep, onStop, canWalk = () => true, isAlive }) {
+export function walker(dpad, { onStep, onStop, canWalk = () => true, isAlive, onJump = null }) {
   const held = new Set();
   let raf = 0, lastT = 0;
   const loop = (t) => {
@@ -595,14 +596,22 @@ export function walker(dpad, { onStep, onStop, canWalk = () => true, isAlive }) 
   const KEYS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
   const kd = (e) => {
     if (!isAlive()) { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); return; }
+    const typing = /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '') || (document.activeElement || {}).isContentEditable;
+    // ␣ space: jump (desktop) — and don't let it "press" whichever button was tapped last
+    if (e.key === ' ' && onJump && !typing && document.querySelector('#modal').classList.contains('hidden')) {
+      e.preventDefault(); if ((document.activeElement || {}).tagName === 'BUTTON') document.activeElement.blur();
+      if (!e.repeat) onJump(); return;
+    }
     const d = KEYS[e.key];
-    if (!d || /INPUT|TEXTAREA/.test((document.activeElement || {}).tagName || '') || !document.querySelector('#modal').classList.contains('hidden')) return;
+    if (!d || typing || !document.querySelector('#modal').classList.contains('hidden')) return;
     e.preventDefault(); press(d);
   };
-  const ku = (e) => { const d = KEYS[e.key]; if (d) release(d); };
+  const ku = (e) => { if (e.key === ' ' && onJump && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '')) e.preventDefault(); const d = KEYS[e.key]; if (d) release(d); };
   window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
   window.addEventListener('blur', () => held.clear(), { once: true });
-  dpad.querySelectorAll('button').forEach((b) => {
+  const jb = dpad.querySelector('[data-jump]');
+  if (jb) { if (onJump) jb.addEventListener('pointerdown', (e) => { e.preventDefault(); jb.classList.add('down'); onJump(); setTimeout(() => jb.classList.remove('down'), 150); }); else jb.remove(); }
+  dpad.querySelectorAll('button[data-d]').forEach((b) => {
     const d = b.dataset.d;
     const down = () => { b.classList.add('down'); press(d); };
     const up = () => { b.classList.remove('down'); release(d); };
@@ -617,7 +626,7 @@ export function walker(dpad, { onStep, onStop, canWalk = () => true, isAlive }) 
   });
   return { held };
 }
-export const DPAD = `<div class="dpad"><button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button></div>`;
+export const DPAD = `<div class="dpad"><button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button><button data-jump aria-label="Jump" title="Jump">⤴</button></div>`;
 
 // furniture you can play (the piano): tap it for a random note — not while moving furniture
 export function wirePlayable(roomEl, onPlay) {

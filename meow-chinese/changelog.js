@@ -591,4 +591,8 @@ export const CHANGES = [
   { v: 215, items: [
     '⭕ Tic-tac-toe now says how many wins a day earn coins.',
   ] },
+  { v: 216, items: [
+    '⤴ Your cat can jump! Press the space bar on a computer, or the pink ⤴ button by the arrows on a phone. Friends see it too.',
+    '😈 Mole Bop: watch out for purple evil moles with horns — bopping one takes away 1 point.',
+  ] },
 ];

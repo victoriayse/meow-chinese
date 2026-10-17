@@ -81,6 +81,7 @@ export function startHosting(hooks) {
           typingFrom.set(p.id, Date.now()); typingListeners.forEach((fn) => fn(p.id));
         } else if (ev === 'note') {
           if (api.inHouse && api.inHouse()) hearNote(visitors.roomEl, p.i);
+        } else if (ev === 'hop') { visitors.hop(p.id);
         } else if (ev === 'emote') {
           visitors.emote(p.id, p.mood);
           const c = visitors.m.get(p.id);
@@ -154,6 +155,7 @@ export function doneTyping(friendId) {
 export function hostRadio(radio) { if (hostCh && visitors.ids().length) hostCh.send('radio', { id: hostUser, radio }); }
 export function hostPets(pets) { if (hostCh && visitors.ids().length) hostCh.send('pets', { id: hostUser, pets }); }
 export function hostNote(i) { if (hostCh && visitors.ids().length) hostCh.send('note', { id: hostUser, i }); }
+export function hostHop() { if (hostCh && visitors.ids().length) hostCh.send('hop', { id: hostUser }); }
 export function hostEmote(mood) { if (hostCh && visitors.ids().length) hostCh.send('emote', { id: hostUser, mood }); }
 export function hostSay(text) { if (hostCh && visitors.ids().length) hostCh.send('chat', { id: hostUser, text }); }
 export const visitorCount = () => visitors.ids().length;
@@ -224,6 +226,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
         if (petLayer) petLayer.update(house ? house.pets : []);
       } else if (ev === 'note') {
         hearNote($('#room', box), p.i);
+      } else if (ev === 'hop') { others.hop(p.id);
       } else if (ev === 'emote') {
         others.emote(p.id, p.mood);
         const c = others.m.get(p.id);
@@ -252,6 +255,8 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   (placeKey === 'stadium' ? (el, o) => { joystick(el, o); walker(document.createElement('div'), o); } : walker)($(placeKey === 'stadium' ? '.joystick' : '.dpad', n), {
     isAlive: () => n.isConnected,
     canWalk: () => !!(myEl && myEl.isConnected && !myEl.dataset.sliding),
+    // ⤴ jump (space bar / the ⤴ button) — everyone here sees it
+    onJump: () => { if (!myKv || !myEl || !myEl.isConnected || mine.seat || myEl.dataset.sliding) return; myKv.jump(); sfx.click(); ch.send('hop', { id: me }); },
     onStep: (dx, dy, dt) => {
       const room0 = $('#room', box), st = mine.seat && stageOf(mine.seat);
       if (st && dy >= 0) {

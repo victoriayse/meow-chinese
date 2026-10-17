@@ -550,7 +550,7 @@ function homeScreen(params = {}) {
           <button class="tool-btn" id="b-arrange" title="Move furniture">🪑</button>
           <button class="tool-btn" id="b-invite" title="Invite a friend" aria-label="Invite a friend">📨</button>
         </div><div class="house-log-wrap" id="hlog"><div class="dpad" id="dpad">
-            <button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button>
+            <button data-d="up" aria-label="Up">▲</button><button data-d="left" aria-label="Left">◀</button><button data-d="down" aria-label="Down">▼</button><button data-d="right" aria-label="Right">▶</button><button data-jump aria-label="Jump" title="Jump">⤴</button>
           </div></div><div class="house-chat-wrap" id="hchat"></div>` : `<div class="ground" id="ground"><div class="kitten-wrap" id="kwrap"><div class="fx-layer" id="fx"></div></div></div>`}
     </div>
     <div class="side">
@@ -774,15 +774,22 @@ function homeScreen(params = {}) {
   const release = (d) => held.delete(d);
   const KEYS = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
   if (room) {
+    // ⤴ jump: space bar on a computer, the ⤴ button on a phone (friends visiting see it too)
+    const hopNow = () => { if (md.face === 'faint' || seatNow()) return; kv.jump(); sfx.click(); Visit.hostHop(); };
+    const typingNow = () => /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '');
     const kd = (e) => {
       if (!ground.isConnected) { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); return; }
-      const d = KEYS[e.key]; if (!d || !document.querySelector('#modal').classList.contains('hidden')) return;
+      if (e.key === ' ' && !typingNow() && document.querySelector('#modal').classList.contains('hidden')) {
+        e.preventDefault(); if ((document.activeElement || {}).tagName === 'BUTTON') document.activeElement.blur(); if (!e.repeat) hopNow(); return;
+      }
+      const d = KEYS[e.key]; if (!d || typingNow() || !document.querySelector('#modal').classList.contains('hidden')) return;
       e.preventDefault(); press(d);
     };
-    const ku = (e) => { const d = KEYS[e.key]; if (d) release(d); };
+    const ku = (e) => { if (e.key === ' ' && !typingNow()) e.preventDefault(); const d = KEYS[e.key]; if (d) release(d); };
+    { const jb = $('#dpad', n).querySelector('[data-jump]'); if (jb) jb.addEventListener('pointerdown', (e) => { e.preventDefault(); jb.classList.add('down'); hopNow(); setTimeout(() => jb.classList.remove('down'), 150); }); }
     window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
     window.addEventListener('blur', () => held.clear(), { once: true });
-    $('#dpad', n).querySelectorAll('button').forEach((b) => {
+    $('#dpad', n).querySelectorAll('button[data-d]').forEach((b) => {
       const d = b.dataset.d;
       const down = () => { b.classList.add('down'); press(d); };
       const up = () => { b.classList.remove('down'); release(d); };

@@ -21,7 +21,7 @@ export const MOLE_TIERS = [[30, 1], [50, 2], [80, 3], [100, 4], [120, 5]];
 const ticketsFor = (score) => MOLE_TIERS.reduce((t, [g, n]) => (score >= g ? n : t), 0);
 
 // pixel art: a mole (normal and bopped), and the red mallet
-const PAL = { o: '#1e1a28', b: '#8c5634', B: '#6a3f24', l: '#c48a5c', w: '#ffffff', k: '#1e1a28', p: '#ff9ec4', n: '#3a2418', y: '#ffd23f',
+const PAL = { v: '#6b3fa0', V: '#a77fd6', o: '#1e1a28', b: '#8c5634', B: '#6a3f24', l: '#c48a5c', w: '#ffffff', k: '#1e1a28', p: '#ff9ec4', n: '#3a2418', y: '#ffd23f',
   r: '#e8384f', R: '#a3202f', h: '#ffd0d6', t: '#c98f58', T: '#8a5a32' };
 const MOLE = [
   '.....oooooo.....',
@@ -40,6 +40,24 @@ const MOLE = [
   'obbbbbbbbbbbbbbo',
 ];
 const BOPPED = MOLE.map((r, i) => (i === 4 ? '.obbkbkbbkbkbbo.' : i === 5 ? 'obbbbkbbbbkbbbbo' : r));
+// 😈 the evil mole: purple, little horns, angry eyebrows and red eyes — bopping it LOSES a point
+const EVIL = [
+  '..oo.oooooo.oo..',
+  '.oyyovvvvvvoyyo.',
+  '..ovvvvvvvvvvo..',
+  '.ovvkkvvvvkkvvo.',
+  '.ovvvkkvvkkvvvo.',
+  'ovvvwrvvvvrwvvvo',
+  'ovvvvvvvvvvvvvvo',
+  'ovvVVVVnnVVVVvvo',
+  'ovVVVVnnnnVVVVvo',
+  'ovVVVwVVVVwVVVvo',
+  'ovvVVVVVVVVVVvvo',
+  'ovvvVVVVVVVVvvvo',
+  'ovvvvvvvvvvvvvvo',
+  'ovvvvvvvvvvvvvvo',
+];
+const EVIL_BOPPED = EVIL.map((r, i) => (i === 5 ? 'ovvvvkvvvvkvvvvo' : i === 4 ? '.ovvkvkvvkvkvvo.' : r));
 const MALLET = [
   '.oooooooooo.....',
   'orrrrrrrrrro....',
@@ -77,18 +95,23 @@ export function openMole(onDone = () => {}) {
   for (let i = 0; i < HOLES; i++) {
     const h = html`<div class="mole-hole"><div class="mole-pit"><div class="mole"></div></div><div class="mole-lip"></div></div>`;
     const m = $('.mole', h); m.append(sprite(MOLE, 5)); const hit = sprite(BOPPED, 5); hit.classList.add('bopped'); m.append(hit);
+    const ev = sprite(EVIL, 5); ev.classList.add('evil'); m.append(ev); const evHit = sprite(EVIL_BOPPED, 5); evHit.classList.add('evil', 'bopped'); m.append(evHit);
     holesEl.append(h);
     const hole = { el: h, mole: m, up: false, hit: false, downT: 0 };
     // pointerdown, not click: a quick tap on a phone counts straight away
     h.addEventListener('pointerdown', (e) => { e.preventDefault(); whack(hole, i); });
     holes.push(hole);
   }
-  let state = 'idle', score = 0, level = 1, endT = 0, alive = true, spawnT = 0, clockT = 0;
+  let state = 'idle', score = 0, misses = 0, level = 1, endT = 0, alive = true, spawnT = 0, clockT = 0;
   const music = moleMusic();
   const say = (t) => { msg.innerHTML = t; hydrateIcons(msg); };
   const showBoard = (d) => { boardBox.innerHTML = boardHtml(d); };
   showBoard(boardCache); loadMoleBoard().then((d) => { if (alive) showBoard(d); });
-  say(`<span class="zh">投币开始！地鼠出来就点它。</span> Put a coin in, then tap the moles when they pop up!<br><small>${TIME}s · <span class="zh">每打${PER_LEVEL}只升一级，越来越快！</span> every ${PER_LEVEL} moles = next level — faster and more moles!</small>`);
+  const intro = () => say(`<span class="zh">投币开始！地鼠出来就点它。</span> Put a coin in, then tap the moles when they pop up!<br><small>${TIME}s · <span class="zh">每打${PER_LEVEL}只升一级，越来越快！</span> every ${PER_LEVEL} moles = next level — faster and more moles!</small>
+      <div class="mole-evil-tip"><span class="mole-evil-pic"></span><span>😈 <span class="zh">小心紫色的坏地鼠！打到它会扣1分。</span><br>Watch out for the purple <b>evil mole</b> with horns — bopping it takes away <b>1 point</b>!</span></div>`);
+  intro();
+  const showTipPic = () => { const p = $('.mole-evil-pic', msg); if (p && !p.firstChild) { const c = document.createElement('canvas'); drawGrid(c, artGrid(EVIL, PAL), 2.5); p.append(c); } };
+  showTipPic();
   const hud = () => {
     $('.bb-level', box).textContent = `LV ${level}`;
     $('.bb-score', box).textContent = `🐹 ${score}`;
@@ -102,6 +125,9 @@ export function openMole(onDone = () => {}) {
     const L = lv(level), free = holes.filter((h) => !h.up);
     if (!free.length || holes.filter((h) => h.up).length >= L.max) return;
     const h = free[Math.floor(Math.random() * free.length)];
+    // now and then it's an evil one (a little more often at higher levels) — never the very first mole
+    h.evil = score + misses > 1 && Math.random() < Math.min(0.28, 0.12 + level * 0.02);
+    h.el.classList.toggle('evil', h.evil);
     h.up = true; h.hit = false; h.el.classList.remove('hit'); h.el.classList.add('up');
     h.mole.style.transitionDuration = `${Math.max(110, 200 - level * 15)}ms`;
     clearTimeout(h.downT); h.downT = setTimeout(() => goDown(h), L.up);
@@ -115,9 +141,10 @@ export function openMole(onDone = () => {}) {
     swing(i);
     if (!h.up || h.hit || !h.el.classList.contains('up')) return;
     h.hit = true; h.el.classList.add('hit'); bonk();
+    if (h.evil) { score = Math.max(0, score - 1); misses++; sfx.miss(); flash('😈 <b>-1</b>'); field.classList.remove('oops'); void field.offsetWidth; field.classList.add('oops'); hud(); goDown(h, 260); return; }
     score++; hud(); goDown(h, 260);
     const nl = Math.floor(score / PER_LEVEL) + 1;
-    if (nl !== level) { level = nl; music.setLevel(level); hud(); flash(`⬆️ <b>LEVEL ${level}</b>`); sfx.correct && sfx.correct(); }
+    if (nl > level) { level = nl; music.setLevel(level); hud(); flash(`⬆️ <b>LEVEL ${level}</b>`); sfx.correct && sfx.correct(); }
   }
   // 🔨 the red mallet swings down onto the hole she tapped
   let swingT = 0;
@@ -149,7 +176,7 @@ export function openMole(onDone = () => {}) {
     if (state !== 'idle') return;
     if (S.get().coins < MOLE_COST) return toast(`金币不够 · You need ${MOLE_COST} coins`);
     S.get().coins -= MOLE_COST; S.save(); sfx.coin && sfx.coin();
-    state = 'playing'; score = 0; level = 1; music.setLevel(1); endT = performance.now() + TIME * 1000;
+    state = 'playing'; score = 0; misses = 0; level = 1; music.setLevel(1); endT = performance.now() + TIME * 1000;
     holes.forEach((h) => { clearTimeout(h.downT); h.up = false; h.hit = false; h.el.classList.remove('up', 'hit'); });
     coinBtn.disabled = true; field.classList.add('on');
     say('<span class="zh">快！打地鼠！</span> Bop those moles!'); hud(); flash('🔨 <b>GO!</b>');
