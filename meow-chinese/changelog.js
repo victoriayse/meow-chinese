@@ -642,4 +642,7 @@ export const CHANGES = [
   { v: 227, items: [
     '☕ Tap the cup when the espresso is ready and your kitten holds it in her paw. Tap Drink at the bottom to drink it.',
   ] },
+  { v: 228, items: [
+    '🛒 New MeowMart tab in My items: everything from the Supermarket and MeowMart is kept there. Food and Drinks now hold your MeowFood orders and coffee.',
+  ] },
 ];

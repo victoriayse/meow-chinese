@@ -61,7 +61,7 @@ export function decorGroup(it) {
 const SLOT_NAME = Object.fromEntries(WEAR_SLOTS.map(([k, zh]) => [k, zh]));
 // tab order: everyday things first (food, toiletries), then what she has unlocked (by level), locked ones last
 export function orderTabs(tabs) {
-  const daily = ['food', 'meals', 'drinks', 'toiletry'], lv = (t) => t.order ?? (t.lock ? S.UNLOCKS[t.lock] : 0);
+  const daily = ['food', 'meals', 'drinks', 'grocery', 'toiletry'], lv = (t) => t.order ?? (t.lock ? S.UNLOCKS[t.lock] : 0);
   const locked = (t) => t.lock && !S.unlocked(t.lock);
   const rest = tabs.filter((t) => !daily.includes(t.key));
   return [...daily.map((k) => tabs.find((t) => t.key === k)).filter(Boolean),
@@ -285,6 +285,7 @@ const MY_TABS = [
   // v226: groceries and deliveries she has kept (Supermarket / MeowMart / MeowFood / the coffee machine)
   { key: 'meals', zh: '食物', en: 'Food', icon: '🍱', snack: 'food', shop: 'food' },
   { key: 'drinks', zh: '饮料', en: 'Drinks', icon: '🥤', snack: 'drink', shop: 'food' },
+  { key: 'grocery', zh: '超市', en: 'MeowMart', icon: '🛒', snack: 'grocery', shop: 'food' },
   { key: 'toiletry', zh: '洗护用品', en: 'Toiletries', icon: '🧴', use: 'groom', shop: 'toiletry', test: (it) => it.cat === 'toiletry' },
   { key: 'toys', lock: 'decor', zh: '玩具', en: 'Toys', icon: '🧶', use: 'play', shop: 'decor', test: (it) => !!it.toy },
   { key: 'head', lock: 'head', zh: '头饰', en: 'Hair', icon: '🎀', shop: 'head', test: (it) => it.cat === 'wear' && it.slot === 'head' },
@@ -325,8 +326,9 @@ export function wardrobeScreen({ go, tab }) {
       return `<button class="aisle ${t.key === tab ? 'on' : ''} ${locked ? 'locked' : ''}" data-tab="${t.key}"><span class="ic">${locked ? '🔒' : t.icon}</span><span class="zh">${t.zh}</span><small>${locked ? `Lv${S.UNLOCKS[t.lock]}` : t.en}</small></button>`;
     }).join('');
     const def = tabs.find((t) => t.key === tab);
-    $('#my-note', n).innerHTML = def.snack === 'food' ? '你买的和外卖送来的食物。点一下就吃！<br>Food you bought or had delivered — tap to eat it.'
-      : def.snack === 'drink' ? '你买的和外卖送来的饮料。点一下就喝！<br>Drinks you bought or had delivered — tap to drink.'
+    $('#my-note', n).innerHTML = def.snack === 'food' ? '外卖送来的饭菜。点一下就吃！<br>Meals from MeowFood and more — tap to eat.'
+      : def.snack === 'drink' ? '外卖送来的饮料和你做的咖啡。点一下就喝！<br>Drinks from MeowFood and your coffee machine — tap to drink.'
+      : def.snack === 'grocery' ? '超市和喵喵超市买的东西。吃、喝或者拿着！<br>Things from the Supermarket and MeowMart — eat, drink or hold them.'
       : def.use === 'feed' ? '点食物喂小猫！<br>Tap food to feed your kitten.'
       : def.use === 'groom' ? '点洗发水或梳子帮小猫洗澡！<br>Tap to bath or brush your kitten.'
       : def.use === 'play' ? '点玩具一起玩！<br>Tap a toy to play together.'
@@ -408,7 +410,7 @@ export function wardrobeScreen({ go, tab }) {
   function renderKept(def, list) {
     const have = S.snacks(), held = S.get().holding;
     const kept = (k) => { const sn = SNACKS[k]; return sn && have[k] > 0 && (sn.keep || sn.grocery || sn.delivery); };
-    const ks = SNACK_ORDER.filter((k, i, a) => a.indexOf(k) === i && kept(k) && (def.snack === 'drink' ? !SNACKS[k].noEat && isDrink(k) : SNACKS[k].noEat || !isDrink(k)))
+    const ks = SNACK_ORDER.filter((k, i, a) => a.indexOf(k) === i && kept(k) && (def.snack === 'grocery' ? !!SNACKS[k].grocery : !SNACKS[k].grocery && !SNACKS[k].noEat && (def.snack === 'drink') === isDrink(k)))
       .sort((a, b) => (SNACKS[a].noEat ? 1 : 0) - (SNACKS[b].noEat ? 1 : 0));
     if (!ks.length) {
       list.innerHTML = `<div class="locked-shelf"><div class="big">${def.icon}</div><p class="help">还没有${def.zh}。去超市买，或者用手机点外卖吧！<br>No ${def.en.toLowerCase()} yet — shop at the Supermarket or order on the phone's 🛵 Delivery app.</p></div>`;
