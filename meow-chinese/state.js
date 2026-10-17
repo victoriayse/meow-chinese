@@ -291,6 +291,7 @@ export const REWARD_ACTS = {
   essay: { zh: '✍️ 看图作文', en: 'Picture writing', per: 'each composition (starting amount — you can change it when checking)', coins: 30, xp: 10 },
   play: { zh: '🎮 陪我玩', en: 'Play with me', per: 'each round with 8/10 or more right', coins: 15, xp: 0 },
   listen: { zh: '🎧 听一听', en: 'Listen & pick (phone game)', per: 'each round with 8/10 or more right', coins: 3, xp: 0 },
+  ttt: { zh: '⭕ 井字棋', en: 'Tic-tac-toe (phone game)', per: 'each game she wins against the kitten (only the first 3 wins a day pay — change that in Daily limits)', coins: 1, xp: 0 },
 };
 export function rewardSetting(k) {
   const d = REWARD_ACTS[k], r = (state.settings.rewards || {})[k] || {};
@@ -333,6 +334,13 @@ export function addXp(n) {
   if (state.lastLevel && state.lastLevel > level()) state.lastLevel = level();
 }
 export const level = () => 1 + Math.floor(xp() / xpPerLevel());
+// set her level straight away (from the parent settings): XP goes to the start of that level
+export function setLevel(lv) {
+  lv = Math.max(1, Math.min(999, Math.round(Number(lv) || 1)));
+  state.kitten.xp = (lv - 1) * xpPerLevel();
+  if (state.lastLevel && state.lastLevel > lv) state.lastLevel = lv;
+  save(); return lv;
+}
 export const levelProgress = () => (xp() % xpPerLevel()) / xpPerLevel();
 export const xpIntoLevel = () => xp() % xpPerLevel();
 
@@ -947,11 +955,12 @@ export const LIMIT_ACTS = {
   match: { zh: '🧩 词语搭配', en: 'Word match', unit: 'sets', item: 'each set', perItem: 0 },
   order: { zh: '🧱 排句子', en: 'Sentence builder', unit: 'sets', item: 'each set', perItem: 0 },
   listen: { zh: '🎧 听一听', en: 'Listen & pick', unit: 'rounds' },
+  ttt: { zh: '⭕ 井字棋', en: 'Tic-tac-toe — paid wins (she can still play for fun after)', unit: 'paid wins', perDayDef: 3 },
 };
 export function limitSetting(k) {
   const d = LIMIT_ACTS[k], r = (state.settings.limits || {})[k] || {};
   const num = (v, def) => { v = Number(v); return v !== null && Number.isFinite(v) && v >= 0 ? Math.round(v) : def; };
-  return { perDay: num(r.perDay, 0), perItem: 'perItem' in d ? num(r.perItem, d.perItem) : null };
+  return { perDay: num(r.perDay, d.perDayDef || 0), perItem: 'perItem' in d ? num(r.perItem, d.perItem) : null };
 }
 export function setLimit(k, field, v) {
   if (!LIMIT_ACTS[k]) return;
@@ -1007,7 +1016,13 @@ export function setHomeActs(list) { state.settings.homeActs = list.filter((k, i)
 // phone game reward
 export const listenRewardInfo = () => rewardFor('listen');
 // tic-tac-toe: every finished game counts towards the daily limit; a win earns the reward
-export function finishTtt(won) { countDone('ttt'); let r = null; if (won) { r = rewardFor('ttt'); state.coins += r.coins; addXp(r.xp); } save(); return r; }
+// tic-tac-toe: a win pays only while she has paid wins left today (3 a day by default; 0 in settings = no limit)
+export const tttPaidLeft = () => { const n = limitSetting('ttt').perDay; return n ? Math.max(0, n - todayCount('tttpaid')) : 99; };
+export function finishTtt(won) {
+  countDone('tttgame'); let r = null;
+  if (won && tttPaidLeft() > 0) { r = rewardFor('ttt'); state.coins += r.coins; addXp(r.xp); countDone('tttpaid'); }
+  save(); return r;
+}
 export function listenReward(right) { countDone('listen'); markTask('listen'); if (right < 8) { save(); return null; } const r = rewardFor('listen'); state.coins += r.coins; addXp(r.xp); save(); return r; }
 
 // ----- flip phone -----

@@ -635,6 +635,10 @@ function settingsView(rerender, go) {
         <button class="btn white" id="xp-sub">－ <span class="zh">减</span> Remove XP</button>
       </div>
       <div class="row"><span class="help" style="margin:0">Quick:</span>${[5, 10, 20, 50, 100].map((v) => `<button class="btn small white" data-xq="${v}">${v}</button>`).join('')}</div>
+      <div class="row coin-box">
+        <label class="field" style="flex:1;min-width:140px">Set her level<input type="number" id="lv-set" min="1" max="999" inputmode="numeric" placeholder="e.g. 20"></label>
+        <button class="btn yellow" id="lv-go">⭐ <span class="zh">设定等级</span> Set level</button>
+      </div>
       <div class="toggle"><span>Unlock all levels (for you to preview everything)<br><small class="help">Hair, shoes, extras, clothes and Home normally unlock at Lv5 / 10 / 15 / 20 / 25.</small></span><button class="switch ${set.unlockAll ? 'on' : ''}" id="ul"></button></div>
       <h3>👨‍👩‍👧 Family</h3>
       <div id="fam-box" class="stack"><p class="help" style="margin:0">Loading…</p></div>
@@ -699,6 +703,12 @@ function settingsView(rerender, go) {
   $('#xp-level', n).onchange = (e) => { S.setXpSetting('level', e.target.value); e.target.value = S.xpPerLevel(); xpPlan(); toast('Saved ✓'); };
   const xamt = () => Math.round(Math.abs(Number($('#xp-amt', n).value)));
   n.addEventListener('click', (e) => { const q = e.target.closest('[data-xq]'); if (q) $('#xp-amt', n).value = q.dataset.xq; });
+  $('#lv-go', n).onclick = async () => {
+    const v = Math.round(Number($('#lv-set', n).value));
+    if (!(v >= 1 && v <= 999)) return toast('Type a level from 1 to 999');
+    if (v < S.level() && !(await confirmBox(`Lower her level to Lv${v}?`, `She is Lv${S.level()} now. Things that unlock above Lv${v} will lock again (anything she already bought stays hers).`, 'Lower it'))) return;
+    S.setLevel(v); $('#lv-set', n).value = ''; xpPlan(); toast(`⭐ Now Lv${S.level()} ✓`);
+  };
   $('#xp-add', n).onclick = () => {
     const v = xamt(); if (!v) return toast('Type how much XP first');
     S.addXp(v); S.save(); $('#xp-amt', n).value = ''; xpPlan(); toast(`Added +${v} XP ✓`);

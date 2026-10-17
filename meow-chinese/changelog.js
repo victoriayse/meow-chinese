@@ -580,4 +580,9 @@ export const CHANGES = [
   { v: 212, items: [
     'Tic-tac-toe has been taken off the phone.',
   ] },
+  { v: 213, items: [
+    '⭕ Tic-tac-toe is back on the phone. Only the first 3 wins a day earn coins — after that it’s just for fun.',
+    '⭐ Parents can now set the kitten’s level straight away in settings (Levels & XP).',
+    '✨ New versions now have to be installed to keep playing (it waits until you finish spelling, an exercise or a composition).',
+  ] },
 ];

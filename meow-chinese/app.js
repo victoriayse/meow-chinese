@@ -12,7 +12,10 @@ import { essayScreen, showEssayReward } from './essay.js';
 import * as Cloud from './cloud.js';
 import { APP_VERSION } from './version.js';
 import * as Weather from './weather.js';
-let pendingNotes = null, notesDismissed = false;   // a newer version is waiting: its "what's new" lines
+let pendingNotes = null, notesDismissed = false;
+// a new version is out: she must update — except mid-exercise (spelling, practice, a composition, parent settings)
+const BUSY_SCREENS = new Set(['spell', 'essay', 'practice', 'parent', 'login', 'setup', 'welcome']);
+let updateWaiting = false;   // a newer version is waiting: its "what's new" lines
 import * as Auth from './auth.js';
 import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
@@ -105,7 +108,7 @@ export function go(name, params = {}, opts = {}) {
   if (node._mounted) node._mounted();
   // soothing music on the calm pages; quiet during spelling so she can hear the words
   if (MUSIC_PAGES.includes(name)) startMusic(); else stopMusic();
-  if (name === 'home' && pendingNotes && !notesDismissed) setTimeout(() => { if (current === 'home') showUpdateNotice(); }, 1500);
+  if (updateWaiting && !BUSY_SCREENS.has(name)) setTimeout(() => { if (!BUSY_SCREENS.has(current)) showForcedUpdate(); }, 600);   // finished the exercise: update now
 }
 function refreshHome() { if (homeRedrawWaits()) return; go('home', current === 'home' ? currentParams : {}, { replace: true }); }
 export function goBack() {
@@ -1590,7 +1593,7 @@ async function checkForUpdate() {
         items = (mod.CHANGES || []).filter((c) => c.v > from && c.v <= to).flatMap((c) => c.items);
       } catch { /* notes unavailable: a plain notice is fine */ }
       pendingNotes = items;
-      if (current === 'home' && !notesDismissed) showUpdateNotice(); else showUpdateBar();
+      showForcedUpdate();
     }
   } catch { /* offline: try again later */ }
 }
@@ -1614,29 +1617,27 @@ async function updateNow(btn) {
   location.reload();
 }
 // the pop-up on the home page: what's new + Update now
-function showUpdateNotice() {
-  if (!$('#modal')?.classList.contains('hidden')) { showUpdateBar(); return; }   // something else is open: just the small bar
+// v213: a new version must be installed — a full-screen notice that can't be closed, so everyone stays on the same
+// version (public places, gates, prizes…). Her progress is backed up before the reload.
+function showUpdateNotice() { showForcedUpdate(); }
+function showUpdateBar() { showForcedUpdate(); }
+// …but never in the middle of spelling, an exercise, a composition or the parent settings: it waits till she's done
+function showForcedUpdate() {
+  updateWaiting = true;
+  if (BUSY_SCREENS.has(current)) return;
+  if (document.querySelector('.force-update')) return;
   document.querySelector('.update-bar')?.remove();
   const items = pendingNotes || [];
-  const n = html`<div class="card stack update-notice">
-      <div class="un-head"><span class="un-star">✨</span><div><b>A new update is ready!</b><small>Here’s what’s new:</small></div></div>
+  const n = html`<div class="force-update" role="alertdialog" aria-modal="true"><div class="card stack update-notice">
+      <div class="un-head"><span class="un-star">✨</span><div><b><span class="zh">有新版本！</span> A new update is ready!</b><small><span class="zh">请先更新才能继续玩。</span> Please update to keep playing.</small></div></div>
       ${items.length ? `<ul class="un-list">${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="help" style="margin:0">Some improvements and fixes.</p>'}
-      <button class="btn big green block" id="un-go">🔄 Update now</button>
-      <button class="btn white small" id="un-later" style="align-self:center">Later</button>
-    </div>`;
+      <button class="btn big green block" id="un-go">🔄 <span class="zh">马上更新</span> Update now</button>
+    </div></div>`;
   $('#un-go', n).onclick = (e) => updateNow(e.currentTarget);
-  $('#un-later', n).onclick = () => { notesDismissed = true; closeModal(); showUpdateBar(); };
-  openModal(n);
-}
-function showUpdateBar() {
-  if (document.querySelector('.update-bar')) return;
-  const bar = html`<div class="update-bar" role="status">
-      <button class="go" type="button">✨ <span class="zh">新版本</span> New version — tap to update</button>
-      <button class="x" type="button" aria-label="Later">✕</button>
-    </div>`;
-  $('.go', bar).onclick = () => (pendingNotes && pendingNotes.length ? (bar.remove(), notesDismissed = false, showUpdateNotice()) : updateNow($('.go', bar)));
-  $('.x', bar).onclick = () => { bar.remove(); setTimeout(() => { updateShown = false; }, 30 * 60000); };   // ask again in 30 minutes
-  document.body.appendChild(bar);
+  // swallow every tap / key outside the button so nothing behind it can be used
+  ['pointerdown', 'click', 'keydown', 'touchstart'].forEach((t) => n.addEventListener(t, (e) => { if (!e.target.closest('#un-go')) { e.stopPropagation(); if (t !== 'touchstart') e.preventDefault(); } }, true));
+  document.body.appendChild(n);
+  try { (document.activeElement || {}).blur?.(); } catch {}
 }
 if (location.protocol === 'https:' || location.hostname === 'localhost') {
   setTimeout(checkForUpdate, 5000);

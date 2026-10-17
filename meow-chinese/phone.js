@@ -27,6 +27,7 @@ const APPS = [
   { key: 'clock', icon: '⏰', zh: '时钟', en: 'Clock' },
   { key: 'notes', icon: '📒', zh: '记事本', en: 'Notes' },
   { key: 'bank', icon: '🏦', zh: '银行', en: 'Bank' },
+  { key: 'ttt', icon: '⭕', zh: '井字棋', en: 'Tic-tac-toe' },
   { key: 'listen', icon: '👂', zh: '听一听', en: 'Listen & pick' },
 ];
 const pinyinOf = (w) => { try { return window.pinyinPro.pinyin(w); } catch { return ''; } };
@@ -268,14 +269,14 @@ export function openPhone({ start = 'home', after } = {}) {
     // ----- tic-tac-toe against the kitten -----
     ttt() {
       header('⭕ 井字棋 Tic-tac-toe');
-      const lim = S.canDo('ttt');
-      if (!lim.ok) { body.appendChild(html`<p class="ph-empty">${S.limitText(lim, 'games')}</p>`); return; }
-      const tw = S.rewardText(S.rewardFor('ttt'));
+      // she can play as much as she likes; only the first few wins each day pay (3 a day unless a parent changes it)
+      const paidLeft = S.tttPaidLeft();
+      const tw = paidLeft ? S.rewardText(S.rewardFor('ttt')) : '';
       const board = Array(9).fill(''), LINES = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
       let over = false;
       const score = (this._ttt = this._ttt || { me: 0, cat: 0, draw: 0 });
       const ui = html`<div class="ttt"><div class="ttt-score">你 You <b id="sm">${score.me}</b> · 平 Draw <b id="sd">${score.draw}</b> · 🐱 <b id="sc">${score.cat}</b></div>
-          <div class="ttt-msg" id="msg">你先走！你是 ❌ · You go first — you are ❌${tw ? `<br><small>赢了得${S.rewardText(S.rewardFor('ttt'), false)} · Win to get ${tw}</small>` : ''}</div>
+          <div class="ttt-msg" id="msg">你先走！你是 ❌ · You go first — you are ❌${tw ? `<br><small>赢了得${S.rewardText(S.rewardFor('ttt'), false)} · Win to get ${tw} <span class="zh">（今天还有${paidLeft}次）</span>(${paidLeft} paid win${paidLeft === 1 ? '' : 's'} left today)</small>` : S.rewardText(S.rewardFor('ttt')) ? '<br><small>今天的奖励拿完了，明天再来！ · No more coins today — just for fun now!</small>' : ''}</div>
           <div class="ttt-board">${board.map((_, i) => `<button data-c="${i}"></button>`).join('')}</div>
           <button class="ph-btn green block" id="again">↺ 再来一局 Play again</button></div>`;
       const cells = [...ui.querySelectorAll('[data-c]')];

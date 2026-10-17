@@ -2072,3 +2072,6 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 @keyframes mole-swing { 0% { transform: rotate(30deg); } 45% { transform: rotate(-62deg); } 65% { transform: rotate(-52deg); } 100% { transform: rotate(-20deg); } }
 .mole-tiers { position: static; flex-direction: row; flex-wrap: wrap; justify-content: center; }
 .mole-field:not(.on) .mole-hole { cursor: default; }
+/* v213: the must-update screen covers everything */
+.force-update { position: fixed; inset: 0; z-index: 99999; background: rgba(20, 16, 40, .82); display: grid; place-items: center; padding: 16px; backdrop-filter: blur(3px); }
+.force-update .update-notice { width: min(440px, 100%); max-height: 90vh; overflow: auto; }
