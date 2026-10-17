@@ -21,14 +21,14 @@ export function snackBar({ onHold = () => {} } = {}) {
     const have = S.snacks(), held = S.get().holding;
     bar.innerHTML = '';
     // books / pencil cases put away in her backpack don't sit in the bar (she can still put them on a table)
-    SNACK_ORDER.filter((k, i, a) => a.indexOf(k) === i && have[k] > 0 && (!SNACKS[k].noEat || held === k)).forEach((k) => {   // v226: things put away (books, soap, tissues…) wait in 🎒 My items
+    SNACK_ORDER.filter((k, i, a) => a.indexOf(k) === i && have[k] > 0 && ((!SNACKS[k].noEat && !SNACKS[k].keep && !SNACKS[k].grocery && !SNACKS[k].delivery) || held === k)).forEach((k) => {   // v230: things put away (books, groceries, deliveries…) wait in 🎒 My items; only what's in her paw shows here
       const b = document.createElement('button'); b.type = 'button'; b.className = `snack-btn ${held === k ? 'held' : ''}`; b.title = `${SNACKS[k].zh} ${SNACKS[k].en}`;
       b.appendChild(snackCanvas(k, 3));
       if (have[k] > 1) b.insertAdjacentHTML('beforeend', `<i class="n">${have[k]}</i>`);
       b.onclick = (e) => { e.stopPropagation(); sfx.click(); S.holdSnack(k); onHold(S.get().holding); };
       bar.appendChild(b);
       // a book or pencil case she is holding: put it back in her bag
-      if (held === k && SNACKS[k].noEat) {
+      if (held === k && (SNACKS[k].noEat || SNACKS[k].keep || SNACKS[k].grocery || SNACKS[k].delivery)) {
         const put = document.createElement('button'); put.type = 'button'; put.className = 'snack-eat put-away-held'; put.innerHTML = '🎒 <span class="zh">放进书包</span> Put away';
         put.onclick = (e) => { e.stopPropagation(); sfx.click(); S.holdSnack(null); onHold(null); };
         bar.appendChild(put);

@@ -55,6 +55,7 @@ const BAG = [
   '....oooooooo....', '...o........o...', '..o..........o..', '..o..........o..', 'oooooooooooooooo', 'offffffffffffffo', 'offffffffffffffo',
   'offffwwwwwwffffo', 'offfwwwwwwwwfffo', 'offfwwwwwwwwfffo', 'offffwwwwwwffffo', 'offffffffffffffo', 'offffffffffffffo', 'offffffffffffffo',
   'offffffffffffffo', 'oFFFFFFFFFFFFFFo', 'oooooooooooooooo'];
+const dropped = new Set();
 export function drawBags(room, roomKey, onChanged) {
   if (!room || roomKey !== 'living') return;
   if (room._dlTimer) clearInterval(room._dlTimer);   // one painter per room
@@ -69,10 +70,12 @@ export function drawBags(room, roomKey, onChanged) {
       if (!n) { if (b) b.remove(); return; }
       if (b && +b.dataset.n === n) return;
       if (b) { b.dataset.n = n; $('.dl-bag-tag', b).textContent = `${sv.icon} ${sv.en} · ${n}`; return; }
-      b = html`<button type="button" class="dl-bag" data-kind="${kind}" data-n="${n}" style="left:${62 + i * 16}%" aria-label="${sv.en} delivery"><span class="dl-bag-tag">${sv.icon} ${sv.en} · ${n}</span></button>`;
+      // the bag drops in only the first time it shows up — when home redraws (cloud sync, friends), it's just there
+      const key = kind + ':' + got.map((d) => d.id).join(','), fresh = !dropped.has(key); dropped.add(key);
+      b = html`<button type="button" class="dl-bag ${fresh ? '' : 'no-drop'}" data-kind="${kind}" data-n="${n}" style="left:${62 + i * 16}%" aria-label="${sv.en} delivery"><span class="dl-bag-tag">${sv.icon} ${sv.en} · ${n}</span></button>`;
       const c = document.createElement('canvas');
       drawGrid(c, artGrid(BAG, { o: '#2b2140', f: sv.color, F: '#1f5a24', w: '#ffffff' }), 4); b.prepend(c);
-      b.onclick = (e) => { e.stopPropagation(); if (room.classList.contains('arranging')) return; const k = openBag(kind); sfx.coin(); toast(`🛍️ <span class="zh">拿到${k}样东西！</span> ${k} item${k === 1 ? '' : 's'} added to your bag (tap them at the bottom)`, { ms: 2600 }); paint(); onChanged(); };
+      b.onclick = (e) => { e.stopPropagation(); if (room.classList.contains('arranging')) return; const k = openBag(kind); sfx.coin(); toast(`🛍️ <span class="zh">${k}样东西放进书包了！</span> ${k} item${k === 1 ? '' : 's'} put in 🎒 My items`, { ms: 2600 }); paint(); onChanged(); };
       room.append(b);
     });
     const coming = onTheWay();

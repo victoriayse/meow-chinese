@@ -68,7 +68,7 @@ export function wireSupermarket(room, { onChanged = () => {} } = {}) {
     showCounter({ querySelector: () => counter }, { ready, waiting: orders().length }, (o, button) => {
       const i = orders().findIndex((x) => x.id === o.id); if (i < 0) return;
       button.disabled = true; const [got] = orders().splice(i, 1); S.addSnack(got.item); S.save();
-      sfx.coin(); toast(`🛍️ <span class="zh">拿到${SNACKS[got.item].zh}了</span> In your bag — tap it at the bottom`, { ms: 1800 });
+      sfx.coin(); toast(`🛍️ <span class="zh">拿到${SNACKS[got.item].zh}了</span> Put in 🎒 My items → 🛒 MeowMart`, { ms: 1800 });
       onChanged(); show();
     }, 'supermarket');
   }

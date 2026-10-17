@@ -648,4 +648,8 @@ export const CHANGES = [
   { v: 229, items: [
     '🧊 The fridge door now swings open on its hinge when you tap it, and swings shut when you tap again.',
   ] },
+  { v: 230, items: [
+    '🛍️ Tapping a delivery bag now puts everything into 🎒 My items (MeowMart, Food or Drinks), not in your paw.',
+    '🛵 Fixed: delivery bags no longer blink when your home redraws.',
+  ] },
 ];
