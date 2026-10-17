@@ -1173,6 +1173,8 @@ function homeScreen(params = {}) {
       const d = e.target.closest('.decor.tap-open');
       if (!d || room.classList.contains('arranging') || e.target.closest('button')) return;
       S.toggleOpen(d.dataset.id); sfx.click();
+      // a fridge door: swing it on its hinge, right where it stands
+      if (d.classList.contains('door-swing')) { d.classList.toggle('door-open', !!(S.get().openThings || {})[d.dataset.id]); Visit.hostResendHouse(); return; }
       const entry = roomLayout(S.get(), roomKey, S.roomOf).find((x) => x.id === d.dataset.id);
       const ne = entry && decorEl(entry, { putAway: true }); if (ne) { ne.style.zIndex = d.style.zIndex; ne.classList.add('swung'); d.replaceWith(ne); }
       Visit.hostResendHouse();

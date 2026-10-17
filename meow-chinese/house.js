@@ -291,6 +291,14 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
     drawGrid(ring, g.slice(0, sp.cy * 2 + 1).map((row, y) => row.slice(0, sp.cx * 2 + 1).map((v, x) => (inRing(x, y) ? v : null))), HOUSE.decor);
     head.appendChild(ring); wrap.append(c, head);
   } else wrap.appendChild(c);
+  if (it.doorSwing && it.frames && it.frames.open) {
+    // v229: a door on a hinge — the inside is always drawn, and the door swings open over it (and shut again)
+    drawGrid(c, artGrid(it.frames.open, it.pal), HOUSE.decor * (it.size || 1) * scale);
+    const door = document.createElement('canvas'); door.className = 'swing-door';
+    drawGrid(door, artGrid(it.art.map((row, y) => (y >= it.art.length - (it.doorSwing.legs || 0) ? row.replace(/./g, '.') : row)), it.pal), HOUSE.decor * (it.size || 1) * scale);
+    wrap.classList.add('door-swing'); if (opened) wrap.classList.add('door-open');
+    wrap.appendChild(door);
+  }
   if (it.ride) {
     // playground rides: the part that moves is drawn on its own layer (the swing's seat, the see-saw's plank, the merry-go-round's turning frames)
     wrap.classList.add('ride'); wrap.dataset.ride = it.ride.kind;

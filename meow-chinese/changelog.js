@@ -645,4 +645,7 @@ export const CHANGES = [
   { v: 228, items: [
     '🛒 New MeowMart tab in My items: everything from the Supermarket and MeowMart is kept there. Food and Drinks now hold your MeowFood orders and coffee.',
   ] },
+  { v: 229, items: [
+    '🧊 The fridge door now swings open on its hinge when you tap it, and swings shut when you tap again.',
+  ] },
 ];
