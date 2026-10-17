@@ -639,4 +639,7 @@ export const CHANGES = [
     '🐟 The old Food tab is now called Kitten food.',
     '🎒 Fixed: Put away now really puts soap, tissues and other things back in your bag.',
   ] },
+  { v: 227, items: [
+    '☕ Tap the cup when the espresso is ready and your kitten holds it in her paw. Tap Drink at the bottom to drink it.',
+  ] },
 ];

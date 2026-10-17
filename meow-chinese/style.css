@@ -2218,3 +2218,5 @@ img.gone { min-height: 40px; font-size: 11px; }
 @keyframes cm-pod { 0% { opacity: 1; transform: translateY(-20px); } 80% { opacity: 1; transform: translateY(14px); } 100% { opacity: 0; transform: translateY(16px); } }
 .stage > .dl-coming { top: auto; bottom: 1%; }
 .stage > .dl-bag { bottom: 6%; }
+.cm-cup.full { animation: cm-bob 1.2s ease-in-out infinite; }
+@keyframes cm-bob { 50% { transform: translate(-50%, -3px); } }

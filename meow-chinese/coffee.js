@@ -56,10 +56,10 @@ export function openCoffeeMachine(onChanged = () => {}) {
   };
   cup.onclick = () => {
     if (!ready) return;
-    ready = false; S.addSnack('espresso'); const st = S.get(); st.espressoMade = [...(st.espressoMade || []), Date.now()]; S.save();
-    $('.cm-stage', box).classList.remove('brew'); sfx.coin(); onChanged();
-    toast('☕ <span class="zh">拿到浓缩咖啡了！一天内要喝掉哦。</span> Espresso in your bag — drink it within a day!', { ms: 2600 });
-    draw();
+    ready = false; S.addSnack('espresso'); const st = S.get(); st.espressoMade = [...(st.espressoMade || []), Date.now()];
+    st.holding = 'espresso'; S.save();                     // v227: she picks the cup up — it's in her paw
+    sfx.coin(); closeModal(); onChanged();
+    toast('☕ <span class="zh">拿着一杯浓缩咖啡！点下面的“喝”来喝。一天内要喝掉哦。</span> You are holding your espresso — tap Drink at the bottom. Drink it within a day!', { ms: 3000 });
   };
   $('#cm-close', box).onclick = closeModal;
   draw(); openModal(box);
