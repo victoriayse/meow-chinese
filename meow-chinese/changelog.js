@@ -633,4 +633,10 @@ export const CHANGES = [
   { v: 225, items: [
     '🛵 Fixed: delivery bags and the "on the way" notice no longer blink on and off.',
   ] },
+  { v: 226, items: [
+    '🎒 My items has two new tabs, 🍱 Food and 🥤 Drinks: everything you bought at the Supermarket or had delivered is kept there.',
+    '✋ In those tabs, tap Eat / Drink to have it now, or Hold to carry it in your paw.',
+    '🐟 The old Food tab is now called Kitten food.',
+    '🎒 Fixed: Put away now really puts soap, tissues and other things back in your bag.',
+  ] },
 ];

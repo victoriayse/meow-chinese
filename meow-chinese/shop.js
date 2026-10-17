@@ -1,6 +1,7 @@
 // 喵喵商店 storefront (spend coins) and the wardrobe (dress up / home).
 import * as S from './state.js';
-import { ITEMS, spriteCanvas, itemEffect, WEAR_SLOTS } from './pixel.js';
+import { ITEMS, SNACKS, SNACK_ORDER, spriteCanvas, itemEffect, WEAR_SLOTS } from './pixel.js';
+import { snackCanvas, isDrink } from './snacks.js';
 import { $, html, esc, coinI, hydrateIcons, KittenView, toast, burst, confirmBox } from './ui.js';
 import { sfx } from './audio.js';
 import * as Auth from './auth.js';
@@ -60,7 +61,7 @@ export function decorGroup(it) {
 const SLOT_NAME = Object.fromEntries(WEAR_SLOTS.map(([k, zh]) => [k, zh]));
 // tab order: everyday things first (food, toiletries), then what she has unlocked (by level), locked ones last
 export function orderTabs(tabs) {
-  const daily = ['food', 'toiletry'], lv = (t) => t.order ?? (t.lock ? S.UNLOCKS[t.lock] : 0);
+  const daily = ['food', 'meals', 'drinks', 'toiletry'], lv = (t) => t.order ?? (t.lock ? S.UNLOCKS[t.lock] : 0);
   const locked = (t) => t.lock && !S.unlocked(t.lock);
   const rest = tabs.filter((t) => !daily.includes(t.key));
   return [...daily.map((k) => tabs.find((t) => t.key === k)).filter(Boolean),
@@ -280,7 +281,10 @@ export function shopScreen({ go, tab = 'food' }) {
 
 // ---------- 🎒 My items: food, toiletries, toys, clothes and home — one tab per kind, like the shop ----------
 const MY_TABS = [
-  { key: 'food', zh: '食物', en: 'Food', icon: '🐟', use: 'feed', shop: 'food', test: (it) => it.cat === 'food' },
+  { key: 'food', zh: '猫粮', en: 'Kitten food', icon: '🐟', use: 'feed', shop: 'food', test: (it) => it.cat === 'food' },
+  // v226: groceries and deliveries she has kept (Supermarket / MeowMart / MeowFood / the coffee machine)
+  { key: 'meals', zh: '食物', en: 'Food', icon: '🍱', snack: 'food', shop: 'food' },
+  { key: 'drinks', zh: '饮料', en: 'Drinks', icon: '🥤', snack: 'drink', shop: 'food' },
   { key: 'toiletry', zh: '洗护用品', en: 'Toiletries', icon: '🧴', use: 'groom', shop: 'toiletry', test: (it) => it.cat === 'toiletry' },
   { key: 'toys', lock: 'decor', zh: '玩具', en: 'Toys', icon: '🧶', use: 'play', shop: 'decor', test: (it) => !!it.toy },
   { key: 'head', lock: 'head', zh: '头饰', en: 'Hair', icon: '🎀', shop: 'head', test: (it) => it.cat === 'wear' && it.slot === 'head' },
@@ -321,7 +325,9 @@ export function wardrobeScreen({ go, tab }) {
       return `<button class="aisle ${t.key === tab ? 'on' : ''} ${locked ? 'locked' : ''}" data-tab="${t.key}"><span class="ic">${locked ? '🔒' : t.icon}</span><span class="zh">${t.zh}</span><small>${locked ? `Lv${S.UNLOCKS[t.lock]}` : t.en}</small></button>`;
     }).join('');
     const def = tabs.find((t) => t.key === tab);
-    $('#my-note', n).innerHTML = def.use === 'feed' ? '点食物喂小猫！<br>Tap food to feed your kitten.'
+    $('#my-note', n).innerHTML = def.snack === 'food' ? '你买的和外卖送来的食物。点一下就吃！<br>Food you bought or had delivered — tap to eat it.'
+      : def.snack === 'drink' ? '你买的和外卖送来的饮料。点一下就喝！<br>Drinks you bought or had delivered — tap to drink.'
+      : def.use === 'feed' ? '点食物喂小猫！<br>Tap food to feed your kitten.'
       : def.use === 'groom' ? '点洗发水或梳子帮小猫洗澡！<br>Tap to bath or brush your kitten.'
       : def.use === 'play' ? '点玩具一起玩！<br>Tap a toy to play together.'
       : def.key === 'decor' ? '点家具放进房间或收进收纳箱。点 💰 卖回商店。<br>Tap to put it in a room or in storage · 💰 sells it back.'
@@ -335,6 +341,7 @@ export function wardrobeScreen({ go, tab }) {
       list.innerHTML = `<div class="locked-shelf"><div class="big">🔒</div><div class="h-title" style="justify-content:center"><span class="zh">${def.zh}要到 Lv${need} 才解锁</span></div><p class="help">${def.en} unlock at level ${need}. You're level ${lv}.</p></div>`;
       return;
     }
+    if (def.snack) return renderKept(def, list);
     const counted = def.use === 'feed' || def.use === 'groom';
     const ids = counted ? Object.keys(s.pantry).filter((id) => s.pantry[id] > 0 && ITEMS[id] && def.test(ITEMS[id]))
       : s.owned.filter((id) => ITEMS[id] && def.test(ITEMS[id]));
@@ -391,6 +398,40 @@ export function wardrobeScreen({ go, tab }) {
         // eating, bathing and playing happen at home, so she can watch her kitten
         if (def.use) { S.setPendingCare({ kind: def.use, id }); go('home'); return; }
         if (placeable) S.toggleDecor(id); else S.toggleWear(id);
+        render(); kv.flash('happy', 900);
+      };
+      list.appendChild(card);
+    });
+    hydrateIcons(n);
+  }
+  // 🍱 / 🥤 the groceries and deliveries she kept: tap food or a drink to have it now; other things (soap, tissues…) she can hold
+  function renderKept(def, list) {
+    const have = S.snacks(), held = S.get().holding;
+    const kept = (k) => { const sn = SNACKS[k]; return sn && have[k] > 0 && (sn.keep || sn.grocery || sn.delivery); };
+    const ks = SNACK_ORDER.filter((k, i, a) => a.indexOf(k) === i && kept(k) && (def.snack === 'drink' ? !SNACKS[k].noEat && isDrink(k) : SNACKS[k].noEat || !isDrink(k)))
+      .sort((a, b) => (SNACKS[a].noEat ? 1 : 0) - (SNACKS[b].noEat ? 1 : 0));
+    if (!ks.length) {
+      list.innerHTML = `<div class="locked-shelf"><div class="big">${def.icon}</div><p class="help">还没有${def.zh}。去超市买，或者用手机点外卖吧！<br>No ${def.en.toLowerCase()} yet — shop at the Supermarket or order on the phone's 🛵 Delivery app.</p></div>`;
+      return;
+    }
+    ks.forEach((k) => {
+      const sn = SNACKS[k], drink = isDrink(k), on = held === k;
+      const eff = sn.noEat ? '' : [sn.hunger ? `+${sn.hunger} 🍗` : '', sn.water ? `+${sn.water} 💧` : '', sn.happy ? `+${sn.happy} ❤` : ''].filter(Boolean).join(' ');
+      const action = sn.noEat ? (on ? '✋ 放下 Put away' : '✋ 拿着 Hold') : drink ? '💧 喝 Drink' : '🍽️ 吃 Eat';
+      const card = html`<button type="button" class="product ${on ? 'sel' : ''}"><span class="count">×${have[k]}</span>
+          <div class="art"></div><div class="shelf-board"></div>
+          <div class="nm">${esc(sn.zh)}</div><div class="nm-en">${esc(sn.en)}</div>
+          ${eff ? `<div class="eff">${eff}</div>` : ''}<span class="tag ${on && sn.noEat ? 'done' : ''}">${action}</span>
+          ${sn.noEat ? '' : `<span class="sell-tag hold-tag" role="button" tabindex="0" title="Hold it in her paw">✋ <span class="zh">${on ? '放下' : '拿着'}</span> ${on ? 'Put away' : 'Hold'}</span>`}</button>`;
+      $('.art', card).appendChild(snackCanvas(k, 5));
+      const hold = $('.hold-tag', card);
+      if (hold) hold.onclick = (e) => { e.stopPropagation(); sfx.click(); S.holdSnack(on ? null : k); render(); kv.flash('happy', 600); toast(on ? '🎒 <span class="zh">放回书包了</span> Put back in your bag' : `✋ <span class="zh">拿着${esc(sn.zh)}</span> Holding it — eat it any time from the bar at the bottom`, { ms: 2000 }); };
+      card.onclick = () => {
+        sfx.click();
+        if (sn.noEat) { S.holdSnack(on ? null : k); render(); return; }
+        if (S.get().holding !== k) S.holdSnack(k);
+        const got = S.eatSnack(); if (!got) return render();
+        sfx.coin(); toast(`😋 <span class="zh">${esc(sn.zh)}真好${drink ? '喝' : '吃'}！</span> Yum!`, { ms: 1800 });
         render(); kv.flash('happy', 900);
       };
       list.appendChild(card);
