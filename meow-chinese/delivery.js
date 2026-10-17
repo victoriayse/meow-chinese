@@ -57,28 +57,33 @@ const BAG = [
   'offffffffffffffo', 'oFFFFFFFFFFFFFFo', 'oooooooooooooooo'];
 export function drawBags(room, roomKey, onChanged) {
   if (!room || roomKey !== 'living') return;
-  let t = null, seen = false;
+  if (room._dlTimer) clearInterval(room._dlTimer);   // one painter per room
+  let seen = false;
+  // v225: the bags and the "on the way" pill are kept, not rebuilt every second (that made them blink)
   const paint = () => {
-    if (!room.isConnected) { if (seen) clearInterval(t); return; }
+    if (!room.isConnected) { if (seen) clearInterval(room._dlTimer); return; }
     seen = true;
-    room.querySelectorAll('.dl-bag, .dl-coming').forEach((el) => el.remove());
     ['mart', 'food'].forEach((kind, i) => {
-      const got = arrived(kind); if (!got.length) return;
-      const n = got.reduce((t, d) => t + d.items.length, 0), sv = SERVICES[kind];
-      const b = html`<button type="button" class="dl-bag" style="left:${62 + i * 16}%" aria-label="${sv.en} delivery"><span class="dl-bag-tag">${sv.icon} ${sv.en} · ${n}</span></button>`;
+      const got = arrived(kind), n = got.reduce((t, d) => t + d.items.length, 0), sv = SERVICES[kind];
+      let b = room.querySelector(`.dl-bag[data-kind="${kind}"]`);
+      if (!n) { if (b) b.remove(); return; }
+      if (b && +b.dataset.n === n) return;
+      if (b) { b.dataset.n = n; $('.dl-bag-tag', b).textContent = `${sv.icon} ${sv.en} · ${n}`; return; }
+      b = html`<button type="button" class="dl-bag" data-kind="${kind}" data-n="${n}" style="left:${62 + i * 16}%" aria-label="${sv.en} delivery"><span class="dl-bag-tag">${sv.icon} ${sv.en} · ${n}</span></button>`;
       const c = document.createElement('canvas');
       drawGrid(c, artGrid(BAG, { o: '#2b2140', f: sv.color, F: '#1f5a24', w: '#ffffff' }), 4); b.prepend(c);
       b.onclick = (e) => { e.stopPropagation(); if (room.classList.contains('arranging')) return; const k = openBag(kind); sfx.coin(); toast(`🛍️ <span class="zh">拿到${k}样东西！</span> ${k} item${k === 1 ? '' : 's'} added to your bag (tap them at the bottom)`, { ms: 2600 }); paint(); onChanged(); };
       room.append(b);
     });
     const coming = onTheWay();
-    if (coming.length) {
-      const s = Math.max(1, Math.ceil((Math.min(...coming.map((d) => d.at)) - Date.now()) / 1000));
-      room.append(html`<div class="dl-coming">🛵 <span class="zh">外卖在路上</span> On the way · ${s}s</div>`);
-    }
+    let note = room.querySelector('.dl-coming');
+    if (!coming.length) { if (note) note.remove(); return; }
+    const sec = Math.max(1, Math.ceil((Math.min(...coming.map((d) => d.at)) - Date.now()) / 1000));
+    if (!note) { note = html`<div class="dl-coming">🛵 <span class="zh">外卖在路上</span> On the way · <b></b></div>`; room.append(note); }
+    $('b', note).textContent = `${sec}s`;
   };
   paint();
-  t = setInterval(paint, 1000);
+  room._dlTimer = setInterval(paint, 1000);
 }
 
 // ---------- the phone app ----------

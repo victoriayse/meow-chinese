@@ -630,4 +630,7 @@ export const CHANGES = [
     '🧊 Tap the fridge at home to open and close it.',
     '☕ Tap the coffee machine at home: put a coffee pod in and it pours an espresso. Pick up the cup! It disappears after 1 day.',
   ] },
+  { v: 225, items: [
+    '🛵 Fixed: delivery bags and the "on the way" notice no longer blink on and off.',
+  ] },
 ];
