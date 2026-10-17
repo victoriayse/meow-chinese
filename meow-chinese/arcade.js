@@ -31,7 +31,7 @@ export function machineBoard(el) {
   };
   paint(); loadBoard().then(paint);
 }
-function boardHtml(d) {
+export function boardHtml(d) {
   const rows = (d && d.board) || [];
   return `<div class="bb-board-title">🏆 <span class="zh">排行榜</span> Leaderboard</div>
     ${rows.length ? `<ol>${rows.map((r) => `<li class="${r.me ? 'me' : ''}"><span>${esc(r.name || '—')}</span><b>${r.best}</b></li>`).join('')}</ol>` : '<p class="help" style="margin:4px 0">还没有人上榜 · No scores yet — be the first!</p>'}
@@ -163,7 +163,7 @@ export async function openPrizes() {
   const box = html`<div class="card stack prize-card"><div class="h-title">🎟️ <span class="zh">兑奖处</span> Prize counter</div>
       <div class="row prize-top"><div class="prize-have"></div>${admin ? '<button type="button" class="btn small yellow prize-edit">✏️ <span class="zh">改价钱</span> Edit costs</button>' : ''}</div>
       <div class="prize-list"><p class="help">…</p></div>
-      <p class="help" style="margin:0"><span class="zh">奖券只能在游戏厅赢，不能送人，也不能用金币买。</span><br>Tickets are won at the arcade only (basketball: 5 goals = 1, 8 = 3, 15 = 4, 25 = 6). They can't be given away or bought with coins.</p>
+      <p class="help" style="margin:0"><span class="zh">奖券只能在游戏厅赢，不能送人，也不能用金币买。</span><br>Tickets are won at the arcade only (basketball: 5 goals = 1, 8 = 3, 15 = 4, 25 = 6 · mole bop: every 10 moles = 1, up to 5). They can't be given away or bought with coins.</p>
       <button type="button" class="btn white prize-close">关闭 Close</button></div>`;
   $('.prize-close', box).onclick = closeModal;
   openModal(box);

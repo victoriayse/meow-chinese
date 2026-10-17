@@ -1,5 +1,6 @@
 import * as S from './state.js';
 import { openBasket, openPrizes } from './arcade.js';
+import { openMole } from './mole.js';
 import { ITEMS, SNACKS, spriteCanvas, drawGrid, artGrid, FASHION_EXCLUSIVE, HOME_EXCLUSIVE } from './pixel.js';
 import { rest } from './cloud.js';
 import { html, $, openModal, closeModal, toast, coinI, hydrateIcons } from './ui.js';
@@ -69,6 +70,7 @@ export function wireMall(room, roomKey, layout, go, onChanged = () => {}) {
     if(goods&&d.dataset.id.split('#')[0]===goods.kiosk)return openGoodsKiosk(roomKey,()=>{showBags();setTimeout(showBags,3200);});
     if(it.prizeDesk)return openPrizes();
     if(it.mallGame==='basketball')return openBasket();
+    if(it.mallGame==='mole')return openMole();
     if(it.mallGame)return it.mallGame==='claw'?openClaw():openBowling();
     if(venue&&d.dataset.id.split('#')[0]===venue.kiosk){
       const token=crypto.randomUUID();

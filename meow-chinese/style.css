@@ -2046,3 +2046,29 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .decor .screen-label.now-showing { font-size: 10px; color: #ffe08a; letter-spacing: .5px; text-shadow: 0 0 4px rgba(255,210,63,.8); }
 .decor[data-id^="nowshowing"] .board-text { font-size: 13px; line-height: 1.35; color: #fff6dc; padding: 4px 8px; }
 .decor .vid-restart { width: calc(18px * var(--inv, 1)); height: calc(18px * var(--inv, 1)); font-size: calc(9px * var(--inv, 1)); border-width: calc(2px * var(--inv, 1)); transform: translateX(calc(-150% - 4px)); }
+/* ---------- v210: 🔨 the arcade's mole machine ---------- */
+.mole-card { background: linear-gradient(#ff8a1d, #e9661a); }
+.mole-marquee { color: #fff7b0; text-shadow: 0 0 8px #2c9c3a, 0 2px 0 #000; background: linear-gradient(#a8e04a, #6fbf3a); border: 3px solid #000; border-radius: 10px; padding: 4px; }
+.mole-field { position: relative; border-radius: 12px; border: 3px solid #000; background: radial-gradient(circle at 30% 20%, #8fd65a, #4fa83a); padding: 14px 10px 8px; overflow: hidden; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.mole-holes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 10px; }
+.mole-hole { position: relative; height: 96px; cursor: pointer; }
+.mole-pit { position: absolute; left: 6%; right: 6%; top: 0; bottom: 12px; overflow: hidden; border-radius: 0 0 50% 50% / 0 0 40% 40%; }
+.mole-pit::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 26px; border-radius: 50%; background: #2a1a10; box-shadow: inset 0 4px 0 #120a06; }
+.mole { position: absolute; left: 50%; bottom: 6px; width: 80px; transform: translate(-50%, 110%); transition: transform 180ms ease-out; }
+.mole canvas { display: block; image-rendering: pixelated; }
+.mole canvas.bopped { display: none; }
+.mole-hole.up .mole { transform: translate(-50%, 0); }
+.mole-hole.hit .mole canvas { display: none; }
+.mole-hole.hit .mole canvas.bopped { display: block; }
+.mole-hole.hit .mole { animation: mole-squash 0.25s ease-out; }
+.mole-hole.hit::after { content: '💫'; position: absolute; left: 50%; top: 2px; transform: translateX(-50%); font-size: 20px; animation: mole-stars 0.5s ease-out forwards; pointer-events: none; }
+.mole-lip { position: absolute; left: 6%; right: 6%; bottom: 4px; height: 16px; border-radius: 50%; background: #3e8a2e; border-top: 3px solid #2a1a10; pointer-events: none; }
+@keyframes mole-squash { 0% { transform: translate(-50%, 0) scale(1, 1); } 40% { transform: translate(-50%, 10%) scale(1.15, 0.8); } 100% { transform: translate(-50%, 0) scale(1, 1); } }
+@keyframes mole-stars { from { opacity: 1; transform: translate(-50%, 0) rotate(0); } to { opacity: 0; transform: translate(-50%, -14px) rotate(90deg); } }
+.mole-mallet { position: absolute; width: 64px; z-index: 4; pointer-events: none; opacity: 0; transform-origin: 50% 100%; transform: rotate(30deg); }
+.mole-mallet canvas { display: block; image-rendering: pixelated; }
+.mole-mallet.shown { opacity: 1; }
+.mole-mallet.swing { animation: mole-swing 0.32s ease-in; }
+@keyframes mole-swing { 0% { transform: rotate(30deg); } 45% { transform: rotate(-62deg); } 65% { transform: rotate(-52deg); } 100% { transform: rotate(-20deg); } }
+.mole-tiers { position: static; flex-direction: row; flex-wrap: wrap; justify-content: center; }
+.mole-field:not(.on) .mole-hole { cursor: default; }

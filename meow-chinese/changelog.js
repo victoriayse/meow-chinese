@@ -569,4 +569,8 @@ export const CHANGES = [
     '⏮️ New restart button beside ▶️ on screens — the film starts again from the beginning for everyone watching.',
     '🎬 New Now Showing board for the cinema — tap it to write what’s on.',
   ] },
+  { v: 210, items: [
+    '🔨 New Mole Bop machine for the arcade! 5 coins, 45 seconds — bop the moles with the red mallet.',
+    'Every 10 moles is the next level: faster, more moles, faster music. 10 moles = 1 ticket, up to 5 tickets.',
+  ] },
 ];

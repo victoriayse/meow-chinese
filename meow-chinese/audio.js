@@ -378,3 +378,48 @@ export function cheer() {
   });
   for (let i = 0; i < 9; i++) noiseAt(a, out, t + 0.1 + i * 0.11 + Math.random() * 0.04, 0.05, 0.12, 1800);   // claps
 }
+// 🔨 the mole machine's tune: a bouncy, plinky loop. setLevel(n) speeds it up (level 1 → 120 bpm, +12 bpm a level)
+export function moleMusic() {
+  const a = ac(); if (!a || !on()) return { stop: () => {}, setLevel: () => {} };
+  hushMusic(true);
+  const out = a.createGain(); out.gain.value = 0.5; out.connect(a.destination);
+  const F = (n) => 440 * 2 ** ((n - 69) / 12);
+  let bpm = 120;
+  const chords = [[60, 64, 67], [65, 69, 72], [67, 71, 74], [60, 64, 67]];
+  const lead = [79, null, 76, null, 79, 81, 79, null, 76, null, 72, null, 74, 76, 74, null,
+    77, null, 81, null, 77, 79, 81, null, 84, null, 81, null, 79, 77, 76, null,
+    79, null, 83, null, 79, 81, 83, null, 86, null, 83, null, 81, 79, 77, null,
+    76, 79, 84, null, 79, 76, 72, null, 74, 76, 72, null, 72, null, null, null];
+  let step = 0, next = a.currentTime + 0.08, live = true;
+  const tick = () => {
+    if (!live) return;
+    const STEP = 60 / bpm / 4;
+    while (next < a.currentTime + 0.25) {
+      const bar = Math.floor(step / 16) % 4, s = step % 16, ch = chords[bar], l = lead[step % 64];
+      if (l) noteAt(a, out, F(l), next, STEP * 1.3, 'square', 0.03);
+      if (l) noteAt(a, out, F(l + 12), next, STEP * 0.5, 'triangle', 0.02);          // a xylophone-ish sparkle
+      if (s % 4 === 0) noteAt(a, out, F(ch[0] - 24), next, STEP * 2, 'triangle', 0.15);
+      if (s % 4 === 2) noteAt(a, out, F(ch[2] - 24), next, STEP * 1.5, 'triangle', 0.1);
+      if (s % 4 === 0) { const o = a.createOscillator(), g = a.createGain(); o.frequency.setValueAtTime(150, next); o.frequency.exponentialRampToValueAtTime(50, next + 0.1);
+        g.gain.setValueAtTime(0.22, next); g.gain.exponentialRampToValueAtTime(0.0001, next + 0.12); o.connect(g).connect(out); o.start(next); o.stop(next + 0.14); }
+      if (s % 2 === 1) noiseAt(a, out, next, 0.03, 0.03);
+      next += STEP; step++;
+    }
+  };
+  const timer = setInterval(tick, 50); tick();
+  return {
+    setLevel: (n) => { bpm = 120 + 12 * (Math.max(1, n) - 1); },
+    stop: () => { if (!live) return; live = false; clearInterval(timer); out.gain.setTargetAtTime(0.0001, a.currentTime, 0.08); setTimeout(() => { out.disconnect(); hushMusic(false); }, 400); },
+  };
+}
+// 🔨 bonk! a mallet hitting a mole: a hollow thump and a little squeak
+export function bonk() {
+  const a = ac(); if (!a || !on()) return;
+  const t = a.currentTime, out = a.createGain(); out.gain.value = 0.8; out.connect(a.destination);
+  const o = a.createOscillator(), g = a.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(260, t); o.frequency.exponentialRampToValueAtTime(90, t + 0.12);
+  g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16); o.connect(g).connect(out); o.start(t); o.stop(t + 0.18);
+  noiseAt(a, out, t, 0.05, 0.12);
+  const q = a.createOscillator(), qg = a.createGain(); q.type = 'square'; q.frequency.setValueAtTime(1300, t + 0.06); q.frequency.exponentialRampToValueAtTime(1900, t + 0.14);
+  qg.gain.setValueAtTime(0.0001, t + 0.06); qg.gain.exponentialRampToValueAtTime(0.04, t + 0.08); qg.gain.exponentialRampToValueAtTime(0.0001, t + 0.18); q.connect(qg).connect(out); q.start(t + 0.06); q.stop(t + 0.2);
+  setTimeout(() => out.disconnect(), 400);
+}
