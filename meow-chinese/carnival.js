@@ -9,7 +9,7 @@
 import * as S from './state.js';
 import { KittenView, html, $, openModal, closeModal, toast, coinI, hydrateIcons, confirmBox, esc } from './ui.js';
 import { drawGrid, artGrid } from './pixel.js';
-import { sfx } from './audio.js';
+import { sfx, carnivalMusic } from './audio.js';
 import * as Gallery from './gallery.js';
 
 export const WHEEL_ROOM = 'carnivalwheel', WHEEL_FEE = 10, RIDE_S = 60;
@@ -356,6 +356,7 @@ export function openRide({ me, partner, at, onEnd }) {
       </div>
     </div>`;
   const cv = $('canvas', box), ctx = cv.getContext('2d'), bar = $('.carn-bar i', box), snap = $('.carn-snap', box);
+  const stopMusic = carnivalMusic();   // 🎵 a cheerful carnival tune while the wheel turns (stops when she gets off)
   let frame = 'plain', preview = null, photoTaken = false, alive = true, done = false;
   const drawFrames = () => {
     const fr = $('.carn-frames', box);
@@ -403,10 +404,10 @@ export function openRide({ me, partner, at, onEnd }) {
     requestAnimationFrame(loop);
   };
   function finish() {
-    if (done) return; done = true; alive = false;
+    if (done) return; done = true; alive = false; stopMusic();
     closeModal(); onEnd();
   }
-  openModal(box, { onClose: () => { if (!done) { done = true; alive = false; onEnd(); } } });
+  openModal(box, { onClose: () => { stopMusic(); if (!done) { done = true; alive = false; onEnd(); } } });
   hydrateIcons(box);
   requestAnimationFrame(loop);
 }

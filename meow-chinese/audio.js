@@ -423,3 +423,29 @@ export function bonk() {
   qg.gain.setValueAtTime(0.0001, t + 0.06); qg.gain.exponentialRampToValueAtTime(0.04, t + 0.08); qg.gain.exponentialRampToValueAtTime(0.0001, t + 0.18); q.connect(qg).connect(out); q.start(t + 0.06); q.stop(t + 0.2);
   setTimeout(() => out.disconnect(), 400);
 }
+// 🎡 the Ferris wheel's tune: a cheerful carnival waltz on a little calliope (3/4 time). Returns stop().
+export function carnivalMusic() {
+  const a = ac(); if (!a || !on()) return () => {};
+  hushMusic(true);
+  const out = a.createGain(); out.gain.value = 0.5; out.connect(a.destination);
+  const F = (n) => 440 * 2 ** ((n - 69) / 12);
+  const BEAT = 60 / 150;                          // 150 beats a minute, 3 beats a bar
+  // 8 bars: C – G – G7 – C – F – C – G – C (oom-pah-pah underneath)
+  const bass = [48, 43, 43, 48, 41, 48, 43, 48], chord = [[64, 67], [62, 67], [62, 65], [64, 67], [65, 69], [64, 67], [62, 65], [64, 67]];
+  const tune = [[76, 2], [79, 1], [84, 2], [79, 1], [78, 1], [79, 1], [81, 1], [79, 3], [77, 2], [76, 1], [74, 2], [71, 1], [72, 3],
+    [77, 2], [81, 1], [84, 2], [81, 1], [79, 1], [76, 1], [72, 1], [74, 2], [79, 1], [72, 3]];
+  let next = a.currentTime + 0.1, beat = 0, ti = 0, tLeft = 0, live = true;
+  const tick = () => {
+    if (!live) return;
+    while (next < a.currentTime + 0.3) {
+      const bar = Math.floor(beat / 3) % 8, b = beat % 3;
+      if (b === 0) noteAt(a, out, F(bass[bar]), next, BEAT * 0.9, 'triangle', 0.16);          // oom
+      else chord[bar].forEach((n) => noteAt(a, out, F(n), next, BEAT * 0.45, 'square', 0.018)); // pah pah
+      if (tLeft <= 0) { const [n, len] = tune[ti % tune.length]; ti++; tLeft = len;
+        noteAt(a, out, F(n), next, BEAT * len * 0.92, 'square', 0.03); noteAt(a, out, F(n + 12), next, BEAT * len * 0.5, 'sine', 0.025); }
+      tLeft--; next += BEAT; beat++;
+    }
+  };
+  const timer = setInterval(tick, 60); tick();
+  return () => { if (!live) return; live = false; clearInterval(timer); out.gain.setTargetAtTime(0.0001, a.currentTime, 0.1); setTimeout(() => { out.disconnect(); hushMusic(false); }, 500); };
+}

@@ -616,4 +616,7 @@ export const CHANGES = [
   { v: 221, items: [
     'Fixed: the "Tap the wheel to board" label no longer jumps left and right.',
   ] },
+  { v: 222, items: [
+    '🎵 The Ferris wheel plays a cheerful carnival tune while you ride.',
+  ] },
 ];
