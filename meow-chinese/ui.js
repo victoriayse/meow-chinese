@@ -107,9 +107,9 @@ export function burst(layer, kind = 'heart', n = 3, x = '50%', y = '30%') {
   }
 }
 
-export function toast(content, { coins = 0, ms = 2700, onClick = null, actions = null } = {}) {
+export function toast(content, { coins = 0, ms = 2700, onClick = null, actions = null, cls = '' } = {}) {
   const t = document.createElement('div');
-  t.className = 'toast';
+  t.className = `toast ${cls}`.trim();
   t.innerHTML = content + (coins ? ` <span class="price">+${coins} ${coinI(20)}</span>` : '');
   // a pop-up you can tap (or with buttons), e.g. "your friend is online — visit?"
   if (onClick || actions) {

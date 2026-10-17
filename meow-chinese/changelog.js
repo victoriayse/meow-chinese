@@ -585,4 +585,7 @@ export const CHANGES = [
     '⭐ Parents can now set the kitten’s level straight away in settings (Levels & XP).',
     '✨ New versions now have to be installed to keep playing (it waits until you finish spelling, an exercise or a composition).',
   ] },
+  { v: 214, items: [
+    '🟢 On phones, "a friend is online" is now a small pill at the top, without buttons.',
+  ] },
 ];

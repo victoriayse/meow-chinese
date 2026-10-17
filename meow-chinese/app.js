@@ -1506,7 +1506,7 @@ Friends.onFriends(() => {
     if (onlineBefore.has(id)) return;
     const f = Friends.acceptedFriends().find((x) => x.other === id), name = Friends.friendName(f);
     const locked = !!(f && f.card && f.card.locked);    // their house is locked: no visiting
-    toast(`🟢 <span class="zh">${esc(name)}上线了！</span> ${esc(name)} is online`, { ms: 9000,
+    toast(`🟢 <span class="zh">${esc(name)}上线了！</span> ${esc(name)} is online`, { ms: 9000, cls: 'online-toast',
       actions: [...(locked ? [] : [{ label: '🏠 <span class="zh">去串门</span> Visit', fn: () => go('visit', { id, name }) }]),
         { label: '📨 <span class="zh">邀请来我家</span> Invite', fn: () => inviteOver(id, name) }] });
   });

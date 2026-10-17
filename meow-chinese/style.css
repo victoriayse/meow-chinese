@@ -2075,3 +2075,8 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 /* v213: the must-update screen covers everything */
 .force-update { position: fixed; inset: 0; z-index: 99999; background: rgba(20, 16, 40, .82); display: grid; place-items: center; padding: 16px; backdrop-filter: blur(3px); }
 .force-update .update-notice { width: min(440px, 100%); max-height: 90vh; overflow: auto; }
+/* v214: "a friend is online" on a phone: a thin pill, no buttons (it just goes by) */
+@media (max-width: 700px) {
+  .toast.online-toast { border-radius: 999px; padding: 3px 14px; font-size: 13px; border-width: 2px; box-shadow: 0 2px 0 rgba(43,33,64,.35); flex-wrap: nowrap; white-space: nowrap; max-width: calc(100vw - 40px); overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+  .toast.online-toast .toast-actions { display: none; }
+}
