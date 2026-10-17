@@ -595,4 +595,8 @@ export const CHANGES = [
     '⤴ Your cat can jump! Press the space bar on a computer, or the pink ⤴ button by the arrows on a phone. Friends see it too.',
     '😈 Mole Bop: watch out for purple evil moles with horns — bopping one takes away 1 point.',
   ] },
+  { v: 217, items: [
+    '🔨 Mole Bop: fixed a normal mole turning purple when you bop it.',
+    '😈 Mole Bop: evil moles come out more often, right from the start.',
+  ] },
 ];

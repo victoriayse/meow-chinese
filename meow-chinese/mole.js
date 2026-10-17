@@ -125,8 +125,8 @@ export function openMole(onDone = () => {}) {
     const L = lv(level), free = holes.filter((h) => !h.up);
     if (!free.length || holes.filter((h) => h.up).length >= L.max) return;
     const h = free[Math.floor(Math.random() * free.length)];
-    // now and then it's an evil one (a little more often at higher levels) — never the very first mole
-    h.evil = score + misses > 1 && Math.random() < Math.min(0.28, 0.12 + level * 0.02);
+    // now and then it's an evil one — often from the start (about 1 in 3 early on, then 1 in 4); never the very first mole
+    h.evil = score + misses > 0 && Math.random() < (level <= 3 ? 0.33 : 0.25);
     h.el.classList.toggle('evil', h.evil);
     h.up = true; h.hit = false; h.el.classList.remove('hit'); h.el.classList.add('up');
     h.mole.style.transitionDuration = `${Math.max(110, 200 - level * 15)}ms`;
