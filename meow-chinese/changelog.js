@@ -573,4 +573,8 @@ export const CHANGES = [
     '🔨 New Mole Bop machine for the arcade! 5 coins, 45 seconds — bop the moles with the red mallet.',
     'Every 10 moles is the next level: faster, more moles, faster music. 10 moles = 1 ticket, up to 5 tickets.',
   ] },
+  { v: 211, items: [
+    '🔨 Mole Bop: tickets are now 30 moles = 1, 50 = 2, 80 = 3, 100 = 4, 120 = 5 (5 tickets at most a game).',
+    '🔨 Mole Bop is harder: every level more moles pop out at once, and they hide again faster.',
+  ] },
 ];

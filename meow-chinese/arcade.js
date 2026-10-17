@@ -163,7 +163,7 @@ export async function openPrizes() {
   const box = html`<div class="card stack prize-card"><div class="h-title">🎟️ <span class="zh">兑奖处</span> Prize counter</div>
       <div class="row prize-top"><div class="prize-have"></div>${admin ? '<button type="button" class="btn small yellow prize-edit">✏️ <span class="zh">改价钱</span> Edit costs</button>' : ''}</div>
       <div class="prize-list"><p class="help">…</p></div>
-      <p class="help" style="margin:0"><span class="zh">奖券只能在游戏厅赢，不能送人，也不能用金币买。</span><br>Tickets are won at the arcade only (basketball: 5 goals = 1, 8 = 3, 15 = 4, 25 = 6 · mole bop: every 10 moles = 1, up to 5). They can't be given away or bought with coins.</p>
+      <p class="help" style="margin:0"><span class="zh">奖券只能在游戏厅赢，不能送人，也不能用金币买。</span><br>Tickets are won at the arcade only (basketball: 5 goals = 1, 8 = 3, 15 = 4, 25 = 6 · mole bop: 30 moles = 1, 50 = 2, 80 = 3, 100 = 4, 120 = 5). They can't be given away or bought with coins.</p>
       <button type="button" class="btn white prize-close">关闭 Close</button></div>`;
   $('.prize-close', box).onclick = closeModal;
   openModal(box);

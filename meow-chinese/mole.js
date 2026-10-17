@@ -1,7 +1,7 @@
 // 🔨 The arcade's mole machine ("打地鼠 Mole Bop").
 // 5 coins a game, 45 seconds. Moles pop up out of 9 holes; tap one to bop it with the red mallet (1 point) and it ducks
 // back down. Every 10 moles is the next level: moles come up faster, stay up for less time, more pop up at once, and the
-// music speeds up. Tickets (kept on the server): 10 moles → 1 · 20 → 2 · 30 → 3 · 40 → 4 · 50+ → 5.
+// music speeds up. Tickets (kept on the server, 5 at most a game): 30 moles → 1 · 50 → 2 · 80 → 3 · 100 → 4 · 120 → 5.
 import * as S from './state.js';
 import { rest } from './cloud.js';
 import { drawGrid, artGrid } from './pixel.js';
@@ -12,13 +12,13 @@ import { boardHtml } from './arcade.js';
 const rpc = (name, body = {}) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
 export const MOLE_COST = 5;
 const TIME = 45, PER_LEVEL = 10, HOLES = 9, TICKET = '🎟️';
-// per level: how long a mole stays up (ms), how many can be up at once, and the gap between new moles (ms)
-const LEVELS = [
-  { up: 1300, max: 1, gap: 900 }, { up: 1100, max: 2, gap: 750 }, { up: 950, max: 2, gap: 600 },
-  { up: 820, max: 3, gap: 500 }, { up: 700, max: 3, gap: 420 }, { up: 600, max: 4, gap: 360 },
-];
-const lv = (n) => LEVELS[Math.min(LEVELS.length, n) - 1];
-const ticketsFor = (score) => Math.min(5, Math.floor(score / 10));
+// per level: how long a mole stays up (ms), how many can be up at once, how many pop up together, and the gap
+// between pop-ups (ms). Every level is harder: shorter, more moles at once, bigger bursts (it tops out at level 8).
+const lv = (n) => { const L = Math.min(8, Math.max(1, n));
+  return { up: Math.max(480, 1300 - 115 * (L - 1)), max: Math.min(7, L), burst: Math.min(4, 1 + Math.floor((L - 1) / 2)), gap: Math.max(260, 900 - 90 * (L - 1)) }; };
+// tickets for one game (5 at most): 30 moles → 1 · 50 → 2 · 80 → 3 · 100 → 4 · 120 → 5 (the server decides)
+export const MOLE_TIERS = [[30, 1], [50, 2], [80, 3], [100, 4], [120, 5]];
+const ticketsFor = (score) => MOLE_TIERS.reduce((t, [g, n]) => (score >= g ? n : t), 0);
 
 // pixel art: a mole (normal and bopped), and the red mallet
 const PAL = { o: '#1e1a28', b: '#8c5634', B: '#6a3f24', l: '#c48a5c', w: '#ffffff', k: '#1e1a28', p: '#ff9ec4', n: '#3a2418', y: '#ffd23f',
@@ -92,7 +92,7 @@ export function openMole(onDone = () => {}) {
   const hud = () => {
     $('.bb-level', box).textContent = `LV ${level}`;
     $('.bb-score', box).textContent = `🐹 ${score}`;
-    $('.mole-tiers', box).innerHTML = [10, 20, 30, 40, 50].map((g) => `<span class="${score >= g ? 'got' : ''}">${g}🐹 → ${TICKET}${ticketsFor(g)}</span>`).join('');
+    $('.mole-tiers', box).innerHTML = MOLE_TIERS.map(([g, n]) => `<span class="${score >= g ? 'got' : ''}">${g}🐹 → ${TICKET}${n}</span>`).join('');
   };
   hud();
   function flash(t) { const f = $('.bb-flash', box); f.innerHTML = t; f.classList.remove('show'); void f.offsetWidth; f.classList.add('show'); }
@@ -140,8 +140,8 @@ export function openMole(onDone = () => {}) {
   function spawnLoop() {
     if (!alive || state !== 'playing') return;
     popUp();
-    // sometimes two come up together at the higher levels
-    if (lv(level).max > 1 && Math.random() < 0.35) setTimeout(() => state === 'playing' && popUp(), 120);
+    // higher levels: several moles burst out together
+    for (let k = 1; k < lv(level).burst; k++) setTimeout(() => state === 'playing' && popUp(), 90 * k);
     spawnT = setTimeout(spawnLoop, lv(level).gap * (0.75 + Math.random() * 0.5));
   }
 
@@ -169,7 +169,7 @@ export function openMole(onDone = () => {}) {
       const won = res.awarded || 0;
       if (won) { sfx.fanfare(); if (won >= 4) confetti(); }
       say(`🐹 <b>${score}</b> <span class="zh">只地鼠！</span> moles bopped!` +
-        (won ? `<br>${TICKET} <b>+${won}</b> <span class="zh">张奖券</span> ticket${won > 1 ? 's' : ''} — swap them for prizes at the prize counter.` : `<br><small>${TICKET} <span class="zh">打到10只就有奖券</span> Bop 10+ moles to win a ticket.</small>`));
+        (won ? `<br>${TICKET} <b>+${won}</b> <span class="zh">张奖券</span> ticket${won > 1 ? 's' : ''} — swap them for prizes at the prize counter.` : `<br><small>${TICKET} <span class="zh">打到30只就有奖券</span> Bop 30+ moles to win a ticket.</small>`));
     } else say(`🐹 <b>${score}</b> moles! <small>(Couldn't reach the leaderboard — tickets need an internet connection.)</small>`);
     coinBtn.disabled = false; state = 'idle'; level = 1; music.setLevel(1);
     onDone();
