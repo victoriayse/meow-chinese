@@ -27,6 +27,8 @@ import * as Radio from './radio.js';
 import * as Visit from './visit.js';
 import * as Places from './places.js';
 import * as Snacks from './snacks.js';
+import * as Delivery from './delivery.js';
+import * as Coffee from './coffee.js';
 import { randomJoke } from './jokes.js';
 import { practiceListScreen, practiceScreen, KINDS } from './practice.js';
 
@@ -508,7 +510,7 @@ export function askPetName(kind, current = '') {
 function homeScreen(params = {}) {
   S.tick();
   S.essayNotifications();
-  S.purgeOldMessages();
+  S.purgeOldMessages(); Coffee.purgeEspresso();
   if (Auth.user() && !Places.isAdmin()) S.movePlaygroundToStorage();   // v158: the playground is now part of the public Park
   const inHouse = params.view === 'house' && (S.unlocked('decor') || (S.roomInfo(params.room).place && Places.isAdmin()));
   const roomKey = inHouse && S.roomOpen(params.room) ? S.roomInfo(params.room).key : 'living';
@@ -576,6 +578,8 @@ function homeScreen(params = {}) {
       </div>
     </div>
   </section>`;
+  // 🛵 deliveries wait in the living room — or right here, if her home isn't open yet
+  if (!inHouse && !S.unlocked('decor')) Delivery.drawBags($('#stage', n), 'living', () => {});
 
   // kitten + decorations
   const kv = new KittenView({ scale, interactive: true, onTap: () => petKitten() });
@@ -1157,13 +1161,20 @@ function homeScreen(params = {}) {
     houseLog = chatLog(houseChat);
     $('#hlog', n).prepend(houseLog.el);
     wirePlayable(room, (i) => Visit.hostNote(i));
+    // ☕ the coffee machine: pop a pod in, it pours an espresso
+    room.querySelectorAll('.decor').forEach((d) => { if (/^coffeemachine/.test(d.dataset.id)) d.classList.add('coffee-maker'); });
+    room.addEventListener('click', (e) => {
+      const d = e.target.closest('.decor.coffee-maker');
+      if (!d || room.classList.contains('arranging') || e.target.closest('button')) return;
+      sfx.click(); Coffee.openCoffeeMachine(() => { kv.draw(); Visit.hostResendHouse(); });
+    });
     // changing cubicle: tap to pull the curtain open / closed
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.tap-open');
       if (!d || room.classList.contains('arranging') || e.target.closest('button')) return;
       S.toggleOpen(d.dataset.id); sfx.click();
       const entry = roomLayout(S.get(), roomKey, S.roomOf).find((x) => x.id === d.dataset.id);
-      const ne = entry && decorEl(entry, { putAway: true }); if (ne) { ne.style.zIndex = d.style.zIndex; d.replaceWith(ne); }
+      const ne = entry && decorEl(entry, { putAway: true }); if (ne) { ne.style.zIndex = d.style.zIndex; ne.classList.add('swung'); d.replaceWith(ne); }
       Visit.hostResendHouse();
     });
     // curtains and blinds: tap to draw them shut, tap again to open
@@ -1193,6 +1204,8 @@ function homeScreen(params = {}) {
     wireDisplays(room, { edit: true, changed: () => { Visit.hostResendHouse(); refreshHome(); } });
     // 🍽️ the home dining table: food anyone in the house can share
     { const me = Auth.user(); if (me && !S.roomInfo(roomKey).place) wireHomeTables(room, me.id, () => { kv.draw(); Visit.hostResendHouse(); }); }
+    // 🛵 deliveries arrive in the living room: one big bag per service
+    if (!S.roomInfo(roomKey).place) Delivery.drawBags(room, roomKey, () => { kv.draw(); Visit.hostResendHouse(); });
     // menu boards: tap to change what's written on them
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.board');

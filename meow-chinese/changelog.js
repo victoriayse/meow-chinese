@@ -624,4 +624,10 @@ export const CHANGES = [
     '🧺 New picnic mat for the Garden: 4 cats can sit on it, and you can put 6 things on it to share.',
     '🌳 Cats are 30% smaller everywhere in the park.',
   ] },
+  { v: 224, items: [
+    '🛒 New Supermarket in the mall, left of the Lobby: order at the kiosk, then collect at the counter or get it delivered home (+15).',
+    '🛵 New Delivery app on the phone: MeowMart (groceries) and MeowFood (meals and drinks). Orders arrive at home in 1 minute, in one big bag per shop.',
+    '🧊 Tap the fridge at home to open and close it.',
+    '☕ Tap the coffee machine at home: put a coffee pod in and it pours an espresso. Pick up the cup! It disappears after 1 day.',
+  ] },
 ];

@@ -21,7 +21,7 @@ export function snackBar({ onHold = () => {} } = {}) {
     const have = S.snacks(), held = S.get().holding;
     bar.innerHTML = '';
     // books / pencil cases put away in her backpack don't sit in the bar (she can still put them on a table)
-    SNACK_ORDER.filter((k) => have[k] > 0 && (!SNACKS[k].noEat || held === k)).forEach((k) => {
+    SNACK_ORDER.filter((k) => have[k] > 0 && (!SNACKS[k].noEat || held === k || SNACKS[k].grocery)).forEach((k) => {   // (groceries like soap stay in the bar)
       const b = document.createElement('button'); b.type = 'button'; b.className = `snack-btn ${held === k ? 'held' : ''}`; b.title = `${SNACKS[k].zh} ${SNACKS[k].en}`;
       b.appendChild(snackCanvas(k, 3));
       if (have[k] > 1) b.insertAdjacentHTML('beforeend', `<i class="n">${have[k]}</i>`);

@@ -2163,3 +2163,58 @@ img.gone { min-height: 40px; font-size: 11px; }
 /* v223: 🌳 cats and helpers are 30% smaller everywhere in the park (Park, Playground, Garden) */
 .room[data-room="park"] .vcat .kflip, .room[data-room="playground"] .vcat .kflip, .room[data-room="parkgarden"] .vcat .kflip { scale: .7; transform-origin: 50% 100%; }
 .room[data-room="park"] .decor .tux-cat .kitten-wrap, .room[data-room="playground"] .decor .tux-cat .kitten-wrap, .room[data-room="parkgarden"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
+/* ---------- v224: 🛒 supermarket, 🛵 delivery ---------- */
+.room[data-room="mallsupermarket"] .vcat .kflip { scale: .7; transform-origin: 50% 100%; }
+.room[data-room="mallsupermarket"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
+.dl-bag { position: absolute; bottom: 4%; z-index: 30; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; animation: dl-drop .5s ease-out; }
+.dl-bag canvas { display: block; image-rendering: pixelated; filter: drop-shadow(0 3px 0 rgba(0,0,0,.25)); }
+.dl-bag-tag { margin-top: -4px; background: #fff8ec; border: 2px solid var(--ink); border-radius: 999px; padding: 0 7px; font: 800 10px/1.4 system-ui, sans-serif; white-space: nowrap; }
+@keyframes dl-drop { from { transform: translateY(-30px); opacity: 0; } to { transform: none; opacity: 1; } }
+.dl-coming { position: absolute; right: 3%; top: 4%; z-index: 30; background: #fff8ec; border: 2px solid var(--ink); border-radius: 999px; padding: 1px 9px; font: 800 11px/1.4 system-ui, sans-serif; pointer-events: none; }
+.dl-pick { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+.dl-svc { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; text-align: left; padding: 8px 10px; border: 3px solid var(--ink); border-radius: 12px; background: #fff; cursor: pointer; border-left: 10px solid var(--c); }
+.dl-svc .ic { grid-row: span 2; font-size: 28px; align-self: center; }
+.dl-svc small { opacity: .75; }
+.dl-way { font-size: 12px; font-weight: 700; }
+.dl-menu { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.dl-list { overflow-y: auto; flex: 1; padding: 4px 6px; display: flex; flex-direction: column; gap: 4px; }
+.dl-row { display: flex; align-items: center; gap: 6px; background: #fff; border: 2px solid var(--ink); border-radius: 8px; padding: 3px 6px; font-size: 12px; }
+.dl-row .art { width: 30px; display: grid; place-items: center; }
+.dl-row .nm { flex: 1; display: flex; flex-direction: column; line-height: 1.15; }
+.dl-row .nm small { opacity: .7; }
+.dl-row .pr { font-weight: 800; white-space: nowrap; }
+.dl-row .q { display: flex; align-items: center; gap: 4px; }
+.dl-row .q button { width: 22px; height: 22px; border: 2px solid var(--ink); border-radius: 6px; background: #ffd23f; font-weight: 900; padding: 0; cursor: pointer; }
+.dl-row input { width: 52px; font: inherit; padding: 2px 4px; border: 2px solid var(--ink); border-radius: 6px; }
+.dl-foot { display: flex; align-items: center; gap: 6px; padding: 6px; border-top: 2px dashed #9fb3c8; }
+.dl-total { flex: 1; font-size: 12px; }
+/* 🧊 the fridge swings when it opens or shuts */
+.house .decor.tap-open > canvas { transform-origin: 0 50%; }
+.house .decor.tap-open.swung > canvas { animation: door-swing .35s ease-out; }
+@keyframes door-swing { 0% { transform: perspective(200px) rotateY(-55deg); } 100% { transform: none; } }
+/* ☕ the coffee machine */
+.home .house .decor.coffee-maker { pointer-events: auto; cursor: pointer; }
+.cm-card { width: min(380px, 100%); text-align: center; }
+.cm-stage { position: relative; height: 200px; display: grid; place-items: start center; }
+.cm-machine canvas { image-rendering: pixelated; display: block; }
+.cm-pod { position: absolute; left: 50%; top: -6px; width: 14px; height: 12px; margin-left: -7px; background: #c99a2e; border: 2px solid #2b2140; border-radius: 3px 3px 6px 6px; opacity: 0; }
+.cm-stream { position: absolute; left: 50%; top: 92px; width: 6px; margin-left: -3px; height: 0; background: #5b3a1f; border-radius: 3px; }
+.cm-cup { position: absolute; left: 50%; top: 128px; transform: translateX(-50%); opacity: 0; cursor: default; filter: saturate(.2) brightness(1.2); }
+.cm-cup.show { opacity: 1; }
+.cm-cup.full { filter: none; cursor: pointer; animation: carn-bob 1.2s ease-in-out infinite; }
+.cm-stage.brew .cm-pod { animation: cm-pod 0.8s ease-in forwards; }
+.cm-stage.brew .cm-stream { animation: cm-pour 1.8s ease-in-out 0.8s forwards; }
+@keyframes cm-pod { 0% { opacity: 1; transform: translateY(-20px); } 80% { opacity: 1; transform: translateY(26px); } 100% { opacity: 0; transform: translateY(30px); } }
+@keyframes cm-pour { 0% { height: 0; } 20% { height: 38px; } 85% { height: 38px; } 100% { height: 0; top: 130px; } }
+.cm-msg { margin: 0; }
+/* 🛒 the Supermarket: cats and the shop assistant 30% smaller */
+.room[data-room="mallsupermarket"] .vcat .kflip, .room[data-room="mallsupermarket"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
+.dl-row .pr, .dl-total { white-space: nowrap; }
+/* coffee machine: line the pour and the cup up with the machine's spout */
+.cm-stage { height: 130px; }
+.cm-stream { top: 30px; }
+.cm-cup { top: 54px; }
+@keyframes cm-pour { 0% { height: 0; } 20% { height: 26px; } 85% { height: 26px; } 100% { height: 0; top: 56px; } }
+@keyframes cm-pod { 0% { opacity: 1; transform: translateY(-20px); } 80% { opacity: 1; transform: translateY(14px); } 100% { opacity: 0; transform: translateY(16px); } }
+.stage > .dl-coming { top: auto; bottom: 1%; }
+.stage > .dl-bag { bottom: 6%; }

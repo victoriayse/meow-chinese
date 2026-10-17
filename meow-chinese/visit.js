@@ -5,6 +5,7 @@ import { wireHomeTables, wirePlaceTables } from './home-tables.js';
 import { createStadium, joystick, JOYSTICK } from './stadium.js';
 import { wireCanteen } from './canteen.js';
 import { createCarnival } from './carnival.js';
+import { wireSupermarket, SUPER_ROOM } from './supermarket.js';
 import { wireBuffet, leaveBuffet, hasPass, isBlocker, setGate, payHost, BUFFET_ROOM, leaveCinema, hasTicket, payCinema, THEATRES } from './buffet.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
@@ -538,6 +539,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       if (justEntered && !Places.isAdmin() && room.querySelector('.decor[data-id^="buffethost"]')) setTimeout(() => { if (room.isConnected && !hasPass()) payHost(() => { if (myKv) myKv.draw(); sendMine(); }); }, 500);
     });
     if (placeKey === 'mall') wireMall(room, roomKey, house, go, () => { if (myKv) myKv.draw(); sendMine(); });
+    if (P && roomKey === SUPER_ROOM) wireSupermarket(room, { onChanged: () => { if (myKv) myKv.draw(); sendMine(); } });
     if (placeKey === 'school' && roomKey === 'schoolcanteen') wireCanteen(room);
     hydrateIcons(box);
   }

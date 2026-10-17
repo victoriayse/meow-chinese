@@ -432,7 +432,7 @@ export function addSnack(kind) { if (!SNACKS[kind]) return; state.snacks = state
 // 🚪 leaving a public place: food and drinks from there can't be taken away (books, pencil cases and shopping bags stay)
 export function dropPlaceFood() {
   const have = snacks(); let n = 0;
-  Object.keys(have).forEach((k) => { const sn = SNACKS[k]; if (!sn || sn.noEat || k === 'shopbag') return; n += have[k]; delete state.snacks[k]; });
+  Object.keys(have).forEach((k) => { const sn = SNACKS[k]; if (!sn || sn.noEat || sn.keep || k === 'shopbag') return; n += have[k];   /* groceries & deliveries (keep) are hers to take home */ delete state.snacks[k]; });
   if (state.holding && !state.snacks[state.holding]) state.holding = null;
   if (n) save();
   return n;

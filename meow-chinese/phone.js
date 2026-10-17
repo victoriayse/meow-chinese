@@ -5,6 +5,7 @@ import { $, html, esc, toast, openModal, closeModal, confetti, coinI, hydrateIco
 import { sfx, speak } from './audio.js';
 import * as Visit from './visit.js';
 import * as Gallery from './gallery.js';
+import * as Delivery from './delivery.js';
 import { acceptedFriends, refreshFriends, sendLetter, onInbox, markRead, refreshSeen, onSeen, errorText, LETTER_MAX, setActivity, isOnline, doingText, lastSeen, friendName } from './friends.js';
 
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -28,6 +29,7 @@ const APPS = [
   { key: 'clock', icon: '⏰', zh: '时钟', en: 'Clock' },
   { key: 'notes', icon: '📒', zh: '记事本', en: 'Notes' },
   { key: 'gallery', icon: '🖼️', zh: '相册', en: 'Gallery' },
+  { key: 'delivery', icon: '🛵', zh: '外卖', en: 'Delivery' },
   { key: 'bank', icon: '🏦', zh: '银行', en: 'Bank' },
   { key: 'ttt', icon: '⭕', zh: '井字棋', en: 'Tic-tac-toe' },
   { key: 'listen', icon: '👂', zh: '听一听', en: 'Listen & pick' },
@@ -209,6 +211,9 @@ export function openPhone({ start = 'home', after } = {}) {
       // fetch who is online, then redraw once
       if (!this._fetched) { this._fetched = true; refreshFriends().then(() => { if (body.isConnected && history[history.length - 1] && history[history.length - 1][0] === 'mail') show('mail'); }); }
     },
+    // ----- 🛵 delivery: MeowMart (groceries) and MeowFood (meals) -----
+    delivery() { Delivery.mountApp(body, { header, go }); },
+    dlmenu(kind) { Delivery.mountMenu(body, kind, { header, back, ask }); },
     // ----- 🖼️ the gallery: every photo she took (100 at most) -----
     gallery() {
       const list = Gallery.photos();
