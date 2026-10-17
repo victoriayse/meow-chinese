@@ -291,7 +291,6 @@ export const REWARD_ACTS = {
   essay: { zh: '✍️ 看图作文', en: 'Picture writing', per: 'each composition (starting amount — you can change it when checking)', coins: 30, xp: 10 },
   play: { zh: '🎮 陪我玩', en: 'Play with me', per: 'each round with 8/10 or more right', coins: 15, xp: 0 },
   listen: { zh: '🎧 听一听', en: 'Listen & pick (phone game)', per: 'each round with 8/10 or more right', coins: 3, xp: 0 },
-  ttt: { zh: '⭕ 井字棋', en: 'Tic-tac-toe (phone game)', per: 'each game she wins against the kitten', coins: 1, xp: 0 },
 };
 export function rewardSetting(k) {
   const d = REWARD_ACTS[k], r = (state.settings.rewards || {})[k] || {};
@@ -948,7 +947,6 @@ export const LIMIT_ACTS = {
   match: { zh: '🧩 词语搭配', en: 'Word match', unit: 'sets', item: 'each set', perItem: 0 },
   order: { zh: '🧱 排句子', en: 'Sentence builder', unit: 'sets', item: 'each set', perItem: 0 },
   listen: { zh: '🎧 听一听', en: 'Listen & pick', unit: 'rounds' },
-  ttt: { zh: '⭕ 井字棋', en: 'Tic-tac-toe', unit: 'games' },
 };
 export function limitSetting(k) {
   const d = LIMIT_ACTS[k], r = (state.settings.limits || {})[k] || {};

@@ -27,7 +27,6 @@ const APPS = [
   { key: 'clock', icon: '⏰', zh: '时钟', en: 'Clock' },
   { key: 'notes', icon: '📒', zh: '记事本', en: 'Notes' },
   { key: 'bank', icon: '🏦', zh: '银行', en: 'Bank' },
-  { key: 'ttt', icon: '⭕', zh: '井字棋', en: 'Tic-tac-toe' },
   { key: 'listen', icon: '👂', zh: '听一听', en: 'Listen & pick' },
 ];
 const pinyinOf = (w) => { try { return window.pinyinPro.pinyin(w); } catch { return ''; } };

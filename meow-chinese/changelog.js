@@ -577,4 +577,7 @@ export const CHANGES = [
     '🔨 Mole Bop: tickets are now 30 moles = 1, 50 = 2, 80 = 3, 100 = 4, 120 = 5 (5 tickets at most a game).',
     '🔨 Mole Bop is harder: every level more moles pop out at once, and they hide again faster.',
   ] },
+  { v: 212, items: [
+    'Tic-tac-toe has been taken off the phone.',
+  ] },
 ];
