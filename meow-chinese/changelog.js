@@ -613,4 +613,7 @@ export const CHANGES = [
     '🎟️ The ticket booth and EXIT sign are now furniture (the admin can move and resize them).',
     '🗺️ Smaller pins on the map.',
   ] },
+  { v: 221, items: [
+    'Fixed: the "Tap the wheel to board" label no longer jumps left and right.',
+  ] },
 ];

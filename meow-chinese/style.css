@@ -2157,3 +2157,6 @@ img.gone { min-height: 40px; font-size: 11px; }
 .decor .screen-label.carn-booth-label { font-size: 9px; color: #2b2140; font-weight: 900; }
 .decor .screen-label.carn-exit-label { font-size: 9px; color: #fff; font-weight: 900; }
 .carn-board-tip { margin: 0; text-align: center; font-size: 14px; }
+/* v221 fix: the hint bobs up and down only (the bob animation was undoing its centring) */
+.carn-hint { animation: carn-hint-bob 1.6s ease-in-out infinite; }
+@keyframes carn-hint-bob { 0%, 100% { transform: translateX(-50%); } 50% { transform: translate(-50%, -3px); } }
