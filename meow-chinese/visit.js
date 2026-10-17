@@ -352,7 +352,8 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (justEntered) leaveBuffet();   // a fresh visit: any old pass (or buffet food) from an earlier visit is gone — pay again
     if (P && placeKey === 'cinema' && lastRoom === null) leaveCinema();   // 🎟️ a new trip to the cinema: buy new tickets
     lastRoom = roomKey;
-    const info = S.roomInfo(roomKey), open = house.open || ['living'];
+    // a public place: every one of its areas is open (new areas appear without the admin re-saving the layout)
+    const info = S.roomInfo(roomKey), open = P ? [...new Set([...(house.open || []), ...(S.PLACE_ROOMS[placeKey] || [])])] : house.open || ['living'];
     box.innerHTML = `<div class="house-unit ${info.outdoor ? 'outdoor' : ''} ${info.bare || info.noRoof ? 'bare' : ''}" id="hunit"><canvas class="roof" id="roof"></canvas>
         <div class="room-name">${info.icon} <span class="zh">${info.zh}</span> ${info.en}${P ? `<button class="room-light ${((house.power || {}).dark || {})[roomKey] ? 'off' : ''}" id="v-light" title="Lights" aria-label="Lights">💡</button>` : ''}${placeKey === 'mall' ? '<button class="room-light mall-directory" title="Mall directory" aria-label="Mall directory">▦</button>' : ''}</div>
         <div class="room" id="room" data-room="${roomKey}"><canvas class="room-bg" id="roombg"></canvas></div>

@@ -9584,6 +9584,24 @@ export function drawRoom(canvas, night = false, kind = 'living', style = null) {
       R(0, floorY, W, H - floorY, night ? '#6b5a6e' : '#e3c9a3');
       for (let y = floorY + 2; y < H; y += 4) for (let x = (y % 8 ? 0 : 4); x < W; x += 8) R(x, y, 7, 3, night ? '#776478' : '#ecd6b4');
       open = true;
+    } else if (kind === 'parkgarden') {
+      // 🌷 the park's garden: sky, a hedge with a white gazebo, flower beds, soft lawn with a stepping-stone path
+      R(0, 0, W, floorY, night ? '#1d286a' : '#a6dbf8');
+      R(0, 0, W, Math.round(floorY * 0.35), night ? '#10174a' : '#84c8f4');
+      if (night) [[9, 7], [27, 3], [44, 11], [70, 5], [96, 9], [112, 4]].forEach(([x, y]) => R(x, y, 1, 1, '#ffffff'));
+      else { R(14, 6, 8, 8, '#ffe066'); R(13, 7, 10, 6, '#ffe066'); [[48, 6], [84, 10]].forEach(([x, y]) => { R(x, y, 12, 3, '#ffffff'); R(x + 3, y - 2, 6, 2, '#ffffff'); }); }
+      const gy = floorY;
+      R(0, gy - 10, W, 10, night ? '#1f4a33' : '#4f9a52');                                  // the hedge
+      for (let x = 0; x < W; x += 6) R(x, gy - 12, 5, 3, night ? '#2a5a3c' : '#66b566');
+      // a little white gazebo
+      R(52, gy - 26, 18, 2, '#ffffff'); for (let i = 0; i < 6; i++) R(54 + i, gy - 32 + i, 14 - 2 * i, 1, night ? '#c9b8f0' : '#e8384f');
+      [53, 68].forEach((x) => R(x, gy - 24, 2, 24, '#ffffff'));
+      // flower beds along the hedge
+      for (let x = 2; x < W; x += 4) { if (x > 50 && x < 72) continue; R(x, gy - 4, 2, 2, ['#ff6f9c', '#ffd23f', '#a77fd6', '#ffffff'][(x / 4) % 4 | 0]); R(x, gy - 2, 2, 2, night ? '#2a5a3c' : '#5aa64a'); }
+      R(0, floorY, W, H - floorY, night ? '#2f6b3c' : '#86d46a');
+      for (let y = floorY + 2; y < H; y += 3) for (let x = (y % 6 ? 2 : 5); x < W; x += 6) R(x, y, 1, 2, night ? '#3d8049' : '#9ee07f');
+      for (let y = floorY + 3, i = 0; y < H; y += 6, i++) { const x = 58 + (i % 2 ? 6 : -6); R(x, y, 8, 3, night ? '#8d7a52' : '#e8d3a2'); }
+      open = true;
     } else if (kind === 'park') {
       // the park: open sky, tall trees and a little pond far away, grass with a winding path
       R(0, 0, W, floorY, night ? '#1d286a' : '#9fd6f7');
@@ -12315,3 +12333,9 @@ ITEMS.mapcarnival = { cat: 'map', room: 'mallbowling', name: '嘉年华', en: 'C
 // v220: 🎡 the Ferris wheel area's ticket booth and EXIT sign (furniture: the admin places, moves and resizes them)
 ITEMS.carnivalbooth = { cat: 'decor', room: 'carnivalwheel', group: 'carnival', name: '摩天轮售票处', en: 'Ferris wheel ticket booth', price: 120, spot: 'front-left', block: true, label: '🎟️ 售票处 Tickets', labelBox: { x: 2 / 24, y: 4 / 22, w: 20 / 24, h: 3 / 22 }, labelStyle: 'plaque carn-booth-label', pal: { o: O, r: '#e8384f', w: '#ffffff', y: '#ffd23f', s: '#c9d3de', g: '#a8dcff', b: '#8a5a32' }, art: ["..oooooooooooooooooooo..", ".orrwwrrwwrrwwrrwwrrwwo.", "orrwwrrwwrrwwrrwwrrwwrro", "oooooooooooooooooooooooo", ".oyyyyyyyyyyyyyyyyyyyyo.", ".oyyyyyyyyyyyyyyyyyyyyo.", ".oyyyyyyyyyyyyyyyyyyyyo.", ".oooooooooooooooooooooo.", ".osssssssssssssssssssso.", ".osgggggggggggggggggggso.", ".osgggggggggggggggggggso.", ".osgggggggggggggggggggso.", ".osgggggggggggggggggggso.", ".osssssssssssssssssssso.", ".obbbbbbbbbbbbbbbbbbbbbo.", ".orrrrrrrrrrrrrrrrrrrrro.", ".orrwwrrrrrrrrrrrrrwwrro.", ".orrrrrrrrrrrrrrrrrrrrro.", ".orrrrrrrrrrrrrrrrrrrrro.", ".orrwwrrrrrrrrrrrrrwwrro.", ".orrrrrrrrrrrrrrrrrrrrro.", ".oooooooooooooooooooooo."] };
 ITEMS.carnivalexit = { cat: 'decor', room: 'carnivalwheel', group: 'carnival', name: '出口牌', en: 'EXIT sign', price: 30, spot: 'front-right', label: '🚪 出口 EXIT', labelBox: { x: 1 / 22, y: 1 / 16, w: 20 / 22, h: 6 / 16 }, labelStyle: 'plaque carn-exit-label', pal: { o: O, g: '#2c9c3a', a: '#8a8d99' }, art: ["oooooooooooooooooooooo", "oggggggggggggggggggggo", "oggggggggggggggggggggo", "oggggggggggggggggggggo", "oggggggggggggggggggggo", "oggggggggggggggggggggo", "oggggggggggggggggggggo", "oooooooooooooooooooooo", ".........oaao.........", ".........oaao.........", ".........oaao.........", ".........oaao.........", ".........oaao.........", ".........oaao.........", ".........oaao.........", ".......oooooooo......."] };
+
+// v223: 🧺 a picnic mat for the park's Garden — 4 cats sit on it, and 6 things can be put down on it to share
+ITEMS.picnicmat = { cat: 'decor', room: 'parkgarden', group: 'park', name: '野餐垫', en: 'Picnic mat (4 cats · 6 things)', price: 120, spot: 'rug',
+  seat: { points: [{ x: 0.12, y: 0.42 }, { x: 0.88, y: 0.42 }, { x: 0.1, y: 0.86 }, { x: 0.9, y: 0.86 }] },
+  surface: { x: [0.33, 0.5, 0.67, 0.31, 0.5, 0.69], y: [0.3, 0.3, 0.3, 0.68, 0.68, 0.68] },
+  pal: { o: O, r: '#e8384f', R: '#a3202f', w: '#ffffff' }, art: ["......oRrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrRo......", "......oRrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrRo......", "......oRrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrRo......", ".....oRrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrRo.....", ".....oRwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwRo.....", ".....oRwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwRo.....", "....oRwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwRo....", "....oRwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwRo....", "....oRrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrRo....", "...oRrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwRo...", "...oRrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwRo...", "...oRrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwRo...", "..oRwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrRo..", "..oRwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrRo..", ".oRwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrRo.", ".oRwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrRo.", ".oRrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwRo.", "oRrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrRo", "oRrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrRo", "oRrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrRo", "RwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwwwwrrrrrrwwwR", "RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR"] };

@@ -9,7 +9,7 @@ import { html, $, openModal, closeModal, toast } from './ui.js';
 
 const rpc = (name, body = {}) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
 // tables you can share things on: the home dining table (4 spaces) and the children's desk (2 spaces)
-const isTable = (id) => ['homedining4', 'schooldesk', 'canteentable', 'buffettable4'].includes(String(id).split('#')[0]);
+const isTable = (id) => ['homedining4', 'schooldesk', 'canteentable', 'buffettable4', 'picnicmat'].includes(String(id).split('#')[0]);
 const surfaceOf = (id) => ITEMS[String(id).split('#')[0]].surface;
 // where the table is: a friend's / my house, or a public place on the map (the school)
 const api = (scope) => scope.k === 'place'
@@ -71,7 +71,7 @@ function draw(roomEl, scope, rows, onChanged) {
     if (!d || !SNACKS[row.item] || !surface || surface.x[row.slot] == null) continue;   // a stored table keeps its food until it comes back out
     const b = document.createElement('button'); b.type = 'button'; b.className = 'table-food home-table-food';
     b.title = `拿起 Pick up ${SNACKS[row.item].zh} ${SNACKS[row.item].en}`;
-    b.style.left = `${surface.x[row.slot] * 100}%`; b.style.top = `${surface.y * 100}%`;
+    b.style.left = `${surface.x[row.slot] * 100}%`; b.style.top = `${(Array.isArray(surface.y) ? surface.y[row.slot] : surface.y) * 100}%`;
     b.appendChild(snackCanvas(row.item, 3)); b.disabled = picking.has(row.id);
     b.addEventListener('pointerdown', (e) => e.stopPropagation());
     b.onclick = async (e) => {

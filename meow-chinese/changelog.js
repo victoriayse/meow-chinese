@@ -619,4 +619,9 @@ export const CHANGES = [
   { v: 222, items: [
     '🎵 The Ferris wheel plays a cheerful carnival tune while you ride.',
   ] },
+  { v: 223, items: [
+    '🌷 The park has a new Garden, to the right of the Playground.',
+    '🧺 New picnic mat for the Garden: 4 cats can sit on it, and you can put 6 things on it to share.',
+    '🌳 Cats are 30% smaller everywhere in the park.',
+  ] },
 ];

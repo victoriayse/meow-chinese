@@ -2160,3 +2160,6 @@ img.gone { min-height: 40px; font-size: 11px; }
 /* v221 fix: the hint bobs up and down only (the bob animation was undoing its centring) */
 .carn-hint { animation: carn-hint-bob 1.6s ease-in-out infinite; }
 @keyframes carn-hint-bob { 0%, 100% { transform: translateX(-50%); } 50% { transform: translate(-50%, -3px); } }
+/* v223: 🌳 cats and helpers are 30% smaller everywhere in the park (Park, Playground, Garden) */
+.room[data-room="park"] .vcat .kflip, .room[data-room="playground"] .vcat .kflip, .room[data-room="parkgarden"] .vcat .kflip { scale: .7; transform-origin: 50% 100%; }
+.room[data-room="park"] .decor .tux-cat .kitten-wrap, .room[data-room="playground"] .decor .tux-cat .kitten-wrap, .room[data-room="parkgarden"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }

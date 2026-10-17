@@ -106,7 +106,7 @@ export function studioBarre(roomEl, on) {
 }
 // the furniture standing in one room: [{ id, css, kind: 'curtain' | 'flat' | 'stand' }]
 export function roomLayout(s, roomKey, roomOf) {
-  const windowRoom = !roomKey.startsWith('mall') && !['garden','playground','park','stadium','carnivalsquare','carnivalwheel','schooloutdoor','schoolhall','rooftop','theatre1','theatre2','lobby','lounge','changing','basement','cafemain','cafetoilet','cafekitchen'].includes(roomKey);
+  const windowRoom = !roomKey.startsWith('mall') && !['garden','playground','park','parkgarden','stadium','carnivalsquare','carnivalwheel','schooloutdoor','schoolhall','rooftop','theatre1','theatre2','lobby','lounge','changing','basement','cafemain','cafetoilet','cafekitchen'].includes(roomKey);
   if (windowRoom && !s.roomStyle?.[roomKey]?.windowFurniture) {
     const id = 'roomwindow#default-' + roomKey;
     s.roomStyle ||= {}; s.roomStyle[roomKey] = {...s.roomStyle[roomKey], windowFurniture: true};
