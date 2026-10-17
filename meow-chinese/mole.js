@@ -1,6 +1,6 @@
 // 🔨 The arcade's mole machine ("打地鼠 Mole Bop").
-// 5 coins a game, 45 seconds. Moles pop up out of 9 holes; tap one to bop it with the red mallet (1 point) and it ducks
-// back down. Every 10 moles is the next level: moles come up faster, stay up for less time, more pop up at once, and the
+// 5 coins a game, 50 seconds. Moles pop up out of 9 holes; tap one to bop it with the red mallet (1 point) and it ducks
+// back down. Every 10 seconds is the next level (5 levels): moles come up faster, stay up for less time, more pop up at once, and the
 // music speeds up. Tickets (kept on the server, 5 at most a game): 30 moles → 1 · 50 → 2 · 80 → 3 · 100 → 4 · 120 → 5.
 import * as S from './state.js';
 import { rest } from './cloud.js';
@@ -11,11 +11,14 @@ import { boardHtml } from './arcade.js';
 
 const rpc = (name, body = {}) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
 export const MOLE_COST = 5;
-const TIME = 45, PER_LEVEL = 10, HOLES = 9, TICKET = '🎟️';
-// per level: how long a mole stays up (ms), how many can be up at once, how many pop up together, and the gap
-// between pop-ups (ms). Every level is harder: shorter, more moles at once, bigger bursts (it tops out at level 8).
-const lv = (n) => { const L = Math.min(8, Math.max(1, n));
-  return { up: Math.max(480, 1300 - 115 * (L - 1)), max: Math.min(7, L), burst: Math.min(4, 1 + Math.floor((L - 1) / 2)), gap: Math.max(260, 900 - 90 * (L - 1)) }; };
+const TIME = 50, LEVEL_S = 10, LEVELS = 5, HOLES = 9, TICKET = '🎟️';   // 50 s: a new level every 10 s (5 levels)
+// per level (1–5): how long a mole stays up (ms), how many can be up at once, how many pop up together, and the gap
+// between pop-ups (ms). Every level is harder: shorter, more moles at once, bigger bursts.
+const LV = [
+  { up: 1300, max: 1, burst: 1, gap: 900 }, { up: 1050, max: 2, burst: 1, gap: 720 }, { up: 850, max: 3, burst: 2, gap: 560 },
+  { up: 680, max: 5, burst: 3, gap: 420 }, { up: 520, max: 7, burst: 4, gap: 300 },
+];
+const lv = (n) => LV[Math.min(LEVELS, Math.max(1, n)) - 1];
 // tickets for one game (5 at most): 30 moles → 1 · 50 → 2 · 80 → 3 · 100 → 4 · 120 → 5 (the server decides)
 export const MOLE_TIERS = [[30, 1], [50, 2], [80, 3], [100, 4], [120, 5]];
 const ticketsFor = (score) => MOLE_TIERS.reduce((t, [g, n]) => (score >= g ? n : t), 0);
@@ -107,7 +110,7 @@ export function openMole(onDone = () => {}) {
   const say = (t) => { msg.innerHTML = t; hydrateIcons(msg); };
   const showBoard = (d) => { boardBox.innerHTML = boardHtml(d); };
   showBoard(boardCache); loadMoleBoard().then((d) => { if (alive) showBoard(d); });
-  const intro = () => say(`<span class="zh">投币开始！地鼠出来就点它。</span> Put a coin in, then tap the moles when they pop up!<br><small>${TIME}s · <span class="zh">每打${PER_LEVEL}只升一级，越来越快！</span> every ${PER_LEVEL} moles = next level — faster and more moles!</small>
+  const intro = () => say(`<span class="zh">投币开始！地鼠出来就点它。</span> Put a coin in, then tap the moles when they pop up!<br><small>${TIME}s · <span class="zh">每${LEVEL_S}秒升一级（共${LEVELS}级），越来越快！</span> a new level every ${LEVEL_S} seconds (${LEVELS} levels) — faster and more moles!</small>
       <div class="mole-evil-tip"><span class="mole-evil-pic"></span><span>😈 <span class="zh">小心紫色的坏地鼠！打到它会扣1分。</span><br>Watch out for the purple <b>evil mole</b> with horns — bopping it takes away <b>1 point</b>!</span></div>`);
   intro();
   const showTipPic = () => { const p = $('.mole-evil-pic', msg); if (p && !p.firstChild) { const c = document.createElement('canvas'); drawGrid(c, artGrid(EVIL, PAL), 2.5); p.append(c); } };
@@ -143,8 +146,6 @@ export function openMole(onDone = () => {}) {
     h.hit = true; h.el.classList.add('hit'); bonk();
     if (h.evil) { score = Math.max(0, score - 1); misses++; sfx.miss(); flash('😈 <b>-1</b>'); field.classList.remove('oops'); void field.offsetWidth; field.classList.add('oops'); hud(); goDown(h, 260); return; }
     score++; hud(); goDown(h, 260);
-    const nl = Math.floor(score / PER_LEVEL) + 1;
-    if (nl > level) { level = nl; music.setLevel(level); hud(); flash(`⬆️ <b>LEVEL ${level}</b>`); sfx.correct && sfx.correct(); }
   }
   // 🔨 the red mallet swings down onto the hole she tapped
   let swingT = 0;
@@ -162,6 +163,9 @@ export function openMole(onDone = () => {}) {
     const left = Math.max(0, (endT - performance.now()) / 1000);
     $('.bb-time', box).textContent = `⏱ ${Math.ceil(left)}`;
     if (left <= 0) return finish();
+    // ⏱ every 10 seconds: the next level
+    const nl = Math.min(LEVELS, Math.floor((TIME - left) / LEVEL_S) + 1);
+    if (nl > level) { level = nl; music.setLevel(level); hud(); flash(`⬆️ <b>LEVEL ${level}</b>`); sfx.correct && sfx.correct(); }
     clockT = setTimeout(tickClock, 200);
   }
   function spawnLoop() {

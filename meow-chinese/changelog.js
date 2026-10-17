@@ -605,4 +605,7 @@ export const CHANGES = [
     '📷 Take a souvenir photo from the cabin (1 per ride). Pretty frames can be bought, with a preview.',
     '🖼️ New Gallery app on the phone: all your photos (up to 100). Send a photo to a friend in Messages.',
   ] },
+  { v: 219, items: [
+    '🔨 Mole Bop is now 50 seconds with 5 levels — a new, faster level every 10 seconds.',
+  ] },
 ];
