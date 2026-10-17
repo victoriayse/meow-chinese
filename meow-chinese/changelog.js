@@ -588,4 +588,7 @@ export const CHANGES = [
   { v: 214, items: [
     '🟢 On phones, "a friend is online" is now a small pill at the top, without buttons.',
   ] },
+  { v: 215, items: [
+    '⭕ Tic-tac-toe now says how many wins a day earn coins.',
+  ] },
 ];

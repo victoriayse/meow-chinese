@@ -276,6 +276,7 @@ export function openPhone({ start = 'home', after } = {}) {
       let over = false;
       const score = (this._ttt = this._ttt || { me: 0, cat: 0, draw: 0 });
       const ui = html`<div class="ttt"><div class="ttt-score">你 You <b id="sm">${score.me}</b> · 平 Draw <b id="sd">${score.draw}</b> · 🐱 <b id="sc">${score.cat}</b></div>
+          ${S.limitSetting('ttt').perDay && S.rewardText(S.rewardFor('ttt')) ? `<p class="ttt-note">🪙 <span class="zh">每天只有前${S.limitSetting('ttt').perDay}次赢可以得金币。</span><br>Only your first ${S.limitSetting('ttt').perDay} win${S.limitSetting('ttt').perDay === 1 ? '' : 's'} each day earn coins.</p>` : ''}
           <div class="ttt-msg" id="msg">你先走！你是 ❌ · You go first — you are ❌${tw ? `<br><small>赢了得${S.rewardText(S.rewardFor('ttt'), false)} · Win to get ${tw} <span class="zh">（今天还有${paidLeft}次）</span>(${paidLeft} paid win${paidLeft === 1 ? '' : 's'} left today)</small>` : S.rewardText(S.rewardFor('ttt')) ? '<br><small>今天的奖励拿完了，明天再来！ · No more coins today — just for fun now!</small>' : ''}</div>
           <div class="ttt-board">${board.map((_, i) => `<button data-c="${i}"></button>`).join('')}</div>
           <button class="ph-btn green block" id="again">↺ 再来一局 Play again</button></div>`;
