@@ -2143,3 +2143,17 @@ img.gone { min-height: 40px; font-size: 11px; }
 .carn-snap small { opacity: .7; font-weight: 600; }
 .carn-view { align-self: center; max-width: 100%; }
 .carn-view canvas { width: auto; max-width: 100%; max-height: min(56vh, 480px); margin: 0 auto; }
+/* v220: smaller map pins */
+.map-pin .ic { width: 38px; height: 38px; border-width: 2px; box-shadow: 0 3px 0 rgba(43,33,64,.35); }
+.map-pin .ic::after { bottom: -9px; border-width: 6px; border-top-width: 7px; }
+.map-pin .ic canvas { width: 20px !important; height: 20px !important; }
+.map-pin .lb { font-size: 11px; padding: 0 6px; margin-top: 4px; border-width: 2px; }
+@media (max-width: 600px) { .map-pin .ic { width: 28px; height: 28px; } .map-pin .ic canvas { width: 15px !important; height: 15px !important; } .map-pin .lb { font-size: 9px; padding: 0 4px; } }
+/* v220: the carnival's wheel tap area, booth and exit sign */
+.carn-wheel-hit { position: absolute; left: 24%; width: 52%; top: 4%; height: 58%; z-index: 1; border: 0; padding: 0; background: none; cursor: pointer; border-radius: 50%; }
+.carn-wheel-hit:hover { background: radial-gradient(circle, rgba(255,210,63,.18), transparent 70%); }
+.carn-hint { position: absolute; left: 50%; top: -2px; transform: translateX(-50%); background: #fff8ec; border: 2px solid var(--ink); border-radius: 999px; padding: 1px 8px; font: 800 11px/1.3 system-ui, sans-serif; white-space: nowrap; color: var(--ink); animation: carn-bob 1.6s ease-in-out infinite; pointer-events: none; }
+.room.arranging .carn-wheel-hit { pointer-events: none; }
+.decor .screen-label.carn-booth-label { font-size: 9px; color: #2b2140; font-weight: 900; }
+.decor .screen-label.carn-exit-label { font-size: 9px; color: #fff; font-weight: 900; }
+.carn-board-tip { margin: 0; text-align: center; font-size: 14px; }

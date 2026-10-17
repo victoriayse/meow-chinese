@@ -317,6 +317,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   // 🎡 the carnival's Ferris wheel (ticket booth, rides together, souvenir photos)
   carnival = placeKey === 'carnival' ? createCarnival({ me, ch, others, getMine: () => mine, myLook, sendMine, getRoomKey: () => roomKey,
     landAtExit: (together) => { mine.seat = null; mine.x = together ? 84 : 86; mine.y = 6; mine.left = true; if (myEl) { place(); myKv && myKv.jump(); } } }) : null;
+  if (carnival && location.hostname === 'localhost') window.__carn = carnival;   // (tests only)
   ch.open();
   // a public place: its furniture is saved online (people there say hello over the channel)
   if (P) Places.loadPlace(placeKey).then((h) => {
@@ -768,6 +769,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (left) return; left = true;
     if (P) { leaveBuffet(); if (placeKey === 'cinema') leaveCinema(); }
     setCatZ(null);
+    if (carnival) carnival.stop();
     if (P && S.dropPlaceFood()) toast('🍽️ <span class="zh">吃的喝的不能带走哦</span> Food and drinks stay behind when you leave', { ms: 2600 });
     Radio.stop(); clearInterval(kt); if (stadium) stadium.stop(); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
   $('#leave', n).onclick = () => { leave(); if (P) go('map'); else go('friend', { id: hostId }); };

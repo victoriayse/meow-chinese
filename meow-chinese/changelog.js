@@ -608,4 +608,9 @@ export const CHANGES = [
   { v: 219, items: [
     '🔨 Mole Bop is now 50 seconds with 5 levels — a new, faster level every 10 seconds.',
   ] },
+  { v: 220, items: [
+    '🎡 Tap the Ferris wheel itself to board: your cat walks into the cabin and sits down. Ride alone, or a friend taps the wheel and walks in to sit beside you — then the door closes and up you go.',
+    '🎟️ The ticket booth and EXIT sign are now furniture (the admin can move and resize them).',
+    '🗺️ Smaller pins on the map.',
+  ] },
 ];

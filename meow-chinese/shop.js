@@ -41,6 +41,7 @@ const DECOR_GROUPS = [
   { key: 'cafe', icon: '☕', zh: '咖啡馆', en: 'Cafe' },
   { key: 'cinema', icon: '🎬', zh: '电影院', en: 'Cinema' },
   { key: 'school', icon: '🏫', zh: '学校', en: 'School' },
+  { key: 'carnival', icon: '🎡', zh: '嘉年华', en: 'Carnival' },
   { key: 'food', icon: '🍰', zh: '小吃', en: 'Food & snacks' },
   { key: 'lights', icon: '💡', zh: '灯', en: 'Lights' },
   { key: 'windows', icon: '🪟', zh: '窗帘', en: 'Curtains' },
@@ -91,7 +92,7 @@ export function shopScreen({ go, tab = 'food' }) {
     </div></section>`;
   let subcat = 'all', subroom = 'all';
   // 🛍️ Shopping Mall / 🎬 Cinema / ☕ Cafe / 🏫 School: a second row of chips, one per room of that place
-  const PLACE_GROUPS = ['mall', 'cinema', 'cafe', 'school'];
+  const PLACE_GROUPS = ['mall', 'cinema', 'cafe', 'school', 'carnival'];
   const ROOM_ORDER = Object.values(S.PLACE_ROOMS).flat(), order = (k) => (k === 'other' ? 1e3 : ROOM_ORDER.indexOf(k));
   const roomOfItem = (it) => (it.room && S.roomInfo(it.room).key === it.room ? it.room : 'other');
   const mini = $('#mini', n);

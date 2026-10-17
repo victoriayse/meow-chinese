@@ -1,7 +1,8 @@
 // 🎡 The Carnival's Ferris wheel (a public place on the map: Main Square ▶ Ferris Wheel).
-// 1. Tap the ticket booth: 10 coins · a 60-second ride, and who nearby already has a ticket.
+// 1. The ticket booth (furniture the admin places): 10 coins · a 60-second ride, and who is waiting to board.
 // 2. Buy a ticket (she confirms first). It stays in her bag until she boards, so changing her mind loses nothing.
-// 3. Ride alone, or invite a cat nearby — each rider uses their own ticket and both say yes before it starts.
+// 3. Tap the wheel to board: she walks into the cabin and sits (1/2). Ride alone, or a second cat taps the wheel and
+//    walks in to sit beside her (each uses their own ticket); then Start — the door closes.
 // 4. The cabin rises: buildings drop away below, clouds drift past, day or night like outside.
 // 5. A pause at the very top to enjoy the view. 6. 📷 one souvenir photo per ride (frames can be bought, with a
 //    preview) — it goes into the phone's 🖼️ Gallery. 7. Down again; the door opens and the cats step out by the exit.
@@ -26,133 +27,198 @@ export const FRAMES = [
 ];
 const ownsFrame = (k) => k === 'plain' || (S.get().photoFrames || []).includes(k);
 
-// ---------- the ticket booth and exit sign (built into the Ferris Wheel area) ----------
-const BOOTH = [
-  '..oooooooooooooooooooo..', '.orrwwrrwwrrwwrrwwrrwwo.', 'orrwwrrwwrrwwrrwwrrwwrro', 'oooooooooooooooooooooooo',
-  '.oyyyyyyyyyyyyyyyyyyyyo.', '.oyyyyyyyyyyyyyyyyyyyyo.', '.oyyyyyyyyyyyyyyyyyyyyo.', '.oooooooooooooooooooooo.',
-  '.osssssssssssssssssssso.', '.osgggggggggggggggggggso.', '.osgggggggggggggggggggso.', '.osgggggggggggggggggggso.',
-  '.osgggggggggggggggggggso.', '.osssssssssssssssssssso.', '.obbbbbbbbbbbbbbbbbbbbbo.', '.orrrrrrrrrrrrrrrrrrrrro.',
-  '.orrwwrrrrrrrrrrrrrwwrro.', '.orrrrrrrrrrrrrrrrrrrrro.', '.orrrrrrrrrrrrrrrrrrrrro.', '.orrwwrrrrrrrrrrrrrwwrro.',
-  '.orrrrrrrrrrrrrrrrrrrrro.', '.oooooooooooooooooooooo.',
-];
-const BPAL = { o: '#2b2140', r: '#e8384f', w: '#ffffff', y: '#ffd23f', s: '#c9d3de', g: '#a8dcff', b: '#8a5a32' };
-
+// ---------- the Ferris wheel area ----------
+// The ticket booth and the EXIT sign are furniture (the admin places, moves and resizes them).
+// The wheel itself is painted in the background: tap it to board.
 export function createCarnival({ me, ch, others, getMine, myLook, sendMine, getRoomKey, landAtExit }) {
-  let invite = null, riding = false;          // invite: { to, name, t } that I sent, waiting for an answer
-  const nearby = () => others.ids().map((id) => ({ id, c: others.m.get(id) })).filter(({ c }) => c && c.room === WHEEL_ROOM && c.look && !c.riding);
+  let riding = false;
+  // the cabin at the platform: { owner, riders: [{ id, look }], heard } — mine (I'm the owner) or one I've heard about
+  let cabin = null, board = null, beat = 0;
+  const heardCabin = () => (cabin && cabin.owner !== me && Date.now() - cabin.heard < 6000 ? cabin : null);
   const markTicket = () => { const m = getMine(); m.wheelTix = tickets(); sendMine(); };
+  const sendCabin = () => { if (cabin && cabin.owner === me) ch.send('wheel-cabin', { id: me, riders: cabin.riders }); };
 
   function attach(room) {
     if (getRoomKey() !== WHEEL_ROOM) return;
-    const booth = html`<button type="button" class="carn-booth" aria-label="Ferris wheel tickets"><span class="carn-sign">🎟️ <span class="zh">售票处</span> Tickets</span></button>`;
-    const c = document.createElement('canvas'); drawGrid(c, artGrid(BOOTH, BPAL), 4); booth.prepend(c);
-    booth.onclick = (e) => { e.stopPropagation(); sfx.click(); openBooth(); };
-    const exit = html`<div class="carn-exit">🚪 <span class="zh">出口</span> EXIT</div>`;
-    room.append(booth, exit);
+    // the painted wheel: a big tap area over it
+    const hit = html`<button type="button" class="carn-wheel-hit" aria-label="Board the Ferris wheel"><span class="carn-hint">🎡 <span class="zh">点摩天轮上车</span> Tap the wheel to board</span></button>`;
+    hit.onclick = (e) => { if (room.classList.contains('arranging')) return; e.stopPropagation(); sfx.click(); tapWheel(); };
+    room.append(hit);
+    room.querySelectorAll('.decor').forEach((d) => { if (/^carnivalbooth/.test(d.dataset.id)) d.classList.add('mall-interactive'); });
+    room.addEventListener('click', (e) => {
+      const d = e.target.closest('.decor'); if (!d || room.classList.contains('arranging') || e.target.closest('button')) return;
+      if (/^carnivalbooth/.test(d.dataset.id)) { sfx.click(); openBooth(); }
+    });
     markTicket();
   }
 
-  // ---------- 1–3: the booth ----------
+  async function buyTicket() {
+    if (S.get().coins < WHEEL_FEE) { toast(`金币不够 · You need ${WHEEL_FEE} coins`); return false; }
+    if (!(await confirmBox('买一张摩天轮票？ Buy a ticket?', `${WHEEL_FEE} coins for one ${RIDE_S}-second ride. You can keep the ticket and ride later.`, `🎟️ 买 Buy (${WHEEL_FEE})`))) return false;
+    if (S.get().coins < WHEEL_FEE) return false;
+    S.get().coins -= WHEEL_FEE; S.get().wheelTickets = tickets() + 1; S.save(); sfx.coin();
+    toast('🎟️ <span class="zh">买好了！票在你的包里。</span> Ticket bought — it stays in your bag until you board.', { ms: 2600 });
+    markTicket(); return true;
+  }
+
+  // 🎟️ the booth: price, ride length, and who's waiting in the cabin
   function openBooth() {
     const box = html`<div class="card stack carn-card">
-        <div class="h-title">🎡 <span class="zh">摩天轮</span> Ferris wheel</div>
+        <div class="h-title">🎟️ <span class="zh">摩天轮售票处</span> Ferris wheel tickets</div>
         <p class="carn-price"><b>${WHEEL_FEE}</b>${coinI(18)} <span class="zh">一张票</span> a ticket · ⏱ <b>${RIDE_S}</b><span class="zh">秒</span>-second ride · <span class="zh">一个车厢坐两只猫</span> 2 cats a cabin</p>
-        <div class="carn-have"></div>
-        <div class="carn-buy-row"></div>
-        <div class="h-sub">👫 <span class="zh">附近的猫</span> Cats nearby</div>
-        <div class="carn-near"></div>
+        <div class="carn-have"></div><div class="carn-wait"></div>
+        <div class="carn-buy-row"><button type="button" class="btn yellow" id="cb-buy">🎟️ <span class="zh">买票</span> Buy a ticket · ${WHEEL_FEE}</button></div>
+        <p class="help" style="margin:0"><span class="zh">有票就点摩天轮上车。</span> Got a ticket? Tap the Ferris wheel to board.</p>
         <button type="button" class="btn white" id="cb-close">关闭 Close</button></div>`;
     const draw = () => {
-      const n = tickets();
-      $('.carn-have', box).innerHTML = `<span class="zh">我的票</span> My tickets: <b>🎟️ ${n}</b> · <span class="zh">金币</span> Coins: <b>${S.get().coins}</b>`;
-      $('.carn-buy-row', box).innerHTML = `<button type="button" class="btn yellow" id="cb-buy" ${S.get().coins >= WHEEL_FEE ? '' : 'disabled'}>🎟️ <span class="zh">买票</span> Buy a ticket · ${WHEEL_FEE}</button>
-          <button type="button" class="btn green" id="cb-alone" ${n ? '' : 'disabled'}>🎡 <span class="zh">自己坐</span> Ride alone</button>`;
-      $('#cb-buy', box).onclick = buy;
-      $('#cb-alone', box).onclick = () => { closeModal(); startRide(null); };
-      const list = $('.carn-near', box), ppl = nearby();
-      list.innerHTML = ppl.length ? '' : '<p class="help" style="margin:0">附近还没有别的猫。 No other cats by the wheel right now.</p>';
-      ppl.forEach(({ id, c }) => {
-        const row = html`<div class="carn-person"><span><b>${esc(c.look.name || '🐱')}</b> ${c.wheelTix ? '<small class="carn-waiting">🎟️ <span class="zh">有票，在等</span> has a ticket — waiting to board</small>' : '<small>没有票 · no ticket yet</small>'}</span>
-            <button type="button" class="btn small green" ${n ? '' : 'disabled'}>📨 <span class="zh">一起坐</span> Invite</button></div>`;
-        $('button', row).onclick = () => sendInvite(id, c.look.name || '朋友', box);
-        list.append(row);
-      });
+      $('.carn-have', box).innerHTML = `<span class="zh">我的票</span> My tickets: <b>🎟️ ${tickets()}</b> · <span class="zh">金币</span> Coins: <b>${S.get().coins}</b>`;
+      const c = heardCabin(), waiting = others.ids().map((id) => others.m.get(id)).filter((o) => o && o.room === WHEEL_ROOM && o.wheelTix && !o.riding);
+      $('.carn-wait', box).innerHTML = c && c.riders.length === 1
+        ? `👫 <b>${esc(c.riders[0].look.name || '🐱')}</b> <span class="zh">在车厢里等人一起坐！</span> is waiting in the cabin — tap the wheel to join!`
+        : waiting.length ? `👫 <span class="zh">有票在等：</span> Waiting to board: ${waiting.map((o) => `<b>${esc(o.look.name || '🐱')}</b>`).join(', ')}` : '<small class="help">现在没有人在等 · Nobody is waiting right now</small>';
+      $('#cb-buy', box).disabled = S.get().coins < WHEEL_FEE;
       hydrateIcons(box);
     };
-    async function buy() {
-      if (S.get().coins < WHEEL_FEE) return toast(`金币不够 · You need ${WHEEL_FEE} coins`);
-      if (!(await confirmBox('买一张摩天轮票？ Buy a ticket?', `${WHEEL_FEE} coins for one 60-second ride. You can keep the ticket and ride later.`, `🎟️ 买 Buy (${WHEEL_FEE})`))) return openBooth();
-      if (S.get().coins < WHEEL_FEE) return;
-      S.get().coins -= WHEEL_FEE; S.get().wheelTickets = tickets() + 1; S.save(); sfx.coin();
-      toast('🎟️ <span class="zh">买好了！票在你的包里。</span> Ticket bought — it stays in your bag until you board.', { ms: 2600 });
-      markTicket(); openBooth();
-    }
+    $('#cb-buy', box).onclick = async () => { if (await buyTicket()) openBooth(); else openBooth(); };
     $('#cb-close', box).onclick = closeModal;
     draw(); openModal(box);
   }
 
-  // ---------- inviting someone nearby (both need a ticket; both say yes) ----------
-  function sendInvite(id, name, box) {
-    if (!tickets()) return toast('先买票 · Buy a ticket first');
-    invite = { to: id, name, t: Date.now() };
-    ch.send('wheel-invite', { id: me, to: id, name: myLook().name });
-    closeModal();
-    const w = html`<div class="card stack carn-card" style="text-align:center"><div class="h-title" style="justify-content:center">📨 <span class="zh">等${esc(name)}回答…</span></div>
-        <p class="help" style="margin:0">Waiting for <b>${esc(name)}</b> to say yes (they use their own ticket).</p>
-        <button type="button" class="btn white" id="cw-cancel">取消 Cancel</button></div>`;
-    $('#cw-cancel', w).onclick = () => { if (invite) ch.send('wheel-answer', { id: me, to: id, ok: false, cancel: true }); invite = null; closeModal(); };
-    openModal(w, { onClose: () => {} });
-    setTimeout(() => { if (invite && invite.to === id && Date.now() - invite.t >= 29000) { invite = null; closeModal(); toast(`${esc(name)} 没有回答 · No answer — try again later`); } }, 30000);
+  // 🎡 tap the wheel: board the waiting cabin (join the cat already inside), or a new one
+  async function tapWheel() {
+    if (riding || board) return;
+    if (!tickets()) {
+      if (!(await buyTicket())) return;
+    }
+    const c = heardCabin();
+    if (c && c.riders.length === 1) {
+      ch.send('wheel-join', { id: me, to: c.owner, look: myLook() });
+      S.get().wheelTickets = tickets() - 1; S.save(); markTicket();   // my ticket goes in as I step in
+      openBoarding({ owner: c.owner, riders: [...c.riders, { id: me, look: myLook() }], walker: me });
+      return;
+    }
+    S.get().wheelTickets = tickets() - 1; S.save(); markTicket();
+    cabin = { owner: me, riders: [{ id: me, look: myLook() }], heard: Date.now() };
+    sendCabin(); clearInterval(beat); beat = setInterval(sendCabin, 2500);
+    openBoarding({ owner: me, riders: cabin.riders, walker: me });
   }
+  // stepping out before the ride starts: the ticket comes back
+  function getOff() {
+    if (!board) return;
+    const wasOwner = board.owner === me;
+    S.get().wheelTickets = tickets() + 1; S.save(); markTicket();
+    if (wasOwner) { clearInterval(beat); ch.send('wheel-cabin', { id: me, riders: [], closed: true }); cabin = null; }
+    else ch.send('wheel-leave', { id: me, to: board.owner });
+    board.close(); board = null;
+  }
+  function startNow() {
+    if (!board) return;
+    const at = Date.now() + 1600;   // the door takes a moment to close
+    if (board.owner === me) { clearInterval(beat); ch.send('wheel-start', { id: me, at, riders: board.riders }); cabin = null; }
+    else ch.send('wheel-start', { id: me, to: board.owner, at, riders: board.riders });
+    go(at, board.riders);
+  }
+  function go(at, riders) {
+    if (!board) return;
+    const partner = riders.find((r) => r.id !== me);
+    board.closeDoor(() => {
+      board = null;
+      riding = true; const m = getMine(); m.riding = true; sendMine();
+      openRide({ me: myLook(), partner: partner ? partner.look : null, at, onEnd: () => {
+        riding = false; const mm = getMine(); mm.riding = false; landAtExit(!!partner); sendMine();
+        toast('🎡 <span class="zh">好玩吗？欢迎再来！</span> Hope you enjoyed the ride!', { ms: 2600 });
+      } });
+    });
+  }
+
   function onBroadcast(ev, p) {
-    if (p.to !== me) return;
-    if (ev === 'wheel-invite') {
-      if (riding) return ch.send('wheel-answer', { id: me, to: p.id, ok: false, busy: true });
-      const from = others.m.get(p.id), name = String(p.name || (from && from.look && from.look.name) || '朋友').slice(0, 30);
-      const box = html`<div class="card stack carn-card" style="text-align:center"><div class="h-title" style="justify-content:center">🎡 <span class="zh">${esc(name)}请你一起坐摩天轮！</span></div>
-          <p style="margin:0"><b>${esc(name)}</b> invites you to ride the Ferris wheel together.<br><small class="help">You use one of your own tickets (${WHEEL_FEE} coins). You have 🎟️ <b>${tickets()}</b>.</small></p>
-          <div class="row" style="justify-content:center"><button type="button" class="btn white" id="ci-no">不了 No thanks</button>
-            <button type="button" class="btn green" id="ci-yes">${tickets() ? '🎟️ <span class="zh">用一张票</span> Use my ticket' : `🎟️ <span class="zh">买票一起坐</span> Buy one (${WHEEL_FEE}) & ride`}</button></div></div>`;
-      $('#ci-no', box).onclick = () => { ch.send('wheel-answer', { id: me, to: p.id, ok: false }); closeModal(); };
-      $('#ci-yes', box).onclick = () => {
-        if (!tickets()) {
-          if (S.get().coins < WHEEL_FEE) { toast(`金币不够 · You need ${WHEEL_FEE} coins`); return; }
-          S.get().coins -= WHEEL_FEE; S.get().wheelTickets = 1; S.save(); sfx.coin();
-        }
-        ch.send('wheel-answer', { id: me, to: p.id, ok: true, look: myLook() }); closeModal();
-        const w = html`<div class="card stack carn-card" style="text-align:center"><p>⏳ <span class="zh">等${esc(name)}开始…</span> Waiting for ${esc(name)} to start…</p></div>`;
-        openModal(w);
-        setTimeout(() => { if (!riding && w.isConnected) closeModal(); }, 20000);
-      };
-      openModal(box); sfx.click();
-    } else if (ev === 'wheel-answer') {
-      if (p.cancel) { closeModal(); return toast('邀请取消了 · The invite was cancelled'); }
-      if (!invite || invite.to !== p.id) return;
-      const name = invite.name; invite = null; closeModal();
-      if (!p.ok) return toast(p.busy ? `${esc(name)}正在坐摩天轮 · ${esc(name)} is riding right now` : `${esc(name)}说不了 · ${esc(name)} said no thanks`);
-      if (!tickets()) return toast('你的票不见了 · You have no ticket');
-      const at = Date.now() + 1500;
-      ch.send('wheel-go', { id: me, to: p.id, at, look: myLook() });
-      startRide({ id: p.id, look: p.look || (others.m.get(p.id) || {}).look }, at);
-    } else if (ev === 'wheel-go') {
-      closeModal();
-      startRide({ id: p.id, look: p.look || (others.m.get(p.id) || {}).look }, p.at);
+    if (ev === 'wheel-cabin') {       // someone is waiting in the cabin (or got off)
+      if (p.closed || !p.riders || !p.riders.length) {
+        if (cabin && cabin.owner === p.id) cabin = null;
+        if (board && board.owner === p.id) { toast('🚪 <span class="zh">另一只猫下车了</span> The other cat got off'); S.get().wheelTickets = tickets() + 1; S.save(); markTicket(); board.close(); board = null; }
+        return;
+      }
+      if (!cabin || cabin.owner !== me) cabin = { owner: p.id, riders: p.riders.slice(0, 2), heard: Date.now() };
+      if (board && board.owner === p.id) board.setRiders(p.riders.slice(0, 2));
+      return;
+    }
+    if (p.to && p.to !== me) return;
+    if (ev === 'wheel-join' && board && board.owner === me) {
+      if (board.riders.length >= 2) return ch.send('wheel-full', { id: me, to: p.id });
+      const riders = [...board.riders, { id: p.id, look: p.look || (others.m.get(p.id) || {}).look || {} }];
+      cabin = { owner: me, riders, heard: Date.now() }; board.setRiders(riders, p.id); sendCabin(); sfx.click();
+    } else if (ev === 'wheel-leave' && board && board.owner === me) {
+      const riders = board.riders.filter((r) => r.id !== p.id); cabin = { owner: me, riders, heard: Date.now() }; board.setRiders(riders); sendCabin();
+      toast('🚪 <span class="zh">另一只猫下车了</span> The other cat got off');
+    } else if (ev === 'wheel-full' && board) {
+      toast('车厢满了 · That cabin is full'); S.get().wheelTickets = tickets() + 1; S.save(); markTicket(); board.close(); board = null;
+    } else if (ev === 'wheel-start' && board && (board.owner === p.id || board.owner === me) && board.riders.some((r) => r.id === p.id)) {
+      if (board.owner === me) { clearInterval(beat); if (p.to) ch.send('wheel-start', { id: me, at: p.at, riders: board.riders }); cabin = null; }
+      go(p.at, board.riders);
     }
   }
 
-  // ---------- 4–7: the ride ----------
-  function startRide(partner, at = Date.now() + 600) {
-    if (riding) return;
-    if (!tickets()) return toast('先买票 · Buy a ticket first');
-    S.get().wheelTickets = tickets() - 1; S.save();           // the ticket is used when the ride starts
-    riding = true; const m = getMine(); m.riding = true; m.wheelTix = tickets(); sendMine();
-    openRide({ me: myLook(), partner: partner && partner.look ? partner.look : null, at, onEnd: () => {
-      riding = false; const mm = getMine(); mm.riding = false; landAtExit(!!partner); sendMine();
-      toast('🎡 <span class="zh">好玩吗？欢迎再来！</span> Hope you enjoyed the ride!', { ms: 2600 });
-    } });
+  // ---------- boarding: she walks into the cabin and sits; 1/2 cats; ride alone or wait for a friend ----------
+  function openBoarding({ owner, riders, walker }) {
+    const night = isNight();
+    const box = html`<div class="card carn-ride carn-board">
+        <div class="carn-ride-top"><span>🎡 <span class="zh">上车啦</span> All aboard!</span><span class="carn-count"></span></div>
+        <div class="carn-view"><canvas width="${SCN_W}" height="${SCN_H}"></canvas></div>
+        <p class="carn-board-tip"></p>
+        <div class="row" style="justify-content:center;flex-wrap:wrap"><button type="button" class="btn white" id="bd-off">🚪 <span class="zh">下车</span> Get off</button><button type="button" class="btn green" id="bd-go"></button></div>
+      </div>`;
+    const ctx = $('canvas', box).getContext('2d');
+    // each rider walks in from the door on the right to a seat (1st on the left, 2nd on the right)
+    const seats = new Map();
+    const addSeat = (r, i, walking) => { if (!seats.has(r.id)) seats.set(r.id, { c: catCanvas(r.look), seat: i, t0: walking ? performance.now() : -1e9 }); };
+    let list = riders.slice(0, 2), alive = true, doorO = 1, closing = null;
+    list.forEach((r, i) => addSeat(r, i, r.id === walker));
+    const st = {
+      owner, get riders() { return list; },
+      setRiders(rs, walking = null) {
+        list = rs.slice(0, 2);
+        [...seats.keys()].forEach((id) => { if (!list.some((r) => r.id === id)) seats.delete(id); });
+        list.forEach((r, i) => { addSeat(r, i, r.id === walking); seats.get(r.id).seat = i; });
+        hud();
+      },
+      close() { alive = false; closeModal(); },
+      closeDoor(done) { closing = { t0: performance.now(), done }; sfx.click(); hud(); },
+    };
+    const hud = () => {
+      $('.carn-count', box).textContent = `🐱 ${list.length}/2`;
+      const two = list.length >= 2;
+      $('#bd-go', box).innerHTML = two ? '▶️ <span class="zh">出发！</span> Start the ride' : '▶️ <span class="zh">自己坐</span> Ride alone';
+      $('.carn-board-tip', box).innerHTML = two ? '<span class="zh">两只猫都上车了！</span> Both cats are in — start whenever you like.' : '<span class="zh">可以自己坐，或者等一个朋友点摩天轮上车。</span> Ride alone, or wait for a friend to tap the wheel and hop in.';
+      $('#bd-go', box).disabled = $('#bd-off', box).disabled = !!closing;
+    };
+    $('#bd-go', box).onclick = () => { if (!closing) startNow(); };
+    $('#bd-off', box).onclick = () => { if (!closing) getOff(); };
+    const WALK = 1400;
+    const loop = (now) => {
+      if (!alive || !box.isConnected) return;
+      if (closing) { doorO = Math.max(0, 1 - (now - closing.t0) / 1000); if (doorO <= 0 && closing.done) { const d = closing.done; closing.done = null; alive = false; closeModal(); d(); return; } }
+      const placed = [...seats.values()].map((s) => {
+        const k = Math.min(1, (now - s.t0) / WALK), target = s.seat === 0 ? -98 : 6;
+        // from the doorway (right) to the seat; bob while walking, then settle down a little to sit
+        return { c: s.c, x: 120 + (target - 120) * (1 - (1 - k) ** 2), dy: k < 1 ? -Math.abs(Math.sin(k * Math.PI * 4)) * 6 : 6 * Math.min(1, (now - s.t0 - WALK) / 250) };
+      });
+      drawScene(ctx, 0, night, [], { door: doorO, placed });
+      requestAnimationFrame(loop);
+    };
+    openModal(box, { onClose: () => { if (alive && !closing) { alive = false; if (board === st) { board = null; getOffSilently(); } } } });
+    hud(); hydrateIcons(box); requestAnimationFrame(loop);
+    board = st;
+    return st;
+  }
+  // closed with ✕ / outside tap while boarding: same as getting off
+  function getOffSilently() {
+    S.get().wheelTickets = tickets() + 1; S.save(); markTicket();
+    if (cabin && cabin.owner === me) { clearInterval(beat); ch.send('wheel-cabin', { id: me, riders: [], closed: true }); cabin = null; }
   }
 
-  return { attach, onBroadcast, openBooth };
+  // leaving the carnival: step out of a waiting cabin (ticket back) / stop the ride
+  function stop() { if (board) getOff(); else if (riding) closeModal(); }
+  return { attach, onBroadcast, openBooth, tapWheel, stop };
 }
 
 // ---------- the ride scene (a canvas, so the souvenir photo is exactly what she sees) ----------
@@ -171,7 +237,7 @@ function height(t) {   // 0 (ground) … 1 (the top), from seconds into the ride
   if (t < RISE + TOP + DESC) { const k = (t - RISE - TOP) / DESC; return 1 - k * k * (3 - 2 * k); }
   return 0;
 }
-function drawScene(ctx, t, night, cats, { door = 0 } = {}) {
+function drawScene(ctx, t, night, cats, { door = 0, placed = null } = {}) {
   const W = SCN_W, H = SCN_H, h = height(t), cam = h * SPAN, groundY = H * 0.86 + cam;
   ctx.imageSmoothingEnabled = false;
   // sky (a little deeper higher up)
@@ -231,18 +297,19 @@ function drawScene(ctx, t, night, cats, { door = 0 } = {}) {
   ctx.fillStyle = night ? '#232a62' : '#cfeeff'; roundRect(ctx, wx, wy, ww, wh, 12); ctx.fill();
   ctx.save(); roundRect(ctx, wx, wy, ww, wh, 12); ctx.clip();
   ctx.fillStyle = night ? 'rgba(255,224,138,.18)' : 'rgba(255,255,255,.35)'; ctx.fillRect(wx, wy, ww, wh);
-  // the cats, sitting side by side on the bench
-  const n = cats.filter(Boolean).length, cs = 92;
-  cats.filter(Boolean).forEach((c, i) => {
-    const px = n === 1 ? -cs / 2 : (i === 0 ? -cs - 6 : 6);
-    const ar = c.height / c.width || 1;
-    ctx.drawImage(c, px, wy + wh - cs * ar + 22, cs, cs * ar);
-  });
+  // the cats, sitting side by side on the bench (1st on the left, 2nd on the right) — or walking in (placed)
+  const cs = 92;
+  if (door > 0) { ctx.fillStyle = '#1a1230'; ctx.fillRect(x0 + cw - 54, y0 + 30, 48, chh - 36); }   // the open doorway (behind the cats walking in)
+  const list = placed || cats.filter(Boolean).map((c, i) => ({ c, x: i === 0 ? -cs - 6 : 6, dy: 6 }));
+  list.forEach(({ c, x, dy }) => { const ar = c.height / c.width || 1; ctx.drawImage(c, x, wy + wh - cs * ar + 22 + (dy || 0), cs, cs * ar); });
   ctx.fillStyle = '#8a5a32'; ctx.fillRect(wx, wy + wh - 16, ww, 16);                             // the bench back
   ctx.restore();
   ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fillRect(wx + 12, wy + 8, 6, wh - 30); ctx.fillRect(wx + 24, wy + 8, 3, wh - 50);   // glass shine
-  // the door (opens at the end)
-  if (door > 0) { ctx.fillStyle = '#c62a3e'; ctx.fillRect(x0 + cw - 46 * (1 - door) - 46, y0 + 30, 46, chh - 40); ctx.fillStyle = '#2b2140'; ctx.fillRect(x0 + cw - 46, y0 + 30, 46 * door, chh - 40); }
+  // the door on the right: closed (0) … open (1) — it slides out and leaves a dark doorway
+  { const dw = 48, dx = x0 + cw - dw - 6, dy0 = y0 + 30, dh = chh - 36;
+    ctx.fillStyle = '#c62a3e'; ctx.fillRect(dx + dw * door, dy0, dw, dh);
+    ctx.fillStyle = '#ffd23f'; ctx.fillRect(dx + dw * door + 6, dy0 + dh / 2 - 3, 6, 6);
+    ctx.fillStyle = 'rgba(207,238,255,.55)'; ctx.fillRect(dx + dw * door + 8, dy0 + 10, dw - 16, 36); }
   ctx.restore();
 }
 function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
