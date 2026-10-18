@@ -155,10 +155,8 @@ function drawMap(c) {
   [[10, 12], [22, 30], [60, 18], [130, 14], [146, 34], [104, 70], [20, 70], [140, 98], [8, 100], [52, 100]].forEach(([x, y]) => { R(x - 3, y - 4, 7, 6, '#4f9a52'); R(x - 2, y - 5, 5, 1, '#66b566'); R(x, y + 2, 1, 3, '#8a5a32'); });
   R(110, 92, 14, 8, '#5ab4ea'); R(112, 91, 10, 10, '#5ab4ea');
 }
-// places closed while they are being renovated (the admin can still go in to work on them)
-export const RENOVATING = new Set(['mall']);
 const PINS = [
-  { key: 'mall', zh: '购物中心', en: 'Shopping Mall', icon: '🛍️', x: 26, y: 77, reno: true },   // 🚧 being renovated: only the admin can go in
+  { key: 'mall', zh: '购物中心', en: 'Shopping Mall', icon: '🛍️', x: 26, y: 77 },
   { key: 'home', zh: '我的家', en: 'Home', icon: '🏠', x: 28, y: 34 },
   { key: 'cinema', zh: '电影院', en: 'Cinema', icon: '🎬', x: 70, y: 34 },
   { key: 'cafe', zh: '咖啡馆', en: 'Cafe', icon: '☕', x: 72, y: 77 },
@@ -172,7 +170,7 @@ export function mapScreen({ go }) {
       <div class="h-title"><span class="zh">🗺️ 地图</span><span class="en">Map</span></div>
       <p class="help" style="margin:0">点一个地方去看看！电影院、咖啡馆、商场、公园、体育场、学校和嘉年华是大家的地方，在那里可以见到所有人。<br>Tap a place to go there. The cinema, cafe, mall, park, stadium, school and carnival are public — you'll see everyone who is there.</p>
       <div class="map-box"><canvas class="map-art"></canvas>
-        ${PINS.map((p) => { const reno = RENOVATING.has(p.key); return `<button class="map-pin ${p.soon ? 'pin-soon' : ''} ${reno ? 'pin-reno' : ''}" data-pin="${p.key}" style="left:${p.x}%;top:${p.y}%"><span class="ic">${p.icon}</span>${reno ? '<i class="reno-badge" aria-hidden="true">🚧</i>' : ''}<span class="lb"><span class="zh">${p.zh}</span> ${p.en}${p.soon ? '<small>即将开放 Coming soon</small>' : reno ? '<small>🚧 装修中 In renovation</small>' : ''}</span></button>`; }).join('')}
+        ${PINS.map((p) => `<button class="map-pin ${p.soon ? 'pin-soon' : ''}" data-pin="${p.key}" style="left:${p.x}%;top:${p.y}%"><span class="ic">${p.icon}</span><span class="lb"><span class="zh">${p.zh}</span> ${p.en}${p.soon ? '<small>即将开放 Coming soon</small>' : ''}</span></button>`).join('')}
       </div></div></section>`;
   drawMap($('.map-art', n));
   n.querySelectorAll('.map-pin').forEach((pin) => { const icon = pin.querySelector('.ic'); icon.textContent = ''; icon.appendChild(spriteCanvas('map' + pin.dataset.pin, 48)); });
@@ -180,7 +178,6 @@ export function mapScreen({ go }) {
     b.onclick = () => {
       const p = PINS.find((x) => x.key === b.dataset.pin);
       if (p.soon) { sfx.miss(); return toast(`${p.icon} <span class="zh">${p.zh}即将开放！</span> The ${p.en.toLowerCase()} is coming soon`, { ms: 2500 }); }
-      if (RENOVATING.has(p.key) && !isAdmin()) { sfx.miss(); return toast(`🚧 <span class="zh">${p.zh}正在装修，很快就开放！</span> The ${p.en.toLowerCase()} is being renovated — it opens again soon`, { ms: 2800 }); }
       sfx.click();
       if (p.key === 'home') return go('home', { view: 'house' });
       if (!Auth.session()) return toast('要先登录 · Please log in first');

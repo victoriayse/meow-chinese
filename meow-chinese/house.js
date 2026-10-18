@@ -20,8 +20,7 @@ export let houseK = 1;
 // scale the fixed-size house to fit its box (the arrows sit outside it)
 export function fitHouse(box, unit) {
   if (!box || !unit) return;
-  // (the mall keeps room for the arrows on every floor, so walking between shops never resizes the view)
-  const side = box.querySelector('.room-nav') || box.dataset.keepArrows ? (window.innerWidth <= 600 ? 28 : ROOM_ARROW) : 0;
+  const side = box.querySelector('.room-nav') ? (window.innerWidth <= 600 ? 28 : ROOM_ARROW) : 0;
   const k = Math.min((box.clientWidth - 2 * side) / HOUSE.w, box.clientHeight / (HOUSE.roof + HOUSE.room)) || 1;
   houseK = k;
   unit.style.setProperty('--k', k); unit.style.setProperty('--inv', 1 / k);
@@ -292,22 +291,6 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
     drawGrid(ring, g.slice(0, sp.cy * 2 + 1).map((row, y) => row.slice(0, sp.cx * 2 + 1).map((v, x) => (inRing(x, y) ? v : null))), HOUSE.decor);
     head.appendChild(ring); wrap.append(c, head);
   } else wrap.appendChild(c);
-  if (it.walldoor) {
-    const dr = it.walldoor.door, doors = document.createElement('div'); doors.className = 'elev-doors';
-    Object.assign(doors.style, { left: `${dr.x * 100}%`, top: `${dr.y * 100}%`, width: `${dr.w * 100}%`, height: `${dr.h * 100}%` });
-    doors.innerHTML = '<i class="elev-door l glass"></i><i class="elev-door r glass"></i>';
-    wrap.classList.add('walldoor'); wrap.appendChild(doors);
-  }
-  if (it.elevator) {
-    // 🛗 the lift: two steel doors that slide apart, and a little screen showing the floor
-    const dr = it.elevator.door, ds = it.elevator.display;
-    const doors = document.createElement('div'); doors.className = 'elev-doors';
-    Object.assign(doors.style, { left: `${dr.x * 100}%`, top: `${dr.y * 100}%`, width: `${dr.w * 100}%`, height: `${dr.h * 100}%` });
-    doors.innerHTML = '<i class="elev-door l"></i><i class="elev-door r"></i>';
-    const scr = document.createElement('div'); scr.className = 'elev-display';
-    Object.assign(scr.style, { left: `${ds.x * 100}%`, top: `${ds.y * 100}%`, width: `${ds.w * 100}%`, height: `${ds.h * 100}%` });
-    wrap.classList.add('elevator'); wrap.append(doors, scr);
-  }
   if (it.doorSwing && it.frames && it.frames.open) {
     // v229: a door on a hinge — the inside is always drawn, and the door swings open over it (and shut again)
     drawGrid(c, artGrid(it.frames.open, it.pal), HOUSE.decor * (it.size || 1) * scale);
@@ -449,10 +432,7 @@ export function stackDecor(roomEl) {
       els.forEach((b) => {
         if (a === b || !overlap(A, box(b))) return;
         const za = +a.style.zIndex || 0, zb = +b.style.zIndex || 0;
-        // (only when a actually sits on / in front of b — its bottom reaches down into b — so a door at the back that just
-        //  touches a bench's top edge isn't pulled in front of the bench and of every cat in the room)
-        const B = box(b), sitsOn = A.b > B.t + (B.b - B.t) * 0.15;
-        if (lay(a) > lay(b) && za <= zb + 2 && sitsOn) a.style.zIndex = zb + 3;   // +3: also in front of a desk's front (drawn 2 above it, over a seated cat)
+        if (lay(a) > lay(b) && za <= zb + 2) a.style.zIndex = zb + 3;   // +3: also in front of a desk's front (drawn 2 above it, over a seated cat)
         else if (lay(a) < lay(b) && za >= zb) a.style.zIndex = Math.max(2, zb - 1);
       });
     });
@@ -505,10 +485,7 @@ export function say(wrapEl, text) {
 // ---------- other cats in the room (friends visiting, or the friend whose house it is) ----------
 // look: { name, level, fur, equipped }  ·  where: { x, y, room, left }
 export class OtherCats {
-  constructor() { this.m = new Map(); this.roomEl = null; this.roomKey = null; this.raf = 0; this.panels = {}; }
-  // 🗺️ the mall's walk-through floors: cats in the rooms next door show up in those (look-only) rooms too
-  setPanels(map) { this.panels = map || {}; this.m.forEach((_, id) => this.draw(id)); }
-  hostOf(c) { if (c.room === this.roomKey) return this.roomEl; const p = this.panels[c.room]; return p && p.isConnected ? p : null; }
+  constructor() { this.m = new Map(); this.roomEl = null; this.roomKey = null; this.raf = 0; }
   attach(roomEl, roomKey) { this.roomEl = roomEl; this.roomKey = roomKey; this.m.forEach((c) => { c.el = null; }); this.m.forEach((_, id) => this.draw(id)); }
   // the latest place we heard about is the target; the cat walks there smoothly (updates arrive in uneven bursts)
   upsert(id, data) {
@@ -518,7 +495,7 @@ export class OtherCats {
     if (c.dx == null || roomChanged || c.seat || Math.hypot(c.x - c.dx, (c.y - c.dy) * 1.5) > 25) { c.dx = c.x; c.dy = c.y; }   // first sight, new room or a big jump: just appear there
     this.m.set(id, c); this.draw(id); this.go(); return c;
   }
-  remove(id) { const c = this.m.get(id); if (c && c.el) { boothView(c.host || this.roomEl, c.el, null, false); c.el.remove(); } this.m.delete(id); syncRides(this.roomEl); }
+  remove(id) { const c = this.m.get(id); if (c && c.el) { boothView(this.roomEl, c.el, null, false); c.el.remove(); } this.m.delete(id); syncRides(this.roomEl); }
   has(id) { return this.m.has(id); }
   ids() { return [...this.m.keys()]; }
   say(id, text) { const c = this.m.get(id); if (c && c.el) say($w(c.el), text); }
@@ -545,34 +522,32 @@ export class OtherCats {
   }
   place(c) {
     if (!c.el) return;
-    const R = c.host || this.roomEl;
     c.el.classList.toggle('riding-away', !!c.riding);   // 🎡 up on the Ferris wheel: not standing in the room
-    const spot = c.seat && seatSpot(R, c.seat, c.slot);
-    boothView(R, c.el, spot && c.seat, c.boothClosed, null, c.look);
+    const spot = c.seat && seatSpot(this.roomEl, c.seat, c.slot);
+    boothView(this.roomEl, c.el, spot && c.seat, c.boothClosed, null, c.look);
     if (spot) { c.x = c.dx = spot.x; c.y = c.dy = spot.y; }
     c.el.style.left = `${c.dx}%`; c.el.style.bottom = `${c.dy}%`;
     c.el.style.zIndex = spot ? spot.z : catZ(c.dx, c.dy);
     c.el.classList.toggle('lying', !!(spot && spot.lie)); c.el.classList.toggle('seated', !!(spot && !spot.walk));
-    c.el.classList.toggle('swimming', !spot && inPool(R, c.dx, c.dy));
+    c.el.classList.toggle('swimming', !spot && inPool(this.roomEl, c.dx, c.dy));
     if (c.kv) { c.kv.setPose(spot ? spot.pose : null); c.kv.setHeld(c.look && c.look.hold); } c.el.dataset.pose = (spot && spot.pose) || '';
     if (c.kv && spot && spot.run) { c.kv.setFacing(spot.flip); c.kv.canvas.classList.add('walking'); }
     else if (c.kv && spot) c.kv.canvas.classList.remove('walking');
-    if (c.bedShown && c.bedShown !== (spot && spot.lie && c.seat)) { blanket(R, c.bedShown, false); c.bedShown = null; }
-    if (spot && spot.lie) { blanket(R, c.seat, true); c.bedShown = c.seat; }
-    rideFx(R, c.el, spot ? c.seat : null);
+    if (c.bedShown && c.bedShown !== (spot && spot.lie && c.seat)) { blanket(this.roomEl, c.bedShown, false); c.bedShown = null; }
+    if (spot && spot.lie) { blanket(this.roomEl, c.seat, true); c.bedShown = c.seat; }
+    rideFx(this.roomEl, c.el, spot ? c.seat : null);
   }
   draw(id) {
     const c = this.m.get(id); if (!c) return;
-    const host = c.look && this.roomEl && this.roomEl.isConnected ? this.hostOf(c) : null;
-    if (!host || (c.el && c.host !== host)) { if (c.el) { boothView(c.host || this.roomEl, c.el, null, false); c.el.remove(); c.el = null; } if (!host) return; }
-    c.host = host;
+    const here = this.roomEl && this.roomEl.isConnected && c.room === this.roomKey && c.look;
+    if (!here) { if (c.el) { boothView(this.roomEl, c.el, null, false); c.el.remove(); c.el = null; } return; }
     if (!c.el || !c.el.isConnected) {
       const el = html`<div class="vcat"><div class="kitten-wrap"><div class="kflip"></div><div class="nametag">${esc(c.look.name || '🐱')}<span class="lv">Lv${c.look.level || 1}</span></div></div></div>`;
       const kv = new KittenView({ scale: HOUSE.kitten, fur: c.look.fur || 'ginger', equipped: { ...(c.look.equipped || {}) } });
       kv.setMood('happy'); kv.setFacing(!!c.left);
       el.querySelector('.kflip').appendChild(kv.canvas);
       c.kv = kv; c.el = el;
-      host.appendChild(el);
+      this.roomEl.appendChild(el);
     }
     this.place(c);
   }

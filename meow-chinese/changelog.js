@@ -659,34 +659,7 @@ export const CHANGES = [
   { v: 232, items: [
     '🚽 Sit on any toilet (at home, a friend\'s house or the mall) for +1 bar of Hygiene. Once every 3 hours.',
   ] },
-  { v: 233, items: [
-    '🗺️ The mall is now one big walk-through map: all the shops on the same floor sit side by side, and the screen follows you as you walk from one shop into the next.',
-    '🛗 New escalators: walk up into one (or tap it) to ride to the floor above or below.',
-    '🐱 You can see other cats in the shops next to yours on the same floor.',
-  ] },
-  { v: 234, items: [
-    '🛗 New mall elevator: walk in (or tap it), the doors slide open, step inside, the doors close — then choose your floor and step out when the doors open again.',
-  ] },
-  { v: 235, items: [
-    '🛗 The elevator now works like a real one: call it and wait for it to come to your floor, step in, see the inside of the lift, press a floor and watch the floor numbers go up or down.',
-    '🐱 Every cat in the mall is now the same smaller size, so nothing jumps when you walk from one shop into the next.',
-  ] },
-  { v: 236, items: [
-    '🗺️ Fixed: the mall view no longer changes size when you walk from one shop into another.',
-  ] },
-  { v: 237, items: [
-    '🐱 Cats in the shopping mall are now 30% smaller again.',
-  ] },
-  { v: 238, items: [
-    '🚪 New mall item: a wall with a sliding glass door, to put between two shops. Cats can only walk through the door, and it slides open as they come near.',
-    '🐱 Fixed: a cat standing in front of the glass doors in the Lobby was hidden behind them.',
-    '🪑 The mall editor now shows the cat at the same size as when walking round the mall.',
-  ] },
-  { v: 239, items: [
-    '🛗 You can now walk onto the escalator from the side to ride it.',
-    '🪑 The mall editor is one walk-through floor too: walk off the side of a shop into the next one.',
-  ] },
-  { v: 240, items: [
-    '🚧 The Shopping Mall is closed for renovation for a little while — it will open again soon!',
+  { v: 241, items: [
+    '↩️ The mall is back to how it was before the walk-through floors (separate shops with ◀ ▶ arrows).',
   ] },
 ];

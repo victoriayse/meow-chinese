@@ -6,7 +6,6 @@ import { createStadium, joystick, JOYSTICK } from './stadium.js';
 import { wireCanteen } from './canteen.js';
 import { createCarnival } from './carnival.js';
 import { wireSupermarket, SUPER_ROOM } from './supermarket.js';
-import { MALL_FLOORS, mallNeighbors } from './mall.js';
 import { wireBuffet, leaveBuffet, hasPass, isBlocker, setGate, payHost, BUFFET_ROOM, leaveCinema, hasTicket, payCinema, THEATRES } from './buffet.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
@@ -44,7 +43,7 @@ export function myLook() {
   const s = S.get(), k = s.kitten;
   return { name: s.childName && !String(k.name).includes(s.childName) ? `${s.childName}的${k.name}` : k.name, level: S.level(), fur: k.fur, equipped: { ...(k.equipped || {}) }, hold: s.holding || null };
 }
-const clampPos = (p) => ({ ...p, x: /^mall/.test(p.room || '') ? Math.max(-1, Math.min(101, p.x)) : Math.max(6, Math.min(94, p.x)), y: Math.max(1, Math.min(S.roomMaxY(p.room || 'living'), p.y)) });
+const clampPos = (p) => ({ ...p, x: Math.max(6, Math.min(94, p.x)), y: Math.max(1, Math.min(S.roomMaxY(p.room || 'living'), p.y)) });
 // send at most ~8 moves a second, and always the last one
 function throttle(fn, ms = 120) {
   let last = 0, t = null, pending = null;
@@ -175,10 +174,6 @@ export const visitorCount = () => visitors.ids().length;
 // VISITOR: walk around a friend's house
 // =====================================================================
 export function visitScreen({ go, id: hostId, name = '', place: placeKey = null, returnRoom = null }) {
-  if (placeKey && Places.RENOVATING.has(placeKey) && !Places.isAdmin()) {   // 🚧 closed for renovation (any way in: the map, a friend, a link)
-    setTimeout(() => { toast('🚧 <span class="zh">这里正在装修，很快就开放！</span> This place is being renovated — it opens again soon', { ms: 2800 }); go('map'); }, 0);
-    return html`<section class="screen"></section>`;
-  }
   // place: a public place on the map (the cinema) — no host, everyone signed in can be there
   const me = (Auth.user() || {}).id, P = placeKey && Places.PLACES[placeKey];
   const startRoom = P ? (Places.isAdmin() && P.rooms.includes(returnRoom) ? returnRoom : P.start) : 'living';
@@ -196,8 +191,6 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null, carnival = null;
 
   let refreshingPlace = false, welcomed = false;
-  let escLock = false;   // just got off an escalator: step off its foot before it can take her again
-  let strip = null, arriveEsc = null, arriveLift = false, liftBusy = false;   // 🗺️ the mall: a whole floor is one long walk-through street; 🛗 arriving off an escalator
   async function refreshPlace() {
     if (!P || !gotHouse || refreshingPlace || !n.isConnected) return;
     refreshingPlace = true;
@@ -301,15 +294,9 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
           }
         }
         mine.x = nx; mine.y = ny; gateWatch();
-        if (strip) {   // 🗺️ walking off the side of a shop: straight into the next one on this floor
-          const fl = strip.floor, k = fl.indexOf(roomKey);
-          if (mine.x > 100 && fl[k + 1]) return crossTo(fl[k + 1], mine.x - 100);
-          if (mine.x < 0 && fl[k - 1]) return crossTo(fl[k - 1], mine.x + 100);
-        }
         // just came through a door and still holding ▲: don't bounce straight back (re-arm once she lets go or turns)
         const now = Date.now(); if (!doorArmed && (dy <= 0 || now - lastStepAt > 400)) doorArmed = true; lastStepAt = now;
         if (dy > 0 && doorArmed && placeKey === 'cinema' && room0 && walkIntoDoor(room0)) return;
-        if (doorArmed && placeKey === 'mall' && room0 && walkIntoEscalator(room0, dy)) return;
       }
       if (dy > 0 && room0) {   // walking up into the front of a stage: climb on
         const H = room0.clientHeight, W = room0.clientWidth;
@@ -381,10 +368,8 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
         <div class="room" id="room" data-room="${roomKey}"><canvas class="room-bg" id="roombg"></canvas></div>
       </div>${roomArrowsHtml(roomKey, (k) => open.includes(k), { showLocked: false })}`;
     const unit = $('#hunit', box), room = $('#room', box);
-    if (placeKey === 'mall') box.dataset.keepArrows = '1'; else delete box.dataset.keepArrows;
     if (P) reapplyShared();
     (house.rooms[roomKey] || []).forEach((e) => { const el = decorEl(e, { videoPick: !!(P && Places.isAdmin()), videoOwner: !!P }); if (el) room.appendChild(el); });
-    strip = placeKey === 'mall' ? buildStrip(room) : null;
     const saveMedia = async () => {
       if (!await Places.savePlace(placeKey)) throw new Error('Could not save the shared layout');
       await refreshPlace();
@@ -465,26 +450,18 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       if (slot < 0) { sfx.miss(); return toast('<span class="zh">坐满了！</span> No room — someone is already there'); }
       mine.seat = d.dataset.id; mine.slot = slot; mine.boothClosed = false; place(); myKv.jump(); sfx.click(); sendMine(); toiletVisit(mine.seat);
     });
-    // 🛗 tap an escalator to ride it
-    if (placeKey === 'mall') room.addEventListener('click', (e) => {
-      const d = e.target.closest('.decor'); if (!d || e.target.closest('button') || room.classList.contains('arranging')) return;
-      const it = ITEMS[d.dataset.id.split('#')[0]]; if (it && it.escalator) rideEscalator(d, it.escalator); else if (it && it.elevator) useLift(d);
-    });
     // my kitten
     myEl = html`<div class="vcat me"><div class="kitten-wrap"><div class="kflip"></div><div class="nametag">${esc(S.get().kitten.name)}<span class="lv">Lv${S.level()}</span></div></div></div>`;
     myKv = new KittenView({ scale: HOUSE.kitten }); myKv.setMood('happy'); myKv.setFacing(mine.left);
     myEl.querySelector('.kflip').appendChild(myKv.canvas);
     myWrap = myEl.querySelector('.kitten-wrap');
     room.appendChild(myEl);
-    others.attach(room, roomKey); others.setPanels(strip ? strip.panels : {});
+    others.attach(room, roomKey);
     if (stadium && roomKey === 'stadium') stadium.attach(room);
     if (carnival) carnival.attach(room);
     sizeCols(); fitHouse(box, unit); requestAnimationFrame(() => { if (unit.isConnected) { sizeCols(); fitHouse(box, unit); } });
     drawRoom($('#roombg', box), isNight(), roomKey, (house.styles || {})[roomKey]); drawRoof($('#roof', box)); studioBarre(room, roomKey === 'basement');
-    if (strip) paintStrip();
-    if (placeKey === 'mall') [room, ...Object.values(strip ? strip.panels : {})].forEach((p) => p.querySelectorAll('.elev-display').forEach((el) => { el.textContent = floorLabel(p.dataset.room); }));
     room.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, room); }); stackDecor(room);
-    room.querySelectorAll('.decor.walldoor, .decor.elevator').forEach((el) => { el.style.zIndex = 3; });   // cats walk in front of a wall's door and of the lift
     const pw = house.power || {};
     applyPower(room, { dark: !!(pw.dark || {})[roomKey], off: pw.off || {} });
     // 💡 in a public place: the owner switches the room's lights for everyone; anyone else just for their own screen
@@ -505,7 +482,6 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     box.querySelector('.mall-directory')?.addEventListener('click', () => openMallDirectory(roomKey, (key) => { roomKey=key; mine.room=key; mine.seat=null; mine.boothClosed=false; mine.x=30; mine.y=6; render(); sendMine(); }));
     // 🚪 the cinema: a Left door / Right door takes the place of that side's arrow (walk into the door to go through)
     if (placeKey === 'cinema') box.querySelectorAll('.room-nav.left, .room-nav.right').forEach((b) => { const side = b.classList.contains('left') ? 'left' : 'right'; if (doorEl(room, side)) b.remove(); });
-    if (placeKey === 'mall') mallArrows();
     box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { roomKey = b.dataset.room; mine.room = roomKey; mine.seat = null; sfx.click(); render(); sendMine(); }; });
     // Each arrival gets one greeting sequence, even if the layout refreshes.
     if (placeKey === 'cafe' && roomKey === 'cafeentrance' && !welcomed && room.querySelector('.cafe-greeter')) {
@@ -560,9 +536,6 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     requestAnimationFrame(() => {
       measureBlockers(room);
       // 🍱 coming into the buffet: she starts just in front of the gate (on the entrance side)
-      if (arriveLift) { arriveLift = false; liftArrive(room); }
-      if (arriveEsc) { const want = arriveEsc; arriveEsc = null; const d = [...room.querySelectorAll('.decor')].find((x) => (ITEMS[x.dataset.id.split('#')[0]] || {}).escalator === want);
-        if (d && myEl) { escLock = true; const r = doorRect(room, d); mine.seat = null; mine.x = want === 'up' ? r.x0 + (r.x1 - r.x0) * 0.12 : r.x1 - (r.x1 - r.x0) * 0.12; mine.y = Math.max(1, Math.min(r.bottom, S.roomMaxY(roomKey)) - 5); mine.left = want !== 'up'; myKv.setFacing(mine.left); place(); myKv.jump(); sendMine(); } }
       const g = justEntered && foot.find((f) => f.gate);
       if (g && myEl) { mine.seat = null; mine.x = (g.x0 + g.x1) / 2; mine.y = Math.max(1, g.y0 - 6); place(); sendMine(); }
       // 🚪 came through a door: she steps out in front of the matching door on this side (left door → arrive at the right door)
@@ -724,12 +697,6 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       const diag = turned ? (flip ? { f: 1 - 2.5 / 22, b: 1 - 16 / 22 } : { f: 2.5 / 22, b: 16 / 22 }) : null;
       foot.push({ el: d, gate: !!it.gate, venue: it.gate ? it.gateFor || gateVenue(room, x0, x1) : null, x0, x1, y0: bottom - 1, y1: bottom + depth, diag });
     });
-    // 🚪 a wall with a door: the whole wall is solid, except the strip of floor right in front of its door
-    room.querySelectorAll('.decor.walldoor').forEach((d) => {
-      const it = ITEMS[d.dataset.id.split('#')[0]], x0 = (d.offsetLeft / W) * 100, x1 = ((d.offsetLeft + d.offsetWidth) / W) * 100;
-      const bottom = ((H - (d.offsetTop + d.offsetHeight)) / H) * 100;
-      foot.push({ el: d, wall: true, x0: x0 + 0.5, x1: x1 - 0.5, y0: Math.max(0, bottom) + it.walldoor.band, y1: 101 });
-    });
   }
   // 🔄 a turned queue pole is drawn at the depth of its front pole, but its rope runs back across the floor: a cat
   // standing in front of the rope (at her x) is drawn in front of the whole pole, a cat behind it stays behind
@@ -739,9 +706,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       const t = Math.max(0, Math.min(1, ((x - f.x0) / Math.max(0.1, f.x1 - f.x0) - f.diag.f) / (f.diag.b - f.diag.f)));
       if (y < f.y0 + t * (f.y1 - f.y0)) z = Math.max(z, (parseInt(f.el.style.zIndex, 10) || 0) + 1);
     }
-    // the mall's small cats: a cat standing at (or just in front of) a thing's base is drawn in front of it,
-    // even when that thing was layered over the wall behind it
-    return placeKey === 'mall' ? z + 4 : z;
+    return z;
   });
   const inFoot = (f, x, y) => {
     if (y < f.y0 || y > f.y1) return false;
@@ -761,16 +726,6 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     return (r && (r.key || r)) || null;
   }
   let gateToastAt = 0;
-  // 🚪 sliding doors in a wall open when a cat comes close and shut once nobody is near
-  function wallDoors() {
-    const room = $('#room', box); if (!room) return;
-    const cats = [{ x: mine.x, y: mine.y }, ...others.ids().map((id) => others.m.get(id)).filter((c) => c && c.room === roomKey).map((c) => ({ x: c.dx ?? c.x, y: c.dy ?? c.y }))];
-    foot.filter((f) => f.wall).forEach((f) => {
-      const near = cats.some((c) => c.x >= f.x0 - 5 && c.x <= f.x1 + 5 && c.y < f.y0 + 2);
-      if (near !== f.el.classList.contains('elev-open')) { f.el.classList.toggle('elev-open', near); }
-    });
-  }
-  const wdT = setInterval(() => { if (!n.isConnected) return clearInterval(wdT); wallDoors(); }, 150);
   function blockedAt(x, y) { return foot.some((f) => inFoot(f, x, y) && !(f.gate && (gatePass(f) || f.el.classList.contains('gate-held')))); }
   // the food side of the buffet: behind the gate's line (no gate in the room: having paid is enough)
   function insideBuffet() {
@@ -802,177 +757,8 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (spot) { myEl.classList.remove('swimming'); mine.x = spot.x; mine.y = spot.y; myEl.style.left = `${spot.x}%`; myEl.style.bottom = `${spot.y}%`; myEl.style.zIndex = spot.z; rideFx(room, myEl, mine.seat); return; }
     rideFx(room, myEl, null);
     Object.assign(mine, clampPos(mine));
-    if (!strip || !strip.floor[strip.floor.indexOf(roomKey) - 1]) mine.x = Math.max(6, mine.x);   // a wall at the end of the floor
-    if (!strip || !strip.floor[strip.floor.indexOf(roomKey) + 1]) mine.x = Math.min(94, mine.x);
     myEl.style.left = `${mine.x}%`; myEl.style.bottom = `${mine.y}%`; myEl.style.zIndex = catZ(mine.x, mine.y);
     myEl.classList.toggle('swimming', inPool(room, mine.x, mine.y));
-    cam();
-  }
-  // ---------- 🗺️ the mall: each floor is one long street you walk along (the camera follows her) ----------
-  function buildStrip(room) {
-    const floor = MALL_FLOORS.find((r) => r.includes(roomKey)); if (!floor || floor.length < 2) return null;
-    const view = document.createElement('div'); view.className = 'mall-view';
-    const track = document.createElement('div'); track.className = 'mall-track';
-    room.replaceWith(view); view.appendChild(track);
-    const panels = {};
-    floor.forEach((k) => {
-      if (k === roomKey) { track.appendChild(room); return; }
-      const p = document.createElement('div'); p.className = 'room mall-preview'; p.dataset.room = k;
-      p.innerHTML = '<canvas class="room-bg"></canvas>';
-      (house.rooms[k] || []).forEach((e) => { const el = decorEl(e, {}); if (el) p.appendChild(el); });
-      track.appendChild(p); panels[k] = p;
-    });
-    return { view, track, panels, floor };
-  }
-  function paintStrip() {
-    const pw = house.power || {};
-    Object.entries(strip.panels).forEach(([k, p]) => {
-      drawRoom(p.querySelector('.room-bg'), isNight(), k, (house.styles || {})[k]);
-      p.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, p); }); stackDecor(p); p.querySelectorAll('.decor.walldoor, .decor.elevator').forEach((el) => { el.style.zIndex = 3; });
-      applyPower(p, { dark: !!(pw.dark || {})[k], off: pw.off || {} });
-    });
-    cam();
-  }
-  function cam() {
-    if (!strip || !strip.view.isConnected) return;
-    const W = strip.view.clientWidth, n = strip.floor.length, i = strip.floor.indexOf(roomKey);
-    const X = Math.max(0, Math.min((n - 1) * W, (i + mine.x / 100) * W - W / 2));
-    strip.track.style.transform = `translateX(${-X}px)`;
-  }
-  function crossTo(k, x) {
-    roomKey = k; mine.room = k; mine.seat = null; mine.boothClosed = false; mine.x = x; render(); sendMine();
-  }
-  // ▲ ▼ in the mall: the escalators take you between floors (the arrows stay only where a floor has no escalator yet)
-  function mallArrows() {
-    const floor = MALL_FLOORS.find((r) => r.includes(roomKey)) || [roomKey];
-    const has = (dir) => floor.some((k) => (house.rooms[k] || []).some((e) => (ITEMS[e.id.split('#')[0]] || {}).escalator === dir));
-    if (strip) box.querySelectorAll('.room-nav.left, .room-nav.right').forEach((b) => b.remove());
-    if (has('up')) box.querySelectorAll('.room-nav.up').forEach((b) => b.remove());
-    if (has('down')) box.querySelectorAll('.room-nav.down').forEach((b) => b.remove());
-  }
-  function walkIntoEscalator(room, dy = 0) {
-    for (const d of room.querySelectorAll('.decor')) {
-      const it = ITEMS[d.dataset.id.split('#')[0]]; if (!it || !it.escalator) continue;
-      const r = doorRect(room, d), w = r.x1 - r.x0, base = Math.min(r.bottom, S.roomMaxY(roomKey));
-      // the foot of the escalator: the low end (left for up, right for down) — walk onto it from the side or from the front
-      const f0 = it.escalator === 'up' ? r.x0 - 1 : r.x1 - w * 0.22, f1 = it.escalator === 'up' ? r.x0 + w * 0.22 : r.x1 + 1;
-      if (mine.x < f0 || mine.x > f1 || mine.y < base - (dy > 0 ? 3 : 5)) continue;
-      if (escLock) return false;
-      rideEscalator(d, it.escalator); return true;
-    }
-    escLock = false;
-    for (const d of room.querySelectorAll('.decor.elevator')) {   // 🛗 walking up into the lift's doorway
-      const it = ITEMS[d.dataset.id.split('#')[0]], r = doorRect(room, d), w = r.x1 - r.x0, dr = it.elevator.door;
-      if (mine.x < r.x0 + w * dr.x || mine.x > r.x0 + w * (dr.x + dr.w) || mine.y < Math.min(r.bottom, S.roomMaxY(roomKey)) - 1.5) continue;
-      useLift(d); return true;
-    }
-    return false;
-  }
-  // ---------- 🛗 the lift ----------
-  const floorLabel = (k) => String(S.roomInfo(k).en || '').split(' ·')[0];
-  const pause = (ms) => new Promise((ok) => setTimeout(ok, ms));
-  const liftIn = (room) => [...room.querySelectorAll('.decor.elevator')][0];
-  const liftSpot = (room, d) => { const it = ITEMS[d.dataset.id.split('#')[0]], r = doorRect(room, d), w = r.x1 - r.x0, dr = it.elevator.door; return { x: r.x0 + w * (dr.x + dr.w / 2), y: Math.max(1, Math.min(r.bottom, S.roomMaxY(roomKey)) - 0.5) }; };
-  // the lift's screens: the floor it is on, with ▲ / ▼ while it moves
-  const liftShow = (el, fi, dir) => { if (el) el.textContent = `${dir ? (dir > 0 ? '▲' : '▼') : ''}${floorLabel(MALL_FLOORS[fi][0])}`; };
-  async function useLift(d) {
-    if (!myEl || myEl.dataset.sliding || liftBusy) return;
-    liftBusy = true; doorArmed = false; mine.seat = null; myEl.dataset.sliding = '1'; myKv.setPose(null);
-    const room = $('#room', box), to = liftSpot(room, d), from = { x: mine.x, y: mine.y };
-    const here = MALL_FLOORS.findIndex((r) => r.includes(roomKey)), scr = d.querySelector('.elev-display');
-    let goingOut = false;
-    try {
-      // 1 · call the lift: it comes down / up to her floor first
-      sfx.click(); toast('🛗 <span class="zh">电梯来了，等一下…</span> The lift is on its way…', { ms: 1600 });
-      const others = [...MALL_FLOORS.keys()].filter((f) => f !== here && Math.abs(f - here) <= 3);
-      let at = others[Math.floor(Math.random() * others.length)] ?? here;
-      while (at !== here) { const dir = Math.sign(here - at); liftShow(scr, at, dir); await pause(750); at += dir; if (!n.isConnected) return; }
-      liftShow(scr, here, 0); sfx.coin();
-      // 2 · the doors open and she steps in
-      d.classList.add('elev-open'); await pause(800);
-      myKv.setFacing(to.x < from.x); myKv.canvas.classList.add('walking');
-      const an = myEl.animate([{ left: `${from.x}%`, bottom: `${from.y}%` }, { left: `${to.x}%`, bottom: `${to.y}%` }], { duration: 650, fill: 'forwards' });
-      await an.finished; an.cancel(); myKv.canvas.classList.remove('walking');
-      mine.x = to.x; mine.y = to.y; myEl.style.left = `${to.x}%`; myEl.style.bottom = `${to.y}%`; myEl.style.zIndex = (parseInt(d.style.zIndex, 10) || 50) + 1; cam();
-      myEl.classList.add('in-lift'); sendMine(); await pause(350);
-      // 3 · inside the lift
-      const fi = await liftCabin(here);
-      if (fi == null || !n.isConnected) {   // she pressed Open: out she comes on the same floor
-        goingOut = true;
-        await pause(150); myEl.classList.remove('in-lift'); await pause(400);
-        mine.y = Math.max(1, mine.y - 7); delete myEl.dataset.sliding; place(); sendMine(); await pause(500); d.classList.remove('elev-open');
-        return;
-      }
-      d.classList.remove('elev-open');
-      const next = MALL_FLOORS[fi], dest = next.find((k) => (house.rooms[k] || []).some((e) => (ITEMS[e.id.split('#')[0]] || {}).elevator)) || next.find((k) => mallNeighbors(k).up || mallNeighbors(k).down) || next[0];
-      delete myEl.dataset.sliding; arriveLift = true; roomKey = dest; mine.room = dest; mine.x = 50; mine.y = 6; render(); if (myEl) { myEl.style.transition = 'none'; myEl.classList.add('in-lift'); } sendMine();
-    } finally { if (!arriveLift && !goingOut) { liftBusy = false; if (myEl) { delete myEl.dataset.sliding; myEl.classList.remove('in-lift'); } d.classList.remove('elev-open'); } if (goingOut) liftBusy = false; }
-  }
-  // 🛗 inside the lift: the doors close, she presses a floor, the lift hums along (the screen counts the floors) and the doors open
-  function liftCabin(here) {
-    return new Promise((done) => {
-      const unit = $('#hunit', box), kv = new KittenView({ scale: HOUSE.kitten * 1.6 }); kv.setMood('happy'); kv.setHeld(S.get().holding || null);
-      const cab = html`<div class="lift-cabin"><div class="cab-box">
-          <div class="cab-wall"><div class="cab-screen"></div><div class="cab-rail"></div><div class="cab-cat"></div>
-            <div class="cab-panel"><div class="cab-panel-title">🛗</div><div class="cab-btns"></div><button type="button" class="cab-open" title="Open the doors">◀▶ <span class="zh">开门</span></button></div></div>
-          <i class="cab-door l"></i><i class="cab-door r"></i></div>
-          <p class="cab-tip"><span class="zh">按一下要去的楼层</span> Press the floor you want</p></div>`;
-      $('.cab-cat', cab).appendChild(kv.canvas);
-      const scr = $('.cab-screen', cab); liftShow(scr, here, 0);
-      let busy = true;
-      [...MALL_FLOORS.keys()].reverse().forEach((fi) => {
-        const b = document.createElement('button'); b.type = 'button'; b.className = `cab-btn ${fi === here ? 'here' : ''}`; b.textContent = floorLabel(MALL_FLOORS[fi][0]);
-        b.onclick = async () => {
-          if (busy || fi === here) return; busy = true; sfx.click(); b.classList.add('lit'); $('.cab-open', cab).disabled = true;
-          $('.cab-tip', cab).innerHTML = `<span class="zh">去${floorLabel(MALL_FLOORS[fi][0])}</span> Going to ${floorLabel(MALL_FLOORS[fi][0])}…`;
-          if (!cab.classList.contains('shut')) { cab.classList.add('shut'); await pause(800); }
-          cab.classList.add('moving'); let at = here; const dir = Math.sign(fi - here);
-          while (at !== fi) { liftShow(scr, at, dir); await pause(900); at += dir; }
-          liftShow(scr, fi, 0); cab.classList.remove('moving'); sfx.coin(); await pause(350);
-          cab.classList.remove('shut'); await pause(800);
-          cab.classList.add('leaving'); await pause(380); cab.remove(); done(fi);
-        };
-        $('.cab-btns', cab).appendChild(b);
-      });
-      $('.cab-open', cab).onclick = async () => {
-        if (busy) return; busy = true; sfx.click(); cab.classList.remove('shut'); await pause(800);
-        cab.classList.add('leaving'); await pause(380); cab.remove(); done(null);
-      };
-      unit.appendChild(cab);
-      // the view fades in with the doors still open, then they slide shut
-      requestAnimationFrame(() => cab.classList.add('in'));
-      setTimeout(() => { if (!cab.isConnected) return; cab.classList.add('shut'); setTimeout(() => { busy = false; }, 800); }, 700);
-    });
-  }
-  async function liftArrive(room) {
-    const d = liftIn(room);
-    if (!d || !myEl) { liftBusy = false; sfx.coin(); return; }
-    const sp = liftSpot(room, d);
-    myEl.dataset.sliding = '1'; myEl.style.transition = 'none'; myEl.classList.add('in-lift'); void myEl.offsetWidth; myEl.style.transition = '';
-    mine.seat = null; mine.x = sp.x; mine.y = sp.y; myEl.style.left = `${sp.x}%`; myEl.style.bottom = `${sp.y}%`; myEl.style.zIndex = (parseInt(d.style.zIndex, 10) || 50) + 1; cam();
-    await pause(300); sfx.coin(); d.classList.add('elev-open'); await pause(750);
-    myEl.classList.remove('in-lift'); await pause(450);
-    delete myEl.dataset.sliding; mine.y = Math.max(1, sp.y - 7); place(); myKv.jump(); sendMine();
-    await pause(600); d.classList.remove('elev-open'); liftBusy = false;
-  }
-  function rideEscalator(d, dir) {
-    if (!myEl || myEl.dataset.sliding) return;
-    const fi = MALL_FLOORS.findIndex((r) => r.includes(roomKey)), next = MALL_FLOORS[fi + (dir === 'up' ? 1 : -1)];
-    if (!next) { sfx.miss(); return toast(dir === 'up' ? '<span class="zh">已经是顶楼了</span> This is the top floor' : '<span class="zh">已经是最低层了</span> This is the bottom floor', { ms: 1600 }); }
-    const want = dir === 'up' ? 'down' : 'up';
-    const hasEsc = (k) => (house.rooms[k] || []).some((e) => (ITEMS[e.id.split('#')[0]] || {}).escalator === want);
-    const to = next.find(hasEsc) || next.find((k) => mallNeighbors(k)[want]) || next[0];
-    const room = $('#room', box), H = room.clientHeight, r = doorRect(room, d), w = r.x1 - r.x0;
-    const a = { x: dir === 'up' ? r.x0 + w * 0.14 : r.x1 - w * 0.14, y: Math.max(1, r.bottom + 2) };
-    const b = { x: dir === 'up' ? r.x0 + w * 0.8 : r.x1 - w * 0.8, y: ((H - (d.offsetTop + d.offsetHeight * 0.26)) / H) * 100 };
-    doorArmed = false; mine.seat = null; myEl.dataset.sliding = '1'; myKv.setPose(null); mine.left = dir !== 'up'; myKv.setFacing(mine.left);
-    myEl.style.zIndex = (parseInt(d.style.zIndex, 10) || 50) + 1; sfx.click();
-    const an = myEl.animate([{ left: `${a.x}%`, bottom: `${a.y}%`, opacity: 1 }, { left: `${b.x}%`, bottom: `${b.y}%`, opacity: 1, offset: 0.85 }, { left: `${b.x}%`, bottom: `${b.y}%`, opacity: 0 }], { duration: 1700, easing: 'linear', fill: 'forwards' });
-    an.onfinish = () => {
-      delete myEl.dataset.sliding; if (!n.isConnected) return;
-      const info = S.roomInfo(to); toast(`🛗 ${info.icon} <span class="zh">${info.zh}</span> ${info.en}`, { ms: 1400 });
-      arriveEsc = want; roomKey = to; mine.room = to; mine.x = 50; mine.y = 6; render(); sendMine();
-    };
   }
   // chat
   $('#vchat', n).appendChild(chatBar((text) => {
@@ -986,7 +772,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   }));
   // the room's column is only as wide as the room (so the chat sits right beside it, not across a big gap)
   const sizeCols = () => { const st = box.closest('.stage'); if (st && st.clientHeight) n.style.setProperty('--hw', `${Math.round(st.clientHeight * HOUSE.w / (HOUSE.roof + HOUSE.room) + 90)}px`); };
-  const refit = () => { if (!n.isConnected) { window.removeEventListener('resize', refit); return; } sizeCols(); fitHouse(box, $('#hunit', box)); cam(); };
+  const refit = () => { if (!n.isConnected) { window.removeEventListener('resize', refit); return; } sizeCols(); fitHouse(box, $('#hunit', box)); };
   window.addEventListener('resize', refit);
   // leaving: say goodbye and close the line
   let left = false;
