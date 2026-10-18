@@ -717,4 +717,8 @@ export const CHANGES = [
   { v: 257, items: [
     '🎏 New in the shop: a Japanese noren curtain doorway. Tap the curtain to push it open, tap again to let it fall shut.',
   ] },
+  { v: 258, items: [
+    '🍣 SushiMeow place mats only take food and drinks from SushiMeow (anything else gets a message instead).',
+    '🍽️ Fixed: putting something on a table could get stuck on "Placing your food…" — now it gives up after a few tries and puts it back in your bag.',
+  ] },
 ];

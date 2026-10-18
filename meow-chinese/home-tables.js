@@ -31,15 +31,24 @@ async function finishDrop(onChanged) {
   try {
     const r = await api(p.scope || { k: 'home', host: p.host }).put(p);
     if (S.get() !== st) return;
-    if (!r || !r.accepted) { S.addSnack(p.item); toast(p.mat != null ? '你的餐垫满了（最多2样） · Your place mat is full (2 things) — it went back to your bag' : '桌子满了，食物放回包里 · The table is full — food returned to your bag'); }
+    if (!r || !r.accepted) { S.addSnack(p.item); toast(r && r.reason === 'not-sushi' ? '🍣 <span class="zh">这里只能放本店的食物和饮料</span> Only food and drinks from this restaurant can be placed here' : p.mat != null ? '你的餐垫满了（最多2样） · Your place mat is full (2 things) — it went back to your bag' : '桌子满了，食物放回包里 · The table is full — food returned to your bag'); }
     else toast('放好了，大家都可以拿 · On the table for anyone to pick up');
     delete st.homePendingDrop; S.save(); onChanged();
-  } catch { /* keep the reserved food; the next poll retries with the same request ID */ }
+  } catch {
+    // keep the reserved food and retry with the same request ID — but not for ever: after a few tries it goes back in her bag
+    if (S.get() === st && st.homePendingDrop === p) {
+      p.tries = (p.tries || 0) + 1;
+      if (p.tries >= 3) { S.addSnack(p.item); delete st.homePendingDrop; toast('放不上去，食物放回包里了 · Could not put it down — it went back in your bag'); onChanged(); }
+      S.save();
+    }
+  }
   finally { dropping = false; }
 }
 function chooseFood(scope, table, onChanged, mat = null) {
   if (S.get().homePendingDrop) { toast('正在放食物… · Placing your food…'); finishDrop(onChanged); return; }
-  const have = S.snacks(), items = Object.keys(have).filter((k) => SNACKS[k] && have[k] > 0 && k !== 'shopbag');
+  const have = S.snacks(), items = Object.keys(have).filter((k) => SNACKS[k] && have[k] > 0 && k !== 'shopbag' && (mat == null || SNACKS[k].sushi));
+  // 🍣 a SushiMeow place mat: only SushiMeow's own food and drinks
+  if (mat != null && !items.length) return toast('🍣 <span class="zh">这里只能放本店的食物和饮料</span> Only food and drinks from this restaurant can be placed here', { ms: 2600 });
   if (!items.length) return toast('包里没有东西 · Nothing in your bag yet — get food at the Cafe, Cinema or Mall, or tap a textbook or pencil case');
   const box = html`<div class="card stack"><div class="h-title"><span class="zh">放到桌上</span> Put something on the table</div><p class="help">放一份，大家都能拿。<br>Place one item from your bag. Anyone here can pick it up.</p><div class="cafe-food-choices"></div><button class="btn white" id="close-table">取消 Cancel</button></div>`;
   items.forEach((k) => {
