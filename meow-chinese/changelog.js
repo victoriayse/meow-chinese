@@ -667,4 +667,8 @@ export const CHANGES = [
     '💰 Pay at the cashier before you leave: tell them your seat number, check your receipt and pay with coins.',
     '🍱 26 new dishes you can only get at SushiMeow — eat them there or put them on the counter.',
   ] },
+  { v: 243, items: [
+    '🍣 SushiMeow: everyone in the restaurant now sees the same plates on the belt, and everyone sees the server cat bring the dishes.',
+    '💰 You can\'t leave SushiMeow in any way until your bill is paid — even closing the app brings you back to the restaurant.',
+  ] },
 ];

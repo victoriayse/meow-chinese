@@ -1,4 +1,5 @@
 import { openMallDirectory } from './mall-play.js';
+import * as Sushi from './sushi.js';
 import { openPoster, openVideo, openRadio, openBoard } from './media.js';
 // 喵喵中文 Meow Chinese — app shell, router, top bar, welcome and home screen.
 import * as S from './state.js';
@@ -89,6 +90,12 @@ const stack = [];
 let currentParams = {};
 const NO_HISTORY = ['welcome', 'setup', 'grave', 'login'];
 export function go(name, params = {}, opts = {}) {
+  // 🍣 an unpaid SushiMeow bill: no way out of the restaurant (or round it, after reopening the app) until it's paid
+  if (Sushi.mustPay() && !['visit', 'login', 'setup', 'welcome', 'parent'].includes(name) && Auth.user()) {
+    toast('💰 <span class="zh">请先在寿司喵付款</span> Please pay your SushiMeow bill at the cashier first', { ms: 2800 });
+    if (current === 'visit' && Sushi.sushiLocked()) return;
+    name = 'visit'; params = { place: 'mall' };
+  }
   if (window.speechSynthesis) speechSynthesis.cancel();
   if (!(name === 'home' && params.view === 'house')) Radio.stop();   // the radio plays only while she's in her house
   // leaving the parent area while looking after a child's account: switch back to her own account first

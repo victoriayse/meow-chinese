@@ -10,6 +10,20 @@ import { snackCanvas } from './snacks.js';
 import { html, $, openModal, closeModal, toast, coinI, hydrateIcons, esc, KittenView } from './ui.js';
 import { sfx } from './audio.js';
 import { say, catZ, HOUSE } from './house.js';
+import { rest } from './cloud.js';
+
+// one clock for everyone in the restaurant (the server's), so the belt is in the same place on every screen
+let clockOff = 0, clockAsked = 0;
+export const now = () => Date.now() + clockOff;
+function syncClock() {
+  if (Date.now() - clockAsked < 60000) return; clockAsked = Date.now();
+  const t0 = Date.now();
+  rest('rpc/server_time', { method: 'POST', body: '{}' }).then((ms) => { const t1 = Date.now(); if (+ms > 0 && t1 - t0 < 3000) clockOff = +ms - (t0 + t1) / 2; }).catch(() => {});
+}
+// she's in SushiMeow with a bill to pay: nothing lets her out until she has paid
+let inSushi = false;
+export const setInSushi = (v) => { inSushi = !!v; };
+export const sushiLocked = () => inSushi && mustPay();
 
 export const SUSHI_ROOM = 'mallsushi';
 const base = (id) => String(id).split('#')[0];
@@ -41,7 +55,10 @@ export function canSit(room, id) {
   return true;
 }
 
-export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedMine, blockedAt, otherCats, onChanged = () => {} }) {
+export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedMine, blockedAt, otherCats, send = () => {}, onChanged = () => {} }) {
+  syncClock(); inSushi = true;
+  // (no cashier and no tablet set up yet: nobody can pay, so nobody may be kept here — the bill is let off)
+  if (mustPay() && ![...room.querySelectorAll('.decor')].some((d) => { const it = ITEMS[base(d.dataset.id)] || {}; return it.sushiCashier || it.sushiTablet; })) { meal().bill = []; S.save(); }
   const priceOf = (k) => Math.max(0, Math.round((house.prices || {})[k] ?? (SNACKS[k] || {}).price ?? 0));
   const beltDishes = () => { const b = (house.sushiBelt || []).filter((k) => SUSHI_MENU.includes(k)); return b.length ? b : SUSHI_MENU.slice(0, 10); };
   const seats = seatEls(room);
@@ -90,10 +107,10 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
       p.onclick = (e) => { e.stopPropagation(); takePlate(i, k); };
       lane.appendChild(p); plates.push(p);
     }
-    const lap = (i) => Math.floor(Date.now() / 1000 / BELT_LOOP_S + i / N);
+    const lap = (i) => Math.floor(now() / 1000 / BELT_LOOP_S + i / N);
     const tick = () => {
       if (!lane.isConnected) return;
-      const t = Date.now() / 1000 / BELT_LOOP_S;
+      const t = now() / 1000 / BELT_LOOP_S;
       plates.forEach((p, i) => {
         const f = (t + i / N) % 1;
         p.style.left = `${(f * 1.16 - 0.12) * 100}%`;
@@ -105,7 +122,7 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
     function takePlate(i, k) {
       if (takenAt.get(i) === lap(i)) return;
       if (!isSeatedMine()) { sfx.miss(); return toast(meal() && meal().seat ? `🍣 <span class="zh">请先坐到你的${meal().seat}号座位</span> Sit at your seat (number ${meal().seat}) first` : '🍣 <span class="zh">请先找领位员拿座位号</span> Please get a seat number from the host first', { ms: 2400 }); }
-      takenAt.set(i, lap(i));
+      takenAt.set(i, lap(i)); send('sushitake', { i, lap: lap(i) });
       addToBill(k, 'belt'); S.addSnack(k); S.save(); sfx.coin();
       toast(`🍣 <span class="zh">拿了${SNACKS[k].zh}</span> ${esc(SNACKS[k].en)} · ${priceOf(k)} coins — it's at the bottom left`, { ms: 2000 });
       onChanged();
@@ -145,13 +162,19 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
     const pts = []; for (let k = found; k != null; k = from.get(k)) pts.unshift({ x: (k % cols) * sx, y: Math.floor(k / cols) * sy });
     return [a, ...pts.filter((_, i) => i % 2 === 0), b];
   }
-  async function walkDish(order) {
+  async function walkDish(order, remote = null) {
     if (!room.isConnected) return;
-    const m = meal(); const seat = m && seats[m.seat - 1];
-    const H = room.clientHeight, W = room.clientWidth;
-    const target = seat ? { x: ((seat.offsetLeft + seat.offsetWidth / 2) / W) * 100, y: Math.max(1, ((H - (seat.offsetTop + seat.offsetHeight)) / H) * 100 - 3) } : { x: 50, y: 4 };
-    const startP = { x: 95, y: Math.min(S.roomMaxY(SUSHI_ROOM), 10) };
-    const path = findPath(startP, target);
+    let path;
+    if (remote) path = remote.path;
+    else {
+      const m = meal(); const seat = m && seats[m.seat - 1];
+      const H = room.clientHeight, W = room.clientWidth;
+      const target = seat ? { x: ((seat.offsetLeft + seat.offsetWidth / 2) / W) * 100, y: Math.max(1, ((H - (seat.offsetTop + seat.offsetHeight)) / H) * 100 - 3) } : { x: 50, y: 4 };
+      const startP = { x: 95, y: Math.min(S.roomMaxY(SUSHI_ROOM), 10) };
+      path = findPath(startP, target).map((p) => ({ x: +p.x.toFixed(1), y: +p.y.toFixed(1) }));
+      send('sushiserve', { k: order.k, path });   // everyone in the restaurant sees the server walk over
+    }
+    const startP = path[0];
     const el = html`<div class="vcat sushi-server"><div class="kitten-wrap"><div class="kflip"></div><div class="nametag">服务员 Server</div></div></div>`;
     const kv = new KittenView({ scale: HOUSE.kitten, fur: 'white', equipped: { body: 'tuxedo', neck: 'bowtie' } }); kv.setMood('happy'); kv.setHeld(order.k);
     el.querySelector('.kflip').appendChild(kv.canvas); room.appendChild(el);
@@ -169,7 +192,7 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
     el.style.left = `${startP.x}%`; el.style.bottom = `${startP.y}%`;
     await walk(path); if (!room.isConnected) return;
     say(el.querySelector('.kitten-wrap'), '请慢用！Enjoy!'); kv.setHeld(null); kv.jump();
-    const mm = meal(); const o = mm && (mm.orders || []).find((x) => x.id === order.id);
+    const mm = meal(); const o = !remote && mm && (mm.orders || []).find((x) => x.id === order.id);
     if (o && !o.served) { o.served = true; S.addSnack(order.k); S.save(); sfx.coin(); toast(`🍣 <span class="zh">${SNACKS[order.k].zh}来了！</span> Your ${esc(SNACKS[order.k].en)} is here — bottom left`, { ms: 2200 }); onChanged(); }
     await new Promise((ok) => setTimeout(ok, 700));
     await walk(path.slice().reverse());
@@ -237,7 +260,10 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
         });
       } else {
         body.innerHTML = receiptHtml(meal());
-        foot.innerHTML = `<span><span class="zh">请到收银台付款</span> Please pay at the cashier · <b>${total()}</b>${coinI(14)}</span>`;
+        const noCashier = ![...room.querySelectorAll('.decor')].some((d) => (ITEMS[base(d.dataset.id)] || {}).sushiCashier);
+        foot.innerHTML = noCashier && total() ? `<span><b>${total()}</b>${coinI(14)}</span><button type="button" class="ph-btn green" id="st-pay" ${st().coins >= total() ? '' : 'disabled'}>💳 <span class="zh">付款</span> Pay</button>`
+          : `<span><span class="zh">请到收银台付款</span> Please pay at the cashier · <b>${total()}</b>${coinI(14)}</span>`;
+        const pb = $('#st-pay', foot); if (pb) pb.onclick = () => { const tt = total(); if (st().coins < tt) return; st().coins -= tt; meal().bill = []; meal().paid = Date.now(); S.save(); sfx.coin(); toast(`💰 Paid ${tt} coins — thank you!`, { ms: 2400 }); onChanged(); draw(); };
       }
       hydrateIcons(box);
     }
@@ -301,4 +327,12 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
     if (it.sushiTablet) { sfx.click(); return openTablet(); }
     if (it.sushiCashier) { sfx.click(); return openCashier(d); }
   });
+  return {
+    onBroadcast(ev, p) {
+      if (!room.isConnected || !p) return;
+      if (ev === 'sushitake' && Number.isInteger(p.i)) takenAt.set(p.i, p.lap);
+      if (ev === 'sushiserve' && Array.isArray(p.path) && p.path.length > 1 && SNACKS[p.k] && p.path.length < 200) serving = serving.then(() => walkDish({ k: p.k }, { path: p.path })).catch(() => {});
+    },
+  };
+
 }

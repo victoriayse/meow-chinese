@@ -6,7 +6,7 @@ import { createStadium, joystick, JOYSTICK } from './stadium.js';
 import { wireCanteen } from './canteen.js';
 import { createCarnival } from './carnival.js';
 import { wireSupermarket, SUPER_ROOM } from './supermarket.js';
-import { wireSushi, leaveSushi, mustPay, canSit, seatNoOf, SUSHI_ROOM } from './sushi.js';
+import { wireSushi, leaveSushi, mustPay, canSit, seatNoOf, setInSushi, SUSHI_ROOM } from './sushi.js';
 import { wireBuffet, leaveBuffet, hasPass, isBlocker, setGate, payHost, BUFFET_ROOM, leaveCinema, hasTicket, payCinema, THEATRES } from './buffet.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
@@ -177,7 +177,7 @@ export const visitorCount = () => visitors.ids().length;
 export function visitScreen({ go, id: hostId, name = '', place: placeKey = null, returnRoom = null }) {
   // place: a public place on the map (the cinema) — no host, everyone signed in can be there
   const me = (Auth.user() || {}).id, P = placeKey && Places.PLACES[placeKey];
-  const startRoom = P ? (Places.isAdmin() && P.rooms.includes(returnRoom) ? returnRoom : P.start) : 'living';
+  const startRoom = P ? (placeKey === 'mall' && mustPay() ? SUSHI_ROOM : Places.isAdmin() && P.rooms.includes(returnRoom) ? returnRoom : P.start) : 'living';   // an unpaid SushiMeow bill: straight back to the restaurant
   const n = html`<section class="visit-home">
       <div class="visit-top"><button class="btn white small" id="leave">← ${P ? '<span class="zh">地图</span> Map' : '<span class="zh">回家</span> Leave'}</button><button class="btn white small visit-phone" id="vphone" title="Meow phone">📱</button>
         ${P && Places.isAdmin() ? '<button class="btn yellow small" id="vdeco" title="Decorate">🛠 <span class="zh">布置</span></button>' : ''}
@@ -191,7 +191,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   let house = null, host = null, roomKey = startRoom, mine = { x: 30, y: 6, room: startRoom, left: false }, lockedOut = false;
   let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null, carnival = null;
 
-  let refreshingPlace = false, welcomed = false;
+  let refreshingPlace = false, welcomed = false, sushiApi = null;
   // 🍣 SushiMeow: the bill must be paid before she can leave
   const unpaid = () => { if (!(P && roomKey === SUSHI_ROOM && mustPay())) return false; sfx.miss(); toast('💰 <span class="zh">请先到收银台付款再离开</span> Please pay your bill at the cashier before you leave', { ms: 2800 }); return true; };
   async function refreshPlace() {
@@ -210,6 +210,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     },
     onBroadcast: (ev, p) => {
       if (!p || p.id === me) return;
+      if (ev.startsWith('sushi')) { if (sushiApi && p && p.room === roomKey && p.id !== me) sushiApi.onBroadcast(ev, p); return; }
       if (stadium && (ev === 'ball' || ev === 'match')) { stadium.onBroadcast(ev, p); return; }
       if (carnival && ev.startsWith('wheel-')) { carnival.onBroadcast(ev, p); return; }
       if (ev === 'locked' && p.to === me && !gotHouse) {
@@ -553,7 +554,8 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     });
     if (placeKey === 'mall') wireMall(room, roomKey, house, go, () => { if (myKv) myKv.draw(); sendMine(); });
     if (P && roomKey === SUPER_ROOM) wireSupermarket(room, { onChanged: () => { if (myKv) myKv.draw(); sendMine(); } });
-    if (P && roomKey === SUSHI_ROOM) wireSushi(room, { house, isAdmin: Places.isAdmin, saveShared: () => Places.savePlace(placeKey), getMine: () => mine,
+    setInSushi(!!(P && roomKey === SUSHI_ROOM)); sushiApi = null;
+    if (P && roomKey === SUSHI_ROOM) sushiApi = wireSushi(room, { send: (ev, d) => ch.send(ev, { ...d, id: me, room: roomKey }), house, isAdmin: Places.isAdmin, saveShared: () => Places.savePlace(placeKey), getMine: () => mine,
       isSeatedMine: () => !!(mine.seat && seatNoOf(room, mine.seat) && seatNoOf(room, mine.seat) === (S.get().sushi || {}).seat),
       blockedAt: (x, y) => blockedAt(x, y), otherCats: () => others.ids().map((id) => others.m.get(id)).filter((c) => c && c.room === roomKey),
       onChanged: () => { if (myKv) myKv.draw(); sendMine(); } });
@@ -787,7 +789,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   let left = false;
   const leave = () => {
     if (left) return; left = true;
-    if (P) { leaveBuffet(); leaveSushi(); if (placeKey === 'cinema') leaveCinema(); }
+    if (P) { leaveBuffet(); leaveSushi(); setInSushi(false); if (placeKey === 'cinema') leaveCinema(); }
     setCatZ(null);
     if (carnival) carnival.stop();
     if (P && S.dropPlaceFood()) toast('🍽️ <span class="zh">吃的喝的不能带走哦</span> Food and drinks stay behind when you leave', { ms: 2600 });
