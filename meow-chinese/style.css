@@ -2264,3 +2264,8 @@ img.gone { min-height: 40px; font-size: 11px; }
 .decor .belt-lane.vertical .bplate { left: 50% !important; bottom: auto; width: 115%; transform: translate(-50%, -50%); }
 /* the "put something on the table" button: just a small round + */
 .home-table-place { width: 13px; min-height: 0; height: 13px; padding: 0; border-radius: 50%; font: 900 11px/1 system-ui, sans-serif; display: grid; place-items: center; background: #fff8ec; border: 1.5px solid var(--ink); box-shadow: 0 1px 0 rgba(0,0,0,.25); }
+/* a red + drawn inside the white circle */
+.home-table-place { position: absolute; color: transparent; }
+.home-table-place::before, .home-table-place::after { content: ''; position: absolute; left: 50%; top: 50%; background: #e8384f; border-radius: 1px; transform: translate(-50%, -50%); }
+.home-table-place::before { width: 62%; height: 18%; }
+.home-table-place::after { width: 18%; height: 62%; }

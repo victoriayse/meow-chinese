@@ -711,4 +711,7 @@ export const CHANGES = [
   { v: 255, items: [
     '➕ The "put food on the table" button is now a small round + button.',
   ] },
+  { v: 256, items: [
+    '➕ The + button now has a red plus, and on the sushi mats it sits in the corner so it does not cover your food.',
+  ] },
 ];
