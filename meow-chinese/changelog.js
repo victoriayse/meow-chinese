@@ -690,4 +690,8 @@ export const CHANGES = [
   { v: 249, items: [
     '🍣 SushiMeow: each conveyor belt seats 4, and there is a new mirror-image belt (table top at the bottom) so the restaurant can have two belts and 8 numbered seats. The second belt runs the other way.',
   ] },
+  { v: 250, items: [
+    '🍣 SushiMeow belts redesigned: 4 place mats on the side next to the seats, where you put your food and drinks.',
+    '🛎️ One ordering kiosk for the whole restaurant: it knows your seat number, and the server brings your order to your seat.',
+  ] },
 ];

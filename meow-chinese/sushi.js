@@ -221,8 +221,7 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
   function openTablet() {
     const m = meal();
     if (!m || !m.seat) { sfx.miss(); return toast('🍣 <span class="zh">请先找领位员拿座位号</span> Please get a seat number from the host first', { ms: 2400 }); }
-    if (!isSeatedMine()) { sfx.miss(); return toast(`🍣 <span class="zh">请先坐到你的${m.seat}号座位</span> Sit at your seat (number ${m.seat}) first`, { ms: 2400 }); }
-    let tab = 'menu'; const qty = {};
+    let tab = 'menu'; const qty = {};   // (the kiosk knows her seat: whatever she orders is brought to her seat)
     const box = html`<div class="card stack sushi-tab"><div class="sushi-tab-head"><b>🍣 寿司喵 SushiMeow</b><span class="seat-pill"><span class="zh">座位</span> Seat ${m.seat}</span></div>
         <div class="sushi-tabs"></div><div class="sushi-body"></div><div class="sushi-foot"></div>
         <button type="button" class="btn white small" id="st-close">关闭 Close</button></div>`;

@@ -2256,3 +2256,6 @@ img.gone { min-height: 40px; font-size: 11px; }
 .decor[data-id^="sushihost"] > canvas, .decor[data-id^="sushicashier"] > canvas { position: relative; z-index: 1; }
 .decor[data-id^="sushihost"] .tux-cat, .decor[data-id^="sushicashier"] .tux-cat { bottom: 42%; }
 .decor .sushi-seatno.on-counter { top: auto; bottom: 22%; z-index: 3; font-size: 12px; }
+/* the sushi counters' "+ 放食物" button sits by the place mats, not over the belt */
+.decor[data-id^="sushibelt"]:not([data-id^="sushibelt2"]) .home-table-place { top: 24%; }
+.decor[data-id^="sushibelt2"] .home-table-place { top: 76%; }
