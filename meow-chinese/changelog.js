@@ -708,4 +708,7 @@ export const CHANGES = [
     '🍣 SushiMeow: the server cat now comes in from the left, walks along the gap between the counter and the seats, then goes out round the end of the counter.',
     '🎵 Calm Japanese zen music plays while you are in SushiMeow.',
   ] },
+  { v: 255, items: [
+    '➕ The "put food on the table" button is now a small round + button.',
+  ] },
 ];

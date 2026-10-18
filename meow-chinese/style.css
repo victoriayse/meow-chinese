@@ -2262,3 +2262,5 @@ img.gone { min-height: 40px; font-size: 11px; }
 /* ↕️ a belt standing the long way: the plates go up and down it */
 .decor .belt-lane.vertical { clip-path: inset(0 -60% 0 -60%); }
 .decor .belt-lane.vertical .bplate { left: 50% !important; bottom: auto; width: 115%; transform: translate(-50%, -50%); }
+/* the "put something on the table" button: just a small round + */
+.home-table-place { width: 13px; min-height: 0; height: 13px; padding: 0; border-radius: 50%; font: 900 11px/1 system-ui, sans-serif; display: grid; place-items: center; background: #fff8ec; border: 1.5px solid var(--ink); box-shadow: 0 1px 0 rgba(0,0,0,.25); }

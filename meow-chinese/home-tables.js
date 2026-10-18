@@ -66,7 +66,7 @@ function draw(roomEl, scope, rows, onChanged) {
     const sushiBelt = (ITEMS[String(d.dataset.id).split('#')[0]] || {}).sushiBelt;
     if (sushiBelt && !(mine && mine.belt === d)) return;
     const b = document.createElement('button'); b.type = 'button'; b.className = 'table-place home-table-place';
-    if (sushiBelt) { const sp = matSpot(d, mine.mat, 0.5); b.classList.add('on-mat'); b.style.left = `${sp.x * 100}%`; b.style.top = `${sp.y * 100}%`; b.textContent = '+ 放'; } b.textContent = d.dataset.id.startsWith('schooldesk') ? '+ 放东西' : '+ 放食物';
+    if (sushiBelt) { const sp = matSpot(d, mine.mat, 0.5); b.classList.add('on-mat'); b.style.left = `${sp.x * 100}%`; b.style.top = `${(sp.y - 0.1) * 100}%`; }   // (the middle of her mat) b.textContent = '+';
     b.title = 'Place something from your bag'; b.setAttribute('aria-label', '放东西 · Place something on this table');
     b.addEventListener('pointerdown', (e) => e.stopPropagation());
     b.onclick = (e) => { e.stopPropagation(); chooseFood(scope, d.dataset.id, onChanged, sushiBelt ? mine.mat : null); };
