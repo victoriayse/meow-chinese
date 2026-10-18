@@ -2279,3 +2279,12 @@ img.gone { min-height: 40px; font-size: 11px; }
 .house .mall-track > .mall-preview { z-index: 1; }
 /* v237: mall cats another 30% smaller (0.7 × 0.7) */
 .room[data-room^="mall"] .vcat .kflip, .room[data-room^="mall"] .decor .tux-cat .kitten-wrap { scale: .49; }
+/* 🚪 walls with a sliding glass door (mall shops) */
+.decor.walldoor .elev-doors { position: absolute; overflow: hidden; pointer-events: none; }
+.decor.walldoor .elev-door { position: absolute; top: 0; bottom: 0; width: 50%; background: linear-gradient(90deg, rgba(160, 214, 238, .75), rgba(226, 245, 252, .55) 50%, rgba(160, 214, 238, .75)); box-shadow: inset 0 0 0 calc(2px * var(--k, 1)) #6f7886; transition: transform .45s ease-in-out; }
+.decor.walldoor .elev-door.l { left: 0; }
+.decor.walldoor .elev-door.r { right: 0; }
+.decor.walldoor.elev-open .elev-door.l { transform: translateX(-96%); }
+.decor.walldoor.elev-open .elev-door.r { transform: translateX(96%); }
+/* the mall's editor (🪑 furnishing a shop): her cat at the same size as when walking round the mall */
+.room[data-room^="mall"] #ground .kitten-wrap { scale: .49; transform-origin: 50% 100%; }

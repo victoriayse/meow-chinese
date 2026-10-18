@@ -479,6 +479,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (strip) paintStrip();
     if (placeKey === 'mall') [room, ...Object.values(strip ? strip.panels : {})].forEach((p) => p.querySelectorAll('.elev-display').forEach((el) => { el.textContent = floorLabel(p.dataset.room); }));
     room.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, room); }); stackDecor(room);
+    room.querySelectorAll('.decor.walldoor, .decor.elevator').forEach((el) => { el.style.zIndex = 3; });   // cats walk in front of a wall's door and of the lift
     const pw = house.power || {};
     applyPower(room, { dark: !!(pw.dark || {})[roomKey], off: pw.off || {} });
     // 💡 in a public place: the owner switches the room's lights for everyone; anyone else just for their own screen
@@ -718,6 +719,12 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       const diag = turned ? (flip ? { f: 1 - 2.5 / 22, b: 1 - 16 / 22 } : { f: 2.5 / 22, b: 16 / 22 }) : null;
       foot.push({ el: d, gate: !!it.gate, venue: it.gate ? it.gateFor || gateVenue(room, x0, x1) : null, x0, x1, y0: bottom - 1, y1: bottom + depth, diag });
     });
+    // 🚪 a wall with a door: the whole wall is solid, except the strip of floor right in front of its door
+    room.querySelectorAll('.decor.walldoor').forEach((d) => {
+      const it = ITEMS[d.dataset.id.split('#')[0]], x0 = (d.offsetLeft / W) * 100, x1 = ((d.offsetLeft + d.offsetWidth) / W) * 100;
+      const bottom = ((H - (d.offsetTop + d.offsetHeight)) / H) * 100;
+      foot.push({ el: d, wall: true, x0: x0 + 0.5, x1: x1 - 0.5, y0: Math.max(0, bottom) + it.walldoor.band, y1: 101 });
+    });
   }
   // 🔄 a turned queue pole is drawn at the depth of its front pole, but its rope runs back across the floor: a cat
   // standing in front of the rope (at her x) is drawn in front of the whole pole, a cat behind it stays behind
@@ -727,7 +734,9 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       const t = Math.max(0, Math.min(1, ((x - f.x0) / Math.max(0.1, f.x1 - f.x0) - f.diag.f) / (f.diag.b - f.diag.f)));
       if (y < f.y0 + t * (f.y1 - f.y0)) z = Math.max(z, (parseInt(f.el.style.zIndex, 10) || 0) + 1);
     }
-    return z;
+    // the mall's small cats: a cat standing at (or just in front of) a thing's base is drawn in front of it,
+    // even when that thing was layered over the wall behind it
+    return placeKey === 'mall' ? z + 4 : z;
   });
   const inFoot = (f, x, y) => {
     if (y < f.y0 || y > f.y1) return false;
@@ -747,6 +756,16 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     return (r && (r.key || r)) || null;
   }
   let gateToastAt = 0;
+  // 🚪 sliding doors in a wall open when a cat comes close and shut once nobody is near
+  function wallDoors() {
+    const room = $('#room', box); if (!room) return;
+    const cats = [{ x: mine.x, y: mine.y }, ...others.ids().map((id) => others.m.get(id)).filter((c) => c && c.room === roomKey).map((c) => ({ x: c.dx ?? c.x, y: c.dy ?? c.y }))];
+    foot.filter((f) => f.wall).forEach((f) => {
+      const near = cats.some((c) => c.x >= f.x0 - 5 && c.x <= f.x1 + 5 && c.y < f.y0 + 2);
+      if (near !== f.el.classList.contains('elev-open')) { f.el.classList.toggle('elev-open', near); }
+    });
+  }
+  const wdT = setInterval(() => { if (!n.isConnected) return clearInterval(wdT); wallDoors(); }, 150);
   function blockedAt(x, y) { return foot.some((f) => inFoot(f, x, y) && !(f.gate && (gatePass(f) || f.el.classList.contains('gate-held')))); }
   // the food side of the buffet: behind the gate's line (no gate in the room: having paid is enough)
   function insideBuffet() {
@@ -804,7 +823,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     const pw = house.power || {};
     Object.entries(strip.panels).forEach(([k, p]) => {
       drawRoom(p.querySelector('.room-bg'), isNight(), k, (house.styles || {})[k]);
-      p.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, p); }); stackDecor(p);
+      p.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, p); }); stackDecor(p); p.querySelectorAll('.decor.walldoor, .decor.elevator').forEach((el) => { el.style.zIndex = 3; });
       applyPower(p, { dark: !!(pw.dark || {})[k], off: pw.off || {} });
     });
     cam();

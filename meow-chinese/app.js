@@ -584,6 +584,7 @@ function homeScreen(params = {}) {
       </div>
     </div>
   </section>`;
+  if (inHouse && roomRI.place === 'mall') { const h = $('#house', n); if (h) h.dataset.keepArrows = '1'; }   // the mall's editor: same size as walking round it
   // 🛵 deliveries wait in the living room — or right here, if her home isn't open yet
   if (!inHouse && !S.unlocked('decor')) Delivery.drawBags($('#stage', n), 'living', () => {});
 

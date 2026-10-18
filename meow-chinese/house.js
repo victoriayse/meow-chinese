@@ -292,6 +292,12 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
     drawGrid(ring, g.slice(0, sp.cy * 2 + 1).map((row, y) => row.slice(0, sp.cx * 2 + 1).map((v, x) => (inRing(x, y) ? v : null))), HOUSE.decor);
     head.appendChild(ring); wrap.append(c, head);
   } else wrap.appendChild(c);
+  if (it.walldoor) {
+    const dr = it.walldoor.door, doors = document.createElement('div'); doors.className = 'elev-doors';
+    Object.assign(doors.style, { left: `${dr.x * 100}%`, top: `${dr.y * 100}%`, width: `${dr.w * 100}%`, height: `${dr.h * 100}%` });
+    doors.innerHTML = '<i class="elev-door l glass"></i><i class="elev-door r glass"></i>';
+    wrap.classList.add('walldoor'); wrap.appendChild(doors);
+  }
   if (it.elevator) {
     // 🛗 the lift: two steel doors that slide apart, and a little screen showing the floor
     const dr = it.elevator.door, ds = it.elevator.display;
@@ -443,7 +449,10 @@ export function stackDecor(roomEl) {
       els.forEach((b) => {
         if (a === b || !overlap(A, box(b))) return;
         const za = +a.style.zIndex || 0, zb = +b.style.zIndex || 0;
-        if (lay(a) > lay(b) && za <= zb + 2) a.style.zIndex = zb + 3;   // +3: also in front of a desk's front (drawn 2 above it, over a seated cat)
+        // (only when a actually sits on / in front of b — its bottom reaches down into b — so a door at the back that just
+        //  touches a bench's top edge isn't pulled in front of the bench and of every cat in the room)
+        const B = box(b), sitsOn = A.b > B.t + (B.b - B.t) * 0.15;
+        if (lay(a) > lay(b) && za <= zb + 2 && sitsOn) a.style.zIndex = zb + 3;   // +3: also in front of a desk's front (drawn 2 above it, over a seated cat)
         else if (lay(a) < lay(b) && za >= zb) a.style.zIndex = Math.max(2, zb - 1);
       });
     });

@@ -677,4 +677,9 @@ export const CHANGES = [
   { v: 237, items: [
     '🐱 Cats in the shopping mall are now 30% smaller again.',
   ] },
+  { v: 238, items: [
+    '🚪 New mall item: a wall with a sliding glass door, to put between two shops. Cats can only walk through the door, and it slides open as they come near.',
+    '🐱 Fixed: a cat standing in front of the glass doors in the Lobby was hidden behind them.',
+    '🪑 The mall editor now shows the cat at the same size as when walking round the mall.',
+  ] },
 ];
