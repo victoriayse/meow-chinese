@@ -2228,7 +2228,7 @@ img.gone { min-height: 40px; font-size: 11px; }
 /* 🍣 SushiMeow */
 .room[data-room="mallsushi"] .vcat .kflip, .room[data-room="mallsushi"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
 .decor .belt-lane { position: absolute; overflow: hidden; pointer-events: none; z-index: 2; }
-.decor .belt-lane .bplate { position: absolute; bottom: 8%; width: 9%; aspect-ratio: 1.25; transform: translateX(-50%); padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; }
+.decor .belt-lane .bplate { position: absolute; bottom: 8%; width: 4.5%; aspect-ratio: 1.25; transform: translateX(-50%); padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; }
 .decor .belt-lane .bplate.gone { visibility: hidden; }
 .decor .bplate .bp-plate { position: absolute; left: 0; right: 0; bottom: 0; height: 32%; border-radius: 50%; background: radial-gradient(ellipse at 50% 35%, #e8576b, #a3202f 70%); box-shadow: 0 2px 0 rgba(0,0,0,.35); }
 .decor .bplate .bp-food { position: absolute; left: 50%; bottom: 18%; transform: translateX(-50%); width: 72% !important; height: auto !important; image-rendering: pixelated; }
@@ -2252,3 +2252,6 @@ img.gone { min-height: 40px; font-size: 11px; }
 .receipt .r-total { border-top: 2px solid #2b2140; margin-top: 4px; padding-top: 4px; font-weight: 900; }
 .seat-pick { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
 .seat-pick .btn { padding: 8px 0; font-size: 18px; }
+/* SushiMeow's host and cashier stand BEHIND their counters (the counter hides their lower half) */
+.decor[data-id^="sushihost"] > canvas, .decor[data-id^="sushicashier"] > canvas { position: relative; z-index: 1; }
+.decor[data-id^="sushihost"] .tux-cat, .decor[data-id^="sushicashier"] .tux-cat { bottom: 42%; }

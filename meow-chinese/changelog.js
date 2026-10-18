@@ -671,4 +671,8 @@ export const CHANGES = [
     '🍣 SushiMeow: everyone in the restaurant now sees the same plates on the belt, and everyone sees the server cat bring the dishes.',
     '💰 You can\'t leave SushiMeow in any way until your bill is paid — even closing the app brings you back to the restaurant.',
   ] },
+  { v: 244, items: [
+    '🍣 SushiMeow: the conveyor belt is twice as long, and the host and cashier now stand behind their counters.',
+    '🚪 New SushiMeow gate: you arrive in front of the host, and the gate opens once the host gives you a seat. It lets you out again once your bill is paid.',
+  ] },
 ];

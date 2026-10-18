@@ -363,6 +363,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (P && lastRoom === SUSHI_ROOM && roomKey !== SUSHI_ROOM) { const n3 = leaveSushi(); if (n3) toast('🍣 <span class="zh">寿司喵的食物留在店里</span> SushiMeow food stays at the restaurant', { ms: 2400 }); if (myKv) myKv.draw(); }
     if (P && lastRoom === BUFFET_ROOM && roomKey !== BUFFET_ROOM) { const n2 = leaveBuffet(); if (n2) toast('🍱 <span class="zh">自助餐的食物留在餐厅里</span> Buffet food stays at the buffet', { ms: 2400 }); if (myKv) myKv.draw(); }
     const justEntered = P && roomKey === BUFFET_ROOM && lastRoom !== BUFFET_ROOM;
+    const sushiArrive = P && roomKey === SUSHI_ROOM && lastRoom !== SUSHI_ROOM;
     if (justEntered) leaveBuffet();   // a fresh visit: any old pass (or buffet food) from an earlier visit is gone — pay again
     if (P && placeKey === 'cinema' && lastRoom === null) leaveCinema();   // 🎟️ a new trip to the cinema: buy new tickets
     lastRoom = roomKey;
@@ -447,6 +448,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.seat'); if (!d || e.target.closest('button')) return;
       if (mine.seat === d.dataset.id) return;
+      if (P && roomKey === SUSHI_ROOM && (ITEMS[d.dataset.id.split('#')[0]] || {}).sushiSeat && !insideSushi()) { sfx.miss(); return toast((S.get().sushi || {}).seat ? '🚪 <span class="zh">请先走进闸门</span> Walk in through the gate first' : '🍣 <span class="zh">请先找领位员拿座位号</span> Please get a seat number from the host first', { ms: 2200 }); }
       if (P && roomKey === SUSHI_ROOM && !canSit(room, d.dataset.id)) { sfx.miss(); return; }
       if (roomKey === BUFFET_ROOM && !insideBuffet()) { sfx.miss(); return toast(hasPass() ? '🚪 <span class="zh">请先走进闸门</span> Walk in through the gate first' : '🎟️ <span class="zh">请先在门口付款</span> Please pay the host at the entrance first', { ms: 2200 }); }
       const taken = others.ids().map((id) => others.m.get(id)).filter((c) => c && c.room === roomKey);
@@ -542,6 +544,10 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     requestAnimationFrame(() => {
       measureBlockers(room);
       // 🍱 coming into the buffet: she starts just in front of the gate (on the entrance side)
+      if (sushiArrive && myEl && !mine.seat) {   // 🍣 coming into SushiMeow: she starts in front of the host
+        const h = [...room.querySelectorAll('.decor')].find((x) => (ITEMS[x.dataset.id.split('#')[0]] || {}).sushiHost);
+        if (h) { const r = doorRect(room, h); mine.x = Math.max(6, Math.min(94, (r.x0 + r.x1) / 2)); mine.y = Math.max(1, r.bottom - 5); mine.left = false; place(); sendMine(); }
+      }
       const g = justEntered && foot.find((f) => f.gate);
       if (g && myEl) { mine.seat = null; mine.x = (g.x0 + g.x1) / 2; mine.y = Math.max(1, g.y0 - 6); place(); sendMine(); }
       // 🚪 came through a door: she steps out in front of the matching door on this side (left door → arrive at the right door)
@@ -706,7 +712,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       // only that diagonal line blocks, not the whole box around it (so she can walk past its far end into a gate)
       const flip = getComputedStyle(d).transform.startsWith('matrix(-1');
       const diag = turned ? (flip ? { f: 1 - 2.5 / 22, b: 1 - 16 / 22 } : { f: 2.5 / 22, b: 16 / 22 }) : null;
-      foot.push({ el: d, gate: !!it.gate, venue: it.gate ? it.gateFor || gateVenue(room, x0, x1) : null, x0, x1, y0: bottom - 1, y1: bottom + depth, diag });
+      foot.push({ el: d, gate: !!it.gate, sushi: !!it.sushiGate, venue: it.gate && !it.sushiGate ? it.gateFor || gateVenue(room, x0, x1) : null, x0, x1, y0: bottom - 1, y1: bottom + depth, diag });
     });
   }
   // 🔄 a turned queue pole is drawn at the depth of its front pole, but its rope runs back across the floor: a cat
@@ -725,7 +731,13 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     return x >= f.x0 - 2 && x <= f.x1 + 2;
   };
   // the buffet gate wants a buffet pass; a cinema gate wants a ticket for its own theatre (the admin goes through free)
-  const gatePass = (f) => Places.isAdmin() || (f && f.venue ? hasTicket(f.venue) : hasPass());
+  const gatePass = (f) => Places.isAdmin() || (f && f.sushi ? sushiGatePass(f) : f && f.venue ? hasTicket(f.venue) : hasPass());
+  // 🍣 SushiMeow's gate: in once the host has given her a seat; out again only once the bill is paid
+  function sushiGatePass(f) {
+    const m = S.get().sushi; if (!m || !m.seat) return false;
+    return !(mustPay() && mine.y > (f.y0 + f.y1) / 2);
+  }
+  const insideSushi = () => { const g = foot.find((f) => f.sushi); return !g || mine.seat || mine.y > (g.y0 + g.y1) / 2; };
   // which theatre a cinema gate guards: the theatre it stands in, else the room behind the nearest door, else by side
   function gateVenue(room, x0, x1) {
     if (placeKey !== 'cinema') return null;

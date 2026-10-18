@@ -27,7 +27,7 @@ export const sushiLocked = () => inSushi && mustPay();
 
 export const SUSHI_ROOM = 'mallsushi';
 const base = (id) => String(id).split('#')[0];
-const SERVE_MS = 5000, BELT_LOOP_S = 46;
+const SERVE_MS = 5000, BELT_LOOP_S = 92;   // (the belt is twice as long now: same speed, twice the plates)
 const st = () => S.get();
 const meal = () => st().sushi || null;
 export const mustPay = () => !!(meal() && (meal().bill || []).length);
@@ -96,7 +96,7 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
     const lane = document.createElement('div'); lane.className = 'belt-lane';
     Object.assign(lane.style, { left: `${ln.x * 100}%`, top: `${ln.y * 100}%`, width: `${ln.w * 100}%`, height: `${ln.h * 100}%` });
     belt.appendChild(lane);
-    const dishes = beltDishes(), N = Math.max(9, dishes.length);
+    const dishes = beltDishes(), N = Math.max(18, dishes.length);
     const plates = [];
     for (let i = 0; i < N; i++) {
       const k = dishes[i % dishes.length];
@@ -113,7 +113,7 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
       const t = now() / 1000 / BELT_LOOP_S;
       plates.forEach((p, i) => {
         const f = (t + i / N) % 1;
-        p.style.left = `${(f * 1.16 - 0.12) * 100}%`;
+        p.style.left = `${(f * 1.08 - 0.06) * 100}%`;
         p.classList.toggle('gone', takenAt.get(i) === lap(i));
       });
       requestAnimationFrame(tick);
