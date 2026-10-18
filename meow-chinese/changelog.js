@@ -681,4 +681,7 @@ export const CHANGES = [
   { v: 246, items: [
     '🍣 SushiMeow can now be set up with the belt at the front and the seats behind it: seat numbers show on the counter, and the server cat hands dishes over the counter.',
   ] },
+  { v: 247, items: [
+    '🍣 SushiMeow: the counter table top is now behind the belt (next to the seats), so food you put down sits right in front of you.',
+  ] },
 ];
