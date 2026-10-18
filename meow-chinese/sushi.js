@@ -215,15 +215,28 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
   }
   async function walkDish(order, remote = null) {
     if (!room.isConnected) return;
-    let path;
-    if (remote) path = remote.path;
+    let path, back;
+    if (remote) { path = remote.path; back = remote.back || path.slice().reverse(); }
     else {
       const m = meal(); const seat = m && seats[m.seat - 1];
-      const H = room.clientHeight, W = room.clientWidth;
-      const target = seat ? { x: ((seat.offsetLeft + seat.offsetWidth / 2) / W) * 100, y: Math.max(1, ((H - (seat.offsetTop + seat.offsetHeight)) / H) * 100) } : { x: 50, y: 4 };
-      const startP = { x: 95, y: Math.min(S.roomMaxY(SUSHI_ROOM), 10) };
-      path = findPath(startP, target).map((p) => ({ x: +p.x.toFixed(1), y: +p.y.toFixed(1) }));
-      send('sushiserve', { k: order.k, path });   // everyone in the restaurant sees the server walk over
+      const H = room.clientHeight, W = room.clientWidth, pct = (px) => (px / W) * 100, up = (px) => ((H - px) / H) * 100;
+      const target = seat ? { x: pct(seat.offsetLeft + seat.offsetWidth / 2), y: Math.max(1, up(seat.offsetTop + seat.offsetHeight)) } : { x: 50, y: 4 };
+      const mm2 = myMat(room), belt = mm2 && mm2.belt, way = belt && belt.dataset.facing;
+      if (belt && way !== 'front') {
+        // 🛣️ the server's own lane: in from the left, along the gap between the counter and the seats, then on past the
+        // end of the counter and out on the right (seats behind the belt: the gap behind it; seats in front: in front of it)
+        const r = { x0: pct(belt.offsetLeft), x1: pct(belt.offsetLeft + belt.offsetWidth), top: up(belt.offsetTop), bottom: up(belt.offsetTop + belt.offsetHeight) };
+        const aisle = Math.max(1, Math.min(S.roomMaxY(SUSHI_ROOM), way === 'back' ? r.bottom - 2.5 : r.top + 1.5));
+        const lo = Math.max(1, r.bottom - 3), clear = Math.min(99, r.x1 + 4);
+        path = [{ x: -5, y: aisle }, { x: Math.max(2, r.x0 - 1), y: aisle }, { x: target.x, y: aisle }];
+        back = [{ x: target.x, y: aisle }, { x: clear, y: aisle }, ...(way === 'back' ? [] : [{ x: clear, y: lo }]), { x: 106, y: way === 'back' ? aisle : lo }];
+      } else {
+        const startP = { x: -5, y: Math.min(S.roomMaxY(SUSHI_ROOM), 10) };   // (a belt standing the long way: find a way round)
+        path = findPath(startP, target); back = path.slice().reverse();
+      }
+      const fix = (pts) => pts.map((p) => ({ x: +p.x.toFixed(1), y: +p.y.toFixed(1) }));
+      path = fix(path); back = fix(back);
+      send('sushiserve', { k: order.k, path, back });   // everyone in the restaurant sees the server walk over
     }
     const startP = path[0];
     const el = html`<div class="vcat sushi-server"><div class="kitten-wrap"><div class="kflip"></div><div class="nametag">服务员 Server</div></div></div>`;
@@ -246,7 +259,7 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
     const mm = meal(); const o = !remote && mm && (mm.orders || []).find((x) => x.id === order.id);
     if (o && !o.served) { o.served = true; S.addSnack(order.k); S.save(); sfx.coin(); toast(`🍣 <span class="zh">${SNACKS[order.k].zh}来了！</span> Your ${esc(SNACKS[order.k].en)} is here — bottom left`, { ms: 2200 }); onChanged(); }
     await new Promise((ok) => setTimeout(ok, 700));
-    await walk(path.slice().reverse());
+    await walk(back);
     el.remove();
   }
   // orders still on their way (e.g. after the room redrew): send them out again
@@ -381,7 +394,7 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
     onBroadcast(ev, p) {
       if (!room.isConnected || !p) return;
       if (ev === 'sushitake' && Number.isInteger(p.i)) takenAt.set(`${p.b || 0}:${p.i}`, p.lap);
-      if (ev === 'sushiserve' && Array.isArray(p.path) && p.path.length > 1 && SNACKS[p.k] && p.path.length < 200) serving = serving.then(() => walkDish({ k: p.k }, { path: p.path })).catch(() => {});
+      if (ev === 'sushiserve' && Array.isArray(p.path) && p.path.length > 1 && SNACKS[p.k] && p.path.length < 200) serving = serving.then(() => walkDish({ k: p.k }, { path: p.path, back: Array.isArray(p.back) && p.back.length < 200 ? p.back : null })).catch(() => {});
     },
   };
 

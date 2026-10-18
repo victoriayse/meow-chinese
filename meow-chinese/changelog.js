@@ -704,4 +704,8 @@ export const CHANGES = [
   { v: 253, items: [
     '🍣 SushiMeow: you can only put your own food and drinks on the place mat in front of your seat, and each mat holds 2 things.',
   ] },
+  { v: 254, items: [
+    '🍣 SushiMeow: the server cat now comes in from the left, walks along the gap between the counter and the seats, then goes out round the end of the counter.',
+    '🎵 Calm Japanese zen music plays while you are in SushiMeow.',
+  ] },
 ];

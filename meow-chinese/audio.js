@@ -449,3 +449,41 @@ export function carnivalMusic() {
   const timer = setInterval(tick, 60); tick();
   return () => { if (!live) return; live = false; clearInterval(timer); out.gain.setTargetAtTime(0.0001, a.currentTime, 0.1); setTimeout(() => { out.disconnect(); hushMusic(false); }, 500); };
 }
+
+// 🍣 SushiMeow: a calm Japanese "zen" tune — koto-like plucks in the old Japanese "in" scale over a soft drone,
+// with a breathy flute line now and then. Loops quietly while she is in the restaurant. Returns stop().
+export function zenMusic() {
+  const a = ac(); if (!a || !musicOn()) return () => {};
+  hushMusic(true);
+  const out = a.createGain(); out.gain.value = 0.55; out.connect(a.destination);
+  const F = (n) => 440 * 2 ** ((n - 69) / 12);
+  const IN = [62, 63, 67, 69, 70, 74, 75, 79];          // D Eb G A Bb (the "in" scale), two octaves
+  const BEAT = 60 / 66;                                  // slow: 66 beats a minute
+  const koto = (n, t, len) => {                          // a plucked string: a bright attack that fades fast
+    noteAt(a, out, F(n), t, Math.min(2.4, BEAT * len * 1.6), 'triangle', 0.06);
+    noteAt(a, out, F(n + 12), t, 0.35, 'sine', 0.02);
+  };
+  const flute = (n, t, len) => {                          // a soft breathy flute that swells and fades
+    const o = a.createOscillator(), g = a.createGain(), v = a.createOscillator(), vg = a.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(F(n), t); v.frequency.value = 5; vg.gain.value = 3;
+    v.connect(vg).connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.035, t + 0.5); g.gain.linearRampToValueAtTime(0.0001, t + BEAT * len);
+    o.connect(g).connect(out); o.start(t); v.start(t); o.stop(t + BEAT * len + 0.05); v.stop(t + BEAT * len + 0.05);
+  };
+  // a gentle 16-beat phrase (index into IN, length in beats); the flute answers every other time round
+  const phrase = [[0, 2], [2, 1], [3, 1], [4, 2], [3, 2], [5, 3], [4, 1], [2, 2], [3, 2]];
+  const answer = [[7, 4], [6, 2], [5, 2], [4, 4], [3, 4]];
+  let next = a.currentTime + 0.2, pi = 0, loop = 0, live = true;
+  const drone = () => { noteAt(a, out, F(38), next, BEAT * 8, 'sine', 0.05); noteAt(a, out, F(45), next, BEAT * 8, 'sine', 0.025); };
+  const tick = () => {
+    if (!live) return;
+    while (next < a.currentTime + 0.5) {
+      if (pi === 0) { drone(); if (loop % 2) { let t = next + BEAT * 2; answer.forEach(([i, len]) => { flute(IN[i] + 12, t, len); t += BEAT * len; }); } }
+      const [i, len] = phrase[pi]; koto(IN[i], next, len);
+      if (Math.random() < 0.25) koto(IN[Math.max(0, i - 2)] - 12, next + BEAT * 0.5, 1);   // a soft lower note now and then
+      next += BEAT * len; pi = (pi + 1) % phrase.length; if (!pi) { loop++; next += BEAT * 2; }   // a pause between phrases
+    }
+  };
+  const timer = setInterval(tick, 120); tick();
+  return () => { if (!live) return; live = false; clearInterval(timer); out.gain.setTargetAtTime(0.0001, a.currentTime, 0.3); setTimeout(() => { out.disconnect(); hushMusic(false); }, 1200); };
+}

@@ -24,7 +24,7 @@ import { managing } from './cloud.js';
 import { Channel } from './rt.js';
 import { drawRoom, drawRoof, ITEMS, SNACKS } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal } from './ui.js';
-import { sfx } from './audio.js';
+import { sfx, zenMusic } from './audio.js';
 import { wireDisplays } from './display-racks.js';
 import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, boothView, freeSlot, hearNote, PetLayer, roomArrowsHtml, catZ, setCatZ, inPool, stackDecor, studioBarre, rideFx } from './house.js';
 import * as Radio from './radio.js';
@@ -191,7 +191,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   let house = null, host = null, roomKey = startRoom, mine = { x: 30, y: 6, room: startRoom, left: false }, lockedOut = false;
   let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null, carnival = null;
 
-  let refreshingPlace = false, welcomed = false, sushiApi = null;
+  let refreshingPlace = false, welcomed = false, sushiApi = null, zenStop = null;
   // 🍣 SushiMeow: the bill must be paid before she can leave
   const unpaid = () => { if (!(P && roomKey === SUSHI_ROOM && mustPay())) return false; sfx.miss(); toast('💰 <span class="zh">请先到收银台付款再离开</span> Please pay your bill at the cashier before you leave', { ms: 2800 }); return true; };
   async function refreshPlace() {
@@ -561,6 +561,8 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (placeKey === 'mall') wireMall(room, roomKey, house, go, () => { if (myKv) myKv.draw(); sendMine(); });
     if (P && roomKey === SUPER_ROOM) wireSupermarket(room, { onChanged: () => { if (myKv) myKv.draw(); sendMine(); } });
     setInSushi(!!(P && roomKey === SUSHI_ROOM)); sushiApi = null;
+    // 🎵 calm zen music while she's in SushiMeow
+    if (P && roomKey === SUSHI_ROOM) { if (!zenStop) zenStop = zenMusic(); } else if (zenStop) { zenStop(); zenStop = null; }
     if (P && roomKey === SUSHI_ROOM) sushiApi = wireSushi(room, { send: (ev, d) => ch.send(ev, { ...d, id: me, room: roomKey }), house, isAdmin: Places.isAdmin, saveShared: () => Places.savePlace(placeKey), getMine: () => mine,
       isSeatedMine: () => !!(mine.seat && seatNoOf(room, mine.seat) && seatNoOf(room, mine.seat) === (S.get().sushi || {}).seat),
       blockedAt: (x, y) => blockedAt(x, y), otherCats: () => others.ids().map((id) => others.m.get(id)).filter((c) => c && c.room === roomKey),
@@ -801,6 +803,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   let left = false;
   const leave = () => {
     if (left) return; left = true;
+    if (zenStop) { zenStop(); zenStop = null; }
     if (P) { leaveBuffet(); leaveSushi(); setInSushi(false); if (placeKey === 'cinema') leaveCinema(); }
     setCatZ(null);
     if (carnival) carnival.stop();
