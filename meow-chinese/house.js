@@ -20,7 +20,8 @@ export let houseK = 1;
 // scale the fixed-size house to fit its box (the arrows sit outside it)
 export function fitHouse(box, unit) {
   if (!box || !unit) return;
-  const side = box.querySelector('.room-nav') ? (window.innerWidth <= 600 ? 28 : ROOM_ARROW) : 0;
+  // (the mall keeps room for the arrows on every floor, so walking between shops never resizes the view)
+  const side = box.querySelector('.room-nav') || box.dataset.keepArrows ? (window.innerWidth <= 600 ? 28 : ROOM_ARROW) : 0;
   const k = Math.min((box.clientWidth - 2 * side) / HOUSE.w, box.clientHeight / (HOUSE.roof + HOUSE.room)) || 1;
   houseK = k;
   unit.style.setProperty('--k', k); unit.style.setProperty('--inv', 1 / k);

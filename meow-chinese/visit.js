@@ -376,6 +376,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
         <div class="room" id="room" data-room="${roomKey}"><canvas class="room-bg" id="roombg"></canvas></div>
       </div>${roomArrowsHtml(roomKey, (k) => open.includes(k), { showLocked: false })}`;
     const unit = $('#hunit', box), room = $('#room', box);
+    if (placeKey === 'mall') box.dataset.keepArrows = '1'; else delete box.dataset.keepArrows;
     if (P) reapplyShared();
     (house.rooms[roomKey] || []).forEach((e) => { const el = decorEl(e, { videoPick: !!(P && Places.isAdmin()), videoOwner: !!P }); if (el) room.appendChild(el); });
     strip = placeKey === 'mall' ? buildStrip(room) : null;

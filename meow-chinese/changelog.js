@@ -671,4 +671,7 @@ export const CHANGES = [
     '🛗 The elevator now works like a real one: call it and wait for it to come to your floor, step in, see the inside of the lift, press a floor and watch the floor numbers go up or down.',
     '🐱 Every cat in the mall is now the same smaller size, so nothing jumps when you walk from one shop into the next.',
   ] },
+  { v: 236, items: [
+    '🗺️ Fixed: the mall view no longer changes size when you walk from one shop into another.',
+  ] },
 ];
