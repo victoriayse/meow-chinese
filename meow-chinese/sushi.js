@@ -55,6 +55,34 @@ export function canSit(room, id) {
   return true;
 }
 
+// ---------- 🍣 the place mats on the belts ----------
+// where a mat is on a belt (as a fraction of the belt's box): mat 0…5, and how far across the mat (0…1)
+export function matSpot(beltEl, mat, f = 0.5) {
+  const it = ITEMS[base(beltEl.dataset.id)]; if (!it || !it.sushiBelt) return null;
+  const sb = it.sushiBelt, way = beltEl.dataset.facing === 'back' && sb.back ? sb.back : beltEl.dataset.facing === 'front' && sb.front ? sb.front : null;
+  const surf = way ? way.surface : it.surface, vert = !!(way && way.vertical);
+  const xs = surf.x, ys = surf.y, x = Array.isArray(xs) ? xs[mat] : xs, y = Array.isArray(ys) ? ys[mat] : ys;
+  if (x == null || y == null) return null;
+  const half = vert ? 0.09 : 0.06;   // half a mat (two things sit side by side / one above the other)
+  return vert ? { x, y: y - half * 2 + half * 2 * f } : { x: x - half + half * 2 * f, y };
+}
+// the mat in front of her own (assigned) seat: { belt, mat } — the nearest mat of the nearest belt to that seat
+export function myMat(room) {
+  const m = meal(); if (!m || !m.seat) return null;
+  const seat = seatEls(room)[m.seat - 1]; if (!seat) return null;
+  const sx = seat.offsetLeft + seat.offsetWidth / 2, sy = seat.offsetTop + seat.offsetHeight;
+  let best = null;
+  room.querySelectorAll('.decor').forEach((b) => {
+    if (!(ITEMS[base(b.dataset.id)] || {}).sushiBelt) return;
+    for (let i = 0; i < 6; i++) {
+      const p = matSpot(b, i); if (!p) continue;
+      const d = Math.hypot(b.offsetLeft + b.offsetWidth * p.x - sx, b.offsetTop + b.offsetHeight * p.y - sy);
+      if (!best || d < best.d) best = { belt: b, mat: i, d };
+    }
+  });
+  return best && best.d < room.clientWidth * 0.25 ? best : null;
+}
+
 export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedMine, blockedAt, otherCats, send = () => {}, onChanged = () => {} }) {
   syncClock(); inSushi = true;
   // (no cashier and no tablet set up yet: nobody can pay, so nobody may be kept here — the bill is let off)

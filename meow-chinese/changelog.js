@@ -701,4 +701,7 @@ export const CHANGES = [
   { v: 252, items: [
     '↕️ SushiMeow belts can now also stand the long way (front to back): tap 🔄 a third time. Seats go on both sides, and a seat turned sideways seats its cat facing the belt.',
   ] },
+  { v: 253, items: [
+    '🍣 SushiMeow: you can only put your own food and drinks on the place mat in front of your seat, and each mat holds 2 things.',
+  ] },
 ];
