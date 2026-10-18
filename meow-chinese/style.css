@@ -2277,3 +2277,5 @@ img.gone { min-height: 40px; font-size: 11px; }
 .house .mall-track > .room { overflow: visible; }
 .house .mall-track > #room { z-index: 2; }
 .house .mall-track > .mall-preview { z-index: 1; }
+/* v237: mall cats another 30% smaller (0.7 × 0.7) */
+.room[data-room^="mall"] .vcat .kflip, .room[data-room^="mall"] .decor .tux-cat .kitten-wrap { scale: .49; }

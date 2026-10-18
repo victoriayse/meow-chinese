@@ -674,4 +674,7 @@ export const CHANGES = [
   { v: 236, items: [
     '🗺️ Fixed: the mall view no longer changes size when you walk from one shop into another.',
   ] },
+  { v: 237, items: [
+    '🐱 Cats in the shopping mall are now 30% smaller again.',
+  ] },
 ];
