@@ -698,4 +698,7 @@ export const CHANGES = [
     '🍣 SushiMeow: 6 seats and 6 place mats per belt, a thicker belt with sushi plates twice as big (and the clear covers no longer cut off).',
     '🔄 Belts and seats can be turned round while moving furniture. A seat backrest shows which way it faces — a cat on a turned seat faces the belt.',
   ] },
+  { v: 252, items: [
+    '↕️ SushiMeow belts can now also stand the long way (front to back): tap 🔄 a third time. Seats go on both sides, and a seat turned sideways seats its cat facing the belt.',
+  ] },
 ];

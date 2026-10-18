@@ -68,11 +68,11 @@ function draw(roomEl, scope, rows, onChanged) {
   });
   for (const row of rows || []) {
     const d = tables.find((el) => el.dataset.id === row.furniture), sb = d && ITEMS[String(row.furniture).split('#')[0]].sushiBelt;
-    const surface = d && (d.dataset.facing === 'back' && sb && sb.back ? sb.back.surface : surfaceOf(row.furniture));   // (a sushi belt turned round has its mats on the other side)
+    const surface = d && (d.dataset.facing === 'back' && sb && sb.back ? sb.back.surface : d.dataset.facing === 'front' && sb && sb.front ? sb.front.surface : surfaceOf(row.furniture));   // (a sushi belt turned round has its mats on the other side)
     if (!d || !SNACKS[row.item] || !surface || surface.x[row.slot] == null) continue;   // a stored table keeps its food until it comes back out
     const b = document.createElement('button'); b.type = 'button'; b.className = 'table-food home-table-food';
     b.title = `拿起 Pick up ${SNACKS[row.item].zh} ${SNACKS[row.item].en}`;
-    b.style.left = `${surface.x[row.slot] * 100}%`; b.style.top = `${(Array.isArray(surface.y) ? surface.y[row.slot] : surface.y) * 100}%`;
+    b.style.left = `${(Array.isArray(surface.x) ? surface.x[row.slot] : surface.x) * 100}%`; b.style.top = `${(Array.isArray(surface.y) ? surface.y[row.slot] : surface.y) * 100}%`;
     b.appendChild(snackCanvas(row.item, 3)); b.disabled = picking.has(row.id);
     b.addEventListener('pointerdown', (e) => e.stopPropagation());
     b.onclick = async (e) => {

@@ -1041,7 +1041,7 @@ function homeScreen(params = {}) {
         remember();
         const id = b.closest('.decor').dataset.id, it = ITEMS[id];
         const way = it.frames && it.frames.front ? S.cycleFacing(id) : S.toggleFacing(id); sfx.click();
-        const say = way === 'front' ? ['面向前面', 'Facing you'] : it.flip ? (way === 'back' ? ['转到另一边', 'Turned the other way'] : ['侧放', 'Sideways']) : way === 'back' ? ['转向后面', 'Facing the back'] : ['转向前面', 'Facing the front'];
+        const say = it.sushiBelt ? (way === 'front' ? ['竖放', 'Running front to back'] : way === 'back' ? ['反过来放', 'Mats on the other side'] : ['横放', 'Running across']) : it.sideToBelt && way === 'front' ? ['侧坐', 'Sideways (facing the belt)'] : way === 'front' ? ['面向前面', 'Facing you'] : it.flip ? (way === 'back' ? ['转到另一边', 'Turned the other way'] : ['侧放', 'Sideways']) : way === 'back' ? ['转向后面', 'Facing the back'] : ['转向前面', 'Facing the front'];
         toast(`🔄 <span class="zh">${it.name}${say[0]}</span> ${say[1]}`);
         Visit.hostResendHouse(); redrawArranging();
       };

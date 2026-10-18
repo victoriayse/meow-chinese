@@ -2259,3 +2259,6 @@ img.gone { min-height: 40px; font-size: 11px; }
 /* the sushi counters' "+ 放食物" button sits by the place mats, not over the belt */
 .decor[data-id^="sushibelt"]:not([data-id^="sushibelt2"]) .home-table-place { top: 24%; }
 .decor[data-id^="sushibelt2"] .home-table-place { top: 76%; }
+/* ↕️ a belt standing the long way: the plates go up and down it */
+.decor .belt-lane.vertical { clip-path: inset(0 -60% 0 -60%); }
+.decor .belt-lane.vertical .bplate { left: 50% !important; bottom: auto; width: 115%; transform: translate(-50%, -50%); }

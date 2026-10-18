@@ -791,11 +791,18 @@ export function seatSpot(roomEl, id, slot = 0) {
   if (flip) sx = 1 - sx;
   return {
     run: !!seat.run, flip,
-    back: !!seat.back || el.dataset.facing === 'back', pose: point ? point.pose || null : seat.lie ? 'lie' : (seat.back || el.dataset.facing === 'back') ? 'back' : seat.side ? ((slot || 0) === 0 ? 'side-r' : 'side-l') : null,
+    back: !!seat.back || el.dataset.facing === 'back', pose: point ? point.pose || null : seat.lie ? 'lie' : (seat.back || el.dataset.facing === 'back') ? 'back' : (it.sideToBelt && el.dataset.facing === 'front') ? sideToBelt(roomEl, el) : seat.side ? ((slot || 0) === 0 ? 'side-r' : 'side-l') : null,
     x: ((el.offsetLeft + el.offsetWidth * sx) / W) * 100,
     y: ((H - (el.offsetTop + el.offsetHeight * (point ? point.y : seat.y))) / H) * 100,
     z: (parseInt(el.style.zIndex, 10) || 50) + (point && point.front ? 3 : 1), lie: !!seat.lie, el,   // front-row seats sit in front of the table
   };
+}
+// 🍣 a SushiMeow seat turned sideways: its cat faces the nearest belt that stands the long way
+function sideToBelt(roomEl, el) {
+  const cx = el.offsetLeft + el.offsetWidth / 2;
+  const belts = [...roomEl.querySelectorAll('.decor[data-facing="front"]')].filter((d) => (ITEMS[d.dataset.id.split('#')[0]] || {}).sushiBelt);
+  const b = belts.sort((p, q) => Math.abs(p.offsetLeft + p.offsetWidth / 2 - cx) - Math.abs(q.offsetLeft + q.offsetWidth / 2 - cx))[0];
+  return !b || b.offsetLeft + b.offsetWidth / 2 >= cx ? 'side-r' : 'side-l';
 }
 // the bed's blanket drawn over a kitten lying in it
 export function blanket(roomEl, id, on) {

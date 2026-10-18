@@ -99,8 +99,8 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
   const belts = [...room.querySelectorAll('.decor')].filter((d) => (ITEMS[base(d.dataset.id)] || {}).sushiBelt).sort((a, b) => (a.dataset.id < b.dataset.id ? -1 : 1));
   const takenAt = new Map();   // "belt:plate" → which trip round the belt she took it on (it comes back next time round)
   belts.forEach((belt, bi) => {
-    const sb = ITEMS[base(belt.dataset.id)].sushiBelt, ln = (belt.dataset.facing === 'back' && sb.back ? sb.back : sb).lane;   // (turned round: the mirror image's belt)
-    const lane = document.createElement('div'); lane.className = 'belt-lane';
+    const sb = ITEMS[base(belt.dataset.id)].sushiBelt, way = belt.dataset.facing === 'back' && sb.back ? sb.back : belt.dataset.facing === 'front' && sb.front ? sb.front : sb, ln = way.lane, vert = !!way.vertical;   // (turned: mirror image / standing the long way)
+    const lane = document.createElement('div'); lane.className = `belt-lane ${vert ? 'vertical' : ''}`;
     Object.assign(lane.style, { left: `${ln.x * 100}%`, top: `${ln.y * 100}%`, width: `${ln.w * 100}%`, height: `${ln.h * 100}%` });
     belt.appendChild(lane);
     // 10 big plates per belt; each time a plate goes round it carries the next dish on the list, so every chosen dish comes by
@@ -128,7 +128,7 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
       const t = now() / 1000 / BELT_LOOP_S;
       plates.forEach((p, i) => {
         const f = (t + i / N) % 1, x = dir > 0 ? f : 1 - f;
-        p.style.left = `${(x * 1.08 - 0.06) * 100}%`;
+        if (vert) p.style.top = `${(x * 1.08 - 0.06) * 100}%`; else p.style.left = `${(x * 1.08 - 0.06) * 100}%`;
         p.classList.toggle('gone', takenAt.get(key(i)) === lap(i)); dress(p, dishAt(i));
       });
       requestAnimationFrame(tick);
