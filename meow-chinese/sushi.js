@@ -66,13 +66,20 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
   room.querySelectorAll('.decor').forEach((d) => { const it = ITEMS[base(d.dataset.id)]; if (it && (it.sushiHost || it.sushiCashier || it.sushiTablet || it.sushiBelt)) d.classList.add('mall-interactive'); });
 
   // ---------- seat numbers ----------
+  // (a seat tucked in behind the counter shows its number on the counter's front, right in front of it)
   function markSeats() {
+    const beltEl = [...room.querySelectorAll('.decor')].find((d) => (ITEMS[base(d.dataset.id)] || {}).sushiBelt);
+    room.querySelectorAll('.sushi-seatno').forEach((b) => b.remove());
     seats.forEach((d, i) => {
-      let b = d.querySelector('.sushi-seatno'); if (!b) { b = document.createElement('div'); b.className = 'sushi-seatno'; d.appendChild(b); }
+      const b = document.createElement('div'); b.className = 'sushi-seatno';
       b.textContent = String(i + 1); b.classList.toggle('mine', !!(meal() && meal().seat === i + 1));
+      const cx = d.offsetLeft + d.offsetWidth / 2;
+      const behind = beltEl && d.offsetTop + d.offsetHeight < beltEl.offsetTop + beltEl.offsetHeight && cx > beltEl.offsetLeft && cx < beltEl.offsetLeft + beltEl.offsetWidth;
+      if (behind) { b.classList.add('on-counter'); b.style.left = `${((cx - beltEl.offsetLeft) / beltEl.offsetWidth) * 100}%`; beltEl.appendChild(b); }
+      else d.appendChild(b);
     });
   }
-  markSeats();
+  markSeats(); requestAnimationFrame(() => { if (room.isConnected) markSeats(); });
 
   // ---------- the host gives her a seat when she comes in ----------
   function assignSeat() {
@@ -145,7 +152,15 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
       if (blockedAt(x, y)) return false;
       return !cats.some((c) => Math.abs(c.x - x) < 3 && Math.abs(c.y - y) < 2.2);
     };
-    const key = (x, y) => y * cols + x, start = [Math.round(a.x / sx), Math.round(a.y / sy)], goal = [Math.round(b.x / sx), Math.round(b.y / sy)];
+    const near = (p) => {   // the closest free floor cell to p (the seat itself, or the spot in front of it, may be furniture)
+      const c = [Math.round(p.x / sx), Math.round(p.y / sy)];
+      for (let r = 0; r <= 12; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = c[0] + dx, y = c[1] + dy; if (x >= 0 && y >= 0 && x < cols && y < rows && free(x, y)) return [x, y];
+      }
+      return c;
+    };
+    const key = (x, y) => y * cols + x, start = near(a), goal = near(b);
     const open = [[start[0], start[1], 0]], from = new Map([[key(...start), null]]), cost = new Map([[key(...start), 0]]);
     let found = null, guard = 0;
     while (open.length && guard++ < 6000) {
@@ -158,9 +173,9 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
         cost.set(nk, nc); from.set(nk, key(x, y)); open.push([nx, ny, nc + Math.hypot(goal[0] - nx, goal[1] - ny)]);
       }
     }
-    if (found == null) return [a, b];
+    if (found == null) return [a, { x: goal[0] * sx, y: goal[1] * sy }];
     const pts = []; for (let k = found; k != null; k = from.get(k)) pts.unshift({ x: (k % cols) * sx, y: Math.floor(k / cols) * sy });
-    return [a, ...pts.filter((_, i) => i % 2 === 0), b];
+    return [a, ...pts.filter((_, i) => i % 2 === 0 || i === pts.length - 1)];   // ends on the free spot next to her seat
   }
   async function walkDish(order, remote = null) {
     if (!room.isConnected) return;
@@ -169,7 +184,7 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
     else {
       const m = meal(); const seat = m && seats[m.seat - 1];
       const H = room.clientHeight, W = room.clientWidth;
-      const target = seat ? { x: ((seat.offsetLeft + seat.offsetWidth / 2) / W) * 100, y: Math.max(1, ((H - (seat.offsetTop + seat.offsetHeight)) / H) * 100 - 3) } : { x: 50, y: 4 };
+      const target = seat ? { x: ((seat.offsetLeft + seat.offsetWidth / 2) / W) * 100, y: Math.max(1, ((H - (seat.offsetTop + seat.offsetHeight)) / H) * 100) } : { x: 50, y: 4 };
       const startP = { x: 95, y: Math.min(S.roomMaxY(SUSHI_ROOM), 10) };
       path = findPath(startP, target).map((p) => ({ x: +p.x.toFixed(1), y: +p.y.toFixed(1) }));
       send('sushiserve', { k: order.k, path });   // everyone in the restaurant sees the server walk over

@@ -2255,3 +2255,4 @@ img.gone { min-height: 40px; font-size: 11px; }
 /* SushiMeow's host and cashier stand BEHIND their counters (the counter hides their lower half) */
 .decor[data-id^="sushihost"] > canvas, .decor[data-id^="sushicashier"] > canvas { position: relative; z-index: 1; }
 .decor[data-id^="sushihost"] .tux-cat, .decor[data-id^="sushicashier"] .tux-cat { bottom: 42%; }
+.decor .sushi-seatno.on-counter { top: auto; bottom: 22%; z-index: 3; font-size: 12px; }

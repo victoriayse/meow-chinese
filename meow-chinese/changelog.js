@@ -678,4 +678,7 @@ export const CHANGES = [
   { v: 245, items: [
     '🪑 Fixed: things wider than the room (like the sushi belt) now keep their ↘ resize corner where you can reach it. The belt also starts a bit smaller.',
   ] },
+  { v: 246, items: [
+    '🍣 SushiMeow can now be set up with the belt at the front and the seats behind it: seat numbers show on the counter, and the server cat hands dishes over the counter.',
+  ] },
 ];
