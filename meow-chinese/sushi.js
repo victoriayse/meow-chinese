@@ -44,7 +44,7 @@ export function leaveSushi() {
 }
 
 // the numbered seats: numbered 1…6 in the order they were bought (so the numbers never jump about)
-const seatEls = (room) => [...room.querySelectorAll('.decor')].filter((d) => (ITEMS[base(d.dataset.id)] || {}).sushiSeat).sort((a, b) => (a.dataset.id < b.dataset.id ? -1 : 1)).slice(0, 6);
+const seatEls = (room) => [...room.querySelectorAll('.decor')].filter((d) => (ITEMS[base(d.dataset.id)] || {}).sushiSeat).sort((a, b) => (a.dataset.id < b.dataset.id ? -1 : 1)).slice(0, 8);
 export const seatNoOf = (room, id) => { const i = seatEls(room).findIndex((d) => d.dataset.id === id); return i < 0 ? 0 : i + 1; };
 // may she sit here? (only on her own numbered seat)
 export function canSit(room, id) {
@@ -68,13 +68,13 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
   // ---------- seat numbers ----------
   // (a seat tucked in behind the counter shows its number on the counter's front, right in front of it)
   function markSeats() {
-    const beltEl = [...room.querySelectorAll('.decor')].find((d) => (ITEMS[base(d.dataset.id)] || {}).sushiBelt);
+    const beltEls = [...room.querySelectorAll('.decor')].filter((d) => ((ITEMS[base(d.dataset.id)] || {}).sushiBelt || {}).numbersFront);
     room.querySelectorAll('.sushi-seatno').forEach((b) => b.remove());
     seats.forEach((d, i) => {
       const b = document.createElement('div'); b.className = 'sushi-seatno';
       b.textContent = String(i + 1); b.classList.toggle('mine', !!(meal() && meal().seat === i + 1));
       const cx = d.offsetLeft + d.offsetWidth / 2;
-      const behind = beltEl && d.offsetTop + d.offsetHeight < beltEl.offsetTop + beltEl.offsetHeight && cx > beltEl.offsetLeft && cx < beltEl.offsetLeft + beltEl.offsetWidth;
+      const beltEl = beltEls.find((b) => d.offsetTop + d.offsetHeight < b.offsetTop + b.offsetHeight && cx > b.offsetLeft && cx < b.offsetLeft + b.offsetWidth), behind = !!beltEl;
       if (behind) { b.classList.add('on-counter'); b.style.left = `${((cx - beltEl.offsetLeft) / beltEl.offsetWidth) * 100}%`; beltEl.appendChild(b); }
       else d.appendChild(b);
     });
@@ -95,18 +95,18 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
   }
   setTimeout(() => { if (room.isConnected) assignSeat(); }, 700);
 
-  // ---------- the conveyor belt ----------
-  const belt = [...room.querySelectorAll('.decor')].find((d) => (ITEMS[base(d.dataset.id)] || {}).sushiBelt);
-  const takenAt = new Map();   // plate number → which trip round the belt she took it on (it comes back next time round)
-  if (belt) {
+  // ---------- the conveyor belts (one or more; the second one is a mirror image) ----------
+  const belts = [...room.querySelectorAll('.decor')].filter((d) => (ITEMS[base(d.dataset.id)] || {}).sushiBelt).sort((a, b) => (a.dataset.id < b.dataset.id ? -1 : 1));
+  const takenAt = new Map();   // "belt:plate" → which trip round the belt she took it on (it comes back next time round)
+  belts.forEach((belt, bi) => {
     const ln = ITEMS[base(belt.dataset.id)].sushiBelt.lane;
     const lane = document.createElement('div'); lane.className = 'belt-lane';
     Object.assign(lane.style, { left: `${ln.x * 100}%`, top: `${ln.y * 100}%`, width: `${ln.w * 100}%`, height: `${ln.h * 100}%` });
     belt.appendChild(lane);
     const dishes = beltDishes(), N = Math.max(18, dishes.length);
-    const plates = [];
+    const plates = [], key = (i) => `${bi}:${i}`;
     for (let i = 0; i < N; i++) {
-      const k = dishes[i % dishes.length];
+      const k = dishes[(i + bi * 5) % dishes.length];
       const p = document.createElement('button'); p.type = 'button'; p.className = 'bplate'; p.title = `${SNACKS[k].zh} ${SNACKS[k].en} · ${priceOf(k)}`;
       p.innerHTML = '<i class="bp-plate"></i><i class="bp-dome"></i>';
       const c = snackCanvas(k, 2); c.classList.add('bp-food'); p.insertBefore(c, p.lastChild);
@@ -114,27 +114,28 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
       p.onclick = (e) => { e.stopPropagation(); takePlate(i, k); };
       lane.appendChild(p); plates.push(p);
     }
+    const dir = bi % 2 ? -1 : 1;   // the second belt runs the other way
     const lap = (i) => Math.floor(now() / 1000 / BELT_LOOP_S + i / N);
     const tick = () => {
       if (!lane.isConnected) return;
       const t = now() / 1000 / BELT_LOOP_S;
       plates.forEach((p, i) => {
-        const f = (t + i / N) % 1;
-        p.style.left = `${(f * 1.08 - 0.06) * 100}%`;
-        p.classList.toggle('gone', takenAt.get(i) === lap(i));
+        const f = (t + i / N) % 1, x = dir > 0 ? f : 1 - f;
+        p.style.left = `${(x * 1.08 - 0.06) * 100}%`;
+        p.classList.toggle('gone', takenAt.get(key(i)) === lap(i));
       });
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
     function takePlate(i, k) {
-      if (takenAt.get(i) === lap(i)) return;
+      if (takenAt.get(key(i)) === lap(i)) return;
       if (!isSeatedMine()) { sfx.miss(); return toast(meal() && meal().seat ? `🍣 <span class="zh">请先坐到你的${meal().seat}号座位</span> Sit at your seat (number ${meal().seat}) first` : '🍣 <span class="zh">请先找领位员拿座位号</span> Please get a seat number from the host first', { ms: 2400 }); }
-      takenAt.set(i, lap(i)); send('sushitake', { i, lap: lap(i) });
+      takenAt.set(key(i), lap(i)); send('sushitake', { b: bi, i, lap: lap(i) });
       addToBill(k, 'belt'); S.addSnack(k); S.save(); sfx.coin();
       toast(`🍣 <span class="zh">拿了${SNACKS[k].zh}</span> ${esc(SNACKS[k].en)} · ${priceOf(k)} coins — it's at the bottom left`, { ms: 2000 });
       onChanged();
     }
-  }
+  });
   function addToBill(k, from) { const m = meal(); if (!m) return; (m.bill ||= []).push({ k, p: priceOf(k), from, at: Date.now() }); S.save(); }
 
   // ---------- the server cat brings tablet orders to her seat ----------
@@ -313,7 +314,7 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
     const box = html`<div class="card stack" style="align-items:stretch;text-align:center"><div class="h-title" style="justify-content:center">💰 <span class="zh">收银台</span> Cashier</div>
         <p style="margin:0"><span class="zh">请告诉我你的座位号</span> Tell me your seat number</p><div class="seat-pick"></div><div class="cash-out"></div>
         <button type="button" class="btn white" id="ca-close">关闭 Close</button></div>`;
-    for (let n = 1; n <= Math.max(6, seats.length); n++) {
+    for (let n = 1; n <= Math.max(4, seats.length); n++) {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'btn white'; b.textContent = String(n);
       b.onclick = () => { sfx.click(); showBill(n); };
       $('.seat-pick', box).appendChild(b);
@@ -345,7 +346,7 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
   return {
     onBroadcast(ev, p) {
       if (!room.isConnected || !p) return;
-      if (ev === 'sushitake' && Number.isInteger(p.i)) takenAt.set(p.i, p.lap);
+      if (ev === 'sushitake' && Number.isInteger(p.i)) takenAt.set(`${p.b || 0}:${p.i}`, p.lap);
       if (ev === 'sushiserve' && Array.isArray(p.path) && p.path.length > 1 && SNACKS[p.k] && p.path.length < 200) serving = serving.then(() => walkDish({ k: p.k }, { path: p.path })).catch(() => {});
     },
   };

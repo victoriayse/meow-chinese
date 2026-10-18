@@ -687,4 +687,7 @@ export const CHANGES = [
   { v: 248, items: [
     '🍣 SushiMeow has a bigger floor (it goes further back), and the lanterns on the wall are smaller.',
   ] },
+  { v: 249, items: [
+    '🍣 SushiMeow: each conveyor belt seats 4, and there is a new mirror-image belt (table top at the bottom) so the restaurant can have two belts and 8 numbered seats. The second belt runs the other way.',
+  ] },
 ];
