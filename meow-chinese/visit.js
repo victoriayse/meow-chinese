@@ -844,47 +844,78 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   // ---------- 🛗 the lift ----------
   const floorLabel = (k) => String(S.roomInfo(k).en || '').split(' ·')[0];
   const pause = (ms) => new Promise((ok) => setTimeout(ok, ms));
-  function chooseFloor(here) {
-    return new Promise((done) => {
-      let picked = null;
-      const c = html`<div class="card stack" style="align-items:stretch;text-align:center"><div class="h-title" style="justify-content:center">🛗 <span class="zh">去几楼？</span> Which floor?</div>
-          <div class="elev-pick"></div><button type="button" class="btn white" id="el-stay">🚪 <span class="zh">不去了，出电梯</span> Get out here</button></div>`;
-      [...MALL_FLOORS.keys()].reverse().forEach((fi) => {
-        const row = MALL_FLOORS[fi], b = document.createElement('button'); b.type = 'button';
-        b.className = `btn ${fi === here ? 'white here' : 'green'}`; b.disabled = fi === here;
-        b.innerHTML = `<b>${floorLabel(row[0])}</b><br><small>${row.map((k) => S.roomInfo(k).icon).join(' ')}</small>`;
-        b.onclick = () => { picked = fi; closeModal(); };
-        $('.elev-pick', c).appendChild(b);
-      });
-      $('#el-stay', c).onclick = () => closeModal();
-      openModal(c, { onClose: () => done(picked) });
-    });
-  }
   const liftIn = (room) => [...room.querySelectorAll('.decor.elevator')][0];
   const liftSpot = (room, d) => { const it = ITEMS[d.dataset.id.split('#')[0]], r = doorRect(room, d), w = r.x1 - r.x0, dr = it.elevator.door; return { x: r.x0 + w * (dr.x + dr.w / 2), y: Math.max(1, Math.min(r.bottom, S.roomMaxY(roomKey)) - 0.5) }; };
+  // the lift's screens: the floor it is on, with ▲ / ▼ while it moves
+  const liftShow = (el, fi, dir) => { if (el) el.textContent = `${dir ? (dir > 0 ? '▲' : '▼') : ''}${floorLabel(MALL_FLOORS[fi][0])}`; };
   async function useLift(d) {
     if (!myEl || myEl.dataset.sliding || liftBusy) return;
     liftBusy = true; doorArmed = false; mine.seat = null; myEl.dataset.sliding = '1'; myKv.setPose(null);
     const room = $('#room', box), to = liftSpot(room, d), from = { x: mine.x, y: mine.y };
+    const here = MALL_FLOORS.findIndex((r) => r.includes(roomKey)), scr = d.querySelector('.elev-display');
+    let goingOut = false;
     try {
-      d.classList.add('elev-open'); sfx.click(); await pause(800);
+      // 1 · call the lift: it comes down / up to her floor first
+      sfx.click(); toast('🛗 <span class="zh">电梯来了，等一下…</span> The lift is on its way…', { ms: 1600 });
+      const others = [...MALL_FLOORS.keys()].filter((f) => f !== here && Math.abs(f - here) <= 3);
+      let at = others[Math.floor(Math.random() * others.length)] ?? here;
+      while (at !== here) { const dir = Math.sign(here - at); liftShow(scr, at, dir); await pause(750); at += dir; if (!n.isConnected) return; }
+      liftShow(scr, here, 0); sfx.coin();
+      // 2 · the doors open and she steps in
+      d.classList.add('elev-open'); await pause(800);
       myKv.setFacing(to.x < from.x); myKv.canvas.classList.add('walking');
       const an = myEl.animate([{ left: `${from.x}%`, bottom: `${from.y}%` }, { left: `${to.x}%`, bottom: `${to.y}%` }], { duration: 650, fill: 'forwards' });
       await an.finished; an.cancel(); myKv.canvas.classList.remove('walking');
       mine.x = to.x; mine.y = to.y; myEl.style.left = `${to.x}%`; myEl.style.bottom = `${to.y}%`; myEl.style.zIndex = (parseInt(d.style.zIndex, 10) || 50) + 1; cam();
-      myEl.classList.add('in-lift'); await pause(250); d.classList.remove('elev-open'); sendMine(); await pause(800);
-      const here = MALL_FLOORS.findIndex((r) => r.includes(roomKey)), fi = await chooseFloor(here);
-      if (fi == null || !n.isConnected) {   // changed her mind: out she comes
-        d.classList.add('elev-open'); await pause(700); myEl.classList.remove('in-lift'); await pause(400);
+      myEl.classList.add('in-lift'); sendMine(); await pause(350);
+      // 3 · inside the lift
+      const fi = await liftCabin(here);
+      if (fi == null || !n.isConnected) {   // she pressed Open: out she comes on the same floor
+        goingOut = true;
+        await pause(150); myEl.classList.remove('in-lift'); await pause(400);
         mine.y = Math.max(1, mine.y - 7); delete myEl.dataset.sliding; place(); sendMine(); await pause(500); d.classList.remove('elev-open');
         return;
       }
+      d.classList.remove('elev-open');
       const next = MALL_FLOORS[fi], dest = next.find((k) => (house.rooms[k] || []).some((e) => (ITEMS[e.id.split('#')[0]] || {}).elevator)) || next.find((k) => mallNeighbors(k).up || mallNeighbors(k).down) || next[0];
-      toast(`🛗 <span class="zh">去${floorLabel(next[0])}</span> Going to ${floorLabel(next[0])}…`, { ms: 1300 });
-      await pause(1400);
-      if (!n.isConnected) return;
       delete myEl.dataset.sliding; arriveLift = true; roomKey = dest; mine.room = dest; mine.x = 50; mine.y = 6; render(); if (myEl) { myEl.style.transition = 'none'; myEl.classList.add('in-lift'); } sendMine();
-    } finally { if (!arriveLift) liftBusy = false; }
+    } finally { if (!arriveLift && !goingOut) { liftBusy = false; if (myEl) { delete myEl.dataset.sliding; myEl.classList.remove('in-lift'); } d.classList.remove('elev-open'); } if (goingOut) liftBusy = false; }
+  }
+  // 🛗 inside the lift: the doors close, she presses a floor, the lift hums along (the screen counts the floors) and the doors open
+  function liftCabin(here) {
+    return new Promise((done) => {
+      const unit = $('#hunit', box), kv = new KittenView({ scale: HOUSE.kitten * 1.6 }); kv.setMood('happy'); kv.setHeld(S.get().holding || null);
+      const cab = html`<div class="lift-cabin"><div class="cab-box">
+          <div class="cab-wall"><div class="cab-screen"></div><div class="cab-rail"></div><div class="cab-cat"></div>
+            <div class="cab-panel"><div class="cab-panel-title">🛗</div><div class="cab-btns"></div><button type="button" class="cab-open" title="Open the doors">◀▶ <span class="zh">开门</span></button></div></div>
+          <i class="cab-door l"></i><i class="cab-door r"></i></div>
+          <p class="cab-tip"><span class="zh">按一下要去的楼层</span> Press the floor you want</p></div>`;
+      $('.cab-cat', cab).appendChild(kv.canvas);
+      const scr = $('.cab-screen', cab); liftShow(scr, here, 0);
+      let busy = true;
+      [...MALL_FLOORS.keys()].reverse().forEach((fi) => {
+        const b = document.createElement('button'); b.type = 'button'; b.className = `cab-btn ${fi === here ? 'here' : ''}`; b.textContent = floorLabel(MALL_FLOORS[fi][0]);
+        b.onclick = async () => {
+          if (busy || fi === here) return; busy = true; sfx.click(); b.classList.add('lit'); $('.cab-open', cab).disabled = true;
+          $('.cab-tip', cab).innerHTML = `<span class="zh">去${floorLabel(MALL_FLOORS[fi][0])}</span> Going to ${floorLabel(MALL_FLOORS[fi][0])}…`;
+          if (!cab.classList.contains('shut')) { cab.classList.add('shut'); await pause(800); }
+          cab.classList.add('moving'); let at = here; const dir = Math.sign(fi - here);
+          while (at !== fi) { liftShow(scr, at, dir); await pause(900); at += dir; }
+          liftShow(scr, fi, 0); cab.classList.remove('moving'); sfx.coin(); await pause(350);
+          cab.classList.remove('shut'); await pause(800);
+          cab.classList.add('leaving'); await pause(380); cab.remove(); done(fi);
+        };
+        $('.cab-btns', cab).appendChild(b);
+      });
+      $('.cab-open', cab).onclick = async () => {
+        if (busy) return; busy = true; sfx.click(); cab.classList.remove('shut'); await pause(800);
+        cab.classList.add('leaving'); await pause(380); cab.remove(); done(null);
+      };
+      unit.appendChild(cab);
+      // the view fades in with the doors still open, then they slide shut
+      requestAnimationFrame(() => cab.classList.add('in'));
+      setTimeout(() => { if (!cab.isConnected) return; cab.classList.add('shut'); setTimeout(() => { busy = false; }, 800); }, 700);
+    });
   }
   async function liftArrive(room) {
     const d = liftIn(room);

@@ -2245,3 +2245,35 @@ img.gone { min-height: 40px; font-size: 11px; }
 .elev-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .elev-pick .btn { font-size: 18px; }
 .elev-pick .btn.here { outline: 3px solid #ffd23f; }
+/* 🛗 inside the lift */
+.lift-cabin { position: absolute; left: 0; right: 0; bottom: 0; top: calc(var(--roof, 0px)); z-index: 300; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: rgba(20, 16, 34, .92); opacity: 0; transition: opacity .35s; border-radius: 10px; }
+.lift-cabin.in { opacity: 1; }
+.lift-cabin.leaving { opacity: 0; }
+.cab-box { position: relative; width: min(78%, 520px); aspect-ratio: 4 / 3; border: 8px solid #6f7886; border-radius: 6px; background: #3a3550; overflow: hidden; box-shadow: 0 10px 0 rgba(0,0,0,.35); }
+.lift-cabin.moving .cab-box { animation: cab-hum .32s ease-in-out infinite; }
+@keyframes cab-hum { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
+.cab-wall { position: absolute; inset: 0; background: linear-gradient(90deg, #c9cfd8 0 2%, #e4e8ee 2% 49%, #d5dbe3 49% 51%, #e4e8ee 51% 98%, #c9cfd8 98%); }
+.cab-wall::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 18%; background: repeating-linear-gradient(90deg, #8a6a4a 0 22px, #7d5f42 22px 44px); border-top: 4px solid #5e4630; }
+.cab-screen { position: absolute; left: 50%; top: 5%; transform: translateX(-50%); min-width: 26%; padding: 4px 10px; background: #1d1a2b; border: 3px solid #6f7886; border-radius: 6px; color: #ff5a4e; font: 900 clamp(14px, 3.4vw, 26px)/1.1 ui-monospace, monospace; text-align: center; text-shadow: 0 0 6px rgba(255,90,78,.8); letter-spacing: 2px; }
+.cab-rail { position: absolute; left: 6%; right: 6%; top: 52%; height: 6px; background: #8f99a8; border-radius: 3px; box-shadow: 0 2px 0 #6f7886; }
+.cab-cat { position: absolute; left: 40%; bottom: 14%; transform: translateX(-50%); }
+.cab-cat canvas { display: block; image-rendering: pixelated; }
+.cab-panel { position: absolute; right: 5%; top: 20%; width: 21%; padding: 6px 5px 8px; background: #2b2140; border: 3px solid #6f7886; border-radius: 8px; display: flex; flex-direction: column; align-items: center; gap: 5px; z-index: 2; }
+.cab-panel-title { font-size: 14px; }
+.cab-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; width: 100%; }
+.cab-btn { aspect-ratio: 1; border-radius: 50%; border: 2px solid #c5ccd6; background: #4c4766; color: #fff; font: 800 clamp(9px, 1.9vw, 13px)/1 system-ui, sans-serif; cursor: pointer; padding: 0; }
+.cab-btn.here { opacity: .55; cursor: default; }
+.cab-btn.lit { background: #ffd23f; color: #2b2140; box-shadow: 0 0 10px #ffd23f; }
+.cab-open { width: 100%; border-radius: 999px; border: 2px solid #c5ccd6; background: #fff8ec; font: 800 11px/1.6 system-ui, sans-serif; cursor: pointer; }
+.cab-open:disabled { opacity: .4; }
+.cab-door { position: absolute; top: 0; bottom: 0; width: 50%; z-index: 3; background: linear-gradient(90deg, rgba(190, 228, 245, .55), rgba(232, 247, 253, .35) 50%, rgba(190, 228, 245, .55)); border: 4px solid #8f99a8; box-sizing: border-box; transition: transform .75s ease-in-out; pointer-events: none; }
+.cab-door.l { left: 0; transform: translateX(-100%); }
+.cab-door.r { right: 0; transform: translateX(100%); }
+.lift-cabin.shut .cab-door.l, .lift-cabin.shut .cab-door.r { transform: none; }
+.cab-tip { margin: 0; color: #fff8ec; font-weight: 800; text-align: center; }
+/* v235: every cat in the mall is the same smaller size (no jump when walking between shops) */
+.room[data-room^="mall"] .vcat .kflip, .room[data-room^="mall"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
+/* …and a cat at the edge of a shop is drawn across the join, not cut in half */
+.house .mall-track > .room { overflow: visible; }
+.house .mall-track > #room { z-index: 2; }
+.house .mall-track > .mall-preview { z-index: 1; }

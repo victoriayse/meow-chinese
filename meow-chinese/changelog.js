@@ -667,4 +667,8 @@ export const CHANGES = [
   { v: 234, items: [
     '🛗 New mall elevator: walk in (or tap it), the doors slide open, step inside, the doors close — then choose your floor and step out when the doors open again.',
   ] },
+  { v: 235, items: [
+    '🛗 The elevator now works like a real one: call it and wait for it to come to your floor, step in, see the inside of the lift, press a floor and watch the floor numbers go up or down.',
+    '🐱 Every cat in the mall is now the same smaller size, so nothing jumps when you walk from one shop into the next.',
+  ] },
 ];
