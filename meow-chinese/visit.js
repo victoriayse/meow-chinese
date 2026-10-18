@@ -31,6 +31,14 @@ import * as Places from './places.js';
 import * as Snacks from './snacks.js';
 
 const isNight = () => { const h = new Date().getHours(); return h >= 18 || h < 5; };
+
+// 🚽 sat on a toilet bowl: +1 bar of Hygiene (once every 3 hours)
+function toiletVisit(id) {
+  const r = S.useToilet(id); if (!r) return;
+  if (r.ok) toast('🚽 <span class="zh">上完厕所，干净一点了！</span> Hygiene +1 bar', { ms: 2200 });
+  else toast(`🚽 <span class="zh">${r.mins >= 60 ? Math.ceil(r.mins / 60) + '小时' : r.mins + '分钟'}后才能再加干净分</span> Hygiene from the toilet again in ${r.mins >= 60 ? Math.ceil(r.mins / 60) + 'h' : r.mins + ' min'}`, { ms: 2200 });
+}
+
 export function myLook() {
   const s = S.get(), k = s.kitten;
   return { name: s.childName && !String(k.name).includes(s.childName) ? `${s.childName}的${k.name}` : k.name, level: S.level(), fur: k.fur, equipped: { ...(k.equipped || {}) }, hold: s.holding || null };
@@ -440,7 +448,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       const stg = stageOf(d.dataset.id);
       if (stg) { const r = d.getBoundingClientRect(), fx = (e.clientX - r.left) / r.width; slot = Math.max(0, Math.min(1, (fx - stg.walk.x0) / (stg.walk.x1 - stg.walk.x0))); }
       if (slot < 0) { sfx.miss(); return toast('<span class="zh">坐满了！</span> No room — someone is already there'); }
-      mine.seat = d.dataset.id; mine.slot = slot; mine.boothClosed = false; place(); myKv.jump(); sfx.click(); sendMine();
+      mine.seat = d.dataset.id; mine.slot = slot; mine.boothClosed = false; place(); myKv.jump(); sfx.click(); sendMine(); toiletVisit(mine.seat);
     });
     // my kitten
     myEl = html`<div class="vcat me"><div class="kitten-wrap"><div class="kflip"></div><div class="nametag">${esc(S.get().kitten.name)}<span class="lv">Lv${S.level()}</span></div></div></div>`;

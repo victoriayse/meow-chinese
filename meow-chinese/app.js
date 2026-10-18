@@ -112,6 +112,12 @@ export function go(name, params = {}, opts = {}) {
   if (MUSIC_PAGES.includes(name)) startMusic(); else stopMusic();
   if (updateWaiting && !BUSY_SCREENS.has(name)) setTimeout(() => { if (!BUSY_SCREENS.has(current)) showForcedUpdate(); }, 600);   // finished the exercise: update now
 }
+// 🚽 sat on a toilet bowl: +1 bar of Hygiene (once every 3 hours)
+function toiletVisit(id) {
+  const r = S.useToilet(id); if (!r) return;
+  if (r.ok) toast('🚽 <span class="zh">上完厕所，干净一点了！</span> Hygiene +1 bar', { ms: 2200 });
+  else toast(`🚽 <span class="zh">${r.mins >= 60 ? Math.ceil(r.mins / 60) + '小时' : r.mins + '分钟'}后才能再加干净分</span> Hygiene from the toilet again in ${r.mins >= 60 ? Math.ceil(r.mins / 60) + 'h' : r.mins + ' min'}`, { ms: 2200 });
+}
 function refreshHome() { if (homeRedrawWaits()) return; go('home', current === 'home' ? currentParams : {}, { replace: true }); }
 export function goBack() {
   const prev = stack.pop() || { name: 'home', params: {} };
@@ -718,7 +724,7 @@ function homeScreen(params = {}) {
     const slot = freeSlot(id, taken);
     if (slot < 0) { sfx.miss(); return toast('<span class="zh">坐满了！</span> No room — someone is already there'); }
     S.get().catSeat = { id, room: roomKey, slot }; S.save();
-    placeCat(); kv.jump(); sfx.click(); Visit.hostMove(hostPos());
+    placeCat(); kv.jump(); sfx.click(); Visit.hostMove(hostPos()); toiletVisit(id);
     if (ITEMS[id].seat.lie) kv.flash('sleepy', 2500);
   };
   // the slide: she climbs to the top, then whooshes down and lands at the bottom
@@ -1402,7 +1408,7 @@ const STAT_INFO = {
     rows: [['Pet the kitten', '+2 each time (up to 10 times a day)'], ['Play with a toy (🎒 My items → Toys)', '+6'], ['Finish a “Play with me” round', '+15'], ['Shampoo or comb', '+2'], ['A friend feeds her kitten', 'the food’s amount +3'],
       ['🍶 Fresh water', '+2'], ['🐟 Fish snack', '+3'], ['🥟 Steamed bun', '+4'], ['🥛 Milk · 🥫 Tuna can', '+8'], ['🍪 Paw cookie', '+15'], ['🥮 Mooncake', '+18'], ['🍦 Ice cream', '+25'], ['🍰 Strawberry cake', '+30']] },
   hygiene: { title: '🛁 干净 Hygiene', intro: 'A full bar lasts about 24 hours (it goes down about 4 points an hour). Below 50% the kitten says “哎呀该帮我洗澡了”, and below 20% “我好臭啊！快帮我洗澡!”.',
-    rows: [['🧴 Shampoo', '+50'], ['🪮 Comb', '+20']],
+    rows: [['🧴 Shampoo', '+50'], ['🪮 Comb', '+20'], ['🚽 Sit on any toilet (once every 3 hours)', '+10']],
     shop: 'Buy shampoo and combs in the shop → 🧴 Toiletries, then use them in 🎒 My items.' },
 };
 function openStatInfo(key) {

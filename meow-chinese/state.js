@@ -1228,3 +1228,15 @@ export function reviewEssay(id, { stars, coins, xp: x, comment }) {
 }
 export function markEssaySeen(id) { const e = essays().find((x) => x.id === id); if (e) { e.seen = true; save(); } }
 export function deleteEssay(id) { state.essays = essays().filter((x) => x.id !== id); save(); }
+
+// 🚽 sitting on any toilet bowl (at home, a friend's, the mall, the cafe…): +1 bar of Hygiene, once every 3 hours
+export const TOILET_EVERY = 3 * 60 * 60 * 1000;
+const TOILET_IDS = ['toilet', 'malltoilet'];
+export function useToilet(id) {
+  if (!TOILET_IDS.includes(String(id || '').split('#')[0])) return null;
+  const k = state.kitten, last = state.lastToilet || 0, left = last + TOILET_EVERY - Date.now();
+  if (left > 0) return { ok: false, mins: Math.ceil(left / 60000) };
+  k.hygiene = Math.min(100, (k.hygiene ?? 100) + 10);
+  state.lastToilet = Date.now(); state.daily.care = true; markActive(); save();
+  return { ok: true };
+}

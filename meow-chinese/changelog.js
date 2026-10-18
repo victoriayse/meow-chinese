@@ -656,4 +656,7 @@ export const CHANGES = [
     '🧺 Picking food up from a table or the picnic mat now puts it straight in your paw — tap Eat to eat it.',
     '🥤 The Milo tin and the 2-in-1 coffee can now be drunk.',
   ] },
+  { v: 232, items: [
+    '🚽 Sit on any toilet (at home, a friend\'s house or the mall) for +1 bar of Hygiene. Once every 3 hours.',
+  ] },
 ];
