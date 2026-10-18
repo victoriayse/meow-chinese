@@ -936,6 +936,9 @@ function homeScreen(params = {}) {
     room.querySelectorAll('.decor').forEach((d) => {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'resize-btn';
       b.textContent = '↘'; b.title = 'Drag corner to resize'; b.setAttribute('aria-label', 'Resize: drag corner, or use arrow keys'); d.appendChild(b);
+      // something wider / taller than the room (a long counter): keep its ↘ handle where she can reach it
+      const grip = () => { const W = room.clientWidth, H = room.clientHeight; b.style.right = `${Math.max(0, d.offsetLeft + d.offsetWidth - W)}px`; b.style.bottom = `${Math.max(0, d.offsetTop + d.offsetHeight - H)}px`; };
+      requestAnimationFrame(grip); room.addEventListener('pointerup', () => requestAnimationFrame(grip));
       b.onclick = (e) => e.stopPropagation();
       b.addEventListener('pointerdown', (e) => {
         e.stopPropagation(); e.preventDefault();

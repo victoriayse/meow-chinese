@@ -675,4 +675,7 @@ export const CHANGES = [
     '🍣 SushiMeow: the conveyor belt is twice as long, and the host and cashier now stand behind their counters.',
     '🚪 New SushiMeow gate: you arrive in front of the host, and the gate opens once the host gives you a seat. It lets you out again once your bill is paid.',
   ] },
+  { v: 245, items: [
+    '🪑 Fixed: things wider than the room (like the sushi belt) now keep their ↘ resize corner where you can reach it. The belt also starts a bit smaller.',
+  ] },
 ];
