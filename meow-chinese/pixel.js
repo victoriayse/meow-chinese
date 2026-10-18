@@ -9363,7 +9363,7 @@ export function drawRoom(canvas, night = false, kind = 'living', style = null) {
   const cssW = canvas.clientWidth || 300, cssH = canvas.clientHeight || 200;
   const W = 120, H = Math.max(40, Math.round(W * cssH / cssW));
   lowres(canvas, W, H, (R) => {
-    const floorY = Math.round(H * 0.64);
+    const floorY = Math.round(H * (kind === 'mallsushi' ? 0.43 : 0.64));   // SushiMeow has a deeper floor
     let open = false;     // garden, rooftop: no window, no wallpaper
     let noWindow = false; // the studio: walls but no window
     if (kind === 'bedroom') {
@@ -9446,7 +9446,7 @@ export function drawRoom(canvas, night = false, kind = 'living', style = null) {
       for (let x = 0; x < W; x += 14) R(x, 0, 1, floorY, '#cfae80');
       R(0, 0, W, 9, '#b3242f'); for (let x = 3; x < W; x += 12) R(x, 9, 6, 6, '#b3242f');
       for (let x = 0; x < W; x += 12) R(x + 4, 2, 2, 4, '#ffffff');
-      for (let x = 20; x < W; x += 48) { R(x, 18, 8, 10, '#e8384f'); R(x + 1, 17, 6, 1, '#2b2140'); R(x + 1, 28, 6, 1, '#2b2140'); R(x + 3, 20, 2, 6, '#ffd23f'); }
+      for (let x = 20; x < W; x += 40) { R(x, 19, 5, 6, '#e8384f'); R(x + 1, 18, 3, 1, '#2b2140'); R(x + 1, 25, 3, 1, '#2b2140'); R(x + 2, 20, 1, 4, '#ffd23f'); }
       R(0, floorY - 3, W, 3, '#6b4226');
       R(0, floorY, W, H - floorY, '#8a5a32');
       for (let y = floorY + 5; y < H; y += 6) R(0, y, W, 1, '#6b4226');

@@ -11,7 +11,7 @@ const names = [
   ['火锅店', 'L4 · Hotpot Restaurant', '🍲'], ['洗手间', 'L4 · Toilet', '🚻'], ['游戏厅', 'L5 · Arcade', '🕹️'], ['补习中心入口', 'L5 · Tuition Center Entrance', '📚'], ['补习室一', 'L5 · Tuition Room 1', '✏️'],
 ];
 export const MALL_ROOMS = MALL_FLOORS.flat();
-export const MALL_ROOM_INFO = MALL_ROOMS.map((key, i) => ({ key, zh: names[i][0], en: names[i][1], icon: names[i][2], place: 'mall', noRoof: true }));
+export const MALL_ROOM_INFO = MALL_ROOMS.map((key, i) => ({ key, zh: names[i][0], en: names[i][1], icon: names[i][2], place: 'mall', noRoof: true, ...(key === 'mallsushi' ? { maxY: 54 } : {}) }));   // SushiMeow's floor goes further back
 // each floor's main room (the one with the stairs): the first room, except the Buffet sits to the LEFT of the Fashion Store
 const LEFT_SIDE = new Set(['mallbuffet', 'mallsupermarket']);
 const mainOf = (row) => row.find((k) => !LEFT_SIDE.has(k));

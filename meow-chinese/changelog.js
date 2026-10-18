@@ -684,4 +684,7 @@ export const CHANGES = [
   { v: 247, items: [
     '🍣 SushiMeow: the counter table top is now behind the belt (next to the seats), so food you put down sits right in front of you.',
   ] },
+  { v: 248, items: [
+    '🍣 SushiMeow has a bigger floor (it goes further back), and the lanterns on the wall are smaller.',
+  ] },
 ];
