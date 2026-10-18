@@ -662,4 +662,9 @@ export const CHANGES = [
   { v: 241, items: [
     '↩️ The mall is back to how it was before the walk-through floors (separate shops with ◀ ▶ arrows).',
   ] },
+  { v: 242, items: [
+    '🍣 New in the mall: SushiMeow on B1 (the carpark is now B2)! The host gives you a seat number, plates go round on the conveyor belt — tap one to take it, or order on the tablet and a server cat brings it to your seat.',
+    '💰 Pay at the cashier before you leave: tell them your seat number, check your receipt and pay with coins.',
+    '🍱 26 new dishes you can only get at SushiMeow — eat them there or put them on the counter.',
+  ] },
 ];

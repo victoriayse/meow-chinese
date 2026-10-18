@@ -6,6 +6,7 @@ import { createStadium, joystick, JOYSTICK } from './stadium.js';
 import { wireCanteen } from './canteen.js';
 import { createCarnival } from './carnival.js';
 import { wireSupermarket, SUPER_ROOM } from './supermarket.js';
+import { wireSushi, leaveSushi, mustPay, canSit, seatNoOf, SUSHI_ROOM } from './sushi.js';
 import { wireBuffet, leaveBuffet, hasPass, isBlocker, setGate, payHost, BUFFET_ROOM, leaveCinema, hasTicket, payCinema, THEATRES } from './buffet.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
@@ -191,6 +192,8 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null, carnival = null;
 
   let refreshingPlace = false, welcomed = false;
+  // 🍣 SushiMeow: the bill must be paid before she can leave
+  const unpaid = () => { if (!(P && roomKey === SUSHI_ROOM && mustPay())) return false; sfx.miss(); toast('💰 <span class="zh">请先到收银台付款再离开</span> Please pay your bill at the cashier before you leave', { ms: 2800 }); return true; };
   async function refreshPlace() {
     if (!P || !gotHouse || refreshingPlace || !n.isConnected) return;
     refreshingPlace = true;
@@ -356,6 +359,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
 
   let lastRoom = null;
   function render() {
+    if (P && lastRoom === SUSHI_ROOM && roomKey !== SUSHI_ROOM) { const n3 = leaveSushi(); if (n3) toast('🍣 <span class="zh">寿司喵的食物留在店里</span> SushiMeow food stays at the restaurant', { ms: 2400 }); if (myKv) myKv.draw(); }
     if (P && lastRoom === BUFFET_ROOM && roomKey !== BUFFET_ROOM) { const n2 = leaveBuffet(); if (n2) toast('🍱 <span class="zh">自助餐的食物留在餐厅里</span> Buffet food stays at the buffet', { ms: 2400 }); if (myKv) myKv.draw(); }
     const justEntered = P && roomKey === BUFFET_ROOM && lastRoom !== BUFFET_ROOM;
     if (justEntered) leaveBuffet();   // a fresh visit: any old pass (or buffet food) from an earlier visit is gone — pay again
@@ -442,6 +446,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor.seat'); if (!d || e.target.closest('button')) return;
       if (mine.seat === d.dataset.id) return;
+      if (P && roomKey === SUSHI_ROOM && !canSit(room, d.dataset.id)) { sfx.miss(); return; }
       if (roomKey === BUFFET_ROOM && !insideBuffet()) { sfx.miss(); return toast(hasPass() ? '🚪 <span class="zh">请先走进闸门</span> Walk in through the gate first' : '🎟️ <span class="zh">请先在门口付款</span> Please pay the host at the entrance first', { ms: 2200 }); }
       const taken = others.ids().map((id) => others.m.get(id)).filter((c) => c && c.room === roomKey);
       let slot = freeSlot(d.dataset.id, taken);
@@ -479,10 +484,10 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     petLayer = new PetLayer(room, roomKey, { onClick: (kind) => { const p = (house.pets || []).find((x) => x.kind === kind); if (p) { sfx.coin(); toast(`🤍 <span class="zh">${esc(p.name)}</span>`, { ms: 1500 }); } } });
     petLayer.update(house.pets || []);
     hearRadio();
-    box.querySelector('.mall-directory')?.addEventListener('click', () => openMallDirectory(roomKey, (key) => { roomKey=key; mine.room=key; mine.seat=null; mine.boothClosed=false; mine.x=30; mine.y=6; render(); sendMine(); }));
+    box.querySelector('.mall-directory')?.addEventListener('click', () => openMallDirectory(roomKey, (key) => { if (unpaid()) return; roomKey=key; mine.room=key; mine.seat=null; mine.boothClosed=false; mine.x=30; mine.y=6; render(); sendMine(); }));
     // 🚪 the cinema: a Left door / Right door takes the place of that side's arrow (walk into the door to go through)
     if (placeKey === 'cinema') box.querySelectorAll('.room-nav.left, .room-nav.right').forEach((b) => { const side = b.classList.contains('left') ? 'left' : 'right'; if (doorEl(room, side)) b.remove(); });
-    box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { roomKey = b.dataset.room; mine.room = roomKey; mine.seat = null; sfx.click(); render(); sendMine(); }; });
+    box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { if (unpaid()) return; roomKey = b.dataset.room; mine.room = roomKey; mine.seat = null; sfx.click(); render(); sendMine(); }; });
     // Each arrival gets one greeting sequence, even if the layout refreshes.
     if (placeKey === 'cafe' && roomKey === 'cafeentrance' && !welcomed && room.querySelector('.cafe-greeter')) {
       welcomed = true;
@@ -522,7 +527,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     }
     if (placeKey === 'cafe') refreshTables();
     if (!P) wireHomeTables(room, hostId, () => { if (myKv) myKv.draw(); sendMine(); });
-    else if (!['cafe', 'mall'].includes(placeKey) || roomKey === BUFFET_ROOM) wirePlaceTables(room, placeKey, roomKey, () => { if (myKv) myKv.draw(); sendMine(); });
+    else if (!['cafe', 'mall'].includes(placeKey) || roomKey === BUFFET_ROOM || roomKey === SUSHI_ROOM) wirePlaceTables(room, placeKey, roomKey, () => { if (myKv) myKv.draw(); sendMine(); });
     if (P && roomKey === BUFFET_ROOM) wireBuffet(room, { onChanged: () => { if (myKv) myKv.draw(); sendMine(); }, isInside: insideBuffet });
     // 🚪 the admin can hold the buffet gate open (anyone may walk through) or close it again — for everyone
     if (P && (roomKey === BUFFET_ROOM || placeKey === 'cinema') && Places.isAdmin()) room.addEventListener('click', (e) => {
@@ -548,6 +553,10 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     });
     if (placeKey === 'mall') wireMall(room, roomKey, house, go, () => { if (myKv) myKv.draw(); sendMine(); });
     if (P && roomKey === SUPER_ROOM) wireSupermarket(room, { onChanged: () => { if (myKv) myKv.draw(); sendMine(); } });
+    if (P && roomKey === SUSHI_ROOM) wireSushi(room, { house, isAdmin: Places.isAdmin, saveShared: () => Places.savePlace(placeKey), getMine: () => mine,
+      isSeatedMine: () => !!(mine.seat && seatNoOf(room, mine.seat) && seatNoOf(room, mine.seat) === (S.get().sushi || {}).seat),
+      blockedAt: (x, y) => blockedAt(x, y), otherCats: () => others.ids().map((id) => others.m.get(id)).filter((c) => c && c.room === roomKey),
+      onChanged: () => { if (myKv) myKv.draw(); sendMine(); } });
     if (placeKey === 'school' && roomKey === 'schoolcanteen') wireCanteen(room);
     hydrateIcons(box);
   }
@@ -778,12 +787,12 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   let left = false;
   const leave = () => {
     if (left) return; left = true;
-    if (P) { leaveBuffet(); if (placeKey === 'cinema') leaveCinema(); }
+    if (P) { leaveBuffet(); leaveSushi(); if (placeKey === 'cinema') leaveCinema(); }
     setCatZ(null);
     if (carnival) carnival.stop();
     if (P && S.dropPlaceFood()) toast('🍽️ <span class="zh">吃的喝的不能带走哦</span> Food and drinks stay behind when you leave', { ms: 2600 });
     Radio.stop(); clearInterval(kt); if (stadium) stadium.stop(); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
-  $('#leave', n).onclick = () => { leave(); if (P) go('map'); else go('friend', { id: hostId }); };
+  $('#leave', n).onclick = () => { if (unpaid()) return; leave(); if (P) go('map'); else go('friend', { id: hostId }); };
   const deco = $('#vdeco', n); if (deco) deco.onclick = () => { if (!gotHouse) return; leave(); go('home', { view: 'house', room: roomKey, arrange: true, openStorage: true }); };   // the admin: furnish this room
   $('#vphone', n).onclick = () => import('./phone.js').then((P) => P.openPhone({ start: 'home' }));   // the phone works at a friend's house too
   const gone = setInterval(() => { if (!n.isConnected) { clearInterval(gone); leave(); } }, 1000);

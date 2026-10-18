@@ -2225,3 +2225,30 @@ img.gone { min-height: 40px; font-size: 11px; }
 .decor.door-swing > canvas.swing-door { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 50%; transform: rotateY(0deg); transition: transform .6s cubic-bezier(.3,.7,.3,1), filter .6s; pointer-events: none; backface-visibility: visible; }
 .decor.door-swing.door-open > canvas.swing-door { transform: rotateY(-112deg); filter: brightness(.88); }
 .dl-bag.no-drop { animation: none; }
+/* 🍣 SushiMeow */
+.room[data-room="mallsushi"] .vcat .kflip, .room[data-room="mallsushi"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
+.decor .belt-lane { position: absolute; overflow: hidden; pointer-events: none; z-index: 2; }
+.decor .belt-lane .bplate { position: absolute; bottom: 8%; width: 9%; aspect-ratio: 1.25; transform: translateX(-50%); padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; }
+.decor .belt-lane .bplate.gone { visibility: hidden; }
+.decor .bplate .bp-plate { position: absolute; left: 0; right: 0; bottom: 0; height: 32%; border-radius: 50%; background: radial-gradient(ellipse at 50% 35%, #e8576b, #a3202f 70%); box-shadow: 0 2px 0 rgba(0,0,0,.35); }
+.decor .bplate .bp-food { position: absolute; left: 50%; bottom: 18%; transform: translateX(-50%); width: 72% !important; height: auto !important; image-rendering: pixelated; }
+.decor .bplate .bp-dome { position: absolute; left: 6%; right: 6%; bottom: 14%; height: 78%; border-radius: 50% 50% 12% 12% / 70% 70% 12% 12%; background: linear-gradient(120deg, rgba(255,255,255,.55), rgba(220,240,255,.18) 40%, rgba(255,255,255,.08) 60%, rgba(255,255,255,.4)); border: 1.5px solid rgba(255,255,255,.75); box-sizing: border-box; }
+.decor .sushi-seatno { position: absolute; left: 50%; top: 6%; transform: translateX(-50%); min-width: 1.6em; padding: 0 4px; background: #fff8ec; border: 2px solid #2b2140; border-radius: 999px; font: 900 11px/1.5 system-ui, sans-serif; text-align: center; pointer-events: none; z-index: 2; }
+.decor .sushi-seatno.mine { background: #ffd23f; box-shadow: 0 0 8px #ffd23f; }
+.vcat.sushi-server { pointer-events: none; }
+.sushi-tab { width: min(460px, 100%); }
+.sushi-tab-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sushi-tab .seat-pill { background: #ffd23f; border: 2px solid var(--ink); border-radius: 999px; padding: 0 10px; font-weight: 900; }
+.sushi-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.sushi-tabs button { flex: 1; border: 2px solid var(--ink); border-radius: 10px; background: #fff8ec; padding: 5px 4px; font: 800 12px/1.2 system-ui, sans-serif; cursor: pointer; }
+.sushi-tabs button.on { background: #e8384f; color: #fff; }
+.sushi-body { max-height: min(46vh, 380px); overflow: auto; display: flex; flex-direction: column; gap: 5px; }
+.sushi-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sushi-body .dl-row .pr { white-space: nowrap; }
+.belt-tick { white-space: nowrap; font-size: 12px; }
+.receipt { background: #fff; border: 2px dashed #8a8d99; border-radius: 6px; padding: 8px 10px; font: 13px/1.5 ui-monospace, monospace; text-align: left; }
+.receipt .r-head { text-align: center; font-weight: 900; margin-bottom: 4px; }
+.receipt .r-line, .receipt .r-total { display: flex; justify-content: space-between; gap: 8px; }
+.receipt .r-total { border-top: 2px solid #2b2140; margin-top: 4px; padding-top: 4px; font-weight: 900; }
+.seat-pick { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.seat-pick .btn { padding: 8px 0; font-size: 18px; }

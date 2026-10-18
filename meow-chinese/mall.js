@@ -1,12 +1,12 @@
 import { BAKERY_EXCLUSIVE } from './pixel.js';
 // Empty public mall: each floor's main room links vertically; side rooms link horizontally.
 export const MALL_FLOORS = [
-  ['mallcarpark'], ['mallsupermarket', 'malllobby', 'mallbakery', 'malltoilet1'],
+  ['mallcarpark'], ['mallsushi'], ['mallsupermarket', 'malllobby', 'mallbakery', 'malltoilet1'],
   ['mallbuffet', 'mallfashion', 'mallchanging'], ['mallhome', 'mallcoffee'],
   ['mallhotpot', 'malltoilet4'], ['mallbowling', 'malltuition', 'mallclassroom'],
 ];
 const names = [
-  ['地下停车场', 'B1 · Carpark', '🚗'], ['超市', 'L1 · Supermarket', '🛒'], ['商场大堂', 'L1 · Lobby', '🛍️'], ['面包店', 'L1 · Bakery', '🥐'], ['洗手间', 'L1 · Toilet', '🚻'],
+  ['地下停车场', 'B2 · Carpark', '🚗'], ['寿司喵', 'B1 · SushiMeow', '🍣'], ['超市', 'L1 · Supermarket', '🛒'], ['商场大堂', 'L1 · Lobby', '🛍️'], ['面包店', 'L1 · Bakery', '🥐'], ['洗手间', 'L1 · Toilet', '🚻'],
   ['自助餐厅', 'L2 · Buffet', '🍱'], ['服装店', 'L2 · Fashion Store', '👗'], ['更衣室', 'L2 · Changing Room', '🚪'], ['家居店', 'L3 · Home Store 1', '🛋️'], ['咖啡店', 'L3 · Coffee Shop', '☕'],
   ['火锅店', 'L4 · Hotpot Restaurant', '🍲'], ['洗手间', 'L4 · Toilet', '🚻'], ['游戏厅', 'L5 · Arcade', '🕹️'], ['补习中心入口', 'L5 · Tuition Center Entrance', '📚'], ['补习室一', 'L5 · Tuition Room 1', '✏️'],
 ];

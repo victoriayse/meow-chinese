@@ -41,7 +41,7 @@ export function layoutOf(place) {
     const song = Radio.mySong(id);
     if (song) radios[id] = { path: song.path, name: song.name, on: song.on !== false, startedAt: song.startedAt || 0, room };
   }));
-  return { radios, rooms, open: keys.slice(), styles: Object.fromEntries(keys.map((k) => [k, S.roomStyle(k)])), power: { dark, off }, prices: { ...(place === 'cafe' ? st.cafePrices || {} : st.kioskPrices || {}) } };
+  return { radios, rooms, open: keys.slice(), styles: Object.fromEntries(keys.map((k) => [k, S.roomStyle(k)])), power: { dark, off }, prices: { ...(place === 'cafe' ? st.cafePrices || {} : st.kioskPrices || {}) }, ...(place === 'mall' ? { sushiBelt: (st.sushiBelt || []).slice() } : {}) };
 }
 export async function loadPlace(place) {
   const empty = place === 'cafe' ? cafeLayout() : { rooms: {}, open: PLACES[place].rooms.slice(), power: {} };
