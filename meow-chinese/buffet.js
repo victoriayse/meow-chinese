@@ -19,7 +19,7 @@ const orders = () => (S.get().buffetOrders ||= []);
 // doorways, and the stage (she climbs onto that)
 export function isBlocker(id, el) {
   const b = base(id), it = ITEMS[b];
-  if (!it || it.cat !== 'decor' || it.walkOver || it.walldoor) return false;
+  if (!it || it.cat !== 'decor' || it.walkOver || it.walldoor || it.escalator) return false;
   if (el && (el.classList.contains('flat') || el.classList.contains('curtain') || el.classList.contains('pool-el'))) return false;
   if (it.door || it.spot === 'rug' || it.spot === 'under' || it.spot === 'curtain' || it.panel === 'door' || (it.seat && it.seat.walk)) return false;
   return true;

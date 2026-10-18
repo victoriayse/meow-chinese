@@ -192,6 +192,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null, carnival = null;
 
   let refreshingPlace = false, welcomed = false;
+  let escLock = false;   // just got off an escalator: step off its foot before it can take her again
   let strip = null, arriveEsc = null, arriveLift = false, liftBusy = false;   // 🗺️ the mall: a whole floor is one long walk-through street; 🛗 arriving off an escalator
   async function refreshPlace() {
     if (!P || !gotHouse || refreshingPlace || !n.isConnected) return;
@@ -304,7 +305,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
         // just came through a door and still holding ▲: don't bounce straight back (re-arm once she lets go or turns)
         const now = Date.now(); if (!doorArmed && (dy <= 0 || now - lastStepAt > 400)) doorArmed = true; lastStepAt = now;
         if (dy > 0 && doorArmed && placeKey === 'cinema' && room0 && walkIntoDoor(room0)) return;
-        if (dy > 0 && doorArmed && placeKey === 'mall' && room0 && walkIntoEscalator(room0)) return;
+        if (doorArmed && placeKey === 'mall' && room0 && walkIntoEscalator(room0, dy)) return;
       }
       if (dy > 0 && room0) {   // walking up into the front of a stage: climb on
         const H = room0.clientHeight, W = room0.clientWidth;
@@ -557,7 +558,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       // 🍱 coming into the buffet: she starts just in front of the gate (on the entrance side)
       if (arriveLift) { arriveLift = false; liftArrive(room); }
       if (arriveEsc) { const want = arriveEsc; arriveEsc = null; const d = [...room.querySelectorAll('.decor')].find((x) => (ITEMS[x.dataset.id.split('#')[0]] || {}).escalator === want);
-        if (d && myEl) { const r = doorRect(room, d); mine.seat = null; mine.x = want === 'up' ? r.x0 + (r.x1 - r.x0) * 0.12 : r.x1 - (r.x1 - r.x0) * 0.12; mine.y = Math.max(1, Math.min(r.bottom, S.roomMaxY(roomKey)) - 5); mine.left = want !== 'up'; myKv.setFacing(mine.left); place(); myKv.jump(); sendMine(); } }
+        if (d && myEl) { escLock = true; const r = doorRect(room, d); mine.seat = null; mine.x = want === 'up' ? r.x0 + (r.x1 - r.x0) * 0.12 : r.x1 - (r.x1 - r.x0) * 0.12; mine.y = Math.max(1, Math.min(r.bottom, S.roomMaxY(roomKey)) - 5); mine.left = want !== 'up'; myKv.setFacing(mine.left); place(); myKv.jump(); sendMine(); } }
       const g = justEntered && foot.find((f) => f.gate);
       if (g && myEl) { mine.seat = null; mine.x = (g.x0 + g.x1) / 2; mine.y = Math.max(1, g.y0 - 6); place(); sendMine(); }
       // 🚪 came through a door: she steps out in front of the matching door on this side (left door → arrive at the right door)
@@ -845,15 +846,17 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (has('up')) box.querySelectorAll('.room-nav.up').forEach((b) => b.remove());
     if (has('down')) box.querySelectorAll('.room-nav.down').forEach((b) => b.remove());
   }
-  function walkIntoEscalator(room) {
+  function walkIntoEscalator(room, dy = 0) {
     for (const d of room.querySelectorAll('.decor')) {
       const it = ITEMS[d.dataset.id.split('#')[0]]; if (!it || !it.escalator) continue;
-      const r = doorRect(room, d), w = r.x1 - r.x0;
-      // the foot of the escalator: the low end (left for up, right for down)
-      const f0 = it.escalator === 'up' ? r.x0 : r.x1 - w * 0.3, f1 = it.escalator === 'up' ? r.x0 + w * 0.3 : r.x1;
-      if (mine.x < f0 || mine.x > f1 || mine.y < Math.min(r.bottom, S.roomMaxY(roomKey)) - 1.5) continue;
+      const r = doorRect(room, d), w = r.x1 - r.x0, base = Math.min(r.bottom, S.roomMaxY(roomKey));
+      // the foot of the escalator: the low end (left for up, right for down) — walk onto it from the side or from the front
+      const f0 = it.escalator === 'up' ? r.x0 - 1 : r.x1 - w * 0.22, f1 = it.escalator === 'up' ? r.x0 + w * 0.22 : r.x1 + 1;
+      if (mine.x < f0 || mine.x > f1 || mine.y < base - (dy > 0 ? 3 : 5)) continue;
+      if (escLock) return false;
       rideEscalator(d, it.escalator); return true;
     }
+    escLock = false;
     for (const d of room.querySelectorAll('.decor.elevator')) {   // 🛗 walking up into the lift's doorway
       const it = ITEMS[d.dataset.id.split('#')[0]], r = doorRect(room, d), w = r.x1 - r.x0, dr = it.elevator.door;
       if (mine.x < r.x0 + w * dr.x || mine.x > r.x0 + w * (dr.x + dr.w) || mine.y < Math.min(r.bottom, S.roomMaxY(roomKey)) - 1.5) continue;

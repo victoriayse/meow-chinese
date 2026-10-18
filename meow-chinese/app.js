@@ -1,4 +1,5 @@
 import { openMallDirectory } from './mall-play.js';
+import { MALL_FLOORS } from './mall.js';
 import { openPoster, openVideo, openRadio, openBoard } from './media.js';
 // 喵喵中文 Meow Chinese — app shell, router, top bar, welcome and home screen.
 import * as S from './state.js';
@@ -21,7 +22,7 @@ import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
 import { wireDisplays } from './display-racks.js';
 import { wireHomeTables } from './home-tables.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, boothView, catFace, freeSlot, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, depthOf, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, boothView, catFace, freeSlot, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
 import * as Pets from './pets.js';
 import * as Radio from './radio.js';
 import * as Visit from './visit.js';
@@ -665,6 +666,31 @@ function homeScreen(params = {}) {
     room.appendChild(wrap);
   });
   }
+  // 🗺️ the mall's editor: the whole floor is one street here too (walk off the side into the next shop)
+  let edStrip = null;
+  if (room && inHouse && roomRI.place === 'mall') {
+    const floor = MALL_FLOORS.find((r) => r.includes(roomKey));
+    if (floor && floor.length > 1) {
+      const view = document.createElement('div'); view.className = 'mall-view';
+      const track = document.createElement('div'); track.className = 'mall-track';
+      room.replaceWith(view); view.appendChild(track);
+      const panels = {};
+      floor.forEach((k) => {
+        if (k === roomKey) { track.appendChild(room); return; }
+        const p = document.createElement('div'); p.className = 'room mall-preview'; p.dataset.room = k; p.innerHTML = '<canvas class="room-bg"></canvas>';
+        roomLayout(s, k, S.roomOf).forEach((e) => { const el = decorEl(e, {}); if (el) p.appendChild(el); });
+        track.appendChild(p); panels[k] = p;
+      });
+      edStrip = { view, track, floor, panels };
+      n.querySelectorAll('.room-nav.left, .room-nav.right').forEach((b) => b.remove());
+    }
+  }
+  function edCam(x) {
+    if (!edStrip || !edStrip.view.isConnected) return;
+    const W = edStrip.view.clientWidth, i = edStrip.floor.indexOf(roomKey), last = edStrip.floor.length - 1;
+    edStrip.track.style.transform = `translateX(${-Math.max(0, Math.min(last * W, (i + x / 100) * W - W / 2))}px)`;
+  }
+  const edSide = (d) => edStrip && edStrip.floor[edStrip.floor.indexOf(roomKey) + d];
 
   // things lower down the room stand in front of things further back
   const depth = (el) => {
@@ -708,12 +734,13 @@ function homeScreen(params = {}) {
     }
     rideFx(room, ground, null);
     const halfW = room.clientWidth ? (kflip.offsetWidth / 2 / room.clientWidth) * 100 : 10;
-    cat.x = Math.max(halfW, Math.min(100 - halfW, cat.x));
+    cat.x = Math.max(edSide(-1) ? -1 : halfW, Math.min(edSide(1) ? 101 : 100 - halfW, cat.x));
     cat.y = Math.max(1, Math.min(S.roomMaxY(roomKey), cat.y));
     ground.classList.toggle('swimming', inPool(room, cat.x, cat.y));   // in the pool: she swims
     ground.style.left = cat.x + '%';
     ground.style.bottom = cat.y + '%';
     ground.style.zIndex = 2 + Math.round(100 - cat.y);
+    edCam(cat.x);
   };
   const hostPos = () => ({ x: +cat.x.toFixed(1), y: +cat.y.toFixed(1), room: roomKey, left: !!kv.left, seat: (seatNow() || {}).id || null, slot: (seatNow() || {}).slot || 0, boothClosed: !!(seatNow() || {}).boothClosed });
   // tap the sofa, a chair, the piano bench or the bed: she hops on (the arrows make her hop off)
@@ -769,6 +796,12 @@ function homeScreen(params = {}) {
     if (held.has('up')) dy += 1; if (held.has('down')) dy -= 1;
     cat.x += dx * 32 * dt; cat.y += dy * 22 * dt;
     if (dx) kv.setFacing(dx < 0);
+    if (edStrip && ((cat.x > 100 && edSide(1)) || (cat.x < 0 && edSide(-1)))) {   // into the next shop on this floor
+      const to = cat.x > 100 ? edSide(1) : edSide(-1);
+      S.get().catPos = { x: +(cat.x > 100 ? cat.x - 100 : cat.x + 100).toFixed(1), y: +cat.y.toFixed(1) }; S.get().catSeat = null; S.save();
+      held.clear(); raf = 0; setHomeBusy(false);
+      go('home', { ...currentParams, view: 'house', room: to }, { replace: true }); return;
+    }
     placeCat();
     S.get().catPos = { x: +cat.x.toFixed(1), y: +cat.y.toFixed(1) };   // remembered as she goes (saved when she stops)
     Visit.hostMove(hostPos());
@@ -1277,7 +1310,7 @@ function homeScreen(params = {}) {
       cageMenu(d.dataset.cage);
     });
   } else { hostRoomNow = 'living'; roomPower = null; homePets = null; Radio.stop(); }
-  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); drawRoof($('#roof', n)); studioBarre(room, roomKey === 'basement'); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); stackDecor(room); placeCat(); if (homePets) homePets(); if (params.openStorage) { delete currentParams.openStorage; $('#b-store', n).click(); } } };
+  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); drawRoof($('#roof', n)); if (edStrip) Object.entries(edStrip.panels).forEach(([k, p]) => { drawRoom(p.querySelector('.room-bg'), isNight(), k, S.roomStyle(k)); p.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, p); }); stackDecor(p); }); studioBarre(room, roomKey === 'basement'); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); stackDecor(room); placeCat(); if (homePets) homePets(); if (params.openStorage) { delete currentParams.openStorage; $('#b-store', n).click(); } } };
   return n;
 }
 

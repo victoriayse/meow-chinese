@@ -682,4 +682,8 @@ export const CHANGES = [
     '🐱 Fixed: a cat standing in front of the glass doors in the Lobby was hidden behind them.',
     '🪑 The mall editor now shows the cat at the same size as when walking round the mall.',
   ] },
+  { v: 239, items: [
+    '🛗 You can now walk onto the escalator from the side to ride it.',
+    '🪑 The mall editor is one walk-through floor too: walk off the side of a shop into the next one.',
+  ] },
 ];
