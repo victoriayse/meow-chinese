@@ -6,6 +6,7 @@ import { createStadium, joystick, JOYSTICK } from './stadium.js';
 import { wireCanteen } from './canteen.js';
 import { createCarnival } from './carnival.js';
 import { wireSupermarket, SUPER_ROOM } from './supermarket.js';
+import { MALL_FLOORS, mallNeighbors } from './mall.js';
 import { wireBuffet, leaveBuffet, hasPass, isBlocker, setGate, payHost, BUFFET_ROOM, leaveCinema, hasTicket, payCinema, THEATRES } from './buffet.js';
 // Live visits: a friend's kitten walks around your house (and you around theirs), chatting in speech bubbles.
 // Each house is a private realtime channel "house:<owner id>" that only the owner and their friends can join.
@@ -43,7 +44,7 @@ export function myLook() {
   const s = S.get(), k = s.kitten;
   return { name: s.childName && !String(k.name).includes(s.childName) ? `${s.childName}的${k.name}` : k.name, level: S.level(), fur: k.fur, equipped: { ...(k.equipped || {}) }, hold: s.holding || null };
 }
-const clampPos = (p) => ({ ...p, x: Math.max(6, Math.min(94, p.x)), y: Math.max(1, Math.min(S.roomMaxY(p.room || 'living'), p.y)) });
+const clampPos = (p) => ({ ...p, x: /^mall/.test(p.room || '') ? Math.max(-1, Math.min(101, p.x)) : Math.max(6, Math.min(94, p.x)), y: Math.max(1, Math.min(S.roomMaxY(p.room || 'living'), p.y)) });
 // send at most ~8 moves a second, and always the last one
 function throttle(fn, ms = 120) {
   let last = 0, t = null, pending = null;
@@ -191,6 +192,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null, carnival = null;
 
   let refreshingPlace = false, welcomed = false;
+  let strip = null, arriveEsc = null;   // 🗺️ the mall: a whole floor is one long walk-through street; 🛗 arriving off an escalator
   async function refreshPlace() {
     if (!P || !gotHouse || refreshingPlace || !n.isConnected) return;
     refreshingPlace = true;
@@ -294,9 +296,15 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
           }
         }
         mine.x = nx; mine.y = ny; gateWatch();
+        if (strip) {   // 🗺️ walking off the side of a shop: straight into the next one on this floor
+          const fl = strip.floor, k = fl.indexOf(roomKey);
+          if (mine.x > 100 && fl[k + 1]) return crossTo(fl[k + 1], mine.x - 100);
+          if (mine.x < 0 && fl[k - 1]) return crossTo(fl[k - 1], mine.x + 100);
+        }
         // just came through a door and still holding ▲: don't bounce straight back (re-arm once she lets go or turns)
         const now = Date.now(); if (!doorArmed && (dy <= 0 || now - lastStepAt > 400)) doorArmed = true; lastStepAt = now;
         if (dy > 0 && doorArmed && placeKey === 'cinema' && room0 && walkIntoDoor(room0)) return;
+        if (dy > 0 && doorArmed && placeKey === 'mall' && room0 && walkIntoEscalator(room0)) return;
       }
       if (dy > 0 && room0) {   // walking up into the front of a stage: climb on
         const H = room0.clientHeight, W = room0.clientWidth;
@@ -370,6 +378,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     const unit = $('#hunit', box), room = $('#room', box);
     if (P) reapplyShared();
     (house.rooms[roomKey] || []).forEach((e) => { const el = decorEl(e, { videoPick: !!(P && Places.isAdmin()), videoOwner: !!P }); if (el) room.appendChild(el); });
+    strip = placeKey === 'mall' ? buildStrip(room) : null;
     const saveMedia = async () => {
       if (!await Places.savePlace(placeKey)) throw new Error('Could not save the shared layout');
       await refreshPlace();
@@ -450,17 +459,23 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       if (slot < 0) { sfx.miss(); return toast('<span class="zh">坐满了！</span> No room — someone is already there'); }
       mine.seat = d.dataset.id; mine.slot = slot; mine.boothClosed = false; place(); myKv.jump(); sfx.click(); sendMine(); toiletVisit(mine.seat);
     });
+    // 🛗 tap an escalator to ride it
+    if (placeKey === 'mall') room.addEventListener('click', (e) => {
+      const d = e.target.closest('.decor'); if (!d || e.target.closest('button') || room.classList.contains('arranging')) return;
+      const it = ITEMS[d.dataset.id.split('#')[0]]; if (it && it.escalator) rideEscalator(d, it.escalator);
+    });
     // my kitten
     myEl = html`<div class="vcat me"><div class="kitten-wrap"><div class="kflip"></div><div class="nametag">${esc(S.get().kitten.name)}<span class="lv">Lv${S.level()}</span></div></div></div>`;
     myKv = new KittenView({ scale: HOUSE.kitten }); myKv.setMood('happy'); myKv.setFacing(mine.left);
     myEl.querySelector('.kflip').appendChild(myKv.canvas);
     myWrap = myEl.querySelector('.kitten-wrap');
     room.appendChild(myEl);
-    others.attach(room, roomKey);
+    others.attach(room, roomKey); others.setPanels(strip ? strip.panels : {});
     if (stadium && roomKey === 'stadium') stadium.attach(room);
     if (carnival) carnival.attach(room);
     sizeCols(); fitHouse(box, unit); requestAnimationFrame(() => { if (unit.isConnected) { sizeCols(); fitHouse(box, unit); } });
     drawRoom($('#roombg', box), isNight(), roomKey, (house.styles || {})[roomKey]); drawRoof($('#roof', box)); studioBarre(room, roomKey === 'basement');
+    if (strip) paintStrip();
     room.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, room); }); stackDecor(room);
     const pw = house.power || {};
     applyPower(room, { dark: !!(pw.dark || {})[roomKey], off: pw.off || {} });
@@ -482,6 +497,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     box.querySelector('.mall-directory')?.addEventListener('click', () => openMallDirectory(roomKey, (key) => { roomKey=key; mine.room=key; mine.seat=null; mine.boothClosed=false; mine.x=30; mine.y=6; render(); sendMine(); }));
     // 🚪 the cinema: a Left door / Right door takes the place of that side's arrow (walk into the door to go through)
     if (placeKey === 'cinema') box.querySelectorAll('.room-nav.left, .room-nav.right').forEach((b) => { const side = b.classList.contains('left') ? 'left' : 'right'; if (doorEl(room, side)) b.remove(); });
+    if (placeKey === 'mall') mallArrows();
     box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { roomKey = b.dataset.room; mine.room = roomKey; mine.seat = null; sfx.click(); render(); sendMine(); }; });
     // Each arrival gets one greeting sequence, even if the layout refreshes.
     if (placeKey === 'cafe' && roomKey === 'cafeentrance' && !welcomed && room.querySelector('.cafe-greeter')) {
@@ -536,6 +552,8 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     requestAnimationFrame(() => {
       measureBlockers(room);
       // 🍱 coming into the buffet: she starts just in front of the gate (on the entrance side)
+      if (arriveEsc) { const want = arriveEsc; arriveEsc = null; const d = [...room.querySelectorAll('.decor')].find((x) => (ITEMS[x.dataset.id.split('#')[0]] || {}).escalator === want);
+        if (d && myEl) { const r = doorRect(room, d); mine.seat = null; mine.x = want === 'up' ? r.x0 + (r.x1 - r.x0) * 0.12 : r.x1 - (r.x1 - r.x0) * 0.12; mine.y = Math.max(1, Math.min(r.bottom, S.roomMaxY(roomKey)) - 5); mine.left = want !== 'up'; myKv.setFacing(mine.left); place(); myKv.jump(); sendMine(); } }
       const g = justEntered && foot.find((f) => f.gate);
       if (g && myEl) { mine.seat = null; mine.x = (g.x0 + g.x1) / 2; mine.y = Math.max(1, g.y0 - 6); place(); sendMine(); }
       // 🚪 came through a door: she steps out in front of the matching door on this side (left door → arrive at the right door)
@@ -757,8 +775,83 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (spot) { myEl.classList.remove('swimming'); mine.x = spot.x; mine.y = spot.y; myEl.style.left = `${spot.x}%`; myEl.style.bottom = `${spot.y}%`; myEl.style.zIndex = spot.z; rideFx(room, myEl, mine.seat); return; }
     rideFx(room, myEl, null);
     Object.assign(mine, clampPos(mine));
+    if (!strip || !strip.floor[strip.floor.indexOf(roomKey) - 1]) mine.x = Math.max(6, mine.x);   // a wall at the end of the floor
+    if (!strip || !strip.floor[strip.floor.indexOf(roomKey) + 1]) mine.x = Math.min(94, mine.x);
     myEl.style.left = `${mine.x}%`; myEl.style.bottom = `${mine.y}%`; myEl.style.zIndex = catZ(mine.x, mine.y);
     myEl.classList.toggle('swimming', inPool(room, mine.x, mine.y));
+    cam();
+  }
+  // ---------- 🗺️ the mall: each floor is one long street you walk along (the camera follows her) ----------
+  function buildStrip(room) {
+    const floor = MALL_FLOORS.find((r) => r.includes(roomKey)); if (!floor || floor.length < 2) return null;
+    const view = document.createElement('div'); view.className = 'mall-view';
+    const track = document.createElement('div'); track.className = 'mall-track';
+    room.replaceWith(view); view.appendChild(track);
+    const panels = {};
+    floor.forEach((k) => {
+      if (k === roomKey) { track.appendChild(room); return; }
+      const p = document.createElement('div'); p.className = 'room mall-preview'; p.dataset.room = k;
+      p.innerHTML = '<canvas class="room-bg"></canvas>';
+      (house.rooms[k] || []).forEach((e) => { const el = decorEl(e, {}); if (el) p.appendChild(el); });
+      track.appendChild(p); panels[k] = p;
+    });
+    return { view, track, panels, floor };
+  }
+  function paintStrip() {
+    const pw = house.power || {};
+    Object.entries(strip.panels).forEach(([k, p]) => {
+      drawRoom(p.querySelector('.room-bg'), isNight(), k, (house.styles || {})[k]);
+      p.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, p); }); stackDecor(p);
+      applyPower(p, { dark: !!(pw.dark || {})[k], off: pw.off || {} });
+    });
+    cam();
+  }
+  function cam() {
+    if (!strip || !strip.view.isConnected) return;
+    const W = strip.view.clientWidth, n = strip.floor.length, i = strip.floor.indexOf(roomKey);
+    const X = Math.max(0, Math.min((n - 1) * W, (i + mine.x / 100) * W - W / 2));
+    strip.track.style.transform = `translateX(${-X}px)`;
+  }
+  function crossTo(k, x) {
+    roomKey = k; mine.room = k; mine.seat = null; mine.boothClosed = false; mine.x = x; render(); sendMine();
+  }
+  // ▲ ▼ in the mall: the escalators take you between floors (the arrows stay only where a floor has no escalator yet)
+  function mallArrows() {
+    const floor = MALL_FLOORS.find((r) => r.includes(roomKey)) || [roomKey];
+    const has = (dir) => floor.some((k) => (house.rooms[k] || []).some((e) => (ITEMS[e.id.split('#')[0]] || {}).escalator === dir));
+    if (strip) box.querySelectorAll('.room-nav.left, .room-nav.right').forEach((b) => b.remove());
+    if (has('up')) box.querySelectorAll('.room-nav.up').forEach((b) => b.remove());
+    if (has('down')) box.querySelectorAll('.room-nav.down').forEach((b) => b.remove());
+  }
+  function walkIntoEscalator(room) {
+    for (const d of room.querySelectorAll('.decor')) {
+      const it = ITEMS[d.dataset.id.split('#')[0]]; if (!it || !it.escalator) continue;
+      const r = doorRect(room, d), w = r.x1 - r.x0;
+      // the foot of the escalator: the low end (left for up, right for down)
+      const f0 = it.escalator === 'up' ? r.x0 : r.x1 - w * 0.3, f1 = it.escalator === 'up' ? r.x0 + w * 0.3 : r.x1;
+      if (mine.x < f0 || mine.x > f1 || mine.y < Math.min(r.bottom, S.roomMaxY(roomKey)) - 1.5) continue;
+      rideEscalator(d, it.escalator); return true;
+    }
+    return false;
+  }
+  function rideEscalator(d, dir) {
+    if (!myEl || myEl.dataset.sliding) return;
+    const fi = MALL_FLOORS.findIndex((r) => r.includes(roomKey)), next = MALL_FLOORS[fi + (dir === 'up' ? 1 : -1)];
+    if (!next) { sfx.miss(); return toast(dir === 'up' ? '<span class="zh">已经是顶楼了</span> This is the top floor' : '<span class="zh">已经是最低层了</span> This is the bottom floor', { ms: 1600 }); }
+    const want = dir === 'up' ? 'down' : 'up';
+    const hasEsc = (k) => (house.rooms[k] || []).some((e) => (ITEMS[e.id.split('#')[0]] || {}).escalator === want);
+    const to = next.find(hasEsc) || next.find((k) => mallNeighbors(k)[want]) || next[0];
+    const room = $('#room', box), H = room.clientHeight, r = doorRect(room, d), w = r.x1 - r.x0;
+    const a = { x: dir === 'up' ? r.x0 + w * 0.14 : r.x1 - w * 0.14, y: Math.max(1, r.bottom + 2) };
+    const b = { x: dir === 'up' ? r.x0 + w * 0.8 : r.x1 - w * 0.8, y: ((H - (d.offsetTop + d.offsetHeight * 0.26)) / H) * 100 };
+    doorArmed = false; mine.seat = null; myEl.dataset.sliding = '1'; myKv.setPose(null); mine.left = dir !== 'up'; myKv.setFacing(mine.left);
+    myEl.style.zIndex = (parseInt(d.style.zIndex, 10) || 50) + 1; sfx.click();
+    const an = myEl.animate([{ left: `${a.x}%`, bottom: `${a.y}%`, opacity: 1 }, { left: `${b.x}%`, bottom: `${b.y}%`, opacity: 1, offset: 0.85 }, { left: `${b.x}%`, bottom: `${b.y}%`, opacity: 0 }], { duration: 1700, easing: 'linear', fill: 'forwards' });
+    an.onfinish = () => {
+      delete myEl.dataset.sliding; if (!n.isConnected) return;
+      const info = S.roomInfo(to); toast(`🛗 ${info.icon} <span class="zh">${info.zh}</span> ${info.en}`, { ms: 1400 });
+      arriveEsc = want; roomKey = to; mine.room = to; mine.x = 50; mine.y = 6; render(); sendMine();
+    };
   }
   // chat
   $('#vchat', n).appendChild(chatBar((text) => {
@@ -772,7 +865,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   }));
   // the room's column is only as wide as the room (so the chat sits right beside it, not across a big gap)
   const sizeCols = () => { const st = box.closest('.stage'); if (st && st.clientHeight) n.style.setProperty('--hw', `${Math.round(st.clientHeight * HOUSE.w / (HOUSE.roof + HOUSE.room) + 90)}px`); };
-  const refit = () => { if (!n.isConnected) { window.removeEventListener('resize', refit); return; } sizeCols(); fitHouse(box, $('#hunit', box)); };
+  const refit = () => { if (!n.isConnected) { window.removeEventListener('resize', refit); return; } sizeCols(); fitHouse(box, $('#hunit', box)); cam(); };
   window.addEventListener('resize', refit);
   // leaving: say goodbye and close the line
   let left = false;

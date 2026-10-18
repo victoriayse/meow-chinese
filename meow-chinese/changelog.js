@@ -659,4 +659,9 @@ export const CHANGES = [
   { v: 232, items: [
     '🚽 Sit on any toilet (at home, a friend\'s house or the mall) for +1 bar of Hygiene. Once every 3 hours.',
   ] },
+  { v: 233, items: [
+    '🗺️ The mall is now one big walk-through map: all the shops on the same floor sit side by side, and the screen follows you as you walk from one shop into the next.',
+    '🛗 New escalators: walk up into one (or tap it) to ride to the floor above or below.',
+    '🐱 You can see other cats in the shops next to yours on the same floor.',
+  ] },
 ];

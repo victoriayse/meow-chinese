@@ -485,7 +485,10 @@ export function say(wrapEl, text) {
 // ---------- other cats in the room (friends visiting, or the friend whose house it is) ----------
 // look: { name, level, fur, equipped }  ·  where: { x, y, room, left }
 export class OtherCats {
-  constructor() { this.m = new Map(); this.roomEl = null; this.roomKey = null; this.raf = 0; }
+  constructor() { this.m = new Map(); this.roomEl = null; this.roomKey = null; this.raf = 0; this.panels = {}; }
+  // 🗺️ the mall's walk-through floors: cats in the rooms next door show up in those (look-only) rooms too
+  setPanels(map) { this.panels = map || {}; this.m.forEach((_, id) => this.draw(id)); }
+  hostOf(c) { if (c.room === this.roomKey) return this.roomEl; const p = this.panels[c.room]; return p && p.isConnected ? p : null; }
   attach(roomEl, roomKey) { this.roomEl = roomEl; this.roomKey = roomKey; this.m.forEach((c) => { c.el = null; }); this.m.forEach((_, id) => this.draw(id)); }
   // the latest place we heard about is the target; the cat walks there smoothly (updates arrive in uneven bursts)
   upsert(id, data) {
@@ -495,7 +498,7 @@ export class OtherCats {
     if (c.dx == null || roomChanged || c.seat || Math.hypot(c.x - c.dx, (c.y - c.dy) * 1.5) > 25) { c.dx = c.x; c.dy = c.y; }   // first sight, new room or a big jump: just appear there
     this.m.set(id, c); this.draw(id); this.go(); return c;
   }
-  remove(id) { const c = this.m.get(id); if (c && c.el) { boothView(this.roomEl, c.el, null, false); c.el.remove(); } this.m.delete(id); syncRides(this.roomEl); }
+  remove(id) { const c = this.m.get(id); if (c && c.el) { boothView(c.host || this.roomEl, c.el, null, false); c.el.remove(); } this.m.delete(id); syncRides(this.roomEl); }
   has(id) { return this.m.has(id); }
   ids() { return [...this.m.keys()]; }
   say(id, text) { const c = this.m.get(id); if (c && c.el) say($w(c.el), text); }
@@ -522,32 +525,34 @@ export class OtherCats {
   }
   place(c) {
     if (!c.el) return;
+    const R = c.host || this.roomEl;
     c.el.classList.toggle('riding-away', !!c.riding);   // 🎡 up on the Ferris wheel: not standing in the room
-    const spot = c.seat && seatSpot(this.roomEl, c.seat, c.slot);
-    boothView(this.roomEl, c.el, spot && c.seat, c.boothClosed, null, c.look);
+    const spot = c.seat && seatSpot(R, c.seat, c.slot);
+    boothView(R, c.el, spot && c.seat, c.boothClosed, null, c.look);
     if (spot) { c.x = c.dx = spot.x; c.y = c.dy = spot.y; }
     c.el.style.left = `${c.dx}%`; c.el.style.bottom = `${c.dy}%`;
     c.el.style.zIndex = spot ? spot.z : catZ(c.dx, c.dy);
     c.el.classList.toggle('lying', !!(spot && spot.lie)); c.el.classList.toggle('seated', !!(spot && !spot.walk));
-    c.el.classList.toggle('swimming', !spot && inPool(this.roomEl, c.dx, c.dy));
+    c.el.classList.toggle('swimming', !spot && inPool(R, c.dx, c.dy));
     if (c.kv) { c.kv.setPose(spot ? spot.pose : null); c.kv.setHeld(c.look && c.look.hold); } c.el.dataset.pose = (spot && spot.pose) || '';
     if (c.kv && spot && spot.run) { c.kv.setFacing(spot.flip); c.kv.canvas.classList.add('walking'); }
     else if (c.kv && spot) c.kv.canvas.classList.remove('walking');
-    if (c.bedShown && c.bedShown !== (spot && spot.lie && c.seat)) { blanket(this.roomEl, c.bedShown, false); c.bedShown = null; }
-    if (spot && spot.lie) { blanket(this.roomEl, c.seat, true); c.bedShown = c.seat; }
-    rideFx(this.roomEl, c.el, spot ? c.seat : null);
+    if (c.bedShown && c.bedShown !== (spot && spot.lie && c.seat)) { blanket(R, c.bedShown, false); c.bedShown = null; }
+    if (spot && spot.lie) { blanket(R, c.seat, true); c.bedShown = c.seat; }
+    rideFx(R, c.el, spot ? c.seat : null);
   }
   draw(id) {
     const c = this.m.get(id); if (!c) return;
-    const here = this.roomEl && this.roomEl.isConnected && c.room === this.roomKey && c.look;
-    if (!here) { if (c.el) { boothView(this.roomEl, c.el, null, false); c.el.remove(); c.el = null; } return; }
+    const host = c.look && this.roomEl && this.roomEl.isConnected ? this.hostOf(c) : null;
+    if (!host || (c.el && c.host !== host)) { if (c.el) { boothView(c.host || this.roomEl, c.el, null, false); c.el.remove(); c.el = null; } if (!host) return; }
+    c.host = host;
     if (!c.el || !c.el.isConnected) {
       const el = html`<div class="vcat"><div class="kitten-wrap"><div class="kflip"></div><div class="nametag">${esc(c.look.name || '🐱')}<span class="lv">Lv${c.look.level || 1}</span></div></div></div>`;
       const kv = new KittenView({ scale: HOUSE.kitten, fur: c.look.fur || 'ginger', equipped: { ...(c.look.equipped || {}) } });
       kv.setMood('happy'); kv.setFacing(!!c.left);
       el.querySelector('.kflip').appendChild(kv.canvas);
       c.kv = kv; c.el = el;
-      this.roomEl.appendChild(el);
+      host.appendChild(el);
     }
     this.place(c);
   }
