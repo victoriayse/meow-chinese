@@ -2288,3 +2288,7 @@ img.gone { min-height: 40px; font-size: 11px; }
 .decor.walldoor.elev-open .elev-door.r { transform: translateX(96%); }
 /* the mall's editor (🪑 furnishing a shop): her cat at the same size as when walking round the mall */
 .room[data-room^="mall"] #ground .kitten-wrap { scale: .49; transform-origin: 50% 100%; }
+/* 🚧 a place on the map that is being renovated */
+.map-pin.pin-reno .ic { filter: grayscale(1) brightness(1.05); opacity: .75; }
+.map-pin.pin-reno .lb { background: #e9e4ef; color: #6b6478; }
+.map-pin .reno-badge { position: absolute; left: 50%; top: -6px; transform: translateX(-50%); font-style: normal; font-size: 22px; filter: drop-shadow(0 2px 0 rgba(0,0,0,.3)); pointer-events: none; }

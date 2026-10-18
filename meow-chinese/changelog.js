@@ -686,4 +686,7 @@ export const CHANGES = [
     '🛗 You can now walk onto the escalator from the side to ride it.',
     '🪑 The mall editor is one walk-through floor too: walk off the side of a shop into the next one.',
   ] },
+  { v: 240, items: [
+    '🚧 The Shopping Mall is closed for renovation for a little while — it will open again soon!',
+  ] },
 ];

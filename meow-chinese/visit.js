@@ -175,6 +175,10 @@ export const visitorCount = () => visitors.ids().length;
 // VISITOR: walk around a friend's house
 // =====================================================================
 export function visitScreen({ go, id: hostId, name = '', place: placeKey = null, returnRoom = null }) {
+  if (placeKey && Places.RENOVATING.has(placeKey) && !Places.isAdmin()) {   // 🚧 closed for renovation (any way in: the map, a friend, a link)
+    setTimeout(() => { toast('🚧 <span class="zh">这里正在装修，很快就开放！</span> This place is being renovated — it opens again soon', { ms: 2800 }); go('map'); }, 0);
+    return html`<section class="screen"></section>`;
+  }
   // place: a public place on the map (the cinema) — no host, everyone signed in can be there
   const me = (Auth.user() || {}).id, P = placeKey && Places.PLACES[placeKey];
   const startRoom = P ? (Places.isAdmin() && P.rooms.includes(returnRoom) ? returnRoom : P.start) : 'living';
