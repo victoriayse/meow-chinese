@@ -192,7 +192,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null, carnival = null;
 
   let refreshingPlace = false, welcomed = false;
-  let strip = null, arriveEsc = null;   // 🗺️ the mall: a whole floor is one long walk-through street; 🛗 arriving off an escalator
+  let strip = null, arriveEsc = null, arriveLift = false, liftBusy = false;   // 🗺️ the mall: a whole floor is one long walk-through street; 🛗 arriving off an escalator
   async function refreshPlace() {
     if (!P || !gotHouse || refreshingPlace || !n.isConnected) return;
     refreshingPlace = true;
@@ -462,7 +462,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     // 🛗 tap an escalator to ride it
     if (placeKey === 'mall') room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor'); if (!d || e.target.closest('button') || room.classList.contains('arranging')) return;
-      const it = ITEMS[d.dataset.id.split('#')[0]]; if (it && it.escalator) rideEscalator(d, it.escalator);
+      const it = ITEMS[d.dataset.id.split('#')[0]]; if (it && it.escalator) rideEscalator(d, it.escalator); else if (it && it.elevator) useLift(d);
     });
     // my kitten
     myEl = html`<div class="vcat me"><div class="kitten-wrap"><div class="kflip"></div><div class="nametag">${esc(S.get().kitten.name)}<span class="lv">Lv${S.level()}</span></div></div></div>`;
@@ -476,6 +476,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     sizeCols(); fitHouse(box, unit); requestAnimationFrame(() => { if (unit.isConnected) { sizeCols(); fitHouse(box, unit); } });
     drawRoom($('#roombg', box), isNight(), roomKey, (house.styles || {})[roomKey]); drawRoof($('#roof', box)); studioBarre(room, roomKey === 'basement');
     if (strip) paintStrip();
+    if (placeKey === 'mall') [room, ...Object.values(strip ? strip.panels : {})].forEach((p) => p.querySelectorAll('.elev-display').forEach((el) => { el.textContent = floorLabel(p.dataset.room); }));
     room.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, room); }); stackDecor(room);
     const pw = house.power || {};
     applyPower(room, { dark: !!(pw.dark || {})[roomKey], off: pw.off || {} });
@@ -552,6 +553,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     requestAnimationFrame(() => {
       measureBlockers(room);
       // 🍱 coming into the buffet: she starts just in front of the gate (on the entrance side)
+      if (arriveLift) { arriveLift = false; liftArrive(room); }
       if (arriveEsc) { const want = arriveEsc; arriveEsc = null; const d = [...room.querySelectorAll('.decor')].find((x) => (ITEMS[x.dataset.id.split('#')[0]] || {}).escalator === want);
         if (d && myEl) { const r = doorRect(room, d); mine.seat = null; mine.x = want === 'up' ? r.x0 + (r.x1 - r.x0) * 0.12 : r.x1 - (r.x1 - r.x0) * 0.12; mine.y = Math.max(1, Math.min(r.bottom, S.roomMaxY(roomKey)) - 5); mine.left = want !== 'up'; myKv.setFacing(mine.left); place(); myKv.jump(); sendMine(); } }
       const g = justEntered && foot.find((f) => f.gate);
@@ -832,7 +834,68 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       if (mine.x < f0 || mine.x > f1 || mine.y < Math.min(r.bottom, S.roomMaxY(roomKey)) - 1.5) continue;
       rideEscalator(d, it.escalator); return true;
     }
+    for (const d of room.querySelectorAll('.decor.elevator')) {   // 🛗 walking up into the lift's doorway
+      const it = ITEMS[d.dataset.id.split('#')[0]], r = doorRect(room, d), w = r.x1 - r.x0, dr = it.elevator.door;
+      if (mine.x < r.x0 + w * dr.x || mine.x > r.x0 + w * (dr.x + dr.w) || mine.y < Math.min(r.bottom, S.roomMaxY(roomKey)) - 1.5) continue;
+      useLift(d); return true;
+    }
     return false;
+  }
+  // ---------- 🛗 the lift ----------
+  const floorLabel = (k) => String(S.roomInfo(k).en || '').split(' ·')[0];
+  const pause = (ms) => new Promise((ok) => setTimeout(ok, ms));
+  function chooseFloor(here) {
+    return new Promise((done) => {
+      let picked = null;
+      const c = html`<div class="card stack" style="align-items:stretch;text-align:center"><div class="h-title" style="justify-content:center">🛗 <span class="zh">去几楼？</span> Which floor?</div>
+          <div class="elev-pick"></div><button type="button" class="btn white" id="el-stay">🚪 <span class="zh">不去了，出电梯</span> Get out here</button></div>`;
+      [...MALL_FLOORS.keys()].reverse().forEach((fi) => {
+        const row = MALL_FLOORS[fi], b = document.createElement('button'); b.type = 'button';
+        b.className = `btn ${fi === here ? 'white here' : 'green'}`; b.disabled = fi === here;
+        b.innerHTML = `<b>${floorLabel(row[0])}</b><br><small>${row.map((k) => S.roomInfo(k).icon).join(' ')}</small>`;
+        b.onclick = () => { picked = fi; closeModal(); };
+        $('.elev-pick', c).appendChild(b);
+      });
+      $('#el-stay', c).onclick = () => closeModal();
+      openModal(c, { onClose: () => done(picked) });
+    });
+  }
+  const liftIn = (room) => [...room.querySelectorAll('.decor.elevator')][0];
+  const liftSpot = (room, d) => { const it = ITEMS[d.dataset.id.split('#')[0]], r = doorRect(room, d), w = r.x1 - r.x0, dr = it.elevator.door; return { x: r.x0 + w * (dr.x + dr.w / 2), y: Math.max(1, Math.min(r.bottom, S.roomMaxY(roomKey)) - 0.5) }; };
+  async function useLift(d) {
+    if (!myEl || myEl.dataset.sliding || liftBusy) return;
+    liftBusy = true; doorArmed = false; mine.seat = null; myEl.dataset.sliding = '1'; myKv.setPose(null);
+    const room = $('#room', box), to = liftSpot(room, d), from = { x: mine.x, y: mine.y };
+    try {
+      d.classList.add('elev-open'); sfx.click(); await pause(800);
+      myKv.setFacing(to.x < from.x); myKv.canvas.classList.add('walking');
+      const an = myEl.animate([{ left: `${from.x}%`, bottom: `${from.y}%` }, { left: `${to.x}%`, bottom: `${to.y}%` }], { duration: 650, fill: 'forwards' });
+      await an.finished; an.cancel(); myKv.canvas.classList.remove('walking');
+      mine.x = to.x; mine.y = to.y; myEl.style.left = `${to.x}%`; myEl.style.bottom = `${to.y}%`; myEl.style.zIndex = (parseInt(d.style.zIndex, 10) || 50) + 1; cam();
+      myEl.classList.add('in-lift'); await pause(250); d.classList.remove('elev-open'); sendMine(); await pause(800);
+      const here = MALL_FLOORS.findIndex((r) => r.includes(roomKey)), fi = await chooseFloor(here);
+      if (fi == null || !n.isConnected) {   // changed her mind: out she comes
+        d.classList.add('elev-open'); await pause(700); myEl.classList.remove('in-lift'); await pause(400);
+        mine.y = Math.max(1, mine.y - 7); delete myEl.dataset.sliding; place(); sendMine(); await pause(500); d.classList.remove('elev-open');
+        return;
+      }
+      const next = MALL_FLOORS[fi], dest = next.find((k) => (house.rooms[k] || []).some((e) => (ITEMS[e.id.split('#')[0]] || {}).elevator)) || next.find((k) => mallNeighbors(k).up || mallNeighbors(k).down) || next[0];
+      toast(`🛗 <span class="zh">去${floorLabel(next[0])}</span> Going to ${floorLabel(next[0])}…`, { ms: 1300 });
+      await pause(1400);
+      if (!n.isConnected) return;
+      delete myEl.dataset.sliding; arriveLift = true; roomKey = dest; mine.room = dest; mine.x = 50; mine.y = 6; render(); if (myEl) { myEl.style.transition = 'none'; myEl.classList.add('in-lift'); } sendMine();
+    } finally { if (!arriveLift) liftBusy = false; }
+  }
+  async function liftArrive(room) {
+    const d = liftIn(room);
+    if (!d || !myEl) { liftBusy = false; sfx.coin(); return; }
+    const sp = liftSpot(room, d);
+    myEl.dataset.sliding = '1'; myEl.style.transition = 'none'; myEl.classList.add('in-lift'); void myEl.offsetWidth; myEl.style.transition = '';
+    mine.seat = null; mine.x = sp.x; mine.y = sp.y; myEl.style.left = `${sp.x}%`; myEl.style.bottom = `${sp.y}%`; myEl.style.zIndex = (parseInt(d.style.zIndex, 10) || 50) + 1; cam();
+    await pause(300); sfx.coin(); d.classList.add('elev-open'); await pause(750);
+    myEl.classList.remove('in-lift'); await pause(450);
+    delete myEl.dataset.sliding; mine.y = Math.max(1, sp.y - 7); place(); myKv.jump(); sendMine();
+    await pause(600); d.classList.remove('elev-open'); liftBusy = false;
   }
   function rideEscalator(d, dir) {
     if (!myEl || myEl.dataset.sliding) return;

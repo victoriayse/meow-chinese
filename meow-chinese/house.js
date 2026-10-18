@@ -291,6 +291,16 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
     drawGrid(ring, g.slice(0, sp.cy * 2 + 1).map((row, y) => row.slice(0, sp.cx * 2 + 1).map((v, x) => (inRing(x, y) ? v : null))), HOUSE.decor);
     head.appendChild(ring); wrap.append(c, head);
   } else wrap.appendChild(c);
+  if (it.elevator) {
+    // 🛗 the lift: two steel doors that slide apart, and a little screen showing the floor
+    const dr = it.elevator.door, ds = it.elevator.display;
+    const doors = document.createElement('div'); doors.className = 'elev-doors';
+    Object.assign(doors.style, { left: `${dr.x * 100}%`, top: `${dr.y * 100}%`, width: `${dr.w * 100}%`, height: `${dr.h * 100}%` });
+    doors.innerHTML = '<i class="elev-door l"></i><i class="elev-door r"></i>';
+    const scr = document.createElement('div'); scr.className = 'elev-display';
+    Object.assign(scr.style, { left: `${ds.x * 100}%`, top: `${ds.y * 100}%`, width: `${ds.w * 100}%`, height: `${ds.h * 100}%` });
+    wrap.classList.add('elevator'); wrap.append(doors, scr);
+  }
   if (it.doorSwing && it.frames && it.frames.open) {
     // v229: a door on a hinge — the inside is always drawn, and the door swings open over it (and shut again)
     drawGrid(c, artGrid(it.frames.open, it.pal), HOUSE.decor * (it.size || 1) * scale);

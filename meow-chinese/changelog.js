@@ -664,4 +664,7 @@ export const CHANGES = [
     '🛗 New escalators: walk up into one (or tap it) to ride to the floor above or below.',
     '🐱 You can see other cats in the shops next to yours on the same floor.',
   ] },
+  { v: 234, items: [
+    '🛗 New mall elevator: walk in (or tap it), the doors slide open, step inside, the doors close — then choose your floor and step out when the doors open again.',
+  ] },
 ];

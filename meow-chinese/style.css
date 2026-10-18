@@ -2233,3 +2233,15 @@ img.gone { min-height: 40px; font-size: 11px; }
 .house .mall-track > .room:not(:last-child) { border-right-width: 0; }
 .house .mall-preview { pointer-events: none; }
 .house .mall-preview .vcat { pointer-events: none; }
+/* 🛗 the mall lift: steel doors slide apart / together */
+.decor.elevator .elev-doors { position: absolute; overflow: hidden; pointer-events: none; }
+.decor.elevator .elev-door { position: absolute; top: 0; bottom: 0; width: 50%; background: linear-gradient(90deg, #aeb7c3, #d9dee5 45%, #b9c1cc); box-shadow: inset 0 0 0 calc(2px * var(--k, 1)) #2b2140; transition: transform .75s ease-in-out; }
+.decor.elevator .elev-door.l { left: 0; }
+.decor.elevator .elev-door.r { right: 0; }
+.decor.elevator.elev-open .elev-door.l { transform: translateX(-96%); }
+.decor.elevator.elev-open .elev-door.r { transform: translateX(96%); }
+.decor.elevator .elev-display { position: absolute; display: grid; place-items: center; color: #ff5a4e; font: 900 10px/1 ui-monospace, monospace; letter-spacing: 1px; pointer-events: none; text-shadow: 0 0 4px rgba(255,90,78,.7); }
+.vcat.in-lift { transition: opacity .5s; opacity: 0; }
+.elev-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.elev-pick .btn { font-size: 18px; }
+.elev-pick .btn.here { outline: 3px solid #ffd23f; }
