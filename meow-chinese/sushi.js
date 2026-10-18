@@ -44,7 +44,7 @@ export function leaveSushi() {
 }
 
 // the numbered seats: numbered 1…6 in the order they were bought (so the numbers never jump about)
-const seatEls = (room) => [...room.querySelectorAll('.decor')].filter((d) => (ITEMS[base(d.dataset.id)] || {}).sushiSeat).sort((a, b) => (a.dataset.id < b.dataset.id ? -1 : 1)).slice(0, 8);
+const seatEls = (room) => [...room.querySelectorAll('.decor')].filter((d) => (ITEMS[base(d.dataset.id)] || {}).sushiSeat).sort((a, b) => (a.dataset.id < b.dataset.id ? -1 : 1)).slice(0, 12);
 export const seatNoOf = (room, id) => { const i = seatEls(room).findIndex((d) => d.dataset.id === id); return i < 0 ? 0 : i + 1; };
 // may she sit here? (only on her own numbered seat)
 export function canSit(room, id) {
@@ -99,30 +99,37 @@ export function wireSushi(room, { house, isAdmin, saveShared, getMine, isSeatedM
   const belts = [...room.querySelectorAll('.decor')].filter((d) => (ITEMS[base(d.dataset.id)] || {}).sushiBelt).sort((a, b) => (a.dataset.id < b.dataset.id ? -1 : 1));
   const takenAt = new Map();   // "belt:plate" → which trip round the belt she took it on (it comes back next time round)
   belts.forEach((belt, bi) => {
-    const ln = ITEMS[base(belt.dataset.id)].sushiBelt.lane;
+    const sb = ITEMS[base(belt.dataset.id)].sushiBelt, ln = (belt.dataset.facing === 'back' && sb.back ? sb.back : sb).lane;   // (turned round: the mirror image's belt)
     const lane = document.createElement('div'); lane.className = 'belt-lane';
     Object.assign(lane.style, { left: `${ln.x * 100}%`, top: `${ln.y * 100}%`, width: `${ln.w * 100}%`, height: `${ln.h * 100}%` });
     belt.appendChild(lane);
-    const dishes = beltDishes(), N = Math.max(18, dishes.length);
+    // 10 big plates per belt; each time a plate goes round it carries the next dish on the list, so every chosen dish comes by
+    const dishes = beltDishes(), N = 10;
     const plates = [], key = (i) => `${bi}:${i}`;
+    const lap = (i) => Math.floor(now() / 1000 / BELT_LOOP_S + i / N);
+    const dishAt = (i) => dishes[((lap(i) * N + i + bi * 5) % dishes.length + dishes.length) % dishes.length];
+    const dress = (p, k) => {
+      if (p.dataset.k === k) return; p.dataset.k = k;
+      p.title = `${SNACKS[k].zh} ${SNACKS[k].en} · ${priceOf(k)}`;
+      p.querySelector('.bp-food')?.remove();
+      const c = snackCanvas(k, 3); c.classList.add('bp-food'); p.insertBefore(c, p.lastChild);
+    };
     for (let i = 0; i < N; i++) {
-      const k = dishes[(i + bi * 5) % dishes.length];
-      const p = document.createElement('button'); p.type = 'button'; p.className = 'bplate'; p.title = `${SNACKS[k].zh} ${SNACKS[k].en} · ${priceOf(k)}`;
+      const p = document.createElement('button'); p.type = 'button'; p.className = 'bplate';
       p.innerHTML = '<i class="bp-plate"></i><i class="bp-dome"></i>';
-      const c = snackCanvas(k, 2); c.classList.add('bp-food'); p.insertBefore(c, p.lastChild);
+      dress(p, dishAt(i));
       p.addEventListener('pointerdown', (e) => e.stopPropagation());
-      p.onclick = (e) => { e.stopPropagation(); takePlate(i, k); };
+      p.onclick = (e) => { e.stopPropagation(); takePlate(i, p.dataset.k); };
       lane.appendChild(p); plates.push(p);
     }
     const dir = bi % 2 ? -1 : 1;   // the second belt runs the other way
-    const lap = (i) => Math.floor(now() / 1000 / BELT_LOOP_S + i / N);
     const tick = () => {
       if (!lane.isConnected) return;
       const t = now() / 1000 / BELT_LOOP_S;
       plates.forEach((p, i) => {
         const f = (t + i / N) % 1, x = dir > 0 ? f : 1 - f;
         p.style.left = `${(x * 1.08 - 0.06) * 100}%`;
-        p.classList.toggle('gone', takenAt.get(key(i)) === lap(i));
+        p.classList.toggle('gone', takenAt.get(key(i)) === lap(i)); dress(p, dishAt(i));
       });
       requestAnimationFrame(tick);
     };

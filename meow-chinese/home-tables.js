@@ -67,7 +67,8 @@ function draw(roomEl, scope, rows, onChanged) {
     d.appendChild(b);
   });
   for (const row of rows || []) {
-    const d = tables.find((el) => el.dataset.id === row.furniture), surface = d && surfaceOf(row.furniture);
+    const d = tables.find((el) => el.dataset.id === row.furniture), sb = d && ITEMS[String(row.furniture).split('#')[0]].sushiBelt;
+    const surface = d && (d.dataset.facing === 'back' && sb && sb.back ? sb.back.surface : surfaceOf(row.furniture));   // (a sushi belt turned round has its mats on the other side)
     if (!d || !SNACKS[row.item] || !surface || surface.x[row.slot] == null) continue;   // a stored table keeps its food until it comes back out
     const b = document.createElement('button'); b.type = 'button'; b.className = 'table-food home-table-food';
     b.title = `拿起 Pick up ${SNACKS[row.item].zh} ${SNACKS[row.item].en}`;

@@ -694,4 +694,8 @@ export const CHANGES = [
     '🍣 SushiMeow belts redesigned: 4 place mats on the side next to the seats, where you put your food and drinks.',
     '🛎️ One ordering kiosk for the whole restaurant: it knows your seat number, and the server brings your order to your seat.',
   ] },
+  { v: 251, items: [
+    '🍣 SushiMeow: 6 seats and 6 place mats per belt, a thicker belt with sushi plates twice as big (and the clear covers no longer cut off).',
+    '🔄 Belts and seats can be turned round while moving furniture. A seat backrest shows which way it faces — a cat on a turned seat faces the belt.',
+  ] },
 ];
