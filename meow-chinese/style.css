@@ -2269,3 +2269,7 @@ img.gone { min-height: 40px; font-size: 11px; }
 .home-table-place::before, .home-table-place::after { content: ''; position: absolute; left: 50%; top: 50%; background: #e8384f; border-radius: 1px; transform: translate(-50%, -50%); }
 .home-table-place::before { width: 62%; height: 18%; }
 .home-table-place::after { width: 18%; height: 62%; }
+/* 🎏 the noren: its two halves swing aside (not all the way) */
+.decor[data-id^="norendoor"] .door-pane { transition: transform .45s ease-in-out; }
+.decor[data-id^="norendoor"].panel-open .pane-0 { transform: translateX(-80%) skewY(-4deg); }
+.decor[data-id^="norendoor"].panel-open .pane-1 { transform: translateX(80%) skewY(4deg); }

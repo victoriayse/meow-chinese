@@ -714,4 +714,7 @@ export const CHANGES = [
   { v: 256, items: [
     '➕ The + button now has a red plus, and on the sushi mats it sits in the corner so it does not cover your food.',
   ] },
+  { v: 257, items: [
+    '🎏 New in the shop: a Japanese noren curtain doorway. Tap the curtain to push it open, tap again to let it fall shut.',
+  ] },
 ];
