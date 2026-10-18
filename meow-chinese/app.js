@@ -171,6 +171,7 @@ function renderTopbar() {
       <span id="logo-kit"></span>
       <span class="brand-text"><span class="logo-zh">喵喵中文</span><span class="logo-en">Meow Chinese</span></span>
     </button>
+    <span class="app-ver" title="The version this app is running">${APP_VERSION.replace('meow-', '')}</span>
     <span class="spacer"></span>
     ${showGame ? `
       <span class="pill" id="coin-pill" title="Coins">${coinI(22)}<span id="coin-n">${s.coins}</span></span>

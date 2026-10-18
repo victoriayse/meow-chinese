@@ -2273,3 +2273,5 @@ img.gone { min-height: 40px; font-size: 11px; }
 .decor[data-id^="norendoor"] .door-pane { transition: transform .45s ease-in-out; }
 .decor[data-id^="norendoor"].panel-open .pane-0 { transform: translateX(-80%) skewY(-4deg); }
 .decor[data-id^="norendoor"].panel-open .pane-1 { transform: translateX(80%) skewY(4deg); }
+/* the version she's running, right of the logo (so it's easy to see an update has arrived) */
+.app-ver { align-self: center; margin-left: 4px; padding: 1px 7px; border-radius: 999px; background: rgba(255,255,255,.12); color: #ffd23f; font: 800 11px/1.5 ui-monospace, monospace; letter-spacing: .5px; white-space: nowrap; }
