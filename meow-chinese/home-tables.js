@@ -76,7 +76,7 @@ function draw(roomEl, scope, rows, onChanged) {
     b.addEventListener('pointerdown', (e) => e.stopPropagation());
     b.onclick = async (e) => {
       e.stopPropagation(); if (picking.has(row.id)) return; picking.add(row.id); b.disabled = true;
-      try { const got = await api(scope).pick(row.id); if (got && SNACKS[got]) { S.addSnack(got); toast(`😋 <span class="zh">拿到${SNACKS[got].zh}了</span> Tap it at the bottom to hold it`, { ms: 2200 }); } else toast('已经被拿走了 · Someone already picked it up'); }
+      try { const got = await api(scope).pick(row.id); if (got && SNACKS[got]) { S.addSnack(got); S.get().holding = got; S.save(); toast(`😋 <span class="zh">拿着${SNACKS[got].zh}</span> In your paw — tap ${SNACKS[got].noEat ? 'Put away' : 'Eat'} at the bottom`, { ms: 2200 }); } else toast('已经被拿走了 · Someone already picked it up'); }
       catch { toast('暂时拿不到，请再试一次 · Could not pick up — try again'); }
       finally { picking.delete(row.id); onChanged(); }
     };

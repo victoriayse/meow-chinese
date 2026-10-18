@@ -652,4 +652,8 @@ export const CHANGES = [
     '🛍️ Tapping a delivery bag now puts everything into 🎒 My items (MeowMart, Food or Drinks), not in your paw.',
     '🛵 Fixed: delivery bags no longer blink when your home redraws.',
   ] },
+  { v: 231, items: [
+    '🧺 Picking food up from a table or the picnic mat now puts it straight in your paw — tap Eat to eat it.',
+    '🥤 The Milo tin and the 2-in-1 coffee can now be drunk.',
+  ] },
 ];
