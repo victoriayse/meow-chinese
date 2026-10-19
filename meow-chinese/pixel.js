@@ -28,7 +28,7 @@ function inTri(px, py, a, b, c) {
 
 // ---------- kitten ----------
 // mood: 'normal' | 'happy' | 'sleepy' | 'blink' | 'eat'
-export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame = 0, mirrorPatch = false, headOnly = false) {
+export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame = 0, mirrorPatch = false, headOnly = false, side = false) {
   const P = FURS[fur] || FURS.ginger;
   const g = grid(KW, KH), region = grid(KW, KH);
   const set = (x, y, c, r) => { if (x >= 0 && y >= 0 && x < KW && y < KH) { g[y][x] = c; if (r) region[y][x] = r; } };
@@ -36,10 +36,12 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
   const Y = (v) => v + OY;
   const tailSway = frame % 2 === 0 ? 0 : 1;
   const back = mood === 'back';   // seen from behind (sitting at the piano)
+  side = side && !back;           // side-on, facing right (flipped for left): same kitten, face turned to the front edge
+  const BX = side ? 15 : 16, sx = side ? 9 : 0;
 
   // tail (behind body; in front of it when we see her from behind)
   const drawTail = () => { for (let t = 0; t <= 1; t += 0.02) {
-    const x0 = 22, y0 = Y(28), cx = 30 + tailSway, cy = Y(26), x1 = 27 + tailSway, y1 = Y(17);
+    const x0 = side ? 9 : 22, y0 = Y(28), cx = side ? 1 - tailSway : 30 + tailSway, cy = Y(26), x1 = side ? 4 - tailSway : 27 + tailSway, y1 = Y(17);
     const bx = (1 - t) ** 2 * x0 + 2 * (1 - t) * t * cx + t * t * x1;
     const by = (1 - t) ** 2 * y0 + 2 * (1 - t) * t * cy + t * t * y1;
     fillShape((x, y) => inEllipse(x, y, bx, by, 1.7, 1.7), t > 0.82 ? P.s : P.f, 'tail');
@@ -47,23 +49,26 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
   if (!headOnly && !back) drawTail();
   // body
   if (!headOnly) {
-    fillShape((x, y) => inEllipse(x, y, 16, Y(24.5), 7.6, 6.6), P.f, 'body');
-    if (!back) fillShape((x, y) => inEllipse(x, y, 16, Y(25.5), 4.2, 4.6), P.w, 'body');
+    fillShape((x, y) => inEllipse(x, y, BX, Y(24.5), 7.6, 6.6), P.f, 'body');
+    if (side) fillShape((x, y) => inEllipse(x, y, 20.4, Y(25.3), 2.6, 4.6), P.w, 'body');   // white chest at the front
+    else if (!back) fillShape((x, y) => inEllipse(x, y, 16, Y(25.5), 4.2, 4.6), P.w, 'body');
     else for (let y = Y(19); y <= Y(28); y++) set(16, y, P.s);   // a stripe down her back
     // paws
-    fillShape((x, y) => inEllipse(x, y, 12.2, Y(30.2), 2.6, 1.7), P.w, 'paw');
-    fillShape((x, y) => inEllipse(x, y, 19.8, Y(30.2), 2.6, 1.7), P.w, 'paw');
+    fillShape((x, y) => inEllipse(x, y, side ? 11.5 : 12.2, Y(30.2), 2.6, 1.7), P.w, 'paw');
+    fillShape((x, y) => inEllipse(x, y, side ? 19.6 : 19.8, Y(30.2), 2.6, 1.7), P.w, 'paw');
   }
   // ears
-  const earL = [[5, Y(10)], [7.5, Y(0.5)], [14, Y(5)]], earR = [[27, Y(10)], [24.5, Y(0.5)], [18, Y(5)]];
+  const earL = side ? [[6, Y(9)], [8.5, Y(0.5)], [14.5, Y(4.5)]] : [[5, Y(10)], [7.5, Y(0.5)], [14, Y(5)]];
+  const earR = side ? [[18.5, Y(4.5)], [23.5, Y(0)], [26, Y(9)]] : [[27, Y(10)], [24.5, Y(0.5)], [18, Y(5)]];
   fillShape((x, y) => inTri(x, y, ...earL), P.f, 'head');
   fillShape((x, y) => inTri(x, y, ...earR), P.f, 'head');
-  if (!back) {
+  if (side) fillShape((x, y) => inTri(x, y, [8.4, Y(7.5)], [9.2, Y(2.8)], [12.8, Y(5.6)]), PINK, 'head');
+  else if (!back) {
     fillShape((x, y) => inTri(x, y, [7.6, Y(8)], [8.3, Y(3)], [12, Y(6)]), PINK, 'head');
     fillShape((x, y) => inTri(x, y, [24.4, Y(8)], [23.7, Y(3)], [20, Y(6)]), PINK, 'head');
   }
   // head
-  fillShape((x, y) => inEllipse(x, y, 16, Y(11.5), 11.2, 8.4), P.f, 'head');
+  fillShape((x, y) => inEllipse(x, y, side ? 16.3 : 16, Y(11.5), side ? 10.8 : 11.2, 8.4), P.f, 'head');
   if (P.patch) {
     // when the kitten turns round, the patches are drawn on the other side so they stay put after the flip
     const px = (x) => (mirrorPatch ? KW - x : x);
@@ -73,58 +78,59 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
   }
   // forehead stripes
   if (!P.patch) {
-    [[13, 4], [16, 4], [19, 4]].forEach(([x, y]) => { set(x, Y(y), P.s); set(x, Y(y + 1), P.s); });
-    set(16, Y(6), P.s);
+    [[13, 4], [16, 4], [19, 4]].forEach(([x, y]) => { set(x - sx / 3, Y(y), P.s); set(x - sx / 3, Y(y + 1), P.s); });
+    set(16 - sx / 3, Y(6), P.s);
   }
   if (!back) {   // the face (not seen from behind)
   // muzzle
-  fillShape((x, y) => inEllipse(x, y, 16, Y(15.2), 4.6, 2.9), P.w, 'head');
+  fillShape((x, y) => (!side || region[y][x] === 'head') && inEllipse(x, y, side ? 24.4 : 16, Y(15.2), side ? 3.6 : 4.6, 2.9), P.w, 'head');
   // cheeks blush (rosier when she is smitten)
-  [[7, 14], [8, 14], [24, 14], [23, 14]].forEach(([x, y]) => set(x, Y(y), BLUSH));
-  if (mood === 'love') [[6, 14], [7, 15], [8, 15], [25, 14], [24, 15], [23, 15]].forEach(([x, y]) => set(x, Y(y), BLUSH));
+  (side ? [[19, 14], [20, 14]] : [[7, 14], [8, 14], [24, 14], [23, 14]]).forEach(([x, y]) => set(x, Y(y), BLUSH));
+  if (mood === 'love') (side ? [[17, 14], [18, 15], [19, 15]] : [[6, 14], [7, 15], [8, 15], [25, 14], [24, 15], [23, 15]]).forEach(([x, y]) => set(x, Y(y), BLUSH));
+  const fs = (x, y, c) => set(x + sx, y, c);
   // nose + mouth
-  set(15, Y(13), NOSE); set(16, Y(13), NOSE);
+  fs(15, Y(13), NOSE); fs(16, Y(13), NOSE);
   if (mood === 'eat') {
-    set(15, Y(15), EYE); set(16, Y(15), EYE); set(15, Y(16), NOSE); set(16, Y(16), NOSE);
+    fs(15, Y(15), EYE); fs(16, Y(15), EYE); fs(15, Y(16), NOSE); fs(16, Y(16), NOSE);
   } else if (mood === 'cough') {
     // open "ko!" mouth
-    set(15, Y(15), EYE); set(16, Y(15), EYE); set(15, Y(16), EYE); set(16, Y(16), EYE);
+    fs(15, Y(15), EYE); fs(16, Y(15), EYE); fs(15, Y(16), EYE); fs(16, Y(16), EYE);
   } else if (mood === 'bored') {
-    set(14, Y(15), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(15), P.o);
+    fs(14, Y(15), P.o); fs(15, Y(15), P.o); fs(16, Y(15), P.o); fs(17, Y(15), P.o);
   } else if (mood === 'dizzy' || mood === 'faint') {
     // wobbly mouth
-    set(13, Y(16), P.o); set(14, Y(15), P.o); set(15, Y(16), P.o); set(16, Y(15), P.o); set(17, Y(16), P.o); set(18, Y(15), P.o);
+    fs(13, Y(16), P.o); fs(14, Y(15), P.o); fs(15, Y(16), P.o); fs(16, Y(15), P.o); fs(17, Y(16), P.o); fs(18, Y(15), P.o);
   } else if (mood === 'cry' || mood === 'hungry') {
     // frown
-    set(14, Y(16), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(16), P.o);
+    fs(14, Y(16), P.o); fs(15, Y(15), P.o); fs(16, Y(15), P.o); fs(17, Y(16), P.o);
   } else if (mood === 'thirsty') {
     // open mouth, tongue out
-    set(14, Y(15), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(15), P.o);
-    set(15, Y(16), '#ff7f9f'); set(16, Y(16), '#ff7f9f'); set(15, Y(17), '#ff7f9f'); set(16, Y(17), '#e8607f');
+    fs(14, Y(15), P.o); fs(15, Y(15), P.o); fs(16, Y(15), P.o); fs(17, Y(15), P.o);
+    fs(15, Y(16), '#ff7f9f'); fs(16, Y(16), '#ff7f9f'); fs(15, Y(17), '#ff7f9f'); fs(16, Y(17), '#e8607f');
   } else if (mood === 'love' || mood === 'e-wink') {
     // big happy smile
-    set(13, Y(14), P.o); set(14, Y(15), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(15), P.o); set(18, Y(14), P.o);
-    set(15, Y(16), '#ff7f9f'); set(16, Y(16), '#ff7f9f');
+    fs(13, Y(14), P.o); fs(14, Y(15), P.o); fs(15, Y(15), P.o); fs(16, Y(15), P.o); fs(17, Y(15), P.o); fs(18, Y(14), P.o);
+    fs(15, Y(16), '#ff7f9f'); fs(16, Y(16), '#ff7f9f');
   } else if (mood === 'e-laugh') {
     // wide-open laughing mouth
-    set(13, Y(14), P.o); set(18, Y(14), P.o);
-    for (let x = 14; x <= 17; x++) set(x, Y(15), P.o);
-    set(14, Y(16), P.o); set(15, Y(16), '#ff7f9f'); set(16, Y(16), '#ff7f9f'); set(17, Y(16), P.o);
-    set(15, Y(17), P.o); set(16, Y(17), P.o);
+    fs(13, Y(14), P.o); fs(18, Y(14), P.o);
+    for (let x = 14; x <= 17; x++) fs(x, Y(15), P.o);
+    fs(14, Y(16), P.o); fs(15, Y(16), '#ff7f9f'); fs(16, Y(16), '#ff7f9f'); fs(17, Y(16), P.o);
+    fs(15, Y(17), P.o); fs(16, Y(17), P.o);
   } else if (mood === 'e-wow') {
     // little round "o"
-    set(15, Y(15), P.o); set(16, Y(15), P.o); set(14, Y(16), P.o); set(17, Y(16), P.o); set(15, Y(17), P.o); set(16, Y(17), P.o);
-    set(15, Y(16), '#5a2d3c'); set(16, Y(16), '#5a2d3c');
+    fs(15, Y(15), P.o); fs(16, Y(15), P.o); fs(14, Y(16), P.o); fs(17, Y(16), P.o); fs(15, Y(17), P.o); fs(16, Y(17), P.o);
+    fs(15, Y(16), '#5a2d3c'); fs(16, Y(16), '#5a2d3c');
   } else if (mood === 'e-angry') {
-    set(14, Y(16), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(16), P.o);
+    fs(14, Y(16), P.o); fs(15, Y(15), P.o); fs(16, Y(15), P.o); fs(17, Y(16), P.o);
   } else if (mood === 'e-shy') {
     // small wavy mouth
-    set(14, Y(15), P.o); set(15, Y(16), P.o); set(16, Y(15), P.o); set(17, Y(16), P.o);
+    fs(14, Y(15), P.o); fs(15, Y(16), P.o); fs(16, Y(15), P.o); fs(17, Y(16), P.o);
   } else if (mood === 'e-cool') {
     // smirk
-    set(14, Y(15), P.o); set(15, Y(15), P.o); set(16, Y(15), P.o); set(17, Y(14), P.o);
+    fs(14, Y(15), P.o); fs(15, Y(15), P.o); fs(16, Y(15), P.o); fs(17, Y(14), P.o);
   } else {
-    set(14, Y(15), P.o); set(15, Y(14), P.o); set(16, Y(14), P.o); set(17, Y(15), P.o);
+    fs(14, Y(15), P.o); fs(15, Y(14), P.o); fs(16, Y(14), P.o); fs(17, Y(15), P.o);
   }
   // eyes
   const eyes = (ex) => {
@@ -194,9 +200,9 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
       set(ex, Y(10), '#ffffff');
     }
   };
-  eyes(10); eyes(20);
+  if (side) eyes(21); else { eyes(10); eyes(20); }
   // whiskers
-  [[3, 13], [4, 13], [3, 15], [4, 15], [27, 13], [28, 13], [27, 15], [28, 15]].forEach(([x, y]) => { if (!g[Y(y)][x]) set(x, Y(y), P.o); });
+  (side ? [[28, 13], [29, 13], [28, 15], [29, 15]] : [[3, 13], [4, 13], [3, 15], [4, 15], [27, 13], [28, 13], [27, 15], [28, 15]]).forEach(([x, y]) => { if (!g[Y(y)][x]) set(x, Y(y), P.o); });
   }
   if (back && !headOnly) drawTail();
 
@@ -220,15 +226,15 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
   const T1 = '#7ec8f5', T2 = '#bfe6ff';
   if (mood === 'cry') {
     const drop = frame % 2;
-    [[9, 13], [9, 14], [9, 15 + drop], [22, 13], [22, 14], [22, 15 + drop]].forEach(([x, y]) => { out[Y(y)][x] = T1; });
-    [[10, 13], [21, 13]].forEach(([x, y]) => { out[Y(y)][x] = T2; });
+    (side ? [[23, 13], [23, 14], [23, 15 + drop]] : [[9, 13], [9, 14], [9, 15 + drop], [22, 13], [22, 14], [22, 15 + drop]]).forEach(([x, y]) => { out[Y(y)][x] = T1; });
+    (side ? [[22, 13]] : [[10, 13], [21, 13]]).forEach(([x, y]) => { out[Y(y)][x] = T2; });
   }
   if (mood === 'cough') {
     const f = frame % 2, C1 = '#ffffff', C2 = '#cfd6e0';
     const puff = f ? [[20, 16], [21, 16], [21, 15], [22, 15], [22, 16], [23, 15], [21, 17], [22, 17]] : [[19, 16], [20, 16], [20, 17], [21, 16]];
-    puff.forEach(([x, y], i) => { if (out[Y(y)] && x < KW) out[Y(y)][x] = i % 3 ? C1 : C2; });
+    puff.forEach(([x, y], i) => { x += sx ? 6 : 0; if (out[Y(y)] && x < KW) out[Y(y)][x] = i % 3 ? C1 : C2; });
     // pale, greenish cheeks
-    [[7, 14], [8, 14], [24, 14], [23, 14]].forEach(([x, y]) => { out[Y(y)][x] = '#b9dca8'; });
+    (side ? [[19, 14], [20, 14]] : [[7, 14], [8, 14], [24, 14], [23, 14]]).forEach(([x, y]) => { out[Y(y)][x] = '#b9dca8'; });
   }
   if (mood === 'dizzy') {
     const pos = [[7, -4], [16, -6], [25, -4], [12, -5], [21, -5]];
@@ -238,9 +244,9 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
       [[0, 0, S], [1, 0, D], [-1, 0, D], [0, 1, D], [0, -1, D]].forEach(([dx, dy, c]) => { const yy = Y(y) + dy; if (yy >= 0 && out[yy] && x + dx >= 0 && x + dx < KW) out[yy][x + dx] = c; });
     });
   }
-  if (mood === 'e-cool') for (let x = 13; x <= 18; x++) out[Y(10)][x] = '#1f1a2e';
+  if (mood === 'e-cool' && !side) for (let x = 13; x <= 18; x++) out[Y(10)][x] = '#1f1a2e';
   if (mood === 'e-angry') [[26, 4], [28, 4], [27, 5], [26, 6], [28, 6], [25, 5], [29, 5]].forEach(([x, y]) => { if (out[Y(y)] && x < KW) out[Y(y)][x] = '#e8384f'; });
-  if (mood === 'e-shy') [[6, 14], [7, 15], [8, 14], [9, 15], [22, 14], [23, 15], [24, 14], [25, 15]].forEach(([x, y]) => { out[Y(y)][x] = '#ff5d8a'; });
+  if (mood === 'e-shy') (side ? [[17, 14], [18, 15], [19, 14], [20, 15]] : [[6, 14], [7, 15], [8, 14], [9, 15], [22, 14], [23, 15], [24, 14], [25, 15]]).forEach(([x, y]) => { out[Y(y)][x] = '#ff5d8a'; });
   if (mood === 'e-wow') [[27, 3], [27, 4], [27, 6]].forEach(([x, y]) => { if (out[Y(y)] && x < KW) out[Y(y)][x] = '#ffd23f'; });
   if (mood === 'thirsty' || mood === 'hungry') {
     [[27, 5], [26, 6], [27, 6], [28, 6], [26, 7], [27, 7], [28, 7], [27, 8]].forEach(([x, y]) => { out[Y(y)][x] = mood === 'thirsty' ? T1 : T2; });
@@ -1819,53 +1825,9 @@ Object.assign(ITEMS, {
 });
 
 // ---------- a kitten sitting side-on (at the dining table), facing right; mirror it to face left ----------
-export function kittenSideGrid(fur = 'ginger', mood = 'normal', frame = 0) {
-  const P = FURS[fur] || FURS.ginger;
-  const g = grid(KW, KH), part = grid(KW, KH);
-  const Y = (v) => v + OY;
-  const fill = (test, c, r) => { for (let y = 0; y < KH; y++) for (let x = 0; x < KW; x++) if (test(x, y)) { g[y][x] = c; part[y][x] = r; } };
-  const set = (x, y, c) => { if (x >= 0 && y >= 0 && x < KW && y < KH) g[y][x] = c; };
-  const sway = frame % 2;
-  // tail curling up behind her
-  for (let t = 0; t <= 1; t += 0.02) {
-    const bx = (1 - t) ** 2 * 9 + 2 * (1 - t) * t * (1 + sway) + t * t * (3 + sway), by = (1 - t) ** 2 * Y(29) + 2 * (1 - t) * t * Y(28) + t * t * Y(18);
-    fill((x, y) => inEllipse(x, y, bx, by, 1.7, 1.7), t > 0.8 ? P.s : P.f, 'tail');
-  }
-  // sitting body: round haunch at the back, chest at the front
-  fill((x, y) => inEllipse(x, y, 13, Y(24.5), 8, 6.6), P.f, 'body');
-  fill((x, y) => inEllipse(x, y, 19, Y(21.5), 5, 6.4), P.f, 'body');
-  fill((x, y) => inEllipse(x, y, 21, Y(22), 2.6, 4.4), P.w, 'body');                  // white chest
-  if (P.patch) fill((x, y) => part[y][x] === 'body' && inEllipse(x, y, 11, Y(21), 4, 3), P.patch, 'body');
-  else [[9, 19], [12, 18], [15, 18]].forEach(([x, y]) => { for (let k = 0; k < 3; k++) if (part[Y(y + k)] && part[Y(y + k)][x] === 'body') g[Y(y + k)][x] = P.s; });
-  // front leg and paws
-  fill((x, y) => x >= 19 && x <= 21 && y >= Y(24) && y <= Y(30), P.f, 'leg');
-  fill((x, y) => inEllipse(x, y, 21.2, Y(30.4), 2.8, 1.5), P.w, 'paw');
-  fill((x, y) => inEllipse(x, y, 10, Y(30.4), 3.4, 1.5), P.w, 'paw');
-  // ears (the far one peeks out behind)
-  fill((x, y) => inTri(x, y, [12, Y(6)], [13.5, Y(-0.5)], [18, Y(4)]), P.s, 'head');
-  fill((x, y) => inTri(x, y, [16, Y(5)], [19.5, Y(-1)], [23, Y(4.5)]), P.f, 'head');
-  fill((x, y) => inTri(x, y, [17.8, Y(4)], [19.5, Y(1)], [21.5, Y(4)]), PINK, 'head');
-  // head and muzzle
-  fill((x, y) => inEllipse(x, y, 18.5, Y(11), 8.6, 7.8), P.f, 'head');
-  fill((x, y) => inEllipse(x, y, 25, Y(13.6), 3.8, 2.8), P.w, 'head');
-  if (P.patch) fill((x, y) => part[y][x] === 'head' && inEllipse(x, y, 14, Y(7), 4, 3.4), P.patch, 'head');
-  else [[15, 4], [17, 4]].forEach(([x, y]) => { set(x, Y(y), P.s); set(x, Y(y + 1), P.s); });
-  // face
-  set(28, Y(12), NOSE); set(28, Y(13), NOSE);
-  set(26, Y(15), P.o); set(27, Y(15), P.o); set(25, Y(14), P.o);
-  set(23, Y(14), BLUSH); set(22, Y(14), BLUSH);
-  if (mood === 'happy' || mood === 'love') { set(21, Y(11), EYE); set(22, Y(10), EYE); set(23, Y(10), EYE); set(24, Y(11), EYE); }
-  else if (mood === 'sleepy' || mood === 'blink') { for (let x = 21; x <= 24; x++) set(x, Y(11), EYE); }
-  else { for (let yy = 9; yy <= 11; yy++) { set(22, Y(yy), EYE); set(23, Y(yy), EYE); } set(22, Y(9), '#ffffff'); }
-  // outline
-  const out = g.map((r) => r.slice());
-  for (let y = 0; y < KH; y++) for (let x = 0; x < KW; x++) {
-    if (g[y][x]) continue;
-    if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => g[y + dy] && g[y + dy][x + dx] && g[y + dy][x + dx] !== P.o)) out[y][x] = P.o;
-  }
-  // whiskers
-  [[29, 13], [30, 12], [29, 15], [30, 15]].forEach(([x, y]) => { if (!out[Y(y)][x]) out[Y(y)][x] = P.o; });
-  return out;
+// side-on (sitting at the dining table, or walking left / right): the same kitten, clothes and all, face turned to the right
+export function kittenSideGrid(fur = 'ginger', mood = 'normal', frame = 0, equipped = {}) {
+  return kittenGrid(fur, mood, equipped, frame, false, false, true);
 }
 
 // ---------- a kitten lying down (in bed): head resting on the left, body stretched out, tail curled ----------

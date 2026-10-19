@@ -70,13 +70,10 @@ export class KittenView {
       drawGrid(this.canvas, kittenLyingGrid(this.fur, lm, this.equipped, Math.floor(this.frame / 3)), this.scale);
       return;
     }
-    if (this.pose === 'side-r' || this.pose === 'side-l') {   // side-on at the dining table
-      let g = kittenSideGrid(this.fur, this.temp || this.mood, Math.floor(this.frame / 3));
-      if (this.pose === 'side-l') g = g.map((row) => [...row].reverse());
-      drawGrid(this.canvas, g, this.scale); return;
-    }
     if (this.pose === 'back') { drawGrid(this.canvas, kittenGrid(this.fur, 'back', this.equipped, Math.floor(this.frame / 3)), this.scale); return; }
-    let g = kittenGrid(this.fur, m, this.equipped, Math.floor(this.frame / 3), !!this.left);
+    const side = this.pose === 'side-r' || this.pose === 'side-l';   // side-on: at the dining table, or walking left / right
+    const flip = side ? this.pose === 'side-l' : !!this.left;
+    let g = side ? kittenSideGrid(this.fur, m, Math.floor(this.frame / 3), this.equipped) : kittenGrid(this.fur, m, this.equipped, Math.floor(this.frame / 3), flip);
     const h = this.held && SNACKS[this.held], size = h && h.size || 1;
     if (h) {   // held up in her front paw; use a finer grid for half-size snacks so their outline stays crisp
       if (size !== 1) {
@@ -87,7 +84,7 @@ export class KittenView {
       const sg = artGrid(h.art, h.pal);
       sg.forEach((row, y) => row.forEach((c, x) => { const gy = Math.round(25 / size) + y, gx = Math.round(21 / size) + x; if (c && g[gy] && gx < g[gy].length) g[gy][gx] = c; }));
     }
-    if (this.left) g = g.map((row) => [...row].reverse());
+    if (flip) g = g.map((row) => [...row].reverse());
     drawGrid(this.canvas, g, this.scale * size);
   }
   jump() { this.canvas.classList.remove('jump'); void this.canvas.offsetWidth; this.canvas.classList.add('jump'); }
