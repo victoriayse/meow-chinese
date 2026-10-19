@@ -737,4 +737,5 @@ export const CHANGES = [
   { v: 270, items: ['Bank: the bottom of the ATM was cut off on smaller screens — now the page scrolls to show the whole machine'] },
   { v: 271, items: ['Fixed: sending coins to a friend at the ATM always failed', 'A pop-up and a phone notification tell you when a friend sends you coins'] },
   { v: 272, items: ['Extra safety: a game can only ever be saved to the account it belongs to (a parent and a linked child never mix, even by accident)'] },
+  { v: 273, items: ['Fixed: opening the app on a second device could reset the bank balance to 0'] },
 ];

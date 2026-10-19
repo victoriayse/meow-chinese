@@ -48,6 +48,8 @@ export function merge3(anc, a, b, path = '', aNewer = true) {
   // both sides changed it
   if (typeof a === 'number' && typeof b === 'number') {
     if (ADDITIVE.has(path) && typeof anc === 'number') return Math.max(0, a + b - anc);
+    // v273: a device that last synced before the bank existed starts its bank at 0 — add, don't replace
+    if (path === 'bank.balance' && anc === undefined) return Math.max(0, a + b);
     return aNewer ? a : b;
   }
   if (Array.isArray(a) && Array.isArray(b)) return mergeArrays(Array.isArray(anc) ? anc : undefined, a, b, path, aNewer);
