@@ -24,6 +24,7 @@ import { wireDisplays } from './display-racks.js';
 import { wireHomeTables } from './home-tables.js';
 import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, boothView, catFace, freeSlot, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx, walkPoseOf } from './house.js';
 import * as Pets from './pets.js';
+import * as Care from './petcare.js';
 import * as Radio from './radio.js';
 import * as Visit from './visit.js';
 import * as Places from './places.js';
@@ -125,6 +126,13 @@ function toiletVisit(id) {
   if (r.ok) toast('🚽 <span class="zh">上完厕所，干净一点了！</span> Hygiene +1 bar', { ms: 2200 });
   else toast(`🚽 <span class="zh">${r.mins >= 60 ? Math.ceil(r.mins / 60) + '小时' : r.mins + '分钟'}后才能再加干净分</span> Hygiene from the toilet again in ${r.mins >= 60 ? Math.ceil(r.mins / 60) + 'h' : r.mins + ' min'}`, { ms: 2200 });
 }
+// food / water changed: redraw the pets' bars and the bowls where she can see them
+function petCareChanged() {
+  const pb = document.querySelector('#petbars'); if (pb) pb.innerHTML = Care.petBarsHtml();
+  Care.paintBowls(document.querySelector('#room'));
+}
+S.onPetCare((ev) => { petCareChanged(); Pets.petAte(ev.kind, ev.what); });
+setInterval(() => { if (!document.hidden) petCareChanged(); }, 60000);
 function refreshHome() { if (homeRedrawWaits()) return; go('home', current === 'home' ? currentParams : {}, { replace: true }); }
 export function goBack() {
   const prev = stack.pop() || { name: 'home', params: {} };
@@ -461,6 +469,7 @@ function petMenu(kind) {
       <div class="pet-art" id="pa"><div class="fx-layer" id="pfx"></div></div>
       <div class="row" style="flex-wrap:wrap;justify-content:center">
         <button class="btn pink" id="pat">🤍 <span class="zh">摸摸</span> Pat</button>
+        ${S.needsFeeding(kind) ? '<button class="btn green" id="feed">🍖 <span class="zh">喂食和水</span> Food & water</button>' : ''}
         ${caged && cage && !it.stayIn ? '<button class="btn blue" id="back">🏠 <span class="zh">放回笼子</span> Put back in cage</button>' : ''}
         <button class="btn white" id="ren">✏️ <span class="zh">改名字</span> Rename</button>
       </div>
@@ -469,6 +478,7 @@ function petMenu(kind) {
     </div>`;
   $('#pa', box).appendChild(petArtCanvas(kind, 6));
   $('#pat', box).onclick = () => { sfx.coin(); burst($('#pfx', box), 'heart', 3, '50%', '30%'); };
+  const fd = $('#feed', box); if (fd) fd.onclick = () => { closeModal(); Care.openBowl(kind, { onChange: petCareChanged, go }); };
   const back = $('#back', box);
   if (back) back.onclick = () => { Pets.putBack(kind); closeModal(); toast(`🏠 <span class="zh">${esc(p.name)}回到笼子里了</span> Back in the cage`); refreshHome(); Visit.hostResendHouse(); };
   $('#ren', box).onclick = () => { closeModal(); askPetName(kind, p.name).then((nm) => { if (nm) { S.renamePet(kind, nm); Pets.refreshPets(); toast(`✏️ ${esc(nm)}`); } }); };
@@ -478,7 +488,7 @@ function petMenu(kind) {
 // 📻 the radio's song: choose an mp3 from this device (kept on this device only)
 function cageMenu(kind) {
   const p = S.petOf(kind), it = ITEMS[kind];
-  const things = S.get().owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'petacc' && (ITEMS[id].cageFor || []).includes(kind));
+  const things = S.get().owned.filter((id) => ITEMS[id] && ITEMS[id].cat === 'petacc' && !ITEMS[id].petBowl && (ITEMS[id].cageFor || []).includes(kind));   // (its food & water bowl always stays in)
   sfx.click();
   const box = html`<div class="card stack pet-card" style="align-items:center;text-align:center">
       <div class="h-title" style="justify-content:center"><span class="zh">${PET_ICON[kind]} ${p ? esc(p.name) : '空笼子'}</span><span class="en">${p ? (p.out ? 'Out exploring the house' : 'In the cage') : 'An empty cage'}</span></div>
@@ -487,8 +497,10 @@ function cageMenu(kind) {
         : `<p class="help" style="margin:0">去商店领养一只${it.name}吧！<br>Adopt a ${it.en.toLowerCase()} in the shop to live here.</p><button class="btn blue" id="adopt">🛍️ <span class="zh">去领养</span> Adopt a pet</button>`}
       ${things.length ? `<div class="cage-things"><div class="help" style="margin:0">笼子里的东西 · Things in the cage (tap to take out / put in)</div>
         <div class="row" style="flex-wrap:wrap;justify-content:center">${things.map((id) => `<button class="cage-chip ${S.inCage(id) ? 'on' : ''}" data-id="${id}"><span class="art"></span><small>${ITEMS[id].name}</small><b>${S.inCage(id) ? '✓' : '—'}</b></button>`).join('')}</div></div>` : ''}
+      ${p && S.needsFeeding(kind) ? '<button class="btn green" id="feed">🍖 <span class="zh">喂食和水</span> Food & water</button>' : ''}
       <button class="btn white" id="pc">关闭 Close</button>
     </div>`;
+  { const fd = $('#feed', box); if (fd) fd.onclick = () => { closeModal(); Care.openBowl(kind, { onChange: petCareChanged, go }); }; }
   box.querySelectorAll('.cage-chip').forEach((c) => {
     c.querySelector('.art').appendChild(spriteCanvas(c.dataset.id, 36));
     c.onclick = () => { const now = S.toggleCageThing(c.dataset.id); sfx.click(); c.classList.toggle('on', now); c.querySelector('b').textContent = now ? '✓' : '—'; changedThings = true; };
@@ -576,6 +588,7 @@ function homeScreen(params = {}) {
         <div class="stat"><span style="font-size:20px;text-align:center">💧</span><span>喝水 <span class="en">Water</span></span><div class="bar segmented"><i style="width:${k.water ?? 75}%;--c:#4fb3ef"></i></div></div>
         <button type="button" class="stat stat-btn" data-info="happy" aria-label="What makes the kitten happy"><span>${'<i data-icon="heart" data-size="22"></i>'}</span><span>开心 <span class="en">Happy</span></span><div class="bar segmented"><i style="width:${k.happy}%;--c:#ff6f9c"></i></div><b class="info-i">i</b></button>
         <button type="button" class="stat stat-btn" data-info="hygiene" aria-label="What keeps the kitten clean"><span style="font-size:20px;text-align:center">🛁</span><span>干净 <span class="en">Hygiene</span></span><div class="bar segmented"><i style="width:${k.hygiene ?? 100}%;--c:#9b7bea"></i></div><b class="info-i">i</b></button>
+        <div class="pet-bars" id="petbars">${Care.petBarsHtml()}</div>
         <div class="stat"><span style="font-family:var(--px);font-weight:700">Lv</span><span>等级 ${S.level()}</span><div class="bar xp-bar"><i style="width:${S.levelProgress() * 100}%;--c:#6cb6f2"></i><b>${S.xpIntoLevel()}/${S.xpPerLevel()} XP</b></div></div>
         ${S.nextUnlock() ? `<div class="next-unlock">🔓 Lv${S.nextUnlock().level} 解锁 ${S.nextUnlock().name}</div>` : ''}
       </div>
@@ -1288,8 +1301,16 @@ function homeScreen(params = {}) {
       if (!d || room.classList.contains('arranging') || e.target.closest('.put-away') || e.target.closest('.pet:not(.in-cage)')) return;
       cageMenu(d.dataset.cage);
     });
+    // 🥣 the puppy's food & water bowl
+    room.addEventListener('click', (e) => {
+      const d = e.target.closest('.decor[data-id^="petbowl"]');
+      if (!d || room.classList.contains('arranging') || e.target.closest('.put-away')) return;
+      e.stopPropagation(); Care.openBowl(ITEMS[d.dataset.id.split('#')[0]].petBowl, { onChange: petCareChanged, go });
+    });
+    Care.paintBowls(room);
+    { const bw = room.querySelector('.decor[data-id^="petbowldog"]'); if (bw) requestAnimationFrame(() => { const W = room.clientWidth || 1, H = room.clientHeight || 1; Pets.setBowlSpot('dog', roomKey, Math.max(4, ((bw.offsetLeft - bw.offsetWidth * 0.12) / W) * 100), Math.max(1, ((H - bw.offsetTop - bw.offsetHeight) / H) * 100 - 1)); }); }
   } else { hostRoomNow = 'living'; roomPower = null; homePets = null; Radio.stop(); }
-  n._mounted = () => { Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); drawRoof($('#roof', n)); studioBarre(room, roomKey === 'basement'); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); stackDecor(room); placeCat(); if (homePets) homePets(); if (params.openStorage) { delete currentParams.openStorage; $('#b-store', n).click(); } } };
+  n._mounted = () => { if (S.unseenPetDeaths().length) setTimeout(() => { if (n.isConnected && document.querySelector('#modal').classList.contains('hidden')) Care.showPetDeaths(); }, 900); Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); drawRoof($('#roof', n)); studioBarre(room, roomKey === 'basement'); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); stackDecor(room); placeCat(); if (homePets) homePets(); if (params.openStorage) { delete currentParams.openStorage; $('#b-store', n).click(); } } };
   return n;
 }
 

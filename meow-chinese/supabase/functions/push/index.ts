@@ -118,6 +118,26 @@ async function onSave(userId: string) {
   return sent;
 }
 
+// ---------- 🐾 pets (dog, hamster, guinea pig): the same sums as the app (state.js petCareTick) ----------
+const PET_NEEDS = ["dog", "hamster", "guineapig"], BOWLS: Record<string, string> = { dog: "petbowldog", hamster: "petbowlhamster", guineapig: "petbowlguineapig" };
+const PET_NAME: Record<string, string> = { dog: "狗狗", hamster: "仓鼠", guineapig: "豚鼠" };
+function petNow(save: any, p: any, now: number) {
+  let food = Number(p.food ?? 100), water = Number(p.water ?? 100), zeroAt = p.zeroAt || null;
+  const b = (save.petBowls || {})[p.kind] || { food: 0, waterAt: 0 };
+  const bowlId = (save.owned || []).find((id: string) => String(id).split("#")[0] === BOWLS[p.kind]);
+  const reach = !!bowlId && (p.kind === "dog" ? !(save.decorHidden || []).includes(bowlId) : true);
+  let bowlFood = Number(b.food || 0), t = Math.min(now, p.careAt || now);
+  while (t < now) {
+    const dt = Math.min(now - t, 10 * 60000); t += dt; const h = dt / 3600000;
+    food = Math.max(0, food - h * (100 / 48));
+    const w = reach && b.waterAt ? 100 - ((t - b.waterAt) / 3600000) * (100 / 24) : 0;
+    if (w > 0) water = 100; else water = Math.max(0, water - h * (100 / 24));
+    while (reach && food <= 90 && bowlFood >= 10) { bowlFood -= 10; food = Math.min(100, food + 10); }
+    if (food <= 0 || water <= 0) zeroAt = zeroAt || t; else zeroAt = null;
+  }
+  return { food, water, dead: !!zeroAt && now - zeroAt > 3 * 864e5 };
+}
+
 // ---------- every 15 minutes: hungry, thirsty, bored, daily tasks ----------
 const TASK_DEFAULTS: Record<string, boolean> = { spell: true, perfect: true, care: true, choice: false, match: false, order: false, essay: false, review: false, listen: false };
 async function checkUser(userId: string) {
@@ -141,6 +161,18 @@ async function checkUser(userId: string) {
     const bored = stage === "ok" && words >= 5 && (save.boredSince || Date.now() - (save.lastPlayAt || 0) >= 3 * 3600000);
     const key = String(save.lastPlayAt || 0);
     if (bored && st.boredKey !== key && !quiet) { sent += await sendTo(userId, "bored", { title: `🎮 ${name}好无聊！`, body: `${name} is bored — come and play with her!` }); st.boredKey = key; }
+  }
+  // 🐾 a pet below 20% Food or Water: tell once each time (again after it has been fed / given water)
+  st.pets = st.pets || {};
+  for (const p of (save.pets || []) as any[]) {
+    if (!PET_NEEDS.includes(p.kind) || p.food == null) continue;
+    const key = p.kind + ":" + (p.at || 0), was = st.pets[key] || {};
+    const now = petNow(save, p, Date.now()), nm = p.name || PET_NAME[p.kind] || "宠物";
+    if (god || now.dead) { st.pets[key] = { food: true, water: true }; continue; }
+    const next = { food: now.food >= 20 ? true : was.food, water: now.water >= 20 ? true : was.water };
+    if (now.food < 20 && was.food !== false && !quiet) { sent += await sendTo(userId, "pet", { title: `🍖 ${nm}饿了！`, body: `${nm} is hungry — put some food in its bowl!`, tag: "pet-food-" + p.kind }); next.food = false; }
+    if (now.water < 20 && was.water !== false && !quiet) { sent += await sendTo(userId, "pet", { title: `💧 ${nm}口渴了！`, body: `${nm} is thirsty — fill up its water bowl!`, tag: "pet-water-" + p.kind }); next.water = false; }
+    st.pets[key] = next;
   }
   // daily tasks: one reminder at the time the parent chose, if they aren't all done
   const p = pushSettings(save), now = local(p.tz);

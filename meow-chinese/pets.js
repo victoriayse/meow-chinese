@@ -30,6 +30,23 @@ export function letOut(kind) {
   live.set(kind, { ...l, room: cage ? S.roomOf(cage) : (l.room || 'living'), mode: 'idle', seat: null, until: Date.now() + 1200, dur: 0, jump: true, fromCage: cage });
   changed();
 }
+// 🥣 v263: where the puppy's bowl stands (the house screen measures it), and pets eating / drinking
+const bowlSpot = new Map();   // kind -> { room, x, y }
+export function setBowlSpot(kind, room, x, y) { bowlSpot.set(kind, { room, x, y }); }
+// it really ate (from the bowl, or a treat): walk over to the bowl if it's in this room, then munch for a bit
+export function petAte(kind, what) {
+  const l = live.get(kind); if (!l) return;
+  const type = what === 'water' || what === 'refill' ? 'water' : 'food';
+  if (l.mode === 'cage') { l.eat = type; l.eatUntil = Date.now() + 3500; changed(); return; }
+  if (what === 'treat') { l.mode = 'eat'; l.eat = 'food'; l.seat = null; l.dur = 0; l.until = Date.now() + 3000; changed(); return; }
+  goEat(kind, l, type);
+  changed();
+}
+function goEat(kind, l, type) {
+  const b = bowlSpot.get(kind);
+  if (!b || b.room !== l.room || !S.bowlReachable(kind)) return false;
+  walkTo(l, kind, b.x, b.y); l.after = { eat: type }; return true;
+}
 export function putBack(kind) { S.setPetOut(kind, false); live.delete(kind); changed(); }
 
 // somewhere to sit in this room: seats (sofa, chairs, bench, bed) and mats / rugs / the dog bed
@@ -67,7 +84,14 @@ function step(p, l, now) {
   const r = Math.random();
   const i = rooms.indexOf(l.room);
   const doors = [i > 0 ? 'left' : null, i < rooms.length - 1 ? 'right' : null].filter(Boolean);
-  if (l.mode === 'walk' || l.mode === 'sit') { l.mode = 'idle'; l.seat = null; l.dur = 0; l.until = now + rnd(1500, 4500); if (Math.random() < 0.5) return; }
+  if (l.mode === 'walk' && l.after && l.after.eat) { const t = l.after.eat; l.after = null; l.left = false; l.mode = 'eat'; l.eat = t; l.dur = 0; l.until = now + rnd(3000, 4500); return; }
+  if (l.mode === 'eat') { l.eat = null; }
+  // now and then it goes for a drink (or a nibble) at its bowl
+  if (l.mode !== 'eat' && S.needsFeeding(kind) && Math.random() < 0.1) {
+    const w = S.bowlWater(kind) > 0, f = S.bowlFood(kind) > 0, t = w && (!f || Math.random() < 0.6) ? 'water' : f ? 'food' : null;
+    if (t && goEat(kind, l, t)) return;
+  }
+  if (l.mode === 'walk' || l.mode === 'sit' || l.mode === 'eat') { l.mode = 'idle'; l.seat = null; l.dur = 0; l.until = now + rnd(1500, 4500); if (Math.random() < 0.5) return; }
   if (r < 0.16 && doors.length) {                     // wander off to the next room
     const dir = doors[Math.floor(Math.random() * doors.length)];
     walkTo(l, kind, dir === 'left' ? -12 : 112, l.y); l.exit = dir; return;
@@ -89,6 +113,11 @@ function tick() {
       if (!cage) { if (live.has(p.kind)) { live.delete(p.kind); any = true; } return; }   // the parrot's cage is in storage: no parrot to see
       const room = S.roomOf(cage);
       if (!l || l.mode !== 'cage' || l.cage !== cage || l.room !== room) { live.set(p.kind, { mode: 'cage', cage, room, x: 0, y: 0, wheel: false, until: now + rnd(3000, 8000) }); any = true; return; }
+      if (l.eat && now > (l.eatUntil || 0)) { l.eat = null; any = true; }
+      if (!l.eat && !l.wheel && S.needsFeeding(p.kind) && S.bowlReachable(p.kind) && Math.random() < 0.004) {
+        const t = S.bowlWater(p.kind) > 0 && (Math.random() < 0.5 || S.bowlFood(p.kind) <= 0) ? 'water' : S.bowlFood(p.kind) > 0 ? 'food' : null;
+        if (t) { l.eat = t; l.eatUntil = now + 3500; any = true; }
+      }
       // a hamster with a wheel hops on for a run now and then
       const hasWheel = S.cageThings(p.kind).some((id) => ITEMS[id].wheel);
       if (!hasWheel && l.wheel) { l.wheel = false; any = true; }
@@ -111,7 +140,7 @@ export function snapshot() {
   return S.pets().filter((p) => live.has(p.kind)).map((p) => {
     const l = live.get(p.kind);
     const walking = l.mode === 'walk';
-    return { kind: p.kind, name: p.name, room: l.room, x: +(+l.x || 0).toFixed(1), y: +(+l.y || 0).toFixed(1), left: !!l.left, mode: l.mode, seat: l.seat || null, dur: +(l.dur || 0).toFixed(2), jump: !!l.jump, cage: l.cage || null, fromCage: l.fromCage || null, wheel: !!l.wheel,
+    return { kind: p.kind, name: p.name, room: l.room, x: +(+l.x || 0).toFixed(1), y: +(+l.y || 0).toFixed(1), left: !!l.left, mode: l.mode, seat: l.seat || null, dur: +(l.dur || 0).toFixed(2), jump: !!l.jump, cage: l.cage || null, fromCage: l.fromCage || null, wheel: !!l.wheel, eat: l.eat || null,
       ...(walking ? { x0: +(+l.x0 || 0).toFixed(1), y0: +(+l.y0 || 0).toFixed(1), age: Date.now() - (l.t0 || 0) } : {}) };
   });
 }

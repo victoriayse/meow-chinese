@@ -336,7 +336,7 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
         tc.style.width = stand.style.width; tc.style.height = stand.style.height;
         tc.append(stand, ring);
       } else {
-        tc = document.createElement('canvas'); tc.className = 'cage-thing';
+        tc = document.createElement('canvas'); tc.className = 'cage-thing'; tc.dataset.id = tid;
         drawGrid(tc, artGrid(t.art, t.pal), HOUSE.decor * (t.inCage.s || 1));   // things in a cage are drawn a bit smaller
       }
       Object.assign(tc.style, { left: `${((1 + t.inCage.x * (inner - 2 - t.art[0].length * (t.inCage.s || 1))) / W) * 100}%`, bottom: `${t.inCage.y * 100}%`, zIndex: t.inCage.z });   // keep the size drawGrid set (sharp screens draw at 2×)
@@ -955,7 +955,7 @@ export class PetLayer {
         }
         const wheel = p.wheel && cw.querySelector('.cage-thing.wheel');
         cw.querySelectorAll('.cage-thing.wheel').forEach((w) => w.classList.toggle('spinning', !!wheel));
-        el.className = `pet in-cage${wheel ? ' on-wheel' : ''}${this.onClick ? ' clickable' : ''}`;
+        el.className = `pet in-cage${wheel ? ' on-wheel' : ''}${this.onClick ? ' clickable' : ''}${p.eat && !wheel ? ' eating' : ''}`; el.dataset.eat = p.eat || '';
         if (wheel) {
           // running inside the wheel: stand in the middle of the ring
           const cwW = cw.offsetWidth || 1, cwH = cw.offsetHeight || 1;
@@ -967,6 +967,8 @@ export class PetLayer {
       const pc = perch.get(p.kind) || {};      // perched up on a sofa / bed right now?
       if (el.parentElement !== room) room.appendChild(el);
       el.classList.remove('in-cage'); delete el.dataset.fresh;
+      el.classList.toggle('eating', p.mode === 'eat' && !!p.eat); el.dataset.eat = p.eat || '';   // 🥣 munching at its bowl
+      if (p.mode === 'eat') el.classList.toggle('left', !!p.left);
       let x = p.x, y = p.y, z = null, sit = false, up = null;
       if (p.mode === 'sit' && p.seat) {
         if (!p.seat.flat) {

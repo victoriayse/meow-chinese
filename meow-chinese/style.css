@@ -2275,3 +2275,42 @@ img.gone { min-height: 40px; font-size: 11px; }
 .decor[data-id^="norendoor"].panel-open .pane-1 { transform: translateX(80%) skewY(4deg); }
 /* the version she's running, right of the logo (so it's easy to see an update has arrived) */
 .app-ver { align-self: center; margin-left: 4px; padding: 1px 7px; border-radius: 999px; background: rgba(255,255,255,.12); color: #ffd23f; font: 800 11px/1.5 ui-monospace, monospace; letter-spacing: .5px; white-space: nowrap; }
+
+/* ---------- 🐾 v263: feeding pets ---------- */
+.pet-bars { display: contents; }
+.pet-head { font-family: var(--zh); font-weight: 700; font-size: 16px; margin: 4px 0 -2px; padding-top: 6px; border-top: 2px dashed rgba(43,33,64,.2); }
+/* munching at the bowl: head bobs down, a little 🦴 / 💧 above */
+.pet.eating .pflip { animation: petnom .5s steps(2, end) infinite; transform-origin: 50% 100%; }
+.pet.left.eating .pflip { animation-name: petnomL; }
+@keyframes petnom { 0% { transform: translateY(0) rotate(0); } 50% { transform: translateY(8%) rotate(6deg); } }
+@keyframes petnomL { 0% { transform: scaleX(-1) translateY(0) rotate(0); } 50% { transform: scaleX(-1) translateY(8%) rotate(6deg); } }
+.pet.eating::before { content: '😋'; position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); font-size: 18px; animation: nomfx 1s ease-in-out infinite; pointer-events: none; }
+.pet.eating[data-eat="water"]::before { content: '💧'; }
+@keyframes nomfx { 0%, 100% { transform: translate(-50%, 0); opacity: .9; } 50% { transform: translate(-50%, -6px); opacity: 1; } }
+.pet.in-cage.eating { animation-play-state: paused; }
+.decor[data-id^="petbowl"] { cursor: pointer; }
+/* the bowl card */
+.bowl-card { max-width: 440px; }
+.bowl-view { position: relative; padding: 18px 10px 4px; min-height: 80px; display: flex; justify-content: center; align-items: flex-end; }
+.bowl-view canvas { image-rendering: pixelated; }
+.bowl-levels { width: 100%; display: grid; gap: 6px; }
+.bowl-levels .stat { grid-template-columns: 26px auto 1fr 50px; }
+.bowl-levels .stat > span:nth-child(2) { white-space: nowrap; }
+.bowl-levels .pctn { font-family: var(--px); text-align: right; }
+.bowl-sec { width: 100%; display: grid; gap: 6px; }
+.bowl-h { font-weight: 700; }
+.bowl-h small { font-weight: 400; color: #6b6280; }
+.bowl-foods { flex-wrap: wrap; justify-content: center; gap: 8px; }
+.food-chip { display: grid; justify-items: center; gap: 2px; min-width: 84px; padding: 6px 8px; border: 3px solid var(--ink); border-radius: 10px; background: #fff8ec; font: inherit; cursor: pointer; }
+.food-chip small { font-size: 12px; }
+.food-chip b { font-family: var(--px); font-size: 13px; }
+.food-chip:disabled { opacity: .45; cursor: default; }
+.food-chip .art canvas { image-rendering: pixelated; }
+/* kibble tumbling into the food bowl / water pouring into the water bowl */
+.kibble-drop { position: absolute; inset: 0; pointer-events: none; }
+.kibble-drop.go::before, .kibble-drop.go::after { content: ''; position: absolute; top: 0; width: 10px; height: 10px; border-radius: 3px; animation: kdrop .6s ease-in forwards; }
+.kibble-drop.food.go::before { left: 34%; background: #a0612e; box-shadow: 14px -10px 0 #6e3f1c, -10px -18px 0 #a0612e, 6px -28px 0 #6e3f1c; }
+.kibble-drop.food.go::after { left: 40%; background: #6e3f1c; box-shadow: -12px -6px 0 #a0612e, 10px -22px 0 #a0612e; animation-delay: .12s; }
+.kibble-drop.water.go::before { left: 62%; width: 8px; height: 26px; border-radius: 6px; background: #6cc4f5; }
+.kibble-drop.water.go::after { left: 66%; width: 6px; height: 16px; border-radius: 6px; background: #d4f1ff; animation-delay: .15s; }
+@keyframes kdrop { from { transform: translateY(-20px); opacity: 0; } 20% { opacity: 1; } to { transform: translateY(60px); opacity: 0; } }

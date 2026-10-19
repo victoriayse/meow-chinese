@@ -12,6 +12,7 @@ export const TYPES = [
   ['noti', '🔔 手机通知 New phone notification (e.g. essay checked)'],
   ['gift', '🎁 朋友送礼物 Gift from a friend'],
   ['feed', '🐟 朋友喂了小猫 A friend fed the kitten'],
+  ['pet', '🐶 宠物饿了或渴了 Pet is hungry or thirsty'],
 ];
 
 const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);

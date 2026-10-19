@@ -8,7 +8,7 @@ import * as Auth from './auth.js';
 import { managing } from './cloud.js';
 
 // things she can buy for a friend (not medicine); needs her own logged-in account
-const giftable = (it) => ['food', 'toiletry', 'wear', 'decor'].includes(it.cat) && !it.special && !it.retired && Auth.session() && !managing();
+const giftable = (it) => ['food', 'toiletry', 'wear', 'decor'].includes(it.cat) && !it.petBowl && !it.special && !it.retired && Auth.session() && !managing();
 const openRooms = () => S.ROOMS.filter((r) => S.roomOpen(r.key)).map((r) => r.key);
 const isWear = (slots) => (it) => it.cat === 'wear' && !it.special && slots.includes(it.slot);
 export const TABS = [
@@ -19,9 +19,10 @@ export const TABS = [
   { key: 'feet', lock: 'feet', zh: '鞋子', en: 'Shoes', icon: '👟', test: isWear(['feet']) },
   { key: 'acc', lock: 'acc', zh: '配饰', en: 'Extras', icon: '👓', test: isWear(['face', 'neck']) },
   { key: 'bags', lock: 'acc', zh: '包包', en: 'Bags', icon: '👜', test: isWear(['bag', 'back']) },
-  { key: 'decor', lock: 'decor', zh: '家具', en: 'Home', icon: '🛋️', test: (it) => it.cat === 'decor' && !it.petacc && !it.retired && !it.special },
+  { key: 'decor', lock: 'decor', zh: '家具', en: 'Home', icon: '🛋️', test: (it) => it.cat === 'decor' && !it.petacc && !it.petBowl && !it.retired && !it.special },
   { key: 'pets', lock: 'decor', zh: '领养宠物', en: 'Adopt a Pet', icon: '🐶', test: (it) => it.cat === 'pet', order: 27 },
-  { key: 'petacc', lock: 'decor', zh: '宠物用品', en: 'Pet Accessories', icon: '🦴', test: (it) => it.petacc || it.cat === 'petacc', order: 28 },
+  { key: 'petshop', lock: 'decor', zh: '宠物', en: 'Pets', icon: '🐾', test: (it) => it.cat === 'petfood' || !!it.petBowl, order: 27.5 },
+  { key: 'petacc', lock: 'decor', zh: '宠物用品', en: 'Pet Accessories', icon: '🦴', test: (it) => (it.petacc || it.cat === 'petacc') && !it.petBowl && !it.retired, order: 28 },
   { key: 'reno', lock: 'decor', zh: '装修', en: 'Renovate', icon: '🎨', test: (it) => it.cat === 'reno', order: 26 },
   { key: 'pharmacy', zh: '药房', en: 'Pharmacy', icon: '💊', test: (it) => it.cat === 'pharmacy', order: 90 },
 ];
@@ -48,6 +49,13 @@ const DECOR_GROUPS = [
   { key: 'windows', icon: '🪟', zh: '窗帘', en: 'Curtains' },
   { key: 'toys', icon: '🧶', zh: '玩具', en: 'Toys' },
 ];
+// 🐾 the Pets aisle's sub-aisles
+const PET_GROUPS = [
+  { key: 'food', icon: '🍖', zh: '食物', en: 'Food', test: (it) => it.cat === 'petfood' },
+  { key: 'drink', icon: '💧', zh: '饮料', en: 'Drinks', test: () => false },
+  { key: 'items', icon: '🥣', zh: '宠物用品', en: 'Pet Items', test: (it) => !!it.petBowl },
+];
+const PET_ORDER = { dog: 0, hamster: 1, guineapig: 2 };
 const POOLSIDE = ['bbq', 'lounger', 'umbrella', 'cocktails', 'towels', 'loungesofa', 'loungesofanavy'];
 export function decorGroup(it) {
   const id = Object.keys(ITEMS).find((k) => ITEMS[k] === it);
@@ -119,7 +127,8 @@ export function shopScreen({ go, tab = 'food' }) {
     list.innerHTML = '';
     const query = ($('#q', n).value || '').trim().toLowerCase();
     // furniture aisle: little sub-aisles by room (living room, bedroom, kitchen…)
-    const subs = !query && def.key === 'decor' ? DECOR_GROUPS.filter((g) => g.key === 'all' || Object.values(ITEMS).some((it) => def.test(it) && decorGroup(it) === g.key)) : [];
+    if (def.key === 'petshop' && !PET_GROUPS.some((g) => g.key === subcat)) subcat = 'food';
+    const subs = !query && def.key === 'decor' ? DECOR_GROUPS.filter((g) => g.key === 'all' || Object.values(ITEMS).some((it) => def.test(it) && decorGroup(it) === g.key)) : !query && def.key === 'petshop' ? PET_GROUPS : [];
     const inGroup = (it) => def.test(it) && decorGroup(it) === subcat;
     const rooms = subs.length && PLACE_GROUPS.includes(subcat) ? [...new Set(Object.values(ITEMS).filter(inGroup).map(roomOfItem))] : [];
     if (rooms.length < 2) subroom = 'all';
@@ -142,6 +151,12 @@ export function shopScreen({ go, tab = 'food' }) {
         <div class="bar" style="max-width:320px;margin:0 auto"><i style="width:${Math.min(100, (lv / need) * 100)}%;--c:#6cb6f2"></i></div></div>`;
       return;
     }
+    if (def.key === 'petshop' && subcat === 'drink') {
+      list.innerHTML = '<div class="locked-shelf"><div class="big">💧</div><p class="help">水是免费的！在家里点一下宠物的水碗就能加满水。<br>Water is free! At home, tap your pet\'s water bowl to fill it up. A full bowl lasts 24 hours.</p></div>';
+      return;
+    }
+    const petG = def.key === 'petshop' && PET_GROUPS.find((g) => g.key === subcat);
+    if (petG) { shelf(Object.entries(ITEMS).filter(([id, it]) => !id.includes('#') && petG.test(it)).sort((a, b) => (PET_ORDER[a[1].pet || a[1].petBowl] - PET_ORDER[b[1].pet || b[1].petBowl]) || (a[1].kind === 'main' ? -1 : 0) - (b[1].kind === 'main' ? -1 : 0))); return; }
     shelf(Object.entries(ITEMS).filter(([, it]) => def.test(it) && (def.key !== 'decor' || subcat === 'all' || decorGroup(it) === subcat && (subroom === 'all' || roomOfItem(it) === subroom))).sort((a, b) => S.price(a[0]) - S.price(b[0])));
   }
   function shelf(entries) {
@@ -151,16 +166,20 @@ export function shopScreen({ go, tab = 'food' }) {
       const special = it.cat === 'special';
       const isPet = it.cat === 'pet', adopted = isPet && S.petOf(id);
       const needCage = isPet && it.cage && !S.ownsCage(id);
-      const owned = (it.cat === 'wear' || it.cat === 'reno' || it.cat === 'petacc') && s.owned.includes(id) || !!adopted;
-      const have = it.cat === 'food' || it.cat === 'toiletry' ? s.pantry[id] || 0 : special ? s.streak.freezes || 0 : it.cat === 'decor' ? S.ownedCount(id) : 0;
+      const needBowl = isPet && !needCage && S.needsFeeding(id) && !S.ownsBowl(id);
+      const owned = (it.cat === 'wear' || it.cat === 'reno' || it.cat === 'petacc') && s.owned.includes(id) || !!adopted || (it.petBowl && S.ownsBowl(it.petBowl));
+      const have = it.cat === 'petfood' ? S.petFoodLeft(id) : it.cat === 'food' || it.cat === 'toiletry' ? s.pantry[id] || 0 : special ? s.streak.freezes || 0 : it.cat === 'decor' ? S.ownedCount(id) : 0;
       const full = special && have >= S.MAX_FREEZES;
       const pharm = it.cat === 'pharmacy';
       const needed = !pharm || S.health() === it.cures;
       const roomShut = it.cat === 'decor' && it.room && !S.roomInfo(it.room).place && !S.roomOpen(it.room);   // cinema things: anyone may buy them (they go home)
       const onlyOne = it.one && S.ownedCount(id) >= 1;   // e.g. the collection counter
-      const can = s.coins >= cost && !full && needed && !roomShut && !needCage && !onlyOne;
+      const can = s.coins >= cost && !full && needed && !roomShut && !needCage && !needBowl && !onlyOne;
       const cageOf = (k) => ({ hamster: '🐹 仓鼠 hamster', guineapig: '🐾 豚鼠 guinea pig', parrot: '🐦 玄凤鹦鹉 cockatiel' }[k] || k);
-      const eff = isPet ? (adopted ? `💕 ${esc(adopted.name)}` : needCage ? '要先买笼子 · Buy its cage first (🦴 Pet Accessories)' : it.hops ? '在家里蹦蹦跳 · Hops around the house' : it.roam ? '在家里到处跑 · Roams around the house' : '住在笼子里 · Lives in its cage')
+      const petNm = (k) => ({ dog: '🐶 狗狗 Dog', hamster: '🐹 仓鼠 Hamster', guineapig: '🐾 豚鼠 Guinea pig' }[k] || k);
+      const eff = isPet ? (adopted ? `💕 ${esc(adopted.name)}` : needCage ? '要先买笼子 · Buy its cage first (🦴 Pet Accessories)' : needBowl ? '要先买食物和水碗 · Buy its food & water bowl first (🐾 Pets → Pet Items)' : it.hops ? '在家里蹦蹦跳 · Hops around the house' : it.roam ? '在家里到处跑 · Roams around the house' : '住在笼子里 · Lives in its cage')
+        : it.cat === 'petfood' ? `${petNm(it.pet)} · ${it.kind === 'main' ? `${it.servings}份 servings · 每份 +5格 Food` : `${it.servings}次 treats · 每次 +1格 (每3小时一次 1 per 3h)`}`
+        : it.petBowl ? `${petNm(it.petBowl)} · ${it.cat === 'decor' ? '放在家里 Goes in your home' : '放在笼子里 Goes in its cage'} · 领养前要先买 Needed before adopting`
         : it.cat === 'petacc' ? `放在笼子里 · Goes in the cage: ${(it.cageFor || []).map(cageOf).join(' / ')}`
         : it.cage ? `${cageOf(it.cage)} 的家 · A home for a ${{ hamster: 'hamster', guineapig: 'guinea pig', parrot: 'cockatiel' }[it.cage]}`
         : it.cat === 'food' || it.cat === 'toiletry' ? itemEffect(it) : it.toy ? '可以一起玩 Toy'
@@ -179,7 +198,7 @@ export function shopScreen({ go, tab = 'food' }) {
           ${owned ? `<span class="tag done">✓ ${isPet ? '我的 Mine' : '已买'}</span>` : `<button class="tag ${can ? '' : 'off'}" ${can ? '' : 'disabled'} data-buy="${id}">${isPet ? '<span class="zh">领养</span> ' : ''}<span class="price">${cost}${coinI(16)}</span></button>`}
           ${giftable(it) ? `<button class="gift-tag" data-gift="${id}" ${s.coins >= cost ? '' : 'disabled'} title="Buy as a gift for a friend">🎁 <span class="zh">送朋友</span></button>` : ''}
         </div>`;
-      $('.art', card).appendChild(spriteCanvas(id, it.cat === 'decor' || isPet ? 76 : 60));
+      $('.art', card).appendChild(spriteCanvas(id, it.petBowl ? 110 : it.cat === 'decor' || isPet ? 76 : 60));
       card.addEventListener('click', (e) => {
         if (e.target.closest('[data-buy]')) return isPet ? adopt(id) : askBuy(id);
         if (e.target.closest('[data-gift]')) return import('./friends.js').then((F) => F.giftFromShop(id, render));
@@ -197,7 +216,7 @@ export function shopScreen({ go, tab = 'food' }) {
   async function askBuy(id) {
     const it = ITEMS[id], cost = S.price(id), coins = S.get().coins;
     // furniture, food and toiletries can be bought several at once
-    const multi = ['decor', 'food', 'toiletry'].includes(it.cat) && !it.one, most = multi ? Math.max(1, Math.min(20, Math.floor(coins / cost))) : 1;
+    const multi = ['decor', 'food', 'toiletry', 'petfood'].includes(it.cat) && !it.one, most = multi ? Math.max(1, Math.min(20, Math.floor(coins / cost))) : 1;
     let qty = 1;
     sfx.click();
     const asking = confirmBox(`买${esc(it.name)}吗？ Buy ${esc(it.en)}?`,
@@ -223,7 +242,8 @@ export function shopScreen({ go, tab = 'food' }) {
     for (let i = 0; i < qty; i++) { if (!S.buy(id)) break; got++; }
     if (!got) { toast('金币不够 · Not enough coins'); return; }
     sfx.coin(); drawKitten(); kv.flash('happy', 1500); kv.jump(); burst($('#fx', n), 'heart', 4, '50%', '20%');
-    toast(it.cat === 'decor' ? `📦 <span class="zh">买了${got}个${it.name}！</span> ${got} × ${esc(it.en)} in your storage box — place them with 🪑 Move furniture`
+    toast(it.cat === 'petfood' ? `🐾 <span class="zh">买了${got}包${it.name}！</span> ${got} × ${esc(it.en)} — tap the pet's bowl at home to feed it`
+      : it.cat === 'decor' ? `📦 <span class="zh">买了${got}个${it.name}！</span> ${got} × ${esc(it.en)} in your storage box — place them with 🪑 Move furniture`
       : `<span class="zh">买了${got}个${it.name}！</span> ${got} × ${esc(it.en)} — find them in 🎒 My items`, { ms: 3500 });
     render();
   }
@@ -265,6 +285,8 @@ export function shopScreen({ go, tab = 'food' }) {
       : it.cat === 'food' || it.cat === 'toiletry' ? `<span class="zh">买了${it.name}！</span> Find it in 🎒 My items`
       : it.cat === 'wear' ? `<span class="zh">穿上${it.name}！</span>`
       : it.cat === 'reno' ? `🎨 <span class="zh">买了${it.name}！</span> At home tap 🪑 then 🎨 to use it`
+      : it.cat === 'petfood' ? `🐾 <span class="zh">买了${it.name}！</span> Tap your pet's bowl at home to feed it`
+      : it.petBowl ? `🥣 <span class="zh">${it.name}${it.cat === 'decor' ? '放在客厅了' : '放进笼子里了'}！</span> ${it.cat === 'decor' ? 'It\'s in your living room' : 'It\'s in the cage'} — it comes full of water`
       : it.cat === 'petacc' ? `🐾 <span class="zh">${it.name}放进笼子里了！</span> It's in the cage now`
       : `📦 <span class="zh">${it.name}放进收纳箱了！</span> In your storage box — place it in your home with 🪑 Move furniture`);
     render();

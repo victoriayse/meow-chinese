@@ -7,6 +7,7 @@ import { $, $$, html, esc, coinI, hydrateIcons, KittenView, toast, confirmBox, o
 import { speak, chineseVoices, sfx } from './audio.js';
 import * as Cloud from './cloud.js';
 import * as Auth from './auth.js';
+import { ADMIN_IDS } from './places.js';
 import * as Push from './push.js';
 import * as Weather from './weather.js';
 import { parentFriendsView, incomingRequests, publishCard } from './friends.js';
@@ -772,10 +773,13 @@ function pricesView(rerender) {
       <button class="btn white" id="reset" style="align-self:flex-start">↺ Reset all to default prices</button>
     </div>`;
   const box = $('#groups', n);
+  // 🐾 pet food and bowls: only the admin (Victoria's own login) sets these prices
+  const u = Auth.user(), admin = !!(u && ADMIN_IDS.includes(u.id));
+  if (admin) groups.push(['pets', '🐾 宠物 Pets (admin only)']);
   groups.forEach(([cat, label]) => {
     const g = html`<div><h3>${label}</h3><div class="price-grid"></div></div>`;
     const grid = $('.price-grid', g);
-    Object.entries(ITEMS).filter(([, it]) => it.cat === cat).forEach(([id, it]) => {
+    Object.entries(ITEMS).filter(([id, it]) => !id.includes('#') && (cat === 'pets' ? it.cat === 'petfood' || !!it.petBowl : it.cat === cat && !it.petBowl)).forEach(([id, it]) => {
       const changed = S.price(id) !== it.price;
       const row = html`<label class="price-row ${changed ? 'changed' : ''}">
           <span class="ico"></span>

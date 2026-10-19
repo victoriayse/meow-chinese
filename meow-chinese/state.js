@@ -1,7 +1,7 @@
 import { MALL_ROOMS, MALL_ROOM_INFO, mallNeighbors } from './mall.js';
 // Game state: saved on this iPad (localStorage). Shaped as one JSON blob so it can
 // later be backed up to Supabase as a single row.
-import { ITEMS, baseId, SNACKS } from './pixel.js';
+import { ITEMS, baseId, SNACKS, PET_NEEDS, bowlOf } from './pixel.js';
 import { BANKS } from './banks.js';
 import { CAFE_ROOMS, CAFE_NEIGHBORS } from './cafe.js';
 
@@ -170,6 +170,7 @@ export function setGodMode(on) {
     const k = state.kitten;
     k.hunger = Math.max(k.hunger, 80); k.water = Math.max(k.water ?? 75, 80); k.happy = Math.max(k.happy, 80); k.hygiene = Math.max(k.hygiene ?? 100, 80);
     state.health.stage = 'ok'; state.health.treated = todayStr();
+    pets().forEach((p) => { if (PET_NEEDS.includes(p.kind)) { p.food = 100; p.water = 100; p.zeroAt = null; p.careAt = Date.now(); } });
   } else {
     state.health.treated = todayStr();        // switching it off starts the sickness count fresh from today
   }
@@ -205,6 +206,7 @@ export function tick() {
     }
   }
   updateHealth();
+  petCareTick(now);
   saveQuiet();
 }
 
@@ -496,6 +498,7 @@ export function buy(id) {
     state.coins -= cost; state.streak.freezes = (state.streak.freezes || 0) + 1; save(); return true;
   }
   if (it.cat === 'pet') return false;          // pets are adopted (adoptPet), not bought
+  if (it.cat === 'petfood') { state.coins -= cost; const pf = (state.petFood ||= {}); pf[id] = (pf[id] || 0) + (it.servings || 1); save(); return true; }
   const usedUp = it.cat === 'food' || it.cat === 'toiletry';
   // furniture can be bought again and again (a second sofa is "sofa#2"); clothes and the rest only once
   if (!usedUp && it.cat !== 'decor' && state.owned.includes(id)) return false;
@@ -505,6 +508,7 @@ export function buy(id) {
   state.owned.push(got);
   if (it.cat === 'wear') state.kitten.equipped[it.slot] = id;
   if (it.cat === 'decor') storeDecorQuiet(got);      // new furniture waits in storage until she places it
+  if (it.petBowl) newBowl(it.petBowl, got);           // a pet bowl comes full of water (the puppy's goes straight into the living room)
   save();
   return got;
 }
@@ -567,12 +571,108 @@ export function adoptPet(kind, name) {
   const it = ITEMS[kind], cost = price(kind);
   if (!it || it.cat !== 'pet' || petOf(kind) || state.coins < cost) return false;
   if (it.cage && !ownsCage(kind)) return false;
+  if (PET_NEEDS.includes(kind) && !ownsBowl(kind)) return false;   // v263: its food & water bowl first
   state.coins -= cost;
-  pets().push({ kind, name: String(name || it.name).trim().slice(0, 12) || it.name, out: false, at: Date.now() });
+  pets().push({ kind, name: String(name || it.name).trim().slice(0, 12) || it.name, out: false, at: Date.now(), ...(PET_NEEDS.includes(kind) ? { food: 100, water: 100, careAt: Date.now() } : {}) });
   save(); return true;
 }
 export function renamePet(kind, name) { const p = petOf(kind); if (!p) return; p.name = String(name || '').trim().slice(0, 12) || p.name; save(); }
 export function setPetOut(kind, out) { const p = petOf(kind); if (!p) return; p.out = !!out; save(); }
+
+// ---------- 🐾 v263: feeding pets (dog, hamster, guinea pig) ----------
+// Each pet has Food and Water bars (0–100, 10 sections). Food goes down over 2 days, and the pet eats from its bowl by itself
+// (1 bar at a time) whenever it has room for it. A full water bowl lasts 24 hours and keeps the pet's Water topped up;
+// once it's empty, Water goes down over a day. At 0 Food or 0 Water for more than 3 days, the pet dies.
+export const PET_FOOD_HOURS = 48, PET_WATER_HOURS = 24, BOWL_WATER_HOURS = 24, PET_DIE_DAYS = 3, TREAT_GAP = 3 * 3600000, PET_LOW = 20;
+export const needsFeeding = (kind) => PET_NEEDS.includes(kind);
+export const fedPets = () => pets().filter((p) => needsFeeding(p.kind));
+export const bowl = (kind) => ((state.petBowls ||= {})[kind] ||= { food: 0, waterAt: 0 });
+export const ownsBowl = (kind) => state.owned.some((id) => baseId(id) === bowlOf(kind));
+const bowlIdOf = (kind) => state.owned.find((id) => baseId(id) === bowlOf(kind)) || null;
+// can the pet get to its bowl? (not packed away in the storage box / taken out of the cage)
+export function bowlReachable(kind) {
+  const id = bowlIdOf(kind); if (!id) return false;
+  return ITEMS[id].cat === 'decor' ? !state.decorHidden.includes(id) : true;
+}
+export const bowlRoom = (kind) => { const id = bowlIdOf(kind); return id && ITEMS[id].cat === 'decor' && !state.decorHidden.includes(id) ? roomOf(id) : null; };
+export const bowlWater = (kind, now = Date.now()) => { const b = bowl(kind); return b.waterAt ? Math.max(0, Math.min(100, 100 - ((now - b.waterAt) / 3600000) * (100 / BOWL_WATER_HOURS))) : 0; };
+export const bowlFood = (kind) => Math.max(0, Math.min(100, bowl(kind).food || 0));
+export const petFoodLeft = (id) => (state.petFood || {})[id] || 0;
+export const petFoods = (kind, type) => Object.keys(ITEMS).filter((id) => ITEMS[id].cat === 'petfood' && ITEMS[id].pet === kind && ITEMS[id].kind === type);
+function newBowl(kind, id) {
+  bowl(kind).waterAt = Date.now();
+  if (ITEMS[id].cat === 'decor') placeDecorQuiet(id, petCage(kind) ? roomOf(petCage(kind)) : 'living');
+}
+function placeDecorQuiet(id, room) {
+  state.decorHidden = state.decorHidden.filter((x) => x !== id);
+  (state.decorRoom ||= {})[id] = room || 'living';
+}
+const careListeners = new Set();
+export const onPetCare = (fn) => { careListeners.add(fn); return () => careListeners.delete(fn); };
+const careEvent = (ev) => careListeners.forEach((fn) => { try { fn(ev); } catch (e) { console.warn(e); } });
+function petDied(p, why, at) {
+  state.pets = pets().filter((x) => x !== p);
+  (state.petDeaths ||= []).push({ kind: p.kind, name: p.name, why, at, seen: false });
+  const msg = why === 'water' ? '没有水喝' : '没有东西吃';
+  notify({ id: `petdied-${p.kind}-${at}`, kind: 'pet', title: `😢 ${p.name}去世了`, body: `${p.name} has sadly died — it had nothing to ${why === 'water' ? 'drink' : 'eat'} for 3 days (${msg})` });
+}
+export function petCareTick(now = Date.now()) {
+  const god = godMode();
+  fedPets().forEach((p) => {
+    if (p.food == null || p.water == null) {
+      // a pet adopted before v263: it gets a bowl (full of food and water) for free
+      p.food = 100; p.water = 100; p.careAt = now;
+      if (!ownsBowl(p.kind)) { const id = bowlOf(p.kind); state.owned.push(id); newBowl(p.kind, id); }
+      bowl(p.kind).food = 100; bowl(p.kind).waterAt = now;
+    }
+    if (god) { p.food = 100; p.water = 100; p.zeroAt = null; p.careAt = now; return; }
+    const b = bowl(p.kind), reach = bowlReachable(p.kind);
+    let t = Math.min(now, p.careAt || now); const ate = { food: false, water: false };
+    while (t < now) {
+      const dt = Math.min(now - t, 10 * 60000); t += dt; const h = dt / 3600000;
+      p.food = Math.max(0, p.food - h * (100 / PET_FOOD_HOURS));
+      const water = reach && b.waterAt ? 100 - ((t - b.waterAt) / 3600000) * (100 / BOWL_WATER_HOURS) : 0;
+      if (water > 0) { if (p.water < 99) ate.water = true; p.water = 100; }
+      else p.water = Math.max(0, p.water - h * (100 / PET_WATER_HOURS));
+      while (reach && p.food <= 90 && b.food >= 10) { b.food -= 10; p.food = Math.min(100, p.food + 10); ate.food = true; }
+      if (p.food <= 0 || p.water <= 0) {
+        p.zeroAt = p.zeroAt || t;
+        if (t - p.zeroAt > PET_DIE_DAYS * 864e5) { petDied(p, p.food <= 0 ? 'food' : 'water', t); return; }
+      } else p.zeroAt = null;
+    }
+    p.careAt = now;
+    if (ate.food) careEvent({ kind: p.kind, what: 'food' });
+    if (ate.water) careEvent({ kind: p.kind, what: 'water' });
+  });
+}
+// put one serving of food in the bowl (+5 bars). '' = done, otherwise why not
+export function fillBowl(kind, id) {
+  const it = ITEMS[id];
+  if (!it || it.cat !== 'petfood' || it.pet !== kind || it.kind !== 'main') return 'bad';
+  if (petFoodLeft(id) < 1) return 'none';
+  petCareTick();
+  const b = bowl(kind);
+  if (b.food > 50) return 'full';
+  state.petFood[id] -= 1; if (!state.petFood[id]) delete state.petFood[id];
+  b.food = Math.min(100, (b.food || 0) + 50);
+  petCareTick(); save(); careEvent({ kind, what: 'fill' });
+  return '';
+}
+export function refillWater(kind) { petCareTick(); bowl(kind).waterAt = Date.now(); petCareTick(); save(); careEvent({ kind, what: 'refill' }); }
+export const treatWait = (kind) => { const p = petOf(kind); return p && p.treatAt ? Math.max(0, p.treatAt + TREAT_GAP - Date.now()) : 0; };
+export function giveTreat(kind, id) {
+  const p = petOf(kind), it = ITEMS[id];
+  if (!p || !it || it.cat !== 'petfood' || it.pet !== kind || it.kind !== 'treat') return 'bad';
+  if (petFoodLeft(id) < 1) return 'none';
+  if (treatWait(kind) > 0) return 'wait';
+  petCareTick();
+  state.petFood[id] -= 1; if (!state.petFood[id]) delete state.petFood[id];
+  p.food = Math.min(100, (p.food || 0) + 10); p.treatAt = Date.now(); p.zeroAt = p.water > 0 ? null : p.zeroAt;
+  save(); careEvent({ kind, what: 'treat' });
+  return '';
+}
+export const unseenPetDeaths = () => (state.petDeaths || []).filter((d) => !d.seen);
+export function seePetDeaths() { (state.petDeaths || []).forEach((d) => { d.seen = true; }); save(); }
 export function toggleWear(id) {
   const it = ITEMS[id]; const eq = state.kitten.equipped;
   eq[it.slot] = eq[it.slot] === id ? null : id;

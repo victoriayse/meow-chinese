@@ -12466,3 +12466,55 @@ ITEMS.norendoor = { cat: 'decor', room: 'mallsushi', group: 'mall', name: '日�
 ITEMS.norendoor.frames = { open: ITEMS.norendoor.art };
 // (a dark line where the two halves of the noren meet)
 ITEMS.norendoor.doorPanels = [ITEMS.norendoor.doorPanels[0].map((r, y) => (y ? r.slice(0, -1) + 'D' : r)), ITEMS.norendoor.doorPanels[1].map((r, y) => (y ? 'D' + r.slice(1) : r))];
+
+// ---------- 🐾 v263: feeding pets (dog, hamster, guinea pig — not the bird or the bunny) ----------
+// Food & water bowls: the puppy's stands on the floor, the small pets' bowls go in their cage.
+// The bowl art is redrawn as the food and water go down (bowlGrid).
+const BOWL_ART = [
+  '..kKkKkk....' + '..........',
+  '.okkkkkko...' + '.owwwWwwo.',
+  'obbbbbbbbo..' + 'obbbbbbbbo',
+  'obhbbbbbbo..' + 'obhbbbbbbo',
+  '.obbbbbbo...' + '.obbbbbbo.',
+  '..oooooo....' + '..oooooo..',
+];
+const bowlPal = (b, h, k, K) => ({ o: O, b, h, k, K, w: '#6cc4f5', W: '#d4f1ff', e: '#5a3d33' });
+export const PET_NEEDS = ['dog', 'hamster', 'guineapig'];
+ITEMS.petbowldog = { cat: 'decor', room: 'living', name: '狗狗食物和水碗', en: 'Dog food & water bowl', price: 20, spot: 'front-right', one: true, petBowl: 'dog', noGift: true, size: 1.3,
+  pal: bowlPal('#e8384f', '#ff9a9a', '#a0612e', '#6e3f1c'), art: BOWL_ART };
+ITEMS.petbowlhamster = { cat: 'petacc', cageFor: ['hamster'], inCage: { x: 0.45, y: 0.2, z: 3, s: 0.55 }, name: '仓鼠食物和水碗', en: 'Hamster food & water bowl', price: 20, petBowl: 'hamster',
+  pal: bowlPal('#ffb03a', '#ffd98a', '#e8c26a', '#9b6a2e'), art: BOWL_ART };
+ITEMS.petbowlguineapig = { cat: 'petacc', cageFor: ['guineapig'], inCage: { x: 0.45, y: 0.2, z: 3, s: 0.55 }, name: '豚鼠食物和水碗', en: 'Guinea pig food & water bowl', price: 20, petBowl: 'guineapig',
+  pal: bowlPal('#5fae4a', '#a8dc8a', '#9fbf5a', '#5f7f2a'), art: BOWL_ART };
+export const bowlOf = (kind) => ({ dog: 'petbowldog', hamster: 'petbowlhamster', guineapig: 'petbowlguineapig' }[kind]);
+// the bowl as it looks now: food 0–100 %, water 0–100 %
+export function bowlGrid(id, food, water) {
+  const it = ITEMS[id];
+  const art = BOWL_ART.map((row, y) => [...row].map((ch, x) => {
+    const isFood = x < 11;
+    if (y === 0 && isFood) return food >= 60 ? ch : '.';
+    if (y === 1 && isFood && (ch === 'k' || ch === 'K')) return food > 0 ? ch : 'e';
+    if (y === 1 && !isFood && (ch === 'w' || ch === 'W')) return water > 0 ? (water < 35 && ch === 'W' ? 'w' : ch) : 'e';
+    return ch;
+  }).join(''));
+  return artGrid(art, it.pal);
+}
+// pet food: packs of main meals (10 servings) and treats (5 feeds)
+const PACK = ['..oooooo..', '.oSSSSSSo.', '.oooooooo.', 'obbbbbbbbo', 'obwwwwwwbo', 'obwIIIIwbo', 'obwIiiIwbo', 'obwIIIIwbo', 'obwwwwwwbo', 'obbbbbbbbo', 'obbbbbbbbo', 'oooooooooo'];
+const POUCH = ['.oooooooo.', 'oSSSSSSSSo', 'oooooooooo', 'obbbbbbbbo', 'obbIIIIbbo', 'obIiIIiIbo', 'obbIIIIbbo', 'obbbbbbbbo', '.oooooooo.'];
+const petFood = (id, pet, kind, name, en, price, b, S, I, i) => [id, { cat: 'petfood', pet, kind, servings: kind === 'main' ? 10 : 5, name, en, price, pal: { o: O, b, S, I, i, w: '#fff8ec' }, art: kind === 'main' ? PACK : POUCH }];
+Object.assign(ITEMS, Object.fromEntries([
+  petFood('dogkibble', 'dog', 'main', '狗粮', 'Dog kibble (10 servings)', 60, '#e8564a', '#ffd23f', '#a0612e', '#6e3f1c'),
+  petFood('hamsterfood', 'hamster', 'main', '仓鼠粮', 'Hamster food (10 servings)', 30, '#ffb03a', '#7cbd52', '#e8c26a', '#9b6a2e'),
+  petFood('guineapigfood', 'guineapig', 'main', '豚鼠粮', 'Guinea pig food (10 servings)', 30, '#5fae4a', '#ffd23f', '#9fbf5a', '#5f7f2a'),
+  petFood('dogtreatchicken', 'dog', 'treat', '冻干鸡肉', 'Freeze-dried chicken (5 treats)', 30, '#f4a65a', '#e8384f', '#f6e0b0', '#c9965a'),
+  petFood('dogtreatbone', 'dog', 'treat', '骨头饼干', 'Dog bone biscuits (5 treats)', 30, '#6cb6f2', '#ffd23f', '#f6e6c8', '#c9a46a'),
+  petFood('dogtreatbeef', 'dog', 'treat', '牛肉干', 'Dried beef snack (5 treats)', 30, '#8a5a32', '#ff7f50', '#b4462e', '#6e2a1a'),
+  petFood('hamtreatseeds', 'hamster', 'treat', '葵花籽', 'Sunflower seeds (5 treats)', 20, '#ffd23f', '#5fae4a', '#3a3530', '#f4ead2'),
+  petFood('hamtreatcorn', 'hamster', 'treat', '玉米干', 'Dried corn (5 treats)', 20, '#7cbd52', '#ffd23f', '#ffcf3a', '#e8a020'),
+  petFood('hamtreatbanana', 'hamster', 'treat', '香蕉干', 'Dried banana (5 treats)', 20, '#6cb6f2', '#ffd23f', '#f6e08a', '#c9a040'),
+  petFood('hamtreatberry', 'hamster', 'treat', '莓果干', 'Dried berries (5 treats)', 20, '#c46bd8', '#ff9ec4', '#b02a4e', '#5a2a6e'),
+  petFood('gptreatfruit', 'guineapig', 'treat', '果干', 'Dried fruits (5 treats)', 20, '#ff9a2e', '#7cbd52', '#ff6f5a', '#ffd23f'),
+  petFood('gptreatbiscuit', 'guineapig', 'treat', '莓果饼干', 'Berry biscuits (5 treats)', 20, '#e8384f', '#ffd23f', '#e8c08a', '#c4304e'),
+  petFood('gptreatyogurt', 'guineapig', 'treat', '酸奶豆', 'Yogurt drops (5 treats)', 20, '#9b7bea', '#ffffff', '#fffaf0', '#e0d0ff'),
+]));
