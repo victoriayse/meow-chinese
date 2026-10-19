@@ -515,6 +515,7 @@ export class OtherCats {
         c.dx += Math.max(-sx, Math.min(sx, ex)); c.dy += Math.max(-sy, Math.min(sy, ey));
         moving = true;
       } else { c.dx = c.x; c.dy = c.y; }
+      c.walkPose = walking ? walkPoseOf(ex, ey) : null;
       if (c.kv) { c.kv.canvas.classList.toggle('walking', walking); if (Math.abs(ex) > 0.15) c.kv.setFacing(ex < 0); else c.kv.setFacing(!!c.left); }
       this.place(c);
     });
@@ -530,7 +531,7 @@ export class OtherCats {
     c.el.style.zIndex = spot ? spot.z : catZ(c.dx, c.dy);
     c.el.classList.toggle('lying', !!(spot && spot.lie)); c.el.classList.toggle('seated', !!(spot && !spot.walk));
     c.el.classList.toggle('swimming', !spot && inPool(this.roomEl, c.dx, c.dy));
-    if (c.kv) { c.kv.setPose(spot ? spot.pose : null); c.kv.setHeld(c.look && c.look.hold); } c.el.dataset.pose = (spot && spot.pose) || '';
+    if (c.kv) { c.kv.setPose(spot ? spot.pose : (c.walkPose || null)); c.kv.setHeld(c.look && c.look.hold); } c.el.dataset.pose = (spot && spot.pose) || '';
     if (c.kv && spot && spot.run) { c.kv.setFacing(spot.flip); c.kv.canvas.classList.add('walking'); }
     else if (c.kv && spot) c.kv.canvas.classList.remove('walking');
     if (c.bedShown && c.bedShown !== (spot && spot.lie && c.seat)) { blanket(this.roomEl, c.bedShown, false); c.bedShown = null; }
@@ -587,6 +588,11 @@ export function chatBar(onSend, onEmote) {
 
 // ---------- walking: arrow keys and the on-screen arrows ----------
 // onStep(dx, dy, dt) is called every frame while a direction is held; onStop() when she lets go
+// which way she looks while walking: up the screen = her back, sideways = side-on, down = facing us (as before)
+export function walkPoseOf(dx, dy) {
+  if (Math.abs(dy) >= Math.abs(dx)) return dy > 0.05 ? 'back' : null;
+  return Math.abs(dx) > 0.05 ? (dx < 0 ? 'side-l' : 'side-r') : null;
+}
 export function walker(dpad, { onStep, onStop, canWalk = () => true, isAlive, onJump = null }) {
   const held = new Set();
   let raf = 0, lastT = 0;

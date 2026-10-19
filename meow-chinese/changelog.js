@@ -724,4 +724,5 @@ export const CHANGES = [
   { v: 259, items: [
     '🔢 The version the app is running now shows next to the Meow Chinese logo.',
   ] },
+  { v: 260, items: ['Walking up shows the kitten from the back, walking left or right shows her side-on', 'Friends see the same when your kitten walks around', 'Food left on tables in public places is cleared after 24 hours'] },
 ];

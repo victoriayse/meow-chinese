@@ -26,7 +26,7 @@ import { drawRoom, drawRoof, ITEMS, SNACKS } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal } from './ui.js';
 import { sfx, zenMusic } from './audio.js';
 import { wireDisplays } from './display-racks.js';
-import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, boothView, freeSlot, hearNote, PetLayer, roomArrowsHtml, catZ, setCatZ, inPool, stackDecor, studioBarre, rideFx } from './house.js';
+import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, boothView, freeSlot, hearNote, PetLayer, roomArrowsHtml, catZ, setCatZ, inPool, stackDecor, studioBarre, rideFx, walkPoseOf } from './house.js';
 import * as Radio from './radio.js';
 import * as Places from './places.js';
 import * as Snacks from './snacks.js';
@@ -189,7 +189,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   const box = $('#house', n), sub = $('#vt-sub', n);
   const others = new OtherCats();
   let house = null, host = null, roomKey = startRoom, mine = { x: 30, y: 6, room: startRoom, left: false }, lockedOut = false;
-  let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null, carnival = null;
+  let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null, carnival = null, myWalkPose = null;
 
   let refreshingPlace = false, welcomed = false, sushiApi = null, zenStop = null;
   // 🍣 SushiMeow: the bill must be paid before she can leave
@@ -313,11 +313,11 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
         }
       }
       if (Math.abs(dx) > 0.2) { mine.left = dx < 0; myKv.setFacing(mine.left); }
-      myKv.canvas.classList.add('walking');
+      myKv.canvas.classList.add('walking'); myWalkPose = walkPoseOf(dx, dy);
       place(); sendMove({ id: me, ...mine });
       if (stadium) stadium.step(dx, dy);
     },
-    onStop: () => { if (myKv) myKv.canvas.classList.remove('walking'); sendMine(); },
+    onStop: () => { myWalkPose = null; if (myKv) myKv.canvas.classList.remove('walking'); if (myEl) place(); sendMine(); },
   });
 
   const logLine = (who, text, mine) => vlog.add(who, text, mine);
@@ -777,7 +777,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       place(); sendMine();
     });
     myEl.classList.toggle('lying', !!(spot && spot.lie)); myEl.classList.toggle('seated', !!(spot && !spot.walk));
-    if (myKv) myKv.setPose(spot ? spot.pose : null); myEl.dataset.pose = (spot && spot.pose) || '';
+    if (myKv) myKv.setPose(spot ? spot.pose : myWalkPose); myEl.dataset.pose = (spot && spot.pose) || '';
     if (room) room.querySelectorAll('.decor.seat').forEach((d) => { if (!others.ids().some((id) => (others.m.get(id) || {}).seat === d.dataset.id)) blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === mine.seat)); });
     if (spot) { myEl.classList.remove('swimming'); mine.x = spot.x; mine.y = spot.y; myEl.style.left = `${spot.x}%`; myEl.style.bottom = `${spot.y}%`; myEl.style.zIndex = spot.z; rideFx(room, myEl, mine.seat); return; }
     rideFx(room, myEl, null);

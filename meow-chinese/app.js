@@ -22,7 +22,7 @@ import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
 import { wireDisplays } from './display-racks.js';
 import { wireHomeTables } from './home-tables.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, boothView, catFace, freeSlot, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx } from './house.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, boothView, catFace, freeSlot, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx, walkPoseOf } from './house.js';
 import * as Pets from './pets.js';
 import * as Radio from './radio.js';
 import * as Visit from './visit.js';
@@ -690,6 +690,7 @@ function homeScreen(params = {}) {
 
   // ----- the kitten walks around the house (arrow keys or the on-screen arrows) -----
   const ground = $('#ground', n);
+  let walkPose = null;   // back / side-on while walking (see walkPoseOf)
   let cat = { x: 50, y: (s.owned.includes('rug') && !s.decorHidden.includes('rug') && S.roomOf('rug') === roomKey) ? 4 : 3, ...(s.catPos || {}) };
   const seatNow = () => { const st = S.get().catSeat; return st && st.room === roomKey && room && room.querySelector(`.decor.seat[data-id="${st.id}"]`) ? st : null; };
   const placeCat = () => {
@@ -702,7 +703,7 @@ function homeScreen(params = {}) {
       placeCat(); S.save(); Visit.hostMove(hostPos());
     });
     ground.classList.toggle('lying', !!(spot && spot.lie)); ground.classList.toggle('seated', !!spot);
-    kv.setPose(spot ? spot.pose : null); ground.dataset.pose = (spot && spot.pose) || '';
+    kv.setPose(spot ? spot.pose : walkPose); ground.dataset.pose = (spot && spot.pose) || '';
     if (spot && spot.run) { kv.setFacing(spot.flip); kv.canvas.classList.add('walking'); }   // running on the treadmill
     else if (spot) kv.canvas.classList.remove('walking');
     room.querySelectorAll('.decor.seat').forEach((d) => blanket(room, d.dataset.id, !!(spot && spot.lie && d.dataset.id === st.id)));
@@ -776,6 +777,7 @@ function homeScreen(params = {}) {
     if (held.has('up')) dy += 1; if (held.has('down')) dy -= 1;
     cat.x += dx * 32 * dt; cat.y += dy * 22 * dt;
     if (dx) kv.setFacing(dx < 0);
+    walkPose = held.size ? walkPoseOf(dx, dy) : null;
     placeCat();
     S.get().catPos = { x: +cat.x.toFixed(1), y: +cat.y.toFixed(1) };   // remembered as she goes (saved when she stops)
     Visit.hostMove(hostPos());
