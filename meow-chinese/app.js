@@ -1549,6 +1549,7 @@ Friends.startFriends((news) => {
     if (x.kind === 'feed') toast(`🐟 <span class="zh">${esc(x.fromName)}喂了你的小猫！</span> A friend fed your kitten`, { ms: 3500 });
     if (x.kind === 'letter') toast(`✉️ <span class="zh">${esc(x.fromName)}给你写了信！</span> You got a letter`, { ms: 3500 });
     if (x.kind === 'gift') toast(`🎁 <span class="zh">${esc(x.fromName)}送你礼物！</span> You got a gift`, { ms: 3500 });
+    if (x.kind === 'transfer') { sfx.coin(); toast(`💸 <span class="zh">${esc(x.fromName)}转给你 ${x.amount} 金币！</span> They're in your 🏦 bank`, { ms: 4000 }); }
   }, i * 900));
   if (current === 'home') setTimeout(refreshHome, 400);
 });

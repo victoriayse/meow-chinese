@@ -10,7 +10,7 @@ import { acceptedFriends, refreshFriends, sendLetter, onInbox, markRead, refresh
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const when = (t) => new Date(t).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
-const NOTI_ICON = { essay: '📝', feed: '🐟', gift: '🎁' };
+const NOTI_ICON = { essay: '📝', feed: '🐟', gift: '🎁', transfer: '💸', pet: '🐾' };
 
 // a little flip phone drawn in SVG, used on the home screen
 export const PHONE_ICON = `<svg viewBox="0 0 32 40" width="34" height="42" aria-hidden="true" shape-rendering="crispEdges">

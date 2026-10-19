@@ -735,4 +735,5 @@ export const CHANGES = [
   { v: 268, items: ['Fixed: a parent switching between their own game and a child account could save the child game into the parent account', 'Saves are now backed up in the cloud (daily, and whenever an account suddenly becomes a different kitten)'] },
   { v: 269, items: ['New 🏦 Bank on the map with a working ATM: balance and 14-day history, deposit, withdraw, transfer coins to friends, and savings', 'Coins earned from tasks, spelling, practice, essays and check-ins now go into your bank account — withdraw them at the ATM to spend', 'Savings moved from the phone to the ATM (your savings are kept)', 'Bank balance shows next to your wallet at the top — tap it to go to the bank'] },
   { v: 270, items: ['Bank: the bottom of the ATM was cut off on smaller screens — now the page scrolls to show the whole machine'] },
+  { v: 271, items: ['Fixed: sending coins to a friend at the ATM always failed', 'A pop-up and a phone notification tell you when a friend sends you coins'] },
 ];
