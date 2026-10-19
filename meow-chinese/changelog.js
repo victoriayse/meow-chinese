@@ -733,4 +733,5 @@ export const CHANGES = [
   { v: 266, items: ['With 2 or more pets, their bars fold away under one Pets button (tap to open or close; a warning shows if a pet is low)', 'Fixed pets showing twice after syncing between devices'] },
   { v: 267, items: ['Treats are given by tapping the pet itself: its card shows your treats to pick from', 'Watch your pet munch the treat bite by bite, with crumbs and hearts'] },
   { v: 268, items: ['Fixed: a parent switching between their own game and a child account could save the child game into the parent account', 'Saves are now backed up in the cloud (daily, and whenever an account suddenly becomes a different kitten)'] },
+  { v: 269, items: ['New 🏦 Bank on the map with a working ATM: balance and 14-day history, deposit, withdraw, transfer coins to friends, and savings', 'Coins earned from tasks, spelling, practice, essays and check-ins now go into your bank account — withdraw them at the ATM to spend', 'Savings moved from the phone to the ATM (your savings are kept)', 'Bank balance shows next to your wallet at the top — tap it to go to the bank'] },
 ];

@@ -12506,3 +12506,27 @@ Object.assign(ITEMS, Object.fromEntries([
   petFood('rabtreathay', 'rabbit', 'treat', '干草饼', 'Hay cubes (5 treats)', 20, '#c9a46a', '#7cbd52', '#d8c46a', '#9f8a3a'),
   petFood('gptreatyogurt', 'guineapig', 'treat', '酸奶豆', 'Yogurt drops (5 treats)', 20, '#9b7bea', '#ffffff', '#fffaf0', '#e0d0ff'),
 ]));
+
+// 🏦 v269: the Bank's pin on the map (an original little bank building with a gold coin on its roof)
+ITEMS.mapbank = { cat: 'map', name: '银行', en: 'Bank map icon', price: 0, special: true,
+  pal: { o: O, r: '#7f8ba0', R: '#5f6b80', y: '#ffd23f', Y: '#e0a524', w: '#f4ead2', s: '#ffffff', d: '#8a5a32', g: '#c9c2b6' },
+  art: [
+    '...........oo...........',
+    '.........oorroo.........',
+    '.......oorrrrrroo.......',
+    '.....oorrrrYYrrrroo.....',
+    '...oorrrrryyyyrrrrroo...',
+    '.oorrrrrrrrYYrrrrrrrroo.',
+    'oooooooooooooooooooooooo',
+    'oRRRRRRRRRRRRRRRRRRRRRRo',
+    'oooooooooooooooooooooooo',
+    'owsswwsswwoooowwsswwsswo',
+    'owsswwsswwoddowwsswwsswo',
+    'owsswwsswwoddowwsswwsswo',
+    'owsswwsswwoddowwsswwsswo',
+    'owsswwsswwoddowwsswwsswo',
+    'owsswwsswwoddowwsswwsswo',
+    'oooooooooooooooooooooooo',
+    'oggggggggggggggggggggggo',
+    'oooooooooooooooooooooooo',
+  ] };

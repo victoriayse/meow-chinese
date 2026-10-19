@@ -4,7 +4,7 @@
 
 const isObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-const ADDITIVE = new Set(['coins', 'kitten.xp']);
+const ADDITIVE = new Set(['coins', 'kitten.xp', 'bank.balance']);
 const SKIP = new Set(['sync', 'updatedAt']);
 
 function mergeArrays(anc, a, b, path, aNewer) {

@@ -148,6 +148,9 @@ async function sendEvent(to, kind, payload) {
   return r;
 }
 
+// 💸 v269: coins from her bank account to a friend's (the ATM)
+export const sendTransfer = (to, amount, message = '') => sendEvent(to, 'transfer', { amount, message: String(message || '').slice(0, LETTER_MAX) });
+
 let started = false;
 export function startFriends(newsCallback) {
   onNews = newsCallback || onNews;

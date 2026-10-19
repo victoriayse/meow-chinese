@@ -164,6 +164,7 @@ const PINS = [
   { key: 'stadium', zh: '体育场', en: 'Stadium', icon: '🏟️', x: 87, y: 60 },
   { key: 'school', zh: '学校', en: 'School', icon: '🏫', x: 50, y: 99 },
   { key: 'carnival', zh: '嘉年华', en: 'Carnival', icon: '🎡', x: 12, y: 56 },
+  { key: 'bank', zh: '银行', en: 'Bank', icon: '🏦', x: 90, y: 30 },
 ];
 export function mapScreen({ go }) {
   const n = html`<section class="screen"><div class="card stack map-card">
@@ -180,6 +181,7 @@ export function mapScreen({ go }) {
       if (p.soon) { sfx.miss(); return toast(`${p.icon} <span class="zh">${p.zh}即将开放！</span> The ${p.en.toLowerCase()} is coming soon`, { ms: 2500 }); }
       sfx.click();
       if (p.key === 'home') return go('home', { view: 'house' });
+      if (p.key === 'bank') return go('bank');   // 🏦 the ATM works on this device (sending to friends needs a login)
       if (!Auth.session()) return toast('要先登录 · Please log in first');
       go('visit', { place: p.key });
     };

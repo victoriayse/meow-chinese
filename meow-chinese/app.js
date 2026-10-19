@@ -25,6 +25,7 @@ import { wireHomeTables } from './home-tables.js';
 import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, boothView, catFace, freeSlot, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx, walkPoseOf } from './house.js';
 import * as Pets from './pets.js';
 import * as Care from './petcare.js';
+import { bankScreen } from './atm.js';
 import * as Radio from './radio.js';
 import * as Visit from './visit.js';
 import * as Places from './places.js';
@@ -85,6 +86,7 @@ const screens = {
   practice: (p) => practiceScreen({ ...p, go }),
   friend: (p) => Friends.friendScreen({ ...p, go }),
   map: () => Places.mapScreen({ go }),
+  bank: () => bankScreen({ go }),
 };
 // a simple history so every page can go Back
 const stack = [];
@@ -182,7 +184,8 @@ function renderTopbar() {
     <span class="app-ver" title="The version this app is running">${APP_VERSION.replace('meow-', '')}</span>
     <span class="spacer"></span>
     ${showGame ? `
-      <span class="pill" id="coin-pill" title="Coins">${coinI(22)}<span id="coin-n">${s.coins}</span></span>
+      <button type="button" class="pill bank-pill" id="bank-pill" data-go="bank" title="Bank balance — tap to go to the bank">🏦<span id="bank-n">${S.bankBalance()}</span></button>
+      <span class="pill" id="coin-pill" title="Wallet">${coinI(22)}<span id="coin-n">${s.coins}</span></span>
       <button class="icon-btn" data-go="parent" aria-label="Parent area" title="家长 Parent">🔒</button>` : ''}
   `;
   hydrateIcons(bar);
@@ -205,6 +208,8 @@ function renderTopbar() {
 }
 function daysSince(d) { return Math.round((new Date(S.todayStr()) - new Date(d)) / 86400000); }
 S.onChange(() => {
+  const bn = $('#bank-n');
+  if (bn && +bn.textContent !== S.bankBalance()) { bn.textContent = S.bankBalance(); const p = $('#bank-pill'); p.classList.remove('coin-bump'); void p.offsetWidth; p.classList.add('coin-bump'); }
   const n = $('#coin-n');
   if (n && +n.textContent !== S.get().coins) {
     n.textContent = S.get().coins;

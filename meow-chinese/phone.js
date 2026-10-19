@@ -30,7 +30,6 @@ const APPS = [
   { key: 'notes', icon: '📒', zh: '记事本', en: 'Notes' },
   { key: 'gallery', icon: '🖼️', zh: '相册', en: 'Gallery' },
   { key: 'delivery', icon: '🛵', zh: '外卖', en: 'Delivery' },
-  { key: 'bank', icon: '🏦', zh: '银行', en: 'Bank' },
   { key: 'ttt', icon: '⭕', zh: '井字棋', en: 'Tic-tac-toe' },
   { key: 'listen', icon: '👂', zh: '听一听', en: 'Listen & pick' },
 ];
@@ -452,60 +451,6 @@ export function openPhone({ start = 'home', after } = {}) {
       $('#say', ui).onclick = () => answer && speak(answer);
       body.appendChild(ui);
       next();
-    },
-
-    // ----- bank -----
-    bank() {
-      header('🏦 喵喵银行 Bank');
-      const s = S.get(), deps = S.bank().deposits;
-      const saved = deps.reduce((a, d) => a + d.amount, 0);
-      body.appendChild(html`<div class="bank-card"><div><small>钱包 Wallet</small><b>${s.coins} ${coinI(18)}</b></div><div><small>存款 Saved</small><b>${saved} ${coinI(18)}</b></div></div>`);
-      const form = html`<div class="bank-form">
-          <b>存钱 Save coins</b>
-          <input type="number" id="amt" min="1" max="${s.coins}" inputmode="numeric" placeholder="多少金币？ How many coins?">
-          <div class="plans">${S.bankPlans().map((p, i) => `<button class="plan ${i === 0 ? 'on' : ''}" data-p="${i}"><b>${Math.round(p.rate * 100)}%</b><small>${p.days} 天 days</small></button>`).join('')}</div>
-          <div class="help" id="calc"></div>
-          <button class="ph-btn green block" id="dep">🐷 存进去 Deposit</button>
-          <div class="ph-note">要存够天数才有利息。提早拿出来就没有利息哦！<br>Leave it for the full days to earn interest. Take it out early and you get no interest.</div>
-        </div>`;
-      let plan = 0;
-      const amtIn = $('#amt', form);
-      const calc = () => {
-        const a = Math.floor(+amtIn.value || 0), p = S.bankPlans()[plan];
-        $('#calc', form).innerHTML = a > 0 ? `${p.days} 天后拿回 Get back after ${p.days} days: <b>${a + Math.round(a * p.rate)}</b> ${coinI(14)} (+${Math.round(a * p.rate)})` : '';
-        hydrateIcons(form);
-      };
-      form.querySelector('.plans').onclick = (e) => { const b = e.target.closest('[data-p]'); if (!b) return; plan = +b.dataset.p; form.querySelectorAll('.plan').forEach((x) => x.classList.toggle('on', x === b)); calc(); };
-      amtIn.oninput = calc;
-      $('#dep', form).onclick = () => {
-        const a = Math.floor(+amtIn.value || 0);
-        if (a <= 0) return toast('输入金币数量 Type how many coins');
-        if (a > S.get().coins) return toast('金币不够 Not enough coins');
-        S.deposit(a, plan); sfx.coin(); toast(`🐷 <span class="zh">存了 ${a} 金币！</span> Saved ${a} coins`); show('bank');
-      };
-      body.appendChild(form);
-      if (deps.length) {
-        body.appendChild(html`<b class="bank-h">我的存款 My savings</b>`);
-        deps.slice().sort((a, b) => S.depositMatures(a) - S.depositMatures(b)).forEach((d) => {
-          const p = S.depositTerms(d), ripe = Date.now() >= S.depositMatures(d);
-          const leftMs = S.depositMatures(d) - Date.now(), daysLeft = Math.ceil(leftMs / 86400000), hrsLeft = Math.ceil(leftMs / 3600000);
-          const r = html`<div class="dep ${ripe ? 'ripe' : ''}">
-              <div class="top"><b>${d.amount} ${coinI(16)}</b><span>${Math.round(p.rate * 100)}% · ${p.days} 天</span></div>
-              <div class="bar"><i style="width:${Math.min(100, ((Date.now() - d.at) / (p.days * 86400000)) * 100)}%"></i></div>
-              <div class="row-s">${ripe ? `✅ 可以拿了！ Ready: <b>${d.amount + S.depositInterest(d)}</b> ${coinI(14)}` : `⏳ 还有 ${daysLeft > 1 ? `${daysLeft} 天 days` : `${hrsLeft} 小时 hours`} · then +${S.depositInterest(d)}`}</div>
-              <button class="ph-btn ${ripe ? 'green' : ''} block" data-w>${ripe ? '💰 取出 Withdraw' : '取出 Withdraw early (no interest)'}</button>
-            </div>`;
-          $('[data-w]', r).onclick = async () => {
-            if (!ripe && !(await ask(`现在拿出来就<b>没有利息</b>，只拿回 ${d.amount} 金币。还要拿吗？<br>Taking it out now gives <b>no interest</b> — just your ${d.amount} coins back. Still withdraw?`, '拿出来 Withdraw'))) return;
-            const res = S.withdraw(d.id);
-            if (!res) return;
-            if (res.interest) { sfx.fanfare(); confetti(); toast(`💰 <span class="zh">拿回 ${res.amount + res.interest} 金币！</span> +${res.interest} interest!`, { ms: 3500 }); }
-            else { sfx.coin(); toast(`拿回 ${res.amount} 金币 · Got ${res.amount} coins back`); }
-            show('bank');
-          };
-          body.appendChild(r);
-        });
-      }
     },
 
     // ----- notifications -----

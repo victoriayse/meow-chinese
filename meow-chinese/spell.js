@@ -78,7 +78,7 @@ export function spellingScreen({ mode = 'list', go }) {
   }
   function addCoins(n) {
     if (!n) return;
-    roundCoins += n; S.addCoins(n);
+    roundCoins += n; S.earnCoins(n, 'Spelling / 听写');   // v269: into her bank account
     $('#rc', root).textContent = roundCoins;
   }
   function boxSize(n) {

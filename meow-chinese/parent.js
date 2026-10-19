@@ -160,7 +160,7 @@ function bankView(rerender) {
   const plans = S.bankPlans();
   const deps = S.bank().deposits;
   const n = html`<div class="stack">
-      <p class="help">The 🏦 Bank app on her phone lets her save coins for a set number of days. If she leaves them for the full time she gets interest; taking them out early gives back only what she put in. Set the three plans here. Changes apply to <b>new</b> deposits — money already saved keeps the terms it was saved with.</p>
+      <p class="help">The 🏦 Bank on the 🗺️ map has an ATM. Everything she earns (tasks, spelling, practice, essays, check-ins) goes into her bank account; she withdraws coins to her wallet to spend them, and can send coins to friends. The ATM's Savings lets her save coins for a set number of days. If she leaves them for the full time she gets interest; taking them out early gives back only what she put in. Set the three plans here. Changes apply to <b>new</b> deposits — money already saved keeps the terms it was saved with.</p>
       <div class="bank-plans">${plans.map((p, i) => `<div class="bank-plan card">
           <b>Plan ${i + 1}</b>
           <label class="field">Interest %<input type="number" min="0" max="500" step="1" inputmode="numeric" data-r="${i}" value="${Math.round(p.rate * 1000) / 10}"></label>

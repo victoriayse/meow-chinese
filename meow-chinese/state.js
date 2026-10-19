@@ -358,6 +358,8 @@ export const xpIntoLevel = () => xp() % xpPerLevel();
 
 // ---------- coins & daily tasks ----------
 export function addCoins(n) { state.coins += n; save(); }
+// spelling rewards: into the bank
+export function earnCoins(n, note) { earn(n, note); save(); }
 
 export function perfectDone() {
   const d = state.daily;
@@ -410,7 +412,7 @@ export function checkDaily() {
   const d = state.daily, got = [];
   d.paid = d.paid || {};
   if (d.spell || d.fed || perfectDone() || Object.values(d.done || {}).some(Boolean)) markActive();
-  const pay = (key, coins, label) => { if (!d.paid[key]) { d.paid[key] = true; state.coins += coins; got.push({ label, coins }); } };
+  const pay = (key, coins, label) => { if (!d.paid[key]) { d.paid[key] = true; earn(coins, `${label}`); got.push({ label, coins }); } };
   const list = dailyTasks();
   list.forEach((t) => { if (t.done) pay(t.key, t.coins, `${t.zh} ${t.en}`); });
   if (list.length && list.every((t) => d.paid[t.key]) && !d.paid.bonus) {
@@ -927,7 +929,7 @@ export function finishPlay(first, total) {
   state.boredSince = null; state.lastPlayAt = Date.now();
   let won = 0;
   let gotXp = 0;
-  if (total > 0 && first / total >= RIGHT_TARGET / WORDS_TARGET) { const r = rewardFor('play'); won = r.coins; gotXp = r.xp; state.coins += won; addXp(gotXp); }
+  if (total > 0 && first / total >= RIGHT_TARGET / WORDS_TARGET) { const r = rewardFor('play'); won = r.coins; gotXp = r.xp; earn(won, 'Play / 玩'); addXp(gotXp); }
   state.kitten.happy = Math.min(100, state.kitten.happy + 15);
   save();
   return { coins: won, xp: gotXp, passed: total > 0 && first / total >= RIGHT_TARGET / WORDS_TARGET };
@@ -974,6 +976,11 @@ export function receiveFriendEvent(ev, fromName) {
     const photo = typeof p.photo === 'string' && /^[0-9a-f-]{36}\/[0-9a-z-]{8,40}\.jpg$/i.test(p.photo) && p.photo.startsWith(ev.from_user + '/') ? p.photo : null;
     out = { id, kind: 'letter', from: ev.from_user, fromName, text: String(p.text).slice(0, 300), at, read: false, ...(photo ? { photo } : {}) };
     state.letters = [out, ...(state.letters || [])].slice(0, 100);
+  } else if (ev.kind === 'transfer' && Number.isInteger(p.amount) && p.amount > 0 && p.amount <= 100000) {
+    // 💸 a friend sent coins from the ATM: straight into her bank account
+    bank().balance += p.amount; bankTx('receive', p.amount, fromName);
+    out = { id, kind: 'transfer', from: ev.from_user, fromName, amount: p.amount, message: String(p.message || '').slice(0, 300), at, seen: false };
+    state.notifications = [{ id: 'n' + id, kind: 'transfer', title: `${fromName}转给你 ${p.amount} 金币`, body: `${fromName} sent you ${p.amount} coins — they're in your 🏦 bank account${p.message ? ': “' + String(p.message).slice(0, 80) + '”' : ''}`, at, read: false }, ...(state.notifications || [])].slice(0, 200);
   } else if (ev.kind === 'gift' && ITEMS[p.item]) {
     out = { id, kind: 'gift', from: ev.from_user, fromName, item: p.item, message: String(p.message || '').slice(0, 300), at, opened: false };
     state.gifts = [out, ...(state.gifts || [])].slice(0, 100);
@@ -1009,9 +1016,9 @@ export function claimCheckin() {
   if (st.claimed) return null;
   state.checkin = { day: st.day, last: todayStr() };
   let reward;
-  if (st.day < CHECKIN_DAYS) { state.coins += checkinCoins(st.day); reward = { day: st.day, coins: checkinCoins(st.day) }; }
+  if (st.day < CHECKIN_DAYS) { earn(checkinCoins(st.day), `Check-in day ${st.day}`); reward = { day: st.day, coins: checkinCoins(st.day) }; }
   else if (!state.owned.includes('princess')) { state.owned.push('princess'); reward = { day: st.day, item: 'princess' }; }
-  else { state.coins += 100; reward = { day: st.day, coins: 100, dup: 'princess' }; }   // already has the gown
+  else { earn(100, 'Check-in day 10'); reward = { day: st.day, coins: 100, dup: 'princess' }; }   // already has the gown
   save();
   return reward;
 }
@@ -1050,7 +1057,7 @@ export function finishPracticeSet(kind, id, right, total) {
   x.lastDone = t;
   countDone(kind, x); markTask(kind);
   let coins = 0, gotXp = 0, paid = false;
-  if (x.lastPaid !== t) { paid = true; x.lastPaid = t; const r = rewardFor(kind); coins = right * r.coins; gotXp = right * r.xp; state.coins += coins; addXp(gotXp); }
+  if (x.lastPaid !== t) { paid = true; x.lastPaid = t; const r = rewardFor(kind); coins = right * r.coins; gotXp = right * r.xp; earn(coins, `Practice · ${kind}`); addXp(gotXp); }
   markActive(); save();
   return { coins, xp: gotXp, paid };
 }
@@ -1061,7 +1068,7 @@ export function payShadeBonus(kind, id, goodRows) {
   if (!x || x.lastShadePaid === todayStr()) return { coins: 0, xp: 0, paid: false };
   x.lastShadePaid = todayStr();
   const r = rewardFor('shadeq'), coins = goodRows * r.coins, gotXp = goodRows * r.xp;
-  state.coins += coins; addXp(gotXp); save();
+  earn(coins, 'Shading'); addXp(gotXp); save();
   return { coins, xp: gotXp, paid: true };
 }
 // ---------- daily limits: how many times a day (0 = no limit) ----------
@@ -1136,10 +1143,10 @@ export const listenRewardInfo = () => rewardFor('listen');
 export const tttPaidLeft = () => { const n = limitSetting('ttt').perDay; return n ? Math.max(0, n - todayCount('tttpaid')) : 99; };
 export function finishTtt(won) {
   countDone('tttgame'); let r = null;
-  if (won && tttPaidLeft() > 0) { r = rewardFor('ttt'); state.coins += r.coins; addXp(r.xp); countDone('tttpaid'); }
+  if (won && tttPaidLeft() > 0) { r = rewardFor('ttt'); earn(r.coins, 'Tic-tac-toe'); addXp(r.xp); countDone('tttpaid'); }
   save(); return r;
 }
-export function listenReward(right) { countDone('listen'); markTask('listen'); if (right < 8) { save(); return null; } const r = rewardFor('listen'); state.coins += r.coins; addXp(r.xp); save(); return r; }
+export function listenReward(right) { countDone('listen'); markTask('listen'); if (right < 8) { save(); return null; } const r = rewardFor('listen'); earn(r.coins, 'Listening'); addXp(r.xp); save(); return r; }
 
 // ----- flip phone -----
 export function notify(n) {
@@ -1226,16 +1233,58 @@ export const bankPlans = () => {
 export function setBankPlans(list) { state.settings.bankPlans = list.map((x) => ({ rate: Math.max(0, Math.min(5, +x.rate || 0)), days: Math.max(1, Math.min(365, Math.round(+x.days || 1))) })); save(); }
 const terms = (d) => (Number.isFinite(d.rate) && d.days ? { rate: d.rate, days: d.days } : (bankPlans()[d.plan] || BANK_DEFAULTS[0]));
 export const depositTerms = terms;
-export const bank = () => { if (!state.bank) state.bank = { deposits: [] }; return state.bank; };
+export const bank = () => { if (!state.bank) state.bank = { deposits: [] }; const b = state.bank; if (!Number.isFinite(b.balance)) b.balance = 0; if (!Array.isArray(b.tx)) b.tx = []; if (!Array.isArray(b.deposits)) b.deposits = []; return b; };
+// ---------- 🏦 v269: the bank account (the ATM at the 🗺️ Bank) ----------
+// Everything she earns from tasks, spelling, practice, essays and check-ins goes into her account; the wallet (coins)
+// is what she spends. The ATM moves coins between them, sends coins to friends and holds her savings (fixed deposits).
+export const TX_DAYS = 14;
+export const bankBalance = () => bank().balance;
+export const savedTotal = () => bank().deposits.reduce((a, d) => a + d.amount, 0);
+function bankTx(kind, amount, note = '') {
+  const b = bank(), now = Date.now();
+  b.tx = [{ id: uid(), at: now, kind, amount, note: String(note || '').slice(0, 60), bal: b.balance }, ...b.tx.filter((t) => t.at > now - TX_DAYS * 864e5)].slice(0, 300);
+}
+export const bankHistory = () => bank().tx.filter((t) => t.at > Date.now() - TX_DAYS * 864e5).sort((a, b) => b.at - a.at);
+// an earning goes straight into the bank (the caller saves)
+export function earn(n, note = '') {
+  n = Math.round(Number(n) || 0); if (n <= 0) return 0;
+  const b = bank(), last = b.tx[0];
+  b.balance += n;
+  // a spelling round pays word by word: one line in the history for the round
+  if (last && last.kind === 'earn' && last.note === String(note || '').slice(0, 60) && Date.now() - last.at < 15 * 60000) { last.amount += n; last.bal = b.balance; last.at = Date.now(); }
+  else bankTx('earn', n, note);
+  return n;
+}
+const bankListeners = new Set();
+export const onBank = (fn) => { bankListeners.add(fn); return () => bankListeners.delete(fn); };
+// put wallet coins into the bank
+export function atmDeposit(n) {
+  n = Math.floor(Number(n) || 0);
+  if (n <= 0 || n > state.coins) return false;
+  state.coins -= n; bank().balance += n; bankTx('deposit', n); save(); return true;
+}
+// take coins out of the bank into the wallet
+export function atmWithdraw(n) {
+  n = Math.floor(Number(n) || 0);
+  if (n <= 0 || n > bank().balance) return false;
+  bank().balance -= n; state.coins += n; bankTx('withdraw', n); save(); return true;
+}
+// coins leaving for a friend (the ATM undoes it if sending fails)
+export function transferOut(n, toName) {
+  n = Math.floor(Number(n) || 0);
+  if (n <= 0 || n > bank().balance) return false;
+  bank().balance -= n; bankTx('send', n, toName); save(); return true;
+}
+export function transferUndo(n, toName) { bank().balance += n; bankTx('refund', n, toName); save(); }
 export const depositMatures = (d) => d.at + terms(d).days * 86400000;
 export const depositInterest = (d) => Math.round(d.amount * terms(d).rate);
 export function deposit(amount, plan) {
   amount = Math.floor(Number(amount) || 0);
   const p = bankPlans()[plan];
-  if (amount <= 0 || amount > state.coins || !p) return null;
-  state.coins -= amount;
+  if (amount <= 0 || amount > bank().balance || !p) return null;
+  bank().balance -= amount;
   const d = { id: uid(), amount, plan, rate: p.rate, days: p.days, at: Date.now() };
-  bank().deposits.push(d); save(); return d;
+  bank().deposits.push(d); bankTx('save', amount, `${Math.round(p.rate * 100)}% · ${p.days}d`); save(); return d;
 }
 export function withdraw(id) {
   const b = bank(), d = b.deposits.find((x) => x.id === id);
@@ -1243,7 +1292,8 @@ export function withdraw(id) {
   const ripe = Date.now() >= depositMatures(d);
   const interest = ripe ? depositInterest(d) : 0;
   b.deposits = b.deposits.filter((x) => x.id !== id);
-  state.coins += d.amount + interest;
+  b.balance += d.amount + interest;
+  bankTx('unsave', d.amount + interest, interest ? `+${interest} interest` : 'early');
   save();
   return { amount: d.amount, interest };
 }
@@ -1334,7 +1384,7 @@ export function reviewEssay(id, { stars, coins, xp: x, comment }) {
   coins = Math.max(0, Math.round(Number(coins) || 0));
   x = x === undefined ? xpPerEssay() : Math.max(0, Math.round(Number(x) || 0));
   e.status = 'reviewed'; e.review = { stars, coins, xp: x, comment: (comment || '').trim(), at: Date.now() }; e.seen = false;
-  state.coins += coins; addXp(x); save(); return true;
+  earn(coins, `Essay · ${e.title || ''}`); addXp(x); save(); return true;
 }
 export function markEssaySeen(id) { const e = essays().find((x) => x.id === id); if (e) { e.seen = true; save(); } }
 export function deleteEssay(id) { state.essays = essays().filter((x) => x.id !== id); save(); }
