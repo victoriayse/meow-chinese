@@ -20,8 +20,8 @@ let child = null, childName = '';
 export const managing = () => child;
 export const managingName = () => childName;
 const rpcCall = (name, body) => rest('rpc/' + name, { method: 'POST', body: JSON.stringify(body) });
-const getRemote = async () => (child
-  ? (await rpcCall('get_child_save', { p_child: child }))[0] || null
+const getRemote = async (who = child) => (who
+  ? (await rpcCall('get_child_save', { p_child: who }))[0] || null
   : (await rest('user_saves?select=data,client_updated'))[0] || null);
 function payload() {
   const data = JSON.parse(JSON.stringify(S.get()));
@@ -37,7 +37,9 @@ const loadAnc = () => { try { const t = localStorage.getItem(ancKey()); return t
 const saveAnc = (d) => { try { localStorage.setItem(ancKey(), JSON.stringify(d)); } catch {} };
 export const clearAnc = () => { try { localStorage.removeItem(ANC_KEY); } catch {} };
 
-let ready = false, timer = null, onReplaced = () => {}, running = null, again = false;
+let ready = false, timer = null, onReplaced = () => {}, running = null, again = false, switching = false;
+// wait until no sync is running (including the follow-up one a running sync may start)
+async function settle() { for (let i = 0; i < 20 && running; i++) { try { await running; } catch {} } }
 function useCopy(data) {
   // put a merged/cloud copy on this device without counting it as a new change
   const owner = child || (Auth.user() && Auth.user().id);
@@ -48,29 +50,42 @@ function useCopy(data) {
   S.saveQuiet();
 }
 // write only if the cloud still has the copy we read (otherwise read again and merge)
-async function write(data, expected) {
+async function write(data, expected, who = child) {
   const stamp = Math.max(Date.now(), (expected || 0) + 1);
-  const r = child
-    ? await rpcCall('put_child_save', { p_child: child, p_data: data, p_client_updated: stamp, p_expected: expected })
+  const r = who
+    ? await rpcCall('put_child_save', { p_child: who, p_data: data, p_client_updated: stamp, p_expected: expected })
     : await rest('rpc/put_my_save2', { method: 'POST', body: JSON.stringify({ p_data: data, p_client_updated: stamp, p_expected: expected }) });
   return r && r.ok ? stamp : null;
 }
 
 // Read the cloud copy, merge it with this device, and write back whatever is new. Safe to call any time.
+// v268: a sync belongs to the account it started for. If she switches between her own game and a child's while
+// it's running (the game on this device is swapped), it stops instead of saving one account's game into the other.
+const ident = (d) => `${(d && d.kitten && d.kitten.name) || ''}|${(d && d.childName) || ''}`;
+let backedUp = '';
 async function syncNow() {
-  if (!Auth.session()) return;
+  if (!Auth.session() || switching) return;
+  const target = child, game = S.get();
+  const moved = () => switching || child !== target || S.get() !== game;
   setStatus('syncing');
   for (let tries = 0; tries < 4; tries++) {
-    const remote = await getRemote();
+    const remote = await getRemote(target);
+    if (moved()) return;
     lastRemoteStamp = remote ? remote.client_updated : null;
     const local = payload();
     if (!remote || !remote.data) {
-      const st = await write(local, null);
+      const st = await write(local, null, target);
       if (st == null) continue;
       lastRemoteStamp = st;
       saveAnc(local); sync().lastSynced = local.updatedAt; S.saveQuiet(); setStatus('ok'); return;
     }
     const anc = loadAnc();
+    // this device holds a different kitten from the account's: keep a copy of it in the cloud first (nothing is lost)
+    if (!target && local.onboarded && remote.data.onboarded && ident(local) !== ident(remote.data) && backedUp !== ident(local)) {
+      backedUp = ident(local);
+      try { await rest('rpc/backup_my_save', { method: 'POST', body: JSON.stringify({ p_data: local, p_reason: 'device-differs' }) }); } catch (e) { /* offline */ }
+      if (moved()) return;
+    }
     // a device that was never set up just takes the account's copy
     const merged = (!anc && !local.onboarded) ? remote.data : mergeSaves(anc, local, remote.data);
     if (!sameSave(merged, local)) { useCopy(merged); onReplaced(); }
@@ -78,7 +93,8 @@ async function syncNow() {
     // must NOT be remembered as "already in the cloud", or the next merge would treat it as deleted
     const out = payload();
     if (!sameSave(merged, remote.data)) {
-      const st = await write(out, remote.client_updated);
+      if (moved()) return;
+      const st = await write(out, remote.client_updated, target);
       if (st == null) continue;                    // someone else saved in between: read and merge again
       lastRemoteStamp = st;
     }
@@ -138,7 +154,7 @@ export function init(replacedCallback) {
   window.addEventListener('online', () => pull());
 }
 export function stop() {
-  ready = false; child = null; childName = ''; S.useStorage(null); clearTimeout(timer); clearAnc(); setStatus('idle');
+  ready = false; child = null; backedUp = ''; childName = ''; S.useStorage(null); clearTimeout(timer); clearAnc(); setStatus('idle');
   // forget the copies of linked children's accounts kept on this device
   try { Object.keys(localStorage).filter((k) => /^meow-chinese-(child-|synced-child-)/.test(k)).forEach((k) => localStorage.removeItem(k)); } catch {}
 }
@@ -154,23 +170,31 @@ export const family = {
 export async function manage(childId, name = '') {
   if (childId === child) return;
   clearTimeout(timer);
-  if (running) await running;
+  await settle();
   await runSync().catch(() => {});                // send any last changes of the current account
-  const remote = await (async () => { const was = child; child = childId; try { return await getRemote(); } catch (e) { child = was; throw e; } })();
-  childName = name;
-  lastRemoteStamp = null;
-  S.useStorage(childId);
-  if (remote && remote.data) { useCopy(remote.data); saveAnc(payload()); lastRemoteStamp = remote.client_updated; }
+  await settle();
+  switching = true;
+  try {
+    const remote = await getRemote(childId);      // (fetched before anything on this device changes over)
+    clearTimeout(timer);
+    child = childId; childName = name; lastRemoteStamp = null;
+    S.useStorage(childId);
+    if (remote && remote.data) { useCopy(remote.data); saveAnc(payload()); lastRemoteStamp = remote.client_updated; }
+  } finally { switching = false; }
   setStatus('ok');
 }
 // back to her own account
 export async function stopManaging() {
   if (!child) return;
   clearTimeout(timer);
-  if (running) await running;
+  await settle();
   await runSync().catch(() => {});                // send the last changes made to the child's account
+  await settle();
+  switching = true;
+  clearTimeout(timer);
   child = null; childName = ''; lastRemoteStamp = null;
   S.useStorage(null);
+  switching = false;
   runSync().catch(() => {});
 }
 export const backupNow = () => runSync();

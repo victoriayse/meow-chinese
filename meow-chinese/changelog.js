@@ -732,4 +732,5 @@ export const CHANGES = [
   { v: 265, items: ['Tapping a pet food & water bowl now opens it: see how much food and water is left, add food, refill water', 'Works for the bowls inside the hamster and guinea pig cages too, even when the pet is sitting on it'] },
   { v: 266, items: ['With 2 or more pets, their bars fold away under one Pets button (tap to open or close; a warning shows if a pet is low)', 'Fixed pets showing twice after syncing between devices'] },
   { v: 267, items: ['Treats are given by tapping the pet itself: its card shows your treats to pick from', 'Watch your pet munch the treat bite by bite, with crumbs and hearts'] },
+  { v: 268, items: ['Fixed: a parent switching between their own game and a child account could save the child game into the parent account', 'Saves are now backed up in the cloud (daily, and whenever an account suddenly becomes a different kitten)'] },
 ];
