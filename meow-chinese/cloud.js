@@ -67,6 +67,10 @@ async function syncNow() {
   if (!Auth.session() || switching) return;
   const target = child, game = S.get();
   const moved = () => switching || child !== target || S.get() !== game;
+  // v272: the game on this device must belong to the account it's being saved to — a parent's own game never goes
+  // into her child's account and a child's never into the parent's (whatever else goes wrong)
+  const owner = target || (Auth.user() && Auth.user().id);
+  if (game.ownerId && owner && game.ownerId !== owner) { console.warn('sync refused: this game belongs to another account'); setStatus('offline', 'wrong account'); return; }
   setStatus('syncing');
   for (let tries = 0; tries < 4; tries++) {
     const remote = await getRemote(target);
