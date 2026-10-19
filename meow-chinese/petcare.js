@@ -23,12 +23,33 @@ export function paintBowls(root) {
 }
 
 // the two bars for each pet on the home screen (10 sections each, like the kitten's)
-export function petBarsHtml() {
-  S.petCareTick();
-  return S.fedPets().map((p) => `
+let petsOpen = false;
+try { petsOpen = localStorage.getItem('meow-pets-open') === '1'; } catch {}
+const barsOf = (p) => `
     <div class="pet-head">${ICON[p.kind] || '🐾'} ${esc(p.name)}</div>
     <div class="stat pet-stat"><span style="font-size:19px;text-align:center">🍖</span><span>饱饱 <span class="en">Food</span></span><div class="bar segmented"><i style="width:${pct(p.food)}%;--c:#f59b2a"></i></div></div>
-    <div class="stat pet-stat"><span style="font-size:19px;text-align:center">💧</span><span>喝水 <span class="en">Water</span></span><div class="bar segmented"><i style="width:${pct(p.water)}%;--c:#4fb3ef"></i></div></div>`).join('');
+    <div class="stat pet-stat"><span style="font-size:19px;text-align:center">💧</span><span>喝水 <span class="en">Water</span></span><div class="bar segmented"><i style="width:${pct(p.water)}%;--c:#4fb3ef"></i></div></div>`;
+// one pet: its bars. More than one: a 🐾 button that opens / closes all their bars (a ⚠️ when one is low)
+export function petBarsHtml() {
+  S.petCareTick();
+  const ps = S.fedPets();
+  if (ps.length < 2) return ps.map(barsOf).join('');
+  const low = ps.filter((p) => pct(p.food) < S.PET_LOW || pct(p.water) < S.PET_LOW);
+  return `<button type="button" class="pet-toggle ${petsOpen ? 'open' : ''}" data-pet-toggle aria-expanded="${petsOpen}">
+      <span class="pt-ic">🐾</span><span class="pt-nm">宠物 <span class="en">Pets</span></span>
+      <span class="pt-who">${ps.map((p) => `<span class="${low.includes(p) ? 'low' : ''}" title="${esc(p.name)}">${ICON[p.kind] || '🐾'}</span>`).join('')}</span>
+      ${low.length ? `<span class="pt-warn">⚠️ ${low.map((p) => esc(p.name)).join(', ')}</span>` : ''}
+      <b class="pt-arrow">${petsOpen ? '▲' : '▼'}</b></button>
+    ${petsOpen ? ps.map(barsOf).join('') : ''}`;
+}
+// the 🐾 button opens / closes the pets' bars (remembered on this device)
+export function wirePetBars(box) {
+  if (!box || box._wired) return; box._wired = true;
+  box.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-pet-toggle]')) return;
+    petsOpen = !petsOpen; try { localStorage.setItem('meow-pets-open', petsOpen ? '1' : '0'); } catch {}
+    sfx.click(); box.innerHTML = petBarsHtml();
+  });
 }
 
 // tap a bowl (or Feed in the pet's menu): see what's left, add food, refill water, give a treat

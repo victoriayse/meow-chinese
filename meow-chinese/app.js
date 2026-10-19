@@ -605,6 +605,7 @@ function homeScreen(params = {}) {
       </div>
     </div>
   </section>`;
+  Care.wirePetBars($('#petbars', n));
   // 🛵 deliveries wait in the living room — or right here, if her home isn't open yet
   if (!inHouse && !S.unlocked('decor')) Delivery.drawBags($('#stage', n), 'living', () => {});
 

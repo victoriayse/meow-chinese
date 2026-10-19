@@ -8,11 +8,14 @@ const ADDITIVE = new Set(['coins', 'kitten.xp']);
 const SKIP = new Set(['sync', 'updatedAt']);
 
 function mergeArrays(anc, a, b, path, aNewer) {
-  const hasIds = [...a, ...b].every((x) => isObj(x) && x.id != null);
+  // pets have no id: one pet of each kind, so they're matched by kind (v266: their food / water numbers change
+  // all the time, and matching them as plain values made a second copy of every pet)
+  const idOf = path === 'pets' ? (x) => x.kind : (x) => x.id;
+  const hasIds = [...a, ...b].every((x) => isObj(x) && idOf(x) != null);
   if (hasIds) {
-    const byId = (arr) => new Map((arr || []).map((x) => [x.id, x]));
+    const byId = (arr) => new Map((arr || []).filter((x) => isObj(x) && idOf(x) != null).map((x) => [idOf(x), x]));
     const A = byId(a), B = byId(b), O = byId(anc);
-    const order = [...a.map((x) => x.id), ...b.map((x) => x.id).filter((id) => !A.has(id))];
+    const order = [...new Set([...a.map(idOf), ...b.map(idOf).filter((id) => !A.has(id))])];
     const out = [];
     for (const id of order) {
       const x = A.get(id), y = B.get(id), o = O.get(id);

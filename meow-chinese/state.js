@@ -114,6 +114,13 @@ function migrate(s) {
   { const old = (out.owned || []).filter((x) => String(x).split('#')[0] === 'dogbowl'); if (old.length) { out.owned = out.owned.filter((x) => !old.includes(x)); out.coins += 30 * old.length; out.decorHidden = (out.decorHidden || []).filter((x) => !old.includes(x)); } }
   // keep items this version doesn't know yet (a newer device may have added them); never lose them
   out.owned = [...new Set(out.owned || [])];
+  // v266: one pet of each kind (cloud syncs made copies), and a pet that died stays gone
+  if (Array.isArray(out.pets)) {
+    const byKind = new Map();
+    out.pets.forEach((p) => { if (!p || !p.kind) return; const q = byKind.get(p.kind); if (!q || (p.careAt || 0) > (q.careAt || 0)) byKind.set(p.kind, p); });
+    const deaths = out.petDeaths || [];
+    out.pets = [...byKind.values()].filter((p) => !deaths.some((d) => d.kind === p.kind && d.at > (p.at || 0)));
+  }
   // anything she is wearing is hers (repairs saves where an older app version dropped new items)
   Object.values(out.kitten.equipped || {}).forEach((id) => { if (id && !out.owned.includes(id)) out.owned.push(id); });
   // something worn in the wrong spot (e.g. a handbag from when bags used the neckwear spot): move it to its own spot
