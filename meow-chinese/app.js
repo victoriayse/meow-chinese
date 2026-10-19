@@ -1308,7 +1308,7 @@ function homeScreen(params = {}) {
       e.stopPropagation(); Care.openBowl(ITEMS[d.dataset.id.split('#')[0]].petBowl, { onChange: petCareChanged, go });
     });
     Care.paintBowls(room);
-    { const bw = room.querySelector('.decor[data-id^="petbowldog"]'); if (bw) requestAnimationFrame(() => { const W = room.clientWidth || 1, H = room.clientHeight || 1; Pets.setBowlSpot('dog', roomKey, Math.max(4, ((bw.offsetLeft - bw.offsetWidth * 0.12) / W) * 100), Math.max(1, ((H - bw.offsetTop - bw.offsetHeight) / H) * 100 - 1)); }); }
+    room.querySelectorAll('.decor[data-id^="petbowl"]').forEach((bw) => requestAnimationFrame(() => { const W = room.clientWidth || 1, H = room.clientHeight || 1; Pets.setBowlSpot(ITEMS[bw.dataset.id.split('#')[0]].petBowl, roomKey, Math.max(4, ((bw.offsetLeft - bw.offsetWidth * 0.12) / W) * 100), Math.max(1, ((H - bw.offsetTop - bw.offsetHeight) / H) * 100 - 1)); }));
   } else { hostRoomNow = 'living'; roomPower = null; homePets = null; Radio.stop(); }
   n._mounted = () => { if (S.unseenPetDeaths().length) setTimeout(() => { if (n.isConnected && document.querySelector('#modal').classList.contains('hidden')) Care.showPetDeaths(); }, 900); Visit.visitors.attach(inHouse ? room : null, roomKey); if (inHouse) { Visit.hostResendHouse(); Visit.hostMove(hostPos()); requestAnimationFrame(() => roomPower && roomPower()); fitHouseBox($('#house', n), $('#hunit', n)); drawRoom($('#roombg', n), isNight(), roomKey, S.roomStyle(roomKey)); drawRoof($('#roof', n)); studioBarre(room, roomKey === 'basement'); decorEls.forEach((el) => { el.style.zIndex = depth(el); }); stackDecor(room); placeCat(); if (homePets) homePets(); if (params.openStorage) { delete currentParams.openStorage; $('#b-store', n).click(); } } };
   return n;

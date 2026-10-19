@@ -118,20 +118,20 @@ async function onSave(userId: string) {
   return sent;
 }
 
-// ---------- 🐾 pets (dog, hamster, guinea pig): the same sums as the app (state.js petCareTick) ----------
-const PET_NEEDS = ["dog", "hamster", "guineapig"], BOWLS: Record<string, string> = { dog: "petbowldog", hamster: "petbowlhamster", guineapig: "petbowlguineapig" };
-const PET_NAME: Record<string, string> = { dog: "狗狗", hamster: "仓鼠", guineapig: "豚鼠" };
+// ---------- 🐾 pets (dog, hamster, guinea pig, bunny): the same sums as the app (state.js petCareTick) ----------
+const PET_NEEDS = ["dog", "hamster", "guineapig", "rabbit"], BOWLS: Record<string, string> = { dog: "petbowldog", hamster: "petbowlhamster", guineapig: "petbowlguineapig", rabbit: "petbowlrabbit" };
+const PET_NAME: Record<string, string> = { dog: "狗狗", hamster: "仓鼠", guineapig: "豚鼠", rabbit: "兔兔" };
 function petNow(save: any, p: any, now: number) {
   let food = Number(p.food ?? 100), water = Number(p.water ?? 100), zeroAt = p.zeroAt || null;
   const b = (save.petBowls || {})[p.kind] || { food: 0, waterAt: 0 };
   const bowlId = (save.owned || []).find((id: string) => String(id).split("#")[0] === BOWLS[p.kind]);
-  const reach = !!bowlId && (p.kind === "dog" ? !(save.decorHidden || []).includes(bowlId) : true);
+  const reach = !!bowlId && (p.kind === "dog" || p.kind === "rabbit" ? !(save.decorHidden || []).includes(bowlId) : true);
   let bowlFood = Number(b.food || 0), t = Math.min(now, p.careAt || now);
   while (t < now) {
     const dt = Math.min(now - t, 10 * 60000); t += dt; const h = dt / 3600000;
-    food = Math.max(0, food - h * (100 / 48));
+    food = Math.max(0, food - h * (100 / 20));
     const w = reach && b.waterAt ? 100 - ((t - b.waterAt) / 3600000) * (100 / 24) : 0;
-    if (w > 0) water = 100; else water = Math.max(0, water - h * (100 / 24));
+    if (w > 0) water = 100; else water = Math.max(0, water - h * (100 / 20));
     while (reach && food <= 90 && bowlFood >= 10) { bowlFood -= 10; food = Math.min(100, food + 10); }
     if (food <= 0 || water <= 0) zeroAt = zeroAt || t; else zeroAt = null;
   }

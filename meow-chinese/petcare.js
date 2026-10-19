@@ -5,7 +5,7 @@ import { ITEMS, bowlGrid, bowlOf, drawGrid, spriteCanvas, artGrid } from './pixe
 import { $, html, esc, toast, openModal, closeModal } from './ui.js';
 import { sfx } from './audio.js';
 
-const ICON = { dog: '🐶', hamster: '🐹', guineapig: '🐾' };
+const ICON = { dog: '🐶', rabbit: '🐰', hamster: '🐹', guineapig: '🐾' };
 const pct = (v) => Math.round(Math.max(0, Math.min(100, v || 0)));
 const hm = (ms) => { const m = Math.ceil(ms / 60000); return m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m} min`; };
 

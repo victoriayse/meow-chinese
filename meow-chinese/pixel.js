@@ -2572,15 +2572,6 @@ Object.assign(ITEMS, {
       '..ss..',
       '..oo..',
     ] },
-  cagebowl: { cat: 'petacc', cageFor: ['hamster', 'guineapig'], inCage: { x: 0.36, y: 0.23, z: 3, s: 0.5 }, name: '小食盆', en: 'Food bowl', price: 20,
-    pal: { o: O, b: '#ffb03a', h: '#ffd27a', f: '#e8c26a', g: '#7cbd52', r: '#d9734a' },
-    art: [
-      '..oofgoo..',
-      'ofgffrfgfo',
-      'ohhhhhhhho',
-      'obbbbbbbbo',
-      'oooooooooo',
-    ] },
   peetray: { cat: 'petacc', cageFor: ['hamster', 'guineapig'], inCage: { x: 0.62, y: 0.21, z: 3, s: 0.6 }, name: '尿盆', en: 'Pee tray', price: 25,
     pal: { o: O, t: '#7fc8a9', u: '#a6e3c8', s: '#f4ead2' },
     art: [
@@ -2630,16 +2621,6 @@ Object.assign(ITEMS, {
       'orrrrrrrrrrrrrrrrrrrrrrrrrro',
       'orrrrrrrrrrrrrrrrrrrrrrrrrro',
       'oooooooooooooooooooooooooooo',
-    ] },
-  dogbowl: { cat: 'decor', petacc: true, name: '狗碗', en: 'Dog bowl', price: 30, spot: 'toy-right',
-    pal: { o: O, b: '#e8384f', h: '#ff7f8f', w: '#ffffff', k: '#b07a48', d: '#8a5a32' },
-    art: [
-      '...kdkkkkkk...',
-      'okkdkkkdkkdkko',
-      'obbbbbbbbbbbbo',
-      'ohhhhhhhhhhhho',
-      'obbbwwwwwwbbbo',
-      'oooooooooooooo',
     ] },
   dogbone: { cat: 'decor', petacc: true, name: '骨头玩具', en: 'Chew bone', price: 20, spot: 'toy-left',
     pal: { o: O, w: '#fff8e6', l: '#f0dfba' },
@@ -12479,14 +12460,16 @@ const BOWL_ART = [
   '..oooooo....' + '..oooooo..',
 ];
 const bowlPal = (b, h, k, K) => ({ o: O, b, h, k, K, w: '#6cc4f5', W: '#d4f1ff', e: '#5a3d33' });
-export const PET_NEEDS = ['dog', 'hamster', 'guineapig'];
+export const PET_NEEDS = ['dog', 'hamster', 'guineapig', 'rabbit'];
 ITEMS.petbowldog = { cat: 'decor', room: 'living', name: '狗狗食物和水碗', en: 'Dog food & water bowl', price: 20, spot: 'front-right', one: true, petBowl: 'dog', noGift: true, size: 1.3,
   pal: bowlPal('#e8384f', '#ff9a9a', '#a0612e', '#6e3f1c'), art: BOWL_ART };
+ITEMS.petbowlrabbit = { cat: 'decor', room: 'living', name: '兔兔食物和水碗', en: 'Bunny food & water bowl', price: 20, spot: 'front-left', one: true, petBowl: 'rabbit', noGift: true, size: 1.2,
+  pal: bowlPal('#6cb6f2', '#bfe2ff', '#e8a040', '#7cbd52'), art: BOWL_ART };
 ITEMS.petbowlhamster = { cat: 'petacc', cageFor: ['hamster'], inCage: { x: 0.45, y: 0.2, z: 3, s: 0.55 }, name: '仓鼠食物和水碗', en: 'Hamster food & water bowl', price: 20, petBowl: 'hamster',
   pal: bowlPal('#ffb03a', '#ffd98a', '#e8c26a', '#9b6a2e'), art: BOWL_ART };
 ITEMS.petbowlguineapig = { cat: 'petacc', cageFor: ['guineapig'], inCage: { x: 0.45, y: 0.2, z: 3, s: 0.55 }, name: '豚鼠食物和水碗', en: 'Guinea pig food & water bowl', price: 20, petBowl: 'guineapig',
   pal: bowlPal('#5fae4a', '#a8dc8a', '#9fbf5a', '#5f7f2a'), art: BOWL_ART };
-export const bowlOf = (kind) => ({ dog: 'petbowldog', hamster: 'petbowlhamster', guineapig: 'petbowlguineapig' }[kind]);
+export const bowlOf = (kind) => ({ dog: 'petbowldog', hamster: 'petbowlhamster', guineapig: 'petbowlguineapig', rabbit: 'petbowlrabbit' }[kind]);
 // the bowl as it looks now: food 0–100 %, water 0–100 %
 export function bowlGrid(id, food, water) {
   const it = ITEMS[id];
@@ -12507,6 +12490,7 @@ Object.assign(ITEMS, Object.fromEntries([
   petFood('dogkibble', 'dog', 'main', '狗粮', 'Dog kibble (10 servings)', 60, '#e8564a', '#ffd23f', '#a0612e', '#6e3f1c'),
   petFood('hamsterfood', 'hamster', 'main', '仓鼠粮', 'Hamster food (10 servings)', 30, '#ffb03a', '#7cbd52', '#e8c26a', '#9b6a2e'),
   petFood('guineapigfood', 'guineapig', 'main', '豚鼠粮', 'Guinea pig food (10 servings)', 30, '#5fae4a', '#ffd23f', '#9fbf5a', '#5f7f2a'),
+  petFood('rabbitfood', 'rabbit', 'main', '兔粮', 'Bunny food (10 servings)', 30, '#6cb6f2', '#ff9a2e', '#9fbf5a', '#e8a040'),
   petFood('dogtreatchicken', 'dog', 'treat', '冻干鸡肉', 'Freeze-dried chicken (5 treats)', 30, '#f4a65a', '#e8384f', '#f6e0b0', '#c9965a'),
   petFood('dogtreatbone', 'dog', 'treat', '骨头饼干', 'Dog bone biscuits (5 treats)', 30, '#6cb6f2', '#ffd23f', '#f6e6c8', '#c9a46a'),
   petFood('dogtreatbeef', 'dog', 'treat', '牛肉干', 'Dried beef snack (5 treats)', 30, '#8a5a32', '#ff7f50', '#b4462e', '#6e2a1a'),
@@ -12516,5 +12500,8 @@ Object.assign(ITEMS, Object.fromEntries([
   petFood('hamtreatberry', 'hamster', 'treat', '莓果干', 'Dried berries (5 treats)', 20, '#c46bd8', '#ff9ec4', '#b02a4e', '#5a2a6e'),
   petFood('gptreatfruit', 'guineapig', 'treat', '果干', 'Dried fruits (5 treats)', 20, '#ff9a2e', '#7cbd52', '#ff6f5a', '#ffd23f'),
   petFood('gptreatbiscuit', 'guineapig', 'treat', '莓果饼干', 'Berry biscuits (5 treats)', 20, '#e8384f', '#ffd23f', '#e8c08a', '#c4304e'),
+  petFood('rabtreatcarrot', 'rabbit', 'treat', '胡萝卜干', 'Dried carrots (5 treats)', 20, '#7cbd52', '#ff9a2e', '#ff8a2e', '#5fae4a'),
+  petFood('rabtreatapple', 'rabbit', 'treat', '苹果片', 'Apple chips (5 treats)', 20, '#e8384f', '#7cbd52', '#fff0c8', '#e8384f'),
+  petFood('rabtreathay', 'rabbit', 'treat', '干草饼', 'Hay cubes (5 treats)', 20, '#c9a46a', '#7cbd52', '#d8c46a', '#9f8a3a'),
   petFood('gptreatyogurt', 'guineapig', 'treat', '酸奶豆', 'Yogurt drops (5 treats)', 20, '#9b7bea', '#ffffff', '#fffaf0', '#e0d0ff'),
 ]));

@@ -55,7 +55,7 @@ const PET_GROUPS = [
   { key: 'drink', icon: '💧', zh: '饮料', en: 'Drinks', test: () => false },
   { key: 'items', icon: '🥣', zh: '宠物用品', en: 'Pet Items', test: (it) => !!it.petBowl },
 ];
-const PET_ORDER = { dog: 0, hamster: 1, guineapig: 2 };
+const PET_ORDER = { dog: 0, rabbit: 1, hamster: 2, guineapig: 3 };
 const POOLSIDE = ['bbq', 'lounger', 'umbrella', 'cocktails', 'towels', 'loungesofa', 'loungesofanavy'];
 export function decorGroup(it) {
   const id = Object.keys(ITEMS).find((k) => ITEMS[k] === it);
@@ -176,7 +176,7 @@ export function shopScreen({ go, tab = 'food' }) {
       const onlyOne = it.one && S.ownedCount(id) >= 1;   // e.g. the collection counter
       const can = s.coins >= cost && !full && needed && !roomShut && !needCage && !needBowl && !onlyOne;
       const cageOf = (k) => ({ hamster: '🐹 仓鼠 hamster', guineapig: '🐾 豚鼠 guinea pig', parrot: '🐦 玄凤鹦鹉 cockatiel' }[k] || k);
-      const petNm = (k) => ({ dog: '🐶 狗狗 Dog', hamster: '🐹 仓鼠 Hamster', guineapig: '🐾 豚鼠 Guinea pig' }[k] || k);
+      const petNm = (k) => ({ dog: '🐶 狗狗 Dog', rabbit: '🐰 兔兔 Bunny', hamster: '🐹 仓鼠 Hamster', guineapig: '🐾 豚鼠 Guinea pig' }[k] || k);
       const eff = isPet ? (adopted ? `💕 ${esc(adopted.name)}` : needCage ? '要先买笼子 · Buy its cage first (🦴 Pet Accessories)' : needBowl ? '要先买食物和水碗 · Buy its food & water bowl first (🐾 Pets → Pet Items)' : it.hops ? '在家里蹦蹦跳 · Hops around the house' : it.roam ? '在家里到处跑 · Roams around the house' : '住在笼子里 · Lives in its cage')
         : it.cat === 'petfood' ? `${petNm(it.pet)} · ${it.kind === 'main' ? `${it.servings}份 servings · 每份 +5格 Food` : `${it.servings}次 treats · 每次 +1格 (每3小时一次 1 per 3h)`}`
         : it.petBowl ? `${petNm(it.petBowl)} · ${it.cat === 'decor' ? '放在家里 Goes in your home' : '放在笼子里 Goes in its cage'} · 领养前要先买 Needed before adopting`

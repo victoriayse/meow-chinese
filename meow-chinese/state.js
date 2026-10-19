@@ -109,6 +109,9 @@ function migrate(s) {
   out.prices = { ...(s.prices || {}) };
   // the garden fence was retired when the garden became a home: refund it
   if ((out.owned || []).includes('fence')) { out.owned = out.owned.filter((x) => x !== 'fence'); out.coins += 40; }
+  // v264: the old decoration-only cage food bowl is gone (the real food & water bowls replaced it): money back
+  if ((out.owned || []).includes('cagebowl')) { out.owned = out.owned.filter((x) => x !== 'cagebowl'); out.coins += 20; if (out.cageOff) out.cageOff = out.cageOff.filter((x) => x !== 'cagebowl'); }
+  { const old = (out.owned || []).filter((x) => String(x).split('#')[0] === 'dogbowl'); if (old.length) { out.owned = out.owned.filter((x) => !old.includes(x)); out.coins += 30 * old.length; out.decorHidden = (out.decorHidden || []).filter((x) => !old.includes(x)); } }
   // keep items this version doesn't know yet (a newer device may have added them); never lose them
   out.owned = [...new Set(out.owned || [])];
   // anything she is wearing is hers (repairs saves where an older app version dropped new items)
@@ -579,11 +582,11 @@ export function adoptPet(kind, name) {
 export function renamePet(kind, name) { const p = petOf(kind); if (!p) return; p.name = String(name || '').trim().slice(0, 12) || p.name; save(); }
 export function setPetOut(kind, out) { const p = petOf(kind); if (!p) return; p.out = !!out; save(); }
 
-// ---------- 🐾 v263: feeding pets (dog, hamster, guinea pig) ----------
-// Each pet has Food and Water bars (0–100, 10 sections). Food goes down over 2 days, and the pet eats from its bowl by itself
+// ---------- 🐾 v263: feeding pets (dog, hamster, guinea pig, bunny) ----------
+// Each pet has Food and Water bars (0–100, 10 sections). A full Food bar lasts 20 hours (1 bar every 2 hours), and the pet eats from its bowl by itself
 // (1 bar at a time) whenever it has room for it. A full water bowl lasts 24 hours and keeps the pet's Water topped up;
-// once it's empty, Water goes down over a day. At 0 Food or 0 Water for more than 3 days, the pet dies.
-export const PET_FOOD_HOURS = 48, PET_WATER_HOURS = 24, BOWL_WATER_HOURS = 24, PET_DIE_DAYS = 3, TREAT_GAP = 3 * 3600000, PET_LOW = 20;
+// once it's empty, Water goes down over 20 hours. At 0 Food or 0 Water for more than 3 days, the pet dies.
+export const PET_FOOD_HOURS = 20, PET_WATER_HOURS = 20, BOWL_WATER_HOURS = 24, PET_DIE_DAYS = 3, TREAT_GAP = 3 * 3600000, PET_LOW = 20;
 export const needsFeeding = (kind) => PET_NEEDS.includes(kind);
 export const fedPets = () => pets().filter((p) => needsFeeding(p.kind));
 export const bowl = (kind) => ((state.petBowls ||= {})[kind] ||= { food: 0, waterAt: 0 });
