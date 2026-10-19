@@ -63,7 +63,7 @@ export function openBowl(kind, { onChange = () => {}, go = null } = {}) {
       <div class="bowl-levels" id="lv"></div>
       <div class="bowl-sec"><div class="bowl-h">🍖 <span class="zh">加食物</span> Add food <small>(每份 +5格 · each serving +5 bars)</small></div><div class="row bowl-foods" id="foods"></div></div>
       <button class="btn blue" id="water">💧 <span class="zh">加满水</span> Refill water (free)</button>
-      ${p ? `<div class="bowl-sec"><div class="bowl-h">🦴 <span class="zh">零食</span> Treats <small>(+1格 · 每3小时一次 · 1 every 3 hours)</small></div><div class="row bowl-foods" id="treats"></div></div>` : ''}
+      ${p ? `<p class="help" style="margin:0">🦴 零食：直接点一下${esc(p.name)}就能喂 · Treats: tap ${esc(p.name)} to give one</p>` : ''}
       <div class="row" style="justify-content:center"><button class="btn white" id="shop">🛍️ <span class="zh">买宠物食物</span> Buy pet food</button><button class="btn white" id="bc">关闭 Close</button></div>
     </div>`;
   const draw = () => {
@@ -79,33 +79,19 @@ export function openBowl(kind, { onChange = () => {}, go = null } = {}) {
     const foods = $('#foods', box), mains = S.petFoods(kind, 'main');
     foods.innerHTML = mains.map((id) => `<button class="food-chip ${S.petFoodLeft(id) ? '' : 'off'}" data-id="${id}" ${S.petFoodLeft(id) && f <= 50 ? '' : 'disabled'}><span class="art"></span><small>${ITEMS[id].name}</small><b>×${S.petFoodLeft(id)}</b></button>`).join('')
       + (f > 50 ? '<p class="help" style="margin:0;width:100%">碗快满了，等它吃一点再加 · The bowl is nearly full — add more once it has eaten some</p>' : '');
-    const treats = $('#treats', box);
-    if (treats) {
-      const wait = S.treatWait(kind), have = S.petFoods(kind, 'treat').filter((id) => S.petFoodLeft(id));
-      treats.innerHTML = have.length ? have.map((id) => `<button class="food-chip" data-treat="${id}" ${wait ? 'disabled' : ''}><span class="art"></span><small>${ITEMS[id].name}</small><b>×${S.petFoodLeft(id)}</b></button>`).join('')
-        + (wait ? `<p class="help" style="margin:0;width:100%">⏳ ${hm(wait)}后才能再吃零食 · Next treat in ${hm(wait)}</p>` : '')
-        : '<p class="help" style="margin:0">还没有零食 · No treats yet — buy some in the shop</p>';
-    }
-    box.querySelectorAll('.food-chip').forEach((ch) => { const a = ch.querySelector('.art'); if (a && !a.firstChild) a.appendChild(spriteCanvas(ch.dataset.id || ch.dataset.treat, 34)); });
+    box.querySelectorAll('.food-chip').forEach((ch) => { const a = ch.querySelector('.art'); if (a && !a.firstChild) a.appendChild(spriteCanvas(ch.dataset.id, 34)); });
   };
   const drop = (cls) => {   // 🍖 kibble tumbling into the bowl / 💧 water pouring in
     const kd = $('#kd', box); kd.className = `kibble-drop ${cls}`; void kd.offsetWidth; kd.classList.add('go');
   };
   box.addEventListener('click', (e) => {
-    const fc = e.target.closest('[data-id].food-chip'), tc = e.target.closest('[data-treat]');
+    const fc = e.target.closest('[data-id].food-chip');
     if (fc && !fc.disabled) {
       const why = S.fillBowl(kind, fc.dataset.id);
       if (why === 'full') return toast('🥣 <span class="zh">碗快满了</span> The bowl is nearly full');
       if (why) return;
       sfx.coin(); drop('food'); setTimeout(draw, 650); onChange();
       toast(`🍖 <span class="zh">加了一份${ITEMS[fc.dataset.id].name}</span> Food added to the bowl`, { ms: 1800 });
-    }
-    if (tc && !tc.disabled) {
-      const why = S.giveTreat(kind, tc.dataset.treat);
-      if (why === 'wait') return toast(`⏳ Next treat in ${hm(S.treatWait(kind))}`);
-      if (why) return;
-      sfx.coin(); draw(); onChange();
-      toast(`🦴 <span class="zh">${esc(S.petOf(kind).name)}吃了${ITEMS[tc.dataset.treat].name}！</span> Yum! +1 bar`, { ms: 2200 });
     }
   });
   $('#water', box).onclick = () => { S.refillWater(kind); sfx.coin(); drop('water'); setTimeout(draw, 650); onChange(); toast('💧 <span class="zh">水加满了！</span> Water bowl filled — it lasts 24 hours', { ms: 2000 }); };
@@ -128,4 +114,14 @@ export function showPetDeaths() {
   S.seePetDeaths();
   openModal(box);
   return true;
+}
+
+// 🦴 treats: only from the pet itself (tap the pet → its card). '' html when it doesn't need feeding
+export function treatPickerHtml(kind) {
+  if (!S.needsFeeding(kind)) return '';
+  const wait = S.treatWait(kind), have = S.petFoods(kind, 'treat').filter((id) => S.petFoodLeft(id));
+  return `<div class="bowl-sec treat-sec"><div class="bowl-h">🦴 <span class="zh">喂零食</span> Give a treat <small>(+1格 · 每3小时一次 · 1 every 3 hours)</small></div>
+    <div class="row bowl-foods">${have.length ? have.map((id) => `<button class="food-chip treat-chip" data-treat="${id}" ${wait ? 'disabled' : ''}><span class="t-emo">${ITEMS[id].emoji}</span><small>${ITEMS[id].name}</small><b>×${S.petFoodLeft(id)}</b></button>`).join('')
+      : '<p class="help" style="margin:0">还没有零食 · No treats yet — buy some in the shop (🐾 Pets → Food)</p>'}
+    ${wait && have.length ? `<p class="help" style="margin:0;width:100%">⏳ ${hm(wait)}后才能再吃零食 · Next treat in ${hm(wait)}</p>` : ''}</div></div>`;
 }

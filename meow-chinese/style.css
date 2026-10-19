@@ -2323,3 +2323,19 @@ img.gone { min-height: 40px; font-size: 11px; }
 .pet-toggle .pt-warn { font-size: 13px; color: #c42a3c; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
 .pet-toggle .pt-arrow { margin-left: auto; font-size: 14px; }
 .pet-toggle.open { background: #ffe6b8; }
+
+/* v267: 🦴 a treat being eaten: held at the mouth, shrinking bite by bite, crumbs, then hearts */
+.pet[data-eat="treat"]::before { content: none; }
+.pet .treat-bit { position: absolute; left: 97%; bottom: 30%; width: 0; height: 0; pointer-events: none; z-index: 3; }
+.pet.left .treat-bit { left: 3%; }
+.pet.in-cage .treat-bit { bottom: 34%; }
+.treat-bit .tb-food { position: absolute; left: 0; bottom: 0; transform: translate(-50%, 0); font-size: 20px; line-height: 1; animation: tbbite 3.6s steps(1, end) forwards; }
+@keyframes tbbite { 0% { transform: translate(-50%, 0) scale(1); } 25% { transform: translate(-50%, 2px) scale(.8); } 50% { transform: translate(-50%, 3px) scale(.6); } 75% { transform: translate(-50%, 4px) scale(.38); } 92% { transform: translate(-50%, 4px) scale(0); } 100% { transform: translate(-50%, 4px) scale(0); } }
+.treat-bit i { position: absolute; left: 0; bottom: 0; width: 4px; height: 4px; border-radius: 1px; background: #c9965a; opacity: 0; animation: tbcrumb .9s ease-in infinite; }
+.treat-bit i:nth-of-type(2) { animation-delay: .3s; left: 6px; background: #a0612e; }
+.treat-bit i:nth-of-type(3) { animation-delay: .6s; left: -6px; }
+@keyframes tbcrumb { 0% { opacity: 1; transform: translate(0, 0); } 100% { opacity: 0; transform: translate(4px, 22px); } }
+.treat-bit .tb-love { position: absolute; left: 0; bottom: 18px; transform: translateX(-50%); font-size: 16px; opacity: 0; animation: tblove 4.2s ease-out forwards; }
+@keyframes tblove { 0%, 80% { opacity: 0; transform: translate(-50%, 0); } 88% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -18px); } }
+.treat-chip .t-emo { font-size: 26px; line-height: 1.1; }
+.pet-card .treat-sec { margin-top: 2px; }

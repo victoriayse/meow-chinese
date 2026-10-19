@@ -910,6 +910,16 @@ function petCanvas(kind, frame) {
   return c;
 }
 const perch = new Map();   // pet kind -> { up: floor spot in front of the seat, at: the seat } while it sits up on furniture
+// 🦴 the treat held at the pet's mouth while it munches (bites out of it, crumbs, then 💕)
+function treatBit(el, id) {
+  let t = el.querySelector(':scope > .treat-bit');
+  if (!id) { if (t) t.remove(); return; }
+  if (t && t.dataset.id === id) return;
+  if (t) t.remove();
+  t = document.createElement('div'); t.className = 'treat-bit'; t.dataset.id = id;
+  t.innerHTML = `<span class="tb-food">${(ITEMS[id] && ITEMS[id].emoji) || '🍖'}</span><i></i><i></i><i></i><span class="tb-love">💕</span>`;
+  el.appendChild(t);
+}
 export class PetLayer {
   constructor(roomEl, roomKey, { onClick, onSpot } = {}) {
     this.roomEl = roomEl; this.roomKey = roomKey; this.onClick = onClick; this.onSpot = onSpot; this.els = new Map();
@@ -955,7 +965,7 @@ export class PetLayer {
         }
         const wheel = p.wheel && cw.querySelector('.cage-thing.wheel');
         cw.querySelectorAll('.cage-thing.wheel').forEach((w) => w.classList.toggle('spinning', !!wheel));
-        el.className = `pet in-cage${wheel ? ' on-wheel' : ''}${this.onClick ? ' clickable' : ''}${p.eat && !wheel ? ' eating' : ''}`; el.dataset.eat = p.eat || '';
+        el.className = `pet in-cage${wheel ? ' on-wheel' : ''}${this.onClick ? ' clickable' : ''}${p.eat && !wheel ? ' eating' : ''}`; el.dataset.eat = p.eat || ''; treatBit(el, !wheel && p.eat === 'treat' && p.treat);
         if (wheel) {
           // running inside the wheel: stand in the middle of the ring
           const cwW = cw.offsetWidth || 1, cwH = cw.offsetHeight || 1;
@@ -968,6 +978,7 @@ export class PetLayer {
       if (el.parentElement !== room) room.appendChild(el);
       el.classList.remove('in-cage'); delete el.dataset.fresh;
       el.classList.toggle('eating', p.mode === 'eat' && !!p.eat); el.dataset.eat = p.eat || '';   // 🥣 munching at its bowl
+      treatBit(el, p.mode === 'eat' && p.eat === 'treat' && p.treat);
       if (p.mode === 'eat') el.classList.toggle('left', !!p.left);
       let x = p.x, y = p.y, z = null, sit = false, up = null;
       if (p.mode === 'sit' && p.seat) {

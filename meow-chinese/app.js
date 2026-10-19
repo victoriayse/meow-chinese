@@ -131,7 +131,7 @@ function petCareChanged() {
   const pb = document.querySelector('#petbars'); if (pb) pb.innerHTML = Care.petBarsHtml();
   Care.paintBowls(document.querySelector('#room'));
 }
-S.onPetCare((ev) => { petCareChanged(); Pets.petAte(ev.kind, ev.what); });
+S.onPetCare((ev) => { petCareChanged(); Pets.petAte(ev.kind, ev.what, ev.id); });
 setInterval(() => { if (!document.hidden) petCareChanged(); }, 60000);
 function refreshHome() { if (homeRedrawWaits()) return; go('home', current === 'home' ? currentParams : {}, { replace: true }); }
 export function goBack() {
@@ -474,11 +474,20 @@ function petMenu(kind) {
         <button class="btn white" id="ren">✏️ <span class="zh">改名字</span> Rename</button>
       </div>
       ${caged && !cage ? '<p class="help" style="margin:0">把笼子摆进房间，就可以把它放回去。<br>Put its cage in a room to keep it in there.</p>' : ''}
+      ${Care.treatPickerHtml(kind)}
       <button class="btn white" id="pc">关闭 Close</button>
     </div>`;
   $('#pa', box).appendChild(petArtCanvas(kind, 6));
   $('#pat', box).onclick = () => { sfx.coin(); burst($('#pfx', box), 'heart', 3, '50%', '30%'); };
   const fd = $('#feed', box); if (fd) fd.onclick = () => { closeModal(); Care.openBowl(kind, { onChange: petCareChanged, go }); };
+  // 🦴 give a treat: the card closes so she can watch it being eaten
+  box.querySelectorAll('[data-treat]').forEach((b) => { b.onclick = () => {
+    const tid = b.dataset.treat, why = S.giveTreat(kind, tid);
+    if (why === 'wait') return toast(`⏳ <span class="zh">还不能吃零食</span> Next treat in ${Math.ceil(S.treatWait(kind) / 60000)} min`);
+    if (why) return;
+    closeModal(); sfx.coin();
+    toast(`${ITEMS[tid].emoji} <span class="zh">${esc(p.name)}吃了${ITEMS[tid].name}！</span> Yum! +1 bar`, { ms: 2600 });
+  }; });
   const back = $('#back', box);
   if (back) back.onclick = () => { Pets.putBack(kind); closeModal(); toast(`🏠 <span class="zh">${esc(p.name)}回到笼子里了</span> Back in the cage`); refreshHome(); Visit.hostResendHouse(); };
   $('#ren', box).onclick = () => { closeModal(); askPetName(kind, p.name).then((nm) => { if (nm) { S.renamePet(kind, nm); Pets.refreshPets(); toast(`✏️ ${esc(nm)}`); } }); };

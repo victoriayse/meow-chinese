@@ -731,4 +731,5 @@ export const CHANGES = [
   { v: 264, items: ['Pet Food and Water bars now last 20 hours (1 bar every 2 hours)', 'Bunnies need feeding too: bunny food & water bowl, bunny food and 3 bunny treats in the shop', 'The old decoration-only food bowl and dog bowl are gone (coins refunded)'] },
   { v: 265, items: ['Tapping a pet food & water bowl now opens it: see how much food and water is left, add food, refill water', 'Works for the bowls inside the hamster and guinea pig cages too, even when the pet is sitting on it'] },
   { v: 266, items: ['With 2 or more pets, their bars fold away under one Pets button (tap to open or close; a warning shows if a pet is low)', 'Fixed pets showing twice after syncing between devices'] },
+  { v: 267, items: ['Treats are given by tapping the pet itself: its card shows your treats to pick from', 'Watch your pet munch the treat bite by bite, with crumbs and hearts'] },
 ];

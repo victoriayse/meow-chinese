@@ -12485,7 +12485,8 @@ export function bowlGrid(id, food, water) {
 // pet food: packs of main meals (10 servings) and treats (5 feeds)
 const PACK = ['..oooooo..', '.oSSSSSSo.', '.oooooooo.', 'obbbbbbbbo', 'obwwwwwwbo', 'obwIIIIwbo', 'obwIiiIwbo', 'obwIIIIwbo', 'obwwwwwwbo', 'obbbbbbbbo', 'obbbbbbbbo', 'oooooooooo'];
 const POUCH = ['.oooooooo.', 'oSSSSSSSSo', 'oooooooooo', 'obbbbbbbbo', 'obbIIIIbbo', 'obIiIIiIbo', 'obbIIIIbbo', 'obbbbbbbbo', '.oooooooo.'];
-const petFood = (id, pet, kind, name, en, price, b, S, I, i) => [id, { cat: 'petfood', pet, kind, servings: kind === 'main' ? 10 : 5, name, en, price, pal: { o: O, b, S, I, i, w: '#fff8ec' }, art: kind === 'main' ? PACK : POUCH }];
+const TREAT_EMOJI = { dogtreatchicken: '🍗', dogtreatbone: '🦴', dogtreatbeef: '🥩', hamtreatseeds: '🌻', hamtreatcorn: '🌽', hamtreatbanana: '🍌', hamtreatberry: '🫐', gptreatfruit: '🍓', gptreatbiscuit: '🍪', gptreatyogurt: '🥛', rabtreatcarrot: '🥕', rabtreatapple: '🍎', rabtreathay: '🌾' };
+const petFood = (id, pet, kind, name, en, price, b, S, I, i) => [id, { cat: 'petfood', pet, kind, servings: kind === 'main' ? 10 : 5, name, en, price, emoji: TREAT_EMOJI[id] || '🍖', pal: { o: O, b, S, I, i, w: '#fff8ec' }, art: kind === 'main' ? PACK : POUCH }];
 Object.assign(ITEMS, Object.fromEntries([
   petFood('dogkibble', 'dog', 'main', '狗粮', 'Dog kibble (10 servings)', 60, '#e8564a', '#ffd23f', '#a0612e', '#6e3f1c'),
   petFood('hamsterfood', 'hamster', 'main', '仓鼠粮', 'Hamster food (10 servings)', 30, '#ffb03a', '#7cbd52', '#e8c26a', '#9b6a2e'),

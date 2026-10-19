@@ -678,7 +678,7 @@ export function giveTreat(kind, id) {
   petCareTick();
   state.petFood[id] -= 1; if (!state.petFood[id]) delete state.petFood[id];
   p.food = Math.min(100, (p.food || 0) + 10); p.treatAt = Date.now(); p.zeroAt = p.water > 0 ? null : p.zeroAt;
-  save(); careEvent({ kind, what: 'treat' });
+  save(); careEvent({ kind, what: 'treat', id });
   return '';
 }
 export const unseenPetDeaths = () => (state.petDeaths || []).filter((d) => !d.seen);
