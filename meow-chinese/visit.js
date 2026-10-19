@@ -751,7 +751,9 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     return (r && (r.key || r)) || null;
   }
   let gateToastAt = 0;
-  function blockedAt(x, y) { return foot.some((f) => inFoot(f, x, y) && !(f.gate && (gatePass(f) || f.el.classList.contains('gate-held')))); }
+  // furniture can be walked through now, so the buffet / SushiMeow gate line runs the whole width of the room
+  // (nobody slips round it through the host's counter without paying or getting a seat)
+  function blockedAt(x, y) { return foot.some((f) => (inFoot(f, x, y) || (f.gate && !f.venue && y >= f.y0 && y <= f.y1)) && !(f.gate && (gatePass(f) || f.el.classList.contains('gate-held')))); }
   // the food side of the buffet: behind the gate's line (no gate in the room: having paid is enough)
   function insideBuffet() {
     const g = foot.find((f) => f.gate);

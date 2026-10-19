@@ -15,14 +15,11 @@ const base = (id) => String(id).split('#')[0];
 export const hasPass = () => !!S.get().buffetPass;
 const orders = () => (S.get().buffetOrders ||= []);
 
-// furniture can't be walked through — except things lying flat on the floor (rugs, mats, pools), curtains,
-// doorways, and the stage (she climbs onto that)
+// she can walk through furniture — except gates, queue poles and fences
 export function isBlocker(id, el) {
   const b = base(id), it = ITEMS[b];
   if (!it || it.cat !== 'decor' || it.walkOver) return false;
-  if (el && (el.classList.contains('flat') || el.classList.contains('curtain') || el.classList.contains('pool-el'))) return false;
-  if (it.door || it.spot === 'rug' || it.spot === 'under' || it.spot === 'curtain' || it.panel === 'door' || (it.seat && it.seat.walk)) return false;
-  return true;
+  return !!(it.gate || b === 'qpole' || /fence/.test(b));
 }
 
 // leaving the buffet: its food and drinks stay behind, and the pass ends

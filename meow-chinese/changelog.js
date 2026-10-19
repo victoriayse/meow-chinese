@@ -726,4 +726,5 @@ export const CHANGES = [
   ] },
   { v: 260, items: ['Walking up shows the kitten from the back, walking left or right shows her side-on', 'Friends see the same when your kitten walks around', 'Food left on tables in public places is cleared after 24 hours'] },
   { v: 261, items: ['New side-on kitten: same face, mood and fur as the front view', 'Clothes, hats and shoes stay on when she faces sideways'] },
+  { v: 262, items: ['Kittens can walk through furniture in shared places', 'Only gates, queue poles and fences still block the way', 'The buffet and SushiMeow gates still cannot be walked around without paying or a seat'] },
 ];
