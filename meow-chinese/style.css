@@ -2288,7 +2288,7 @@ img.gone { min-height: 40px; font-size: 11px; }
 .pet.eating[data-eat="water"]::before { content: '💧'; }
 @keyframes nomfx { 0%, 100% { transform: translate(-50%, 0); opacity: .9; } 50% { transform: translate(-50%, -6px); opacity: 1; } }
 .pet.in-cage.eating { animation-play-state: paused; }
-.decor[data-id^="petbowl"] { cursor: pointer; }
+.home .house .decor[data-id^="petbowl"] { pointer-events: auto; cursor: pointer; }
 /* the bowl card */
 .bowl-card { max-width: 440px; }
 .bowl-view { position: relative; padding: 18px 10px 4px; min-height: 80px; display: flex; justify-content: center; align-items: flex-end; }

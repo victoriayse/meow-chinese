@@ -1301,6 +1301,17 @@ function homeScreen(params = {}) {
       if (!d || room.classList.contains('arranging') || e.target.closest('.put-away') || e.target.closest('.pet:not(.in-cage)')) return;
       cageMenu(d.dataset.cage);
     });
+    // 🥣 tapped right on a food & water bowl inside a cage (even with the hamster sitting on it): open the bowl
+    room.addEventListener('click', (e) => {
+      if (room.classList.contains('arranging')) return;
+      for (const bw of room.querySelectorAll('.decor.cage .cage-thing[data-id^="petbowl"]')) {
+        const r = bw.getBoundingClientRect();
+        if (e.clientX >= r.left - 8 && e.clientX <= r.right + 8 && e.clientY >= r.top - 12 && e.clientY <= r.bottom + 6) {
+          e.stopPropagation(); e.preventDefault();
+          Care.openBowl(ITEMS[bw.dataset.id.split('#')[0]].petBowl, { onChange: petCareChanged, go }); return;
+        }
+      }
+    }, true);
     // 🥣 the puppy's food & water bowl
     room.addEventListener('click', (e) => {
       const d = e.target.closest('.decor[data-id^="petbowl"]');
