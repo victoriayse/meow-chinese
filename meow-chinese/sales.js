@@ -24,9 +24,11 @@ export function loadSales(force = false) {
     .finally(() => { loading = null; });
   return loading;
 }
-export const addSale = ({ item, pct, start, end }) => call('', { method: 'POST', body: JSON.stringify({ item, pct, starts_at: new Date(start).toISOString(), ends_at: new Date(end).toISOString() }) }).then(() => loadSales(true));
-export const updateSale = (id, { pct, start, end }) => call(`?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ pct, starts_at: new Date(start).toISOString(), ends_at: new Date(end).toISOString() }) }).then(() => loadSales(true));
-export const removeSale = (id) => call(`?id=eq.${id}`, { method: 'DELETE' }).then(() => loadSales(true));
+// the server answers with the rows it changed: none means it said no (e.g. not the admin)
+const changed = (rows) => { if (!Array.isArray(rows) || !rows.length) throw new Error('not allowed'); return loadSales(true); };
+export const addSale = ({ item, pct, start, end }) => call('', { method: 'POST', body: JSON.stringify({ item, pct, starts_at: new Date(start).toISOString(), ends_at: new Date(end).toISOString() }) }).then(changed);
+export const updateSale = (id, { pct, start, end }) => call(`?id=eq.${id}`, { method: 'PATCH', body: JSON.stringify({ pct, starts_at: new Date(start).toISOString(), ends_at: new Date(end).toISOString() }) }).then(changed);
+export const removeSale = (id) => call(`?id=eq.${id}`, { method: 'DELETE' }).then(changed);
 // "2d 4h", "3h 12m", "4m 09s"
 export function left(ms) {
   if (ms <= 0) return '0s';
