@@ -2436,3 +2436,6 @@ img.gone { min-height: 40px; font-size: 11px; }
 .sa-row input { font: inherit; font-size: 13px; padding: 4px; border: 2px solid var(--ink); border-radius: 6px; min-width: 0; }
 .sa-row .sa-btns { display: flex; gap: 4px; }
 @media (max-width: 760px) { .sa-form { grid-template-columns: 1fr 1fr; } .sa-form .sa-dur { grid-column: 1 / -1; } .sa-row { grid-template-columns: 40px 1fr 70px; } .sa-row .sa-s, .sa-row .sa-e { grid-column: span 3; } .sa-row .sa-btns { grid-column: span 3; justify-content: flex-end; } }
+
+/* v276: the sale countdown keeps its width while the seconds tick */
+.sale-banner .sb-time b, .product .sale-left span { font-variant-numeric: tabular-nums; white-space: nowrap; }
