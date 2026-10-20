@@ -741,4 +741,5 @@ export const CHANGES = [
   { v: 274, items: ['New red 🏷️ Sale aisle (first in the shop) with a countdown to when the sale ends', 'Items on sale show a red % OFF badge and the old price crossed out, in every aisle', 'Admin: put any item on sale from the Sale aisle — choose the % and the start and end dates, schedule sales ahead, edit or remove them', 'New furniture: table lamp, bonsai, baby pink stand mixer, baby pink blender, white vanity table, toy house, fireplace, white & baby pink grand piano (20% off this week)'] },
   { v: 275, items: ['Fixed: the admin could not remove, change or add sales'] },
   { v: 276, items: ['Sale countdowns now show days, hours, minutes and seconds, ticking down every second'] },
+  { v: 277, items: ['40 new clothes in the shop: Modern Chic, Sporty Chic, Playful Kids, and the Silver Circuit and Scarlet Circuit sets (cap, jersey, skirt, jacket, shoes)', 'Skirts are their own piece now — wear one with any top — and they flare out at the hem like a real skirt'] },
 ];

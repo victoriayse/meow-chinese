@@ -270,6 +270,21 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
       out[y][x] = sole ? feet.pal.b : (top && (x === 11 || x === 19) ? feet.pal.l : feet.pal.a);
     }
   }
+  // 👗 v277: a skirt flares out from the waist like a real skirt (wider than her body at the hem), with its own outline
+  const skirt = !headOnly && equipped.skirt && ITEMS[equipped.skirt];
+  if (skirt && skirt.flare) {
+    const cx = side ? 15 : 16, top = Y(23), hem = Y(28), mask = new Set();
+    for (let yy = top; yy <= hem; yy++) {
+      const t = (yy - top) / (hem - top), half = 7 + t * 3;
+      for (let x = 0; x < KW; x++) {
+        const dx = x + 0.5 - cx; if (Math.abs(dx) > half) continue;
+        const k = skirt.flare(dx / half, t, x, yy - top);
+        if (k) { out[yy][x] = skirt.pal[k] || k; mask.add(yy * KW + x); }
+      }
+    }
+    mask.forEach((m) => { const yy = Math.floor(m / KW), x = m % KW;
+      [[1, 0], [-1, 0], [0, 1]].forEach(([dx, dy]) => { const X = x + dx, Yy = yy + dy; if (X >= 0 && X < KW && Yy < KH && !mask.has(Yy * KW + X)) out[Yy][X] = P.o; }); });
+  }
   // accessories
   ['back', 'neck', 'bag', 'face', 'head'].forEach((slot) => {
     const id = equipped[slot];
@@ -1441,6 +1456,7 @@ ITEMS.starchoker = { cat: 'wear', slot: 'neck', name: '紫星项圈', en: 'Purpl
 export const WEAR_SLOTS = [
   ['head', '头饰', 'Hair'],
   ['body', '衣服', 'Clothes'],
+  ['skirt', '裙子', 'Skirt'],
   ['feet', '鞋子', 'Shoes'],
   ['face', '眼镜', 'Glasses'],
   ['neck', '围巾领结', 'Neckwear'],
@@ -12717,3 +12733,127 @@ ITEMS.grandpiano = { cat: 'decor', name: '白粉三角钢琴', en: 'White & baby
     '...owo......................owo.',
     '..oooo......................oooo',
   ] };
+
+// ---------- 👗 v277: Fashion studies — 40 new clothes (original designs) ----------
+// Each piece is one pattern f(u, v, x, y) → a colour key: u runs −1…1 across, v 0…1 top to bottom.
+// The same pattern draws the shop picture (in a garment shape below) and the clothes on the kitten.
+const FASHION_SHAPES = {
+  tee: ['.....ooo..ooo.....', '...oo###oo###oo...', '.oo############oo.', 'o################o', 'o################o', 'oooo##########oooo', '...o##########o...', '...o##########o...', '...o##########o...', '...o##########o...', '...o##########o...', '...o##########o...', '...oooooooooooo...'],
+  long: ['.....ooo..ooo.....', '...oo###oo###oo...', '.oo############oo.', 'o################o', 'o################o', 'o##o##########o##o', 'o##o##########o##o', 'o##o##########o##o', 'oooo##########oooo', '...o##########o...', '...o##########o...', '...o##########o...', '...oooooooooooo...'],
+  tank: ['....oo......oo....', '...o##o....o##o...', '...o##oooooo##o...', '..o############o..', '..o############o..', '..o############o..', '..o############o..', '..o############o..', '..o############o..', '..o############o..', '..o############o..', '..o############o..', '..oooooooooooooo..'],
+  dress: ['.....ooo..ooo.....', '...oo###oo###oo...', '.oo############oo.', 'o################o', 'oooo##########oooo', '...o##########o...', '...o##########o...', '..o############o..', '..o############o..', '.o##############o.', '.o##############o.', 'o################o', 'oooooooooooooooooo'],
+  pinafore: ['....oo......oo....', '....o#o....o#o....', '....o#oooooo#o....', '....o########o....', '....o########o....', '....o########o....', '...o##########o...', '...o##########o...', '..o############o..', '..o############o..', '.o##############o.', 'o################o', 'oooooooooooooooooo'],
+  skirt: ['....oooooooooo....', '....o########o....', '....o########o....', '...o##########o...', '...o##########o...', '..o############o..', '..o############o..', '.o##############o.', 'o################o', 'oooooooooooooooooo'],
+  cap: ['.....oooooooo.....', '....o########o....', '...o##########o...', '..o############o..', '..o############o..', 'oooo############oo', 'o################o', 'oooooooooooooooooo'],
+  shoes: ['.oooooo...oooooo..', '.o####o...o####o..', '.o####o...o####o..', '.o####oo..o####oo.', '.o######o.o######o', '.o######o.o######o', '.oooooooo.oooooooo'],
+};
+// the shop picture: the garment shape filled with the pattern (a darker edge on the right and at the hem)
+function fashionArt(shape, f) {
+  const rows = FASHION_SHAPES[shape], H = rows.length, W = rows[0].length;
+  return rows.map((row, y) => [...row].map((ch, x) => {
+    if (ch !== '#') return ch;
+    let u, v = y / (H - 1);
+    if (shape === 'shoes') { const left = x < 9, x0 = left ? 2 : 11, x1 = left ? 7 : 16; u = ((x - x0) / Math.max(1, x1 - x0)) * 2 - 1; }
+    else u = ((x + 0.5) / W) * 2 - 1;
+    let k = f(u, v, x, y) || 'a';
+    const edge = rows[y][x + 1] === 'o' || (rows[y + 1] && rows[y + 1][x] === 'o');
+    if (edge && k === 'a') k = 'c';
+    return k;
+  }).join(''));
+}
+const near = (a, b, d = 0.09) => Math.abs(a - b) < d;
+const plus = (u, v, cu, cv, s = 0.09) => (near(u, cu, s) && near(v, cv, s * 2.2)) || (near(v, cv, s * 0.9) && near(u, cu, s * 2.4));
+const fheart = (u, v, cu, cv, r = 0.32) => { const x = (u - cu) / r, y = (v - cv) / (r * 0.9); return y < 0.9 && ((x * x + Math.pow(y - Math.sqrt(Math.abs(x)) * 0.7, 2)) < 0.55); };
+// tops & dresses: body slot (painted on her body, which is about 15 × 14); skirts: their own slot, flaring at the hem
+const fashionTop = (id, name, en, price, shape, pal, f) => [id, { cat: 'wear', slot: 'body', name, en, price, pal: { o: O, ...pal }, art: fashionArt(shape, f),
+  paint: (x, y, p) => { const k = f(x / 7, y / 13, x + 16, y); return k ? p[k] : null; } }];
+const fashionSkirt = (id, name, en, price, pal, f) => [id, { cat: 'wear', slot: 'skirt', name, en, price, pal: { o: O, ...pal }, art: fashionArt('skirt', f), flare: f }];
+const fashionCap = (id, name, en, price, pal, f) => [id, { cat: 'wear', slot: 'head', name, en, price, pal: { o: O, ...pal }, art: fashionArt('cap', f), wear: { x: 7, y: 2 } }];
+const fashionShoes = (id, name, en, price, pal, f) => [id, { cat: 'wear', slot: 'feet', name, en, price, pal: { o: O, ...pal }, art: fashionArt('shoes', f) }];
+const NAVY = '#262144', NAVY2 = '#3a3560', CREAM = '#f4ead2', CREAM2 = '#e2d4b4', CARAMEL = '#c9884a', CARAMEL2 = '#a86a32', SKY = '#7cc4ec', SKY2 = '#4f9fd0';
+const FPINK = '#ff9ec4', FPINK2 = '#e0628c', CHERRY = '#e8384f', CHERRY2 = '#c41f36', MINT = '#7cbd52', MINT2 = '#4f9a3a', GOLD = '#ffd23f', LILAC = '#a77be6', LILAC2 = '#7a4fc0', GREY = '#b8c2d4', TEAL = '#5fc4b0', SILVER = '#c9d3de';
+// circuit lines (the Silver and Scarlet sets): a long line down the right, a shorter one across, and little lights
+const circuit = (u, v) => (near(u, 0.5, 0.08) && v > 0.1 ? 'd' : near(v, 0.45, 0.05) && u > 0.1 ? 'd' : near(u, -0.45, 0.12) && near(v, 0.3, 0.06) ? 'd' : near(u, -0.2, 0.14) && near(v, 0.65, 0.04) ? 'w' : null);
+Object.assign(ITEMS, Object.fromEntries([
+  // 01 Modern chic
+  fashionTop('fcreamblazer', '奶油色西装外套', 'Cream tailored blazer', 110, 'long', { a: CREAM, c: CREAM2, b: CARAMEL, w: '#ffffff' },
+    (u, v) => (v > 0.93 ? 'b' : near(u, 0, 0.08) && v > 0.25 ? (Math.floor(v * 12) % 3 ? 'b' : 'a') : v < 0.32 && near(Math.abs(u), 0.15 + v * 0.7, 0.07) ? 'b' : v < 0.08 && Math.abs(u) < 0.25 ? 'w' : 'a')),
+  fashionTop('fmidnightvest', '深蓝马甲', 'Midnight waistcoat', 90, 'tank', { a: NAVY, c: NAVY2, w: '#ffffff', s: GREY },
+    (u, v) => (u > 0.82 || v > 0.92 ? 's' : near(u, -0.18, 0.09) && v > 0.15 && Math.floor(v * 12) % 3 === 0 ? 'w' : near(u, 0.05, 0.06) ? 's' : 'a')),
+  fashionTop('fbretonknit', '海魂条纹针织衫', 'Breton striped knit', 80, 'tee', { a: CREAM, c: CREAM2, b: CARAMEL },
+    (u, v) => (v < 0.1 && Math.abs(u) < 0.3 ? 'b' : v > 0.15 && Math.floor(v * 9) % 2 === 0 ? 'b' : 'a')),
+  fashionTop('frosebowblouse', '玫瑰蝴蝶结衬衫', 'Rose bow blouse', 85, 'tee', { a: FPINK, c: FPINK2, w: '#ffffff' },
+    (u, v) => (v > 0.15 && v < 0.38 && Math.abs(u) < 0.32 && (Math.abs(u) < 0.08 || Math.abs(v - 0.26) < 0.05 + Math.abs(u) * 0.3) ? 'w' : 'a')),
+  fashionTop('fcarameltrench', '焦糖腰带风衣', 'Caramel belted trench', 130, 'long', { a: CARAMEL, c: CARAMEL2, b: CREAM, k: '#7a4a2a' },
+    (u, v) => (near(v, 0.58, 0.05) ? (near(u, 0, 0.1) ? 'b' : 'k') : near(u, 0, 0.05) && v > 0.25 ? 'k' : v < 0.35 && near(Math.abs(u), 0.12 + v * 0.8, 0.06) ? 'b' : near(Math.abs(u), 0.3, 0.06) && v > 0.65 && Math.floor(v * 12) % 3 === 0 ? 'b' : 'a')),
+  fashionTop('fskydenim', '天蓝牛仔外套', 'Sky denim jacket', 95, 'long', { a: SKY, c: SKY2, w: '#ffffff' },
+    (u, v) => (v < 0.08 && Math.abs(u) < 0.3 ? 'w' : near(u, 0, 0.05) ? 'c' : v > 0.48 && v < 0.62 && Math.abs(u) > 0.25 && Math.abs(u) < 0.62 ? (v < 0.53 ? 'w' : 'c') : 'a')),
+  fashionTop('fpearltweed', '珍珠粗花呢开衫', 'Pearl tweed cardigan', 120, 'long', { a: CREAM, c: CREAM2, y: GOLD, s: GREY, w: '#ffffff' },
+    (u, v, x, y) => (v > 0.92 || (near(u, 0, 0.06) && v < 0.12) ? 'y' : near(u, 0, 0.06) ? 's' : (x * 2 + y * 3) % 7 === 0 ? 's' : (x + y * 2) % 9 === 0 ? 'w' : 'a')),
+  fashionSkirt('fmidnightpleat', '深蓝百褶裙', 'Midnight pleated skirt', 70, { a: NAVY, c: NAVY2, s: '#5a5480', w: CREAM },
+    (u, v) => (v < 0.15 ? 'w' : v > 0.9 ? 'w' : near(Math.abs(u), 0.2, 0.07) || near(Math.abs(u), 0.62, 0.07) ? 's' : 'a')),
+  fashionTop('fcherrywrap', '樱桃红裹身裙', 'Cherry wrap dress', 130, 'dress', { a: CHERRY, c: CHERRY2, w: '#fff0f0' },
+    (u, v) => (v < 0.62 && near(u, v * 1.7 - 0.75, 0.1) ? 'w' : near(u, 0.4, 0.08) && near(v, 0.62, 0.06) ? 'w' : 'a')),
+  fashionTop('fcreampinafore', '奶油色背带裙', 'Cream pinafore dress', 110, 'pinafore', { a: CREAM, c: CREAM2, b: CARAMEL, w: '#ffffff' },
+    (u, v) => (v > 0.93 ? 'b' : near(v, 0.24, 0.04) && Math.abs(u) < 0.45 ? 'w' : v > 0.55 && v < 0.72 && Math.abs(u) > 0.25 && Math.abs(u) < 0.6 ? 'b' : 'a')),
+  // 02 Sporty chic
+  fashionTop('fskyfootball', '天蓝足球衫', 'Sky football jersey', 70, 'tee', { a: SKY, c: SKY2, w: '#ffffff' },
+    (u, v) => (near(v, 0.12 + (1 - Math.abs(u)) * 0.18, 0.05) && Math.abs(u) < 0.75 ? 'w' : plus(u, v, 0, 0.62) ? 'w' : 'a')),
+  fashionTop('fcherrybasket', '樱桃红篮球衫', 'Cherry basketball jersey', 70, 'tank', { a: CHERRY, c: CHERRY2, w: '#ffffff' },
+    (u, v) => (Math.abs(u) > 0.7 ? 'w' : v < 0.06 ? 'w' : near(Math.abs(u), 0.6, 0.04) ? 'c' : 'a')),
+  fashionTop('fcreamtennis', '奶油色网球裙', 'Cream tennis dress', 110, 'dress', { a: CREAM, c: CREAM2, g: MINT, G: MINT2 },
+    (u, v) => (v < 0.08 && Math.abs(u) < 0.35 ? 'g' : near(v, 0.5, 0.04) ? 'g' : v > 0.92 ? 'g' : v > 0.5 && (near(Math.abs(u), 0.15, 0.06) || near(Math.abs(u), 0.55, 0.06)) ? 'g' : 'a')),
+  fashionTop('fpinkvarsity', '粉色棒球外套', 'Pink varsity jacket', 120, 'long', { a: FPINK, c: FPINK2, w: '#ffffff', k: '#c9466f' },
+    (u, v) => (Math.abs(u) > 0.74 ? 'w' : near(u, 0, 0.05) ? (Math.floor(v * 10) % 3 ? 'k' : 'w') : plus(u, v, -0.4, 0.3, 0.07) ? 'w' : v > 0.55 && v < 0.68 && Math.abs(u) > 0.25 && Math.abs(u) < 0.6 ? 'k' : 'a')),
+  fashionTop('fminttrack', '薄荷运动外套', 'Mint track jacket', 95, 'long', { a: MINT, c: MINT2, w: '#ffffff', k: '#3f7f2f' },
+    (u, v) => (v < 0.08 ? 'w' : near(Math.abs(u), 0.55, 0.05) ? 'w' : near(u, 0, 0.05) ? (Math.floor(v * 12) % 2 ? 'k' : 'c') : 'a')),
+  fashionTop('fmidnightrun', '深蓝跑步背心', 'Midnight running vest', 70, 'tank', { a: NAVY, c: NAVY2, y: GOLD, s: '#5a5480' },
+    (u, v) => (v < 0.08 && Math.abs(u) < 0.4 ? 'y' : near(v, 0.2 + (1 - Math.abs(u)) * 0.15, 0.05) && Math.abs(u) < 0.8 ? 'y' : plus(u, v, 0, 0.6) ? 'y' : u > 0.85 || v > 0.94 ? 's' : 'a')),
+  fashionTop('fskyblock', '天蓝拼色风衣', 'Sky colour-block windbreaker', 110, 'long', { a: SKY, c: SKY2, p: FPINK, w: '#ffffff', k: NAVY },
+    (u, v) => (v < 0.1 && Math.abs(u) < 0.35 ? 'k' : u > 0.05 && v < 0.45 ? 'p' : u < -0.05 && v > 0.55 && v < 0.78 ? 'w' : 'a')),
+  fashionSkirt('frosepleat', '玫瑰百褶网球裙', 'Rose pleated tennis skirt', 70, { a: FPINK, c: FPINK2, w: '#ffffff' },
+    (u, v) => (v < 0.15 ? 'w' : v > 0.88 ? 'w' : near(Math.abs(u), 0.22, 0.07) || near(Math.abs(u), 0.65, 0.07) ? 'c' : 'a')),
+  fashionTop('fcreamrugby', '奶油色橄榄球衫', 'Cream rugby polo', 85, 'tee', { a: CREAM, c: CREAM2, r: CHERRY, b: SKY2 },
+    (u, v) => (v < 0.1 && Math.abs(u) < 0.32 ? 'b' : (v > 0.15 && v < 0.27) || (v > 0.45 && v < 0.57) || (v > 0.75 && v < 0.87) ? 'r' : 'a')),
+  fashionTop('fsunsweat', '阳光运动卫衣', 'Sunshine warm-up sweatshirt', 85, 'long', { a: GOLD, c: '#e0a524', w: '#fff8dc' },
+    (u, v) => (plus(u, v, 0, 0.38, 0.1) ? 'w' : near(v, 0.82, 0.04) ? 'w' : 'a')),
+  // 03 Playful kids
+  fashionTop('fstarprincess', '星光公主裙', 'Starlight princess dress', 140, 'dress', { a: FPINK, c: FPINK2, y: GOLD },
+    (u, v) => (v < 0.08 && Math.abs(u) < 0.3 ? 'y' : plus(u, v, -0.3, 0.3, 0.07) || plus(u, v, 0.4, 0.62, 0.07) || plus(u, v, -0.45, 0.82, 0.07) ? 'y' : 'a')),
+  fashionTop('ficecrystal', '冰晶派对裙', 'Ice-crystal party dress', 140, 'dress', { a: SKY, c: SKY2, w: '#ffffff' },
+    (u, v) => (v < 0.08 && Math.abs(u) < 0.3 ? 'w' : plus(u, v, -0.25, 0.3, 0.07) || plus(u, v, 0.45, 0.65, 0.07) || plus(u, v, -0.5, 0.85, 0.07) ? 'w' : 'a')),
+  fashionTop('fgardenpinafore', '故事书花园背带裙', 'Storybook garden pinafore', 120, 'pinafore', { a: MINT, c: MINT2, w: '#ffffff', y: CREAM },
+    (u, v) => (v < 0.3 && (near(Math.abs(u), 0.35, 0.06) || near(v, 0.26, 0.04)) && Math.abs(u) < 0.42 ? 'y' : plus(u, v, -0.05, 0.4, 0.07) || plus(u, v, 0.4, 0.75, 0.07) ? 'w' : 'a')),
+  fashionTop('fmoonbunny', '月亮兔连帽衫', 'Moon-bunny hoodie', 110, 'long', { a: NAVY, c: NAVY2, p: LILAC, k: FPINK, w: CREAM },
+    (u, v) => (v < 0.1 ? 'p' : u > 0.85 || v > 0.93 ? 'p' : Math.abs(u) < 0.22 && v > 0.22 && v < 0.45 ? ((near(u, -0.08, 0.05) || near(u, 0.08, 0.05)) && v > 0.33 && v < 0.38 ? 'a' : 'k') : near(u, 0.4, 0.07) && near(v, 0.78, 0.06) ? 'w' : 'a')),
+  fashionTop('flilacbow', '丁香蝴蝶结派对裙', 'Lilac bow party dress', 130, 'dress', { a: LILAC, c: LILAC2, p: FPINK },
+    (u, v) => (v < 0.08 && Math.abs(u) < 0.3 ? 'p' : v > 0.15 && v < 0.35 && Math.abs(u) < 0.32 && (Math.abs(u) < 0.08 || Math.abs(v - 0.25) < 0.05 + Math.abs(u) * 0.3) ? 'p' : 'a')),
+  fashionTop('fpopstar', '流行巨星舞台外套', 'Pop-star stage jacket', 130, 'long', { a: LILAC, c: LILAC2, y: GOLD },
+    (u, v) => (v < 0.07 || v > 0.92 ? 'y' : near(u, 0, 0.05) ? 'y' : plus(u, v, -0.4, 0.4, 0.07) || plus(u, v, 0.4, 0.65, 0.07) || plus(u, v, -0.5, 0.85, 0.06) ? 'y' : 'a')),
+  fashionTop('fheartjersey', '爱心安可球衣', 'Heart encore jersey', 80, 'tee', { a: FPINK, c: FPINK2, k: NAVY },
+    (u, v) => (v < 0.08 && Math.abs(u) < 0.3 ? 'k' : fheart(u, v, 0, 0.32) ? 'k' : 'a')),
+  fashionTop('fsundungarees', '阳光探险背带裤', 'Sunshine adventure dungarees', 110, 'pinafore', { a: GOLD, c: '#e0a524', b: SKY, k: '#d9961a' },
+    (u, v) => (v < 0.22 && Math.abs(u) > 0.25 && Math.abs(u) < 0.45 ? 'b' : near(v, 0.24, 0.04) && Math.abs(u) < 0.45 ? 'b' : v > 0.48 && v < 0.62 && Math.abs(u) > 0.2 && Math.abs(u) < 0.55 ? 'k' : 'a')),
+  fashionTop('fcherrysailor', '樱桃蝴蝶结水手裙', 'Cherry ribbon sailor dress', 130, 'dress', { a: CHERRY, c: CHERRY2, w: '#fff0e0' },
+    (u, v) => (v < 0.25 && Math.abs(u) < 0.55 - v ? 'w' : near(u, 0, 0.08) && near(v, 0.3, 0.06) ? 'w' : near(v, 0.85, 0.04) ? 'w' : 'a')),
+  fashionTop('fclouddream', '云朵梦想卫衣', 'Cloud dream sweatshirt', 85, 'long', { a: SKY, c: SKY2, w: '#ffffff' },
+    (u, v) => (v < 0.07 && Math.abs(u) < 0.3 ? 'w' : (Math.pow(u / 0.45, 2) + Math.pow((v - 0.48) / 0.12, 2) < 1 && v > 0.4) || (Math.pow(u / 0.22, 2) + Math.pow((v - 0.4) / 0.11, 2) < 1) ? 'w' : 'a')),
+  // 04 Silver circuit
+  fashionCap('fsilvercap', '银色电路帽', 'Silver Circuit cap', 60, { a: NAVY, c: NAVY2, d: TEAL, w: '#ffffff' }, (u, v) => (v > 0.7 ? (near(u, -0.4, 0.06) || near(u, 0.5, 0.06) ? 'd' : 'c') : circuit(u, v) || 'a')),
+  fashionTop('fsilverjersey', '银色电路球衣', 'Silver Circuit jersey', 90, 'tee', { a: NAVY, c: NAVY2, d: TEAL, w: '#ffffff' }, (u, v) => (v < 0.08 && Math.abs(u) < 0.3 ? 'd' : circuit(u, v) || 'a')),
+  fashionSkirt('fsilverskirt', '银色电路裙', 'Silver Circuit skirt', 80, { a: NAVY, c: NAVY2, d: TEAL, s: '#5a5480' },
+    (u, v) => (v < 0.15 || v > 0.88 ? 'd' : near(Math.abs(u), 0.25, 0.07) || near(Math.abs(u), 0.65, 0.07) ? 's' : 'a')),
+  fashionTop('fsilverjacket', '银色电路外套', 'Silver Circuit jacket', 120, 'long', { a: SILVER, c: '#a9b4c2', d: TEAL, k: '#5a6478', w: '#ffffff' },
+    (u, v) => (near(u, 0, 0.05) ? (Math.floor(v * 10) % 3 ? 'k' : 'd') : circuit(u, v) || 'a')),
+  fashionShoes('fsilvershoes', '银色电路鞋', 'Silver Circuit shoes', 70, { a: NAVY, b: '#ffffff', l: TEAL, c: NAVY2, d: TEAL, w: '#ffffff' },
+    (u, v) => (v > 0.7 ? 'b' : near(u, 0, 0.18) ? 'd' : near(v, 0.45, 0.08) ? 'w' : 'a')),
+  // 05 Scarlet circuit
+  fashionCap('fscarletcap', '猩红电路帽', 'Scarlet Circuit cap', 60, { a: CHERRY, c: CHERRY2, d: GOLD, w: '#ffffff' }, (u, v) => (v > 0.7 ? (near(u, -0.4, 0.06) || near(u, 0.5, 0.06) ? 'd' : 'c') : circuit(u, v) || 'a')),
+  fashionTop('fscarletjersey', '猩红电路球衣', 'Scarlet Circuit jersey', 90, 'tee', { a: CHERRY, c: CHERRY2, d: '#ffffff', w: '#ffffff' }, (u, v) => (v < 0.08 && Math.abs(u) < 0.3 ? 'd' : circuit(u, v) || 'a')),
+  fashionSkirt('fscarletskirt', '猩红电路裙', 'Scarlet Circuit skirt', 80, { a: CHERRY, c: CHERRY2, d: GOLD, s: '#b01c30' },
+    (u, v) => (v < 0.15 || v > 0.88 ? 'd' : near(Math.abs(u), 0.25, 0.07) || near(Math.abs(u), 0.65, 0.07) ? 's' : 'a')),
+  fashionTop('fscarletjacket', '猩红电路外套', 'Scarlet Circuit jacket', 120, 'long', { a: CHERRY, c: CHERRY2, d: GOLD, k: GOLD, w: '#ffffff' },
+    (u, v) => (near(u, 0, 0.05) ? (Math.floor(v * 10) % 3 ? 'k' : 'w') : circuit(u, v) || 'a')),
+  fashionShoes('fscarletshoes', '猩红电路鞋', 'Scarlet Circuit shoes', 70, { a: CHERRY, b: '#ffffff', l: GOLD, c: CHERRY2, d: '#ffffff', w: '#ffffff' },
+    (u, v) => (v > 0.7 ? 'b' : near(u, 0, 0.18) ? 'd' : near(v, 0.45, 0.08) ? 'w' : 'a')),
+]));
