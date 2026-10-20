@@ -420,8 +420,13 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
 }
 // furniture she put in front (⬆ or dragged last) / behind (⬇) other things stays that way.
 // decorLayer: a big positive number = in front (newest wins), negative = behind.
+// does this piece overlap a curtain? (curtains are centred with a transform, so compare where they really are on screen)
+export function behindCurtainOk(roomEl, el) {
+  const r = el.getBoundingClientRect();
+  return [...roomEl.querySelectorAll('.decor.curtain')].some((cu) => { const c = cu.getBoundingClientRect(); return r.left < c.right && c.left < r.right && r.top < c.bottom && c.top < r.bottom; });
+}
 export function stackDecor(roomEl) {
-  const els = [...roomEl.querySelectorAll('.decor:not(.curtain):not(.flat), .decor[data-layer]')];
+  const els = [...roomEl.querySelectorAll('.decor:not(.curtain):not(.flat), .decor[data-layer]:not(.curtain)')];   // curtains stay pinned at the window (z 1)
   const box = (el) => ({ l: el.offsetLeft, t: el.offsetTop, r: el.offsetLeft + el.offsetWidth, b: el.offsetTop + el.offsetHeight });
   const overlap = (a, b) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b;
   const lay = (el) => +el.dataset.layer || 0;
@@ -437,6 +442,8 @@ export function stackDecor(roomEl) {
       });
     });
   }
+  // 🪟 a window (or anything) sent behind (⬇) where a curtain hangs goes behind the curtain
+  els.forEach((el) => { if (lay(el) < 0 && !el.classList.contains('curtain') && behindCurtainOk(roomEl, el)) el.style.zIndex = 0; });
   // the studio's barre: things put in front go in front of it, things put behind go behind it
   const barre = roomEl.querySelector('.studio-barre');
   if (barre) {

@@ -22,7 +22,7 @@ import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
 import { wireDisplays } from './display-racks.js';
 import { wireHomeTables } from './home-tables.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, boothView, catFace, freeSlot, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx, walkPoseOf } from './house.js';
+import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, boothView, catFace, freeSlot, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx, walkPoseOf, behindCurtainOk } from './house.js';
 import * as Pets from './pets.js';
 import * as Care from './petcare.js';
 import { bankScreen } from './atm.js';
@@ -335,6 +335,7 @@ function setHomeBusy(b) {
 
 // ----- first visit of the day: greeting, check-in rewards; jokes now and then -----
 let greet = null, greetUntil = 0, checkinShown = false;
+const CHECKIN_ON = false;   // 📅 the 10-day check-in reward (off for now)
 function greetNow() {
   const g = S.takeGreeting();
   if (g) { greet = g; greetUntil = Date.now() + 90000; setTimeout(() => meow('happy'), 500); }
@@ -677,18 +678,21 @@ function homeScreen(params = {}) {
     const tray = html`<div class="stage-tray">
         <button class="tray-btn phone-btn ${pb ? 'new' : ''}" id="t-phone" title="Phone">${PHONE_ICON}${pb ? `<i class="badge">${pb}</i>` : ''}</button>
         ${gifts.length ? `<button class="tray-btn gift" id="t-gift" title="Gifts">🎁<i class="badge">${gifts.length}</i></button>` : ''}
-        <button class="tray-btn ${S.checkinStatus().claimed ? '' : 'gift'}" id="t-ck" title="Daily check-in">📅${S.checkinStatus().claimed ? '' : '<i class="badge">!</i>'}</button>
+
         <button class="tray-btn" id="t-shop" title="Shop" aria-label="Shop">🛍️</button>
         <button class="tray-btn" id="t-bag" title="My items" aria-label="My items">🎒</button>
+        <button class="tray-btn" id="t-map" title="Map" aria-label="Map">🗺️</button>
       </div>`;
     $('#stage', n).appendChild(tray);
     // 🍿 snacks from the cinema: hold one, eat it
     ($('#house', n) || $('#stage', n)).appendChild(Snacks.snackBar({ onHold: () => { kv.draw(); Visit.hostResendHouse(); } }));
     const tg = $('#t-gift', tray); if (tg) tg.onclick = () => Friends.openGiftBox(S.unopenedGifts()[0], refreshHome);
-    $('#t-ck', tray).onclick = () => openCheckin(refreshHome);
+    // (v278: the 10-day check-in reward is switched off for now — set CHECKIN_ON to bring it back)
+    { const ck = $('#t-ck', tray); if (ck) ck.onclick = () => openCheckin(refreshHome); }
     $('#t-shop', tray).onclick = () => go('shop');
     $('#t-bag', tray).onclick = () => go('wardrobe');
-    if (!S.checkinStatus().claimed && !checkinShown && S.get().onboarded) { checkinShown = true; setTimeout(() => { if (current === 'home' && $('#modal').classList.contains('hidden')) openCheckin(refreshHome); }, 1200); }
+    $('#t-map', tray).onclick = () => { sfx.click(); go('map'); };
+    if (CHECKIN_ON && !S.checkinStatus().claimed && !checkinShown && S.get().onboarded) { checkinShown = true; setTimeout(() => { if (current === 'home' && $('#modal').classList.contains('hidden')) openCheckin(refreshHome); }, 1200); }
     $('#t-phone', tray).onclick = () => openPhone({ start: S.unreadNotifications().length ? 'noti' : S.unreadLetters().length ? 'mail' : 'home', after: refreshHome });
   }
 
@@ -911,6 +915,7 @@ function homeScreen(params = {}) {
       const box = html`<div class="card stack">
           <div class="h-title"><span class="zh">📦 收纳箱</span><span class="en">Storage box</span></div>
           <p class="help" style="margin:0">点一件家具，放进${ri.zh}。<br>Tap a piece to put it in the ${ri.en.toLowerCase()}.</p>
+          ${ids.length > 4 ? '<input type="search" id="sq" class="store-search" placeholder="🔍 搜索 Search your storage…" autocomplete="off">' : ''}
           <div class="store-grid">${ids.length ? ids.map((id) => `<button class="store-item" data-id="${id}"><span class="art"></span><span class="zh">${ITEMS[id].name}</span><small>${esc(ITEMS[id].en)}</small></button>`).join('')
             : '<p class="help">收纳箱是空的。去商店买家具吧！<br>Storage is empty — buy furniture in the shop.</p>'}</div>
           <button class="btn white" id="c">关闭 Close</button>
@@ -921,8 +926,19 @@ function homeScreen(params = {}) {
         toast(`<span class="zh">${ITEMS[b.dataset.id].name}放进${ri.zh}了！</span> Drag it where you like`);
         redrawArranging();
       }; });
+      // 🔍 type to find a piece (Chinese or English name)
+      const sq = $('#sq', box);
+      if (sq) sq.oninput = () => {
+        const q = sq.value.trim().toLowerCase(); let shown = 0;
+        box.querySelectorAll('.store-item').forEach((b) => { const it = ITEMS[b.dataset.id], hit = !q || `${it.name} ${it.en}`.toLowerCase().includes(q); b.hidden = !hit; if (hit) shown++; });
+        let none = $('#sq-none', box);
+        if (!shown && !none) { none = html`<p class="help" id="sq-none" style="margin:0">没找到 · Nothing called “${esc(sq.value.trim())}” in storage</p>`; $('.store-grid', box).after(none); }
+        else if (shown && none) none.remove();
+        else if (none) none.innerHTML = `没找到 · Nothing called “${esc(sq.value.trim())}” in storage`;
+      };
       $('#c', box).onclick = closeModal;
       openModal(box);
+      if (sq && !matchMedia('(pointer: coarse)').matches) sq.focus();
     };
     // 📨 invite a friend who is online to come over
     $('#b-invite', n).onclick = () => {
@@ -1056,6 +1072,20 @@ function homeScreen(params = {}) {
         const z = (el) => +el.style.zIndex || 0;
         const order = [d, ...decorEls.filter((x) => x !== d && x.isConnected && hits(x))].sort((a, b2) => z(a) - z(b2));
         const i = order.indexOf(d), j = front ? i + 1 : i - 1;
+        s.decorLayer = s.decorLayer || {};
+        // 🪟 already at the back and a curtain hangs here: go behind the curtain (⬆ brings it back out in front)
+        if (!front && j < 0 && behindCurtainOk(room, d) && !((+d.dataset.layer || 0) < 0)) {
+          s.decorLayer[d.dataset.id] = -Date.now(); d.dataset.layer = s.decorLayer[d.dataset.id];
+          decorEls.forEach((x) => { x.style.zIndex = depth(x); }); stackDecor(room);
+          S.saveQuiet(); sfx.click(); Visit.hostResendHouse();
+          return toast('🪟 <span class="zh">放到窗帘后面了</span> Behind the curtain', { ms: 1400 });
+        }
+        if (front && (+d.dataset.layer || 0) < 0) {
+          s.decorLayer[d.dataset.id] = Date.now() - order.length - 1; d.dataset.layer = s.decorLayer[d.dataset.id];
+          decorEls.forEach((x) => { x.style.zIndex = depth(x); }); stackDecor(room);
+          S.saveQuiet(); sfx.click(); Visit.hostResendHouse();
+          return toast('⬆ <span class="zh">从窗帘后面出来了</span> In front of the curtain', { ms: 1400 });
+        }
         if (j < 0 || j >= order.length) { sfx.miss(); toast(front ? '已经在最前面 · Already at the very front' : '已经在最后面 · Already at the very back', { ms: 1400 }); return; }
         [order[i], order[j]] = [order[j], order[i]];
         s.decorLayer = s.decorLayer || {};
