@@ -257,6 +257,7 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
   if (body && body.paint) {
     for (let y = 0; y < KH; y++) for (let x = 0; x < KW; x++) {
       if (region[y][x] !== 'body' || out[y][x] === P.o) continue;
+      if (body.dress && !headOnly && y > Y(28)) continue;   // below a dress's hem: her own fur between the paws
       const c = body.paint(x - 16, y - OY - 18, body.pal);
       if (c) out[y][x] = c;
     }
@@ -272,6 +273,21 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
   }
   // 👗 v277: a skirt flares out from the waist like a real skirt (wider than her body at the hem), with its own outline
   const skirt = !headOnly && equipped.skirt && ITEMS[equipped.skirt];
+  // 👗 v280: a dress flares out below the waist the same way (its own pattern carried down to the hem), unless a skirt is on top
+  const dressFlare = !headOnly && !(skirt && skirt.flare) && body && body.dress && body.paint
+    ? { pal: body.pal, flare: (u, t) => { const c = body.paint(Math.round(u * 7), Math.round(5 + t * 8), body.pal); return c || body.pal.a; } } : null;
+  if (dressFlare) {
+    const cx = side ? 15 : 16, top = Y(23), hem = Y(28), mask = new Set();
+    for (let yy = top; yy <= hem; yy++) {
+      const t = (yy - top) / (hem - top), half = 7 + t * 3;
+      for (let x = 0; x < KW; x++) {
+        const dx = x + 0.5 - cx; if (Math.abs(dx) > half) continue;
+        out[yy][x] = dressFlare.flare(dx / half, t); mask.add(yy * KW + x);
+      }
+    }
+    mask.forEach((m) => { const yy = Math.floor(m / KW), x = m % KW;
+      [[1, 0], [-1, 0], [0, 1]].forEach(([dx, dy]) => { const X = x + dx, Yy = yy + dy; if (X >= 0 && X < KW && Yy < KH && !mask.has(Yy * KW + X)) out[Yy][X] = P.o; }); });
+  }
   if (skirt && skirt.flare) {
     const cx = side ? 15 : 16, top = Y(23), hem = Y(28), mask = new Set();
     for (let yy = top; yy <= hem; yy++) {
@@ -1353,7 +1369,7 @@ const bikiniPaint = (x, y, p) => (
   : y === 3 && x === 0 ? p.c
   : y >= 9 && y <= 11 && Math.abs(x) <= (y === 11 ? 3 : 5) ? (((x + 9) * 2 + y) % 5 === 0 ? p.b : p.a)
   : y === 8 && Math.abs(x) <= 6 ? p.c : null);
-const wearBody = (id, name, en, price, pal, paint, tpl = SHIRT) => [id, { cat: 'wear', slot: 'body', name, en, price, pal: { o: O, ...pal }, art: tpl, paint }];
+const wearBody = (id, name, en, price, pal, paint, tpl = SHIRT) => [id, { cat: 'wear', slot: 'body', name, en, price, pal: { o: O, ...pal }, art: tpl, paint, dress: tpl === DRESS }];
 const wearFeet = (id, name, en, price, pal) => [id, { cat: 'wear', slot: 'feet', name, en, price, pal: { o: O, ...pal }, art: SHOE }];
 Object.assign(ITEMS, Object.fromEntries([
   wearBody('tshirt', '蓝色T恤', 'Blue T-shirt', 45, { a: '#5fa8e8', b: '#ffffff', c: '#3f7fc0' },
@@ -12765,7 +12781,7 @@ const near = (a, b, d = 0.09) => Math.abs(a - b) < d;
 const plus = (u, v, cu, cv, s = 0.09) => (near(u, cu, s) && near(v, cv, s * 2.2)) || (near(v, cv, s * 0.9) && near(u, cu, s * 2.4));
 const fheart = (u, v, cu, cv, r = 0.32) => { const x = (u - cu) / r, y = (v - cv) / (r * 0.9); return y < 0.9 && ((x * x + Math.pow(y - Math.sqrt(Math.abs(x)) * 0.7, 2)) < 0.55); };
 // tops & dresses: body slot (painted on her body, which is about 15 × 14); skirts: their own slot, flaring at the hem
-const fashionTop = (id, name, en, price, shape, pal, f) => [id, { cat: 'wear', slot: 'body', name, en, price, pal: { o: O, ...pal }, art: fashionArt(shape, f),
+const fashionTop = (id, name, en, price, shape, pal, f) => [id, { cat: 'wear', slot: 'body', name, en, price, pal: { o: O, ...pal }, art: fashionArt(shape, f), dress: shape === 'dress' || shape === 'pinafore',
   paint: (x, y, p) => { const k = f(x / 7, y / 13, x + 16, y); return k ? p[k] : null; } }];
 const fashionSkirt = (id, name, en, price, pal, f) => [id, { cat: 'wear', slot: 'skirt', name, en, price, pal: { o: O, ...pal }, art: fashionArt('skirt', f), flare: f }];
 const fashionCap = (id, name, en, price, pal, f) => [id, { cat: 'wear', slot: 'head', name, en, price, pal: { o: O, ...pal }, art: fashionArt('cap', f), wear: { x: 7, y: 2 } }];

@@ -744,4 +744,5 @@ export const CHANGES = [
   { v: 277, items: ['40 new clothes in the shop: Modern Chic, Sporty Chic, Playful Kids, and the Silver Circuit and Scarlet Circuit sets (cap, jersey, skirt, jacket, shoes)', 'Skirts are their own piece now — wear one with any top — and they flare out at the hem like a real skirt'] },
   { v: 278, items: ['🔍 Search your storage box — type a name in English or Chinese', '🪟 Furniture can go behind the curtains: tap ⬇ until it says "Behind the curtain" (⬆ brings it out)', '📅 The 10-day check-in reward is switched off for now', '🗺️ New map button next to the bag, top left'] },
   { v: 279, items: ['📱 Sale settings fit on a phone screen (dates, buttons and the list)', '📱 The top bar fits on narrow phones — the 🔒 button is no longer cut off'] },
+  { v: 280, items: ['👗 Dresses flare out below the waist like the skirts do (pink dress, qipao, princess dresses, pinafores and the new dresses)'] },
 ];
