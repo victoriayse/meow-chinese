@@ -6,12 +6,15 @@ import { $, html, esc, coinI, hydrateIcons, KittenView, toast, burst, confirmBox
 import { sfx } from './audio.js';
 import * as Auth from './auth.js';
 import { managing } from './cloud.js';
+import * as Sales from './sales.js';
+import { isAdmin } from './places.js';
 
 // things she can buy for a friend (not medicine); needs her own logged-in account
 const giftable = (it) => ['food', 'toiletry', 'wear', 'decor'].includes(it.cat) && !it.petBowl && !it.special && !it.retired && Auth.session() && !managing();
 const openRooms = () => S.ROOMS.filter((r) => S.roomOpen(r.key)).map((r) => r.key);
 const isWear = (slots) => (it) => it.cat === 'wear' && !it.special && slots.includes(it.slot);
 export const TABS = [
+  { key: 'sale', zh: '特卖', en: 'Sale', icon: '🏷️', test: () => false },
   { key: 'food', zh: '食物', en: 'Food', icon: '🐟', test: (it) => it.cat === 'food' },
   { key: 'toiletry', zh: '洗护用品', en: 'Toiletries', icon: '🧴', test: (it) => it.cat === 'toiletry' },
   { key: 'head', lock: 'head', zh: '头饰', en: 'Hair', icon: '🎀', test: isWear(['head']) },
@@ -69,14 +72,16 @@ export function decorGroup(it) {
 const SLOT_NAME = Object.fromEntries(WEAR_SLOTS.map(([k, zh]) => [k, zh]));
 // tab order: everyday things first (food, toiletries), then what she has unlocked (by level), locked ones last
 export function orderTabs(tabs) {
-  const daily = ['food', 'meals', 'drinks', 'grocery', 'toiletry'], lv = (t) => t.order ?? (t.lock ? S.UNLOCKS[t.lock] : 0);
+  const daily = ['sale', 'food', 'meals', 'drinks', 'grocery', 'toiletry'], lv = (t) => t.order ?? (t.lock ? S.UNLOCKS[t.lock] : 0);
   const locked = (t) => t.lock && !S.unlocked(t.lock);
   const rest = tabs.filter((t) => !daily.includes(t.key));
   return [...daily.map((k) => tabs.find((t) => t.key === k)).filter(Boolean),
     ...rest.filter((t) => !locked(t)).sort((a, b) => lv(a) - lv(b)), ...rest.filter(locked).sort((a, b) => lv(a) - lv(b))];
 }
 
-export function shopScreen({ go, tab = 'food' }) {
+export function shopScreen({ go, tab = null }) {
+  // 🏷️ the Sale aisle opens first while something is on sale
+  if (!tab) tab = Object.keys(ITEMS).some((id) => !id.includes('#') && S.activeSale(id)) ? 'sale' : 'food';
   if (tab === 'wear') tab = 'body';
   // try-on: one item per slot, so hair + clothes + shoes can all be tried together
   let tryOn = { ...S.get().kitten.equipped };
@@ -143,6 +148,7 @@ export function shopScreen({ go, tab = 'food' }) {
       shelf(found.sort((a, b) => S.price(a[0]) - S.price(b[0])));
       return;
     }
+    if (def.key === 'sale') { saleAisle(list); return; }
     if (def.lock && !S.unlocked(def.lock)) {
       const need = S.UNLOCKS[def.lock], lv = S.level();
       list.innerHTML = `<div class="locked-shelf"><div class="big">🔒</div>
@@ -189,13 +195,16 @@ export function shopScreen({ go, tab = 'food' }) {
         : it.cat === 'reno' ? (it.kind === 'wall' ? '🧱 墙纸 Wallpaper' : it.kind === 'pool' ? '🏊 在家里游泳！Swim at home' : '🟫 地板 Floor')
         : it.cat === 'decor' ? (() => { const g = DECOR_GROUPS.find((x) => x.key === decorGroup(it)) || DECOR_GROUPS[1]; return `${g.icon} ${g.zh} ${g.en}${roomShut ? ` · 🔒 Lv${S.UNLOCKS[it.room]}` : ''}${it.one ? ' · 只能买一个 Only one' : ''}`; })() : '';
       const trying = it.cat === 'wear' && tryOn[it.slot] === id && S.get().kitten.equipped[it.slot] !== id;
-      const card = html`<div class="product ${trying ? 'sel' : ''} ${owned ? 'is-owned' : ''}">
+      const sale = S.activeSale(id), was = S.basePrice(id);
+      const card = html`<div class="product ${trying ? 'sel' : ''} ${owned ? 'is-owned' : ''} ${sale ? 'on-sale' : ''}">
+          ${sale ? `<span class="sale-badge"><b>${sale.pct}%</b>OFF</span>` : ''}
           ${owned ? `<span class="owned">${isPet ? '已领养 Adopted' : '已有 Owned'}</span>` : have ? `<span class="count">×${have}</span>` : ''}
           <div class="art"></div>
           <div class="shelf-board"></div>
           <div class="nm">${it.name}</div><div class="nm-en">${it.en}</div>
           ${eff ? `<div class="eff">${eff}</div>` : ''}
-          ${owned ? `<span class="tag done">✓ ${isPet ? '我的 Mine' : '已买'}</span>` : `<button class="tag ${can ? '' : 'off'}" ${can ? '' : 'disabled'} data-buy="${id}">${isPet ? '<span class="zh">领养</span> ' : ''}<span class="price">${cost}${coinI(16)}</span></button>`}
+          ${owned ? `<span class="tag done">✓ ${isPet ? '我的 Mine' : '已买'}</span>` : `<button class="tag ${can ? '' : 'off'}" ${can ? '' : 'disabled'} data-buy="${id}">${isPet ? '<span class="zh">领养</span> ' : ''}<span class="price">${sale ? `<s>${was}</s> ` : ''}${cost}${coinI(16)}</span></button>`}
+          ${sale && !owned ? `<div class="sale-left">⏳ <span data-ends="${sale.end}">${Sales.left(sale.end - Date.now())}</span></div>` : ''}
           ${giftable(it) ? `<button class="gift-tag" data-gift="${id}" ${s.coins >= cost ? '' : 'disabled'} title="Buy as a gift for a friend">🎁 <span class="zh">送朋友</span></button>` : ''}
         </div>`;
       $('.art', card).appendChild(spriteCanvas(id, it.petBowl ? 110 : it.cat === 'decor' || isPet ? 76 : 60));
@@ -212,6 +221,79 @@ export function shopScreen({ go, tab = 'food' }) {
     });
     hydrateIcons(n);
   }
+  // ---------- 🏷️ the Sale aisle: what's on sale now (with a countdown), and the admin's sale settings ----------
+  function saleAisle(list) {
+    const now = Date.now(), sales = S.allSales();
+    const items = [...new Set(sales.filter((r) => now >= r.start && now < r.end).map((r) => r.item))].filter((id) => ITEMS[id]);
+    const soonest = Math.min(...items.map((id) => S.activeSale(id).end));
+    const next = sales.filter((r) => r.start > now && ITEMS[r.item]).sort((a, b) => a.start - b.start)[0];
+    list.appendChild(html`<div class="sale-banner"><span class="sb-tag">🏷️ <span class="zh">限时特卖</span> SALE</span>
+        ${items.length ? `<span class="sb-time">⏳ <span class="zh">还剩</span> Ends in <b data-ends="${soonest}">${Sales.left(soonest - now)}</b></span>` : `<span class="sb-time">${next ? `<span class="zh">下一个特卖</span> Next sale in <b data-ends="${next.start}">${Sales.left(next.start - now)}</b>` : '<span class="zh">现在没有特卖</span> No sale right now — check back soon!'}</span>`}</div>`);
+    if (items.length) shelf(items.map((id) => [id, ITEMS[id]]).sort((a, b) => S.price(a[0]) - S.price(b[0])));
+    if (isAdmin()) list.appendChild(saleAdmin());
+  }
+  const toInput = (ms) => { const d = new Date(ms), p = (x) => String(x).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+  const buyable = () => Object.entries(ITEMS).filter(([id, it]) => !id.includes('#') && it.price > 0 && !it.retired && !it.special && TABS.some((t) => t.key !== 'sale' && t.test(it)));
+  function saleAdmin() {
+    const now = Date.now(), sales = S.allSales().slice().sort((a, b) => a.start - b.start);
+    const status = (r) => (now < r.start ? ['sched', '⏰ 预定 Scheduled'] : now < r.end ? ['live', '🔴 进行中 On now'] : ['done', '已结束 Ended']);
+    const box = html`<div class="card stack sale-admin">
+        <div class="h-title"><span class="zh">🛠️ 特卖设置</span><span class="en">Sale settings (admin only)</span></div>
+        <div class="sa-form">
+          <label class="field sa-item"><span>商品 Item</span><input id="sa-item" list="sa-items" placeholder="Type to search… e.g. Sofa" autocomplete="off"><datalist id="sa-items">${buyable().map(([id, it]) => `<option value="${esc(it.en)} · ${esc(it.name)} [${id}]"></option>`).join('')}</datalist></label>
+          <label class="field sa-pct"><span>折扣 % off</span><input id="sa-pct" type="number" min="1" max="90" value="20" inputmode="numeric"></label>
+          <label class="field"><span>开始 Starts</span><input id="sa-start" type="datetime-local" value="${toInput(now)}"></label>
+          <label class="field"><span>结束 Ends</span><input id="sa-end" type="datetime-local" value="${toInput(now + 7 * 864e5)}"></label>
+          <div class="sa-dur"><small>时长 Length:</small>${[1, 3, 7, 14].map((d) => `<button type="button" class="btn white small" data-dur="${d}">${d} 天 days</button>`).join('')}</div>
+          <button type="button" class="btn green" id="sa-add">➕ <span class="zh">加入特卖</span> Add sale</button>
+        </div>
+        <div class="sa-list">${sales.length ? sales.map((r) => { const [cls, lbl] = status(r), it = ITEMS[r.item];
+          return `<div class="sa-row ${cls}" data-id="${r.id}"><span class="sa-art" data-art="${it ? r.item : ''}"></span>
+            <span class="sa-nm"><b class="zh">${it ? it.name : esc(r.item)}</b><small>${it ? esc(it.en) : 'unknown item'} · ${lbl}</small></span>
+            <span class="sa-pp"><input type="number" class="sa-p" min="1" max="90" value="${r.pct}" aria-label="% off"><small>%</small></span>
+            <input type="datetime-local" class="sa-s" value="${toInput(r.start)}" aria-label="Starts">
+            <input type="datetime-local" class="sa-e" value="${toInput(r.end)}" aria-label="Ends">
+            <span class="sa-btns"><button type="button" class="btn white small" data-save title="Save">💾</button><button type="button" class="btn white small" data-del title="Remove">🗑</button></span></div>`; }).join('')
+          : '<p class="help" style="margin:0">还没有特卖。 No sales set up yet.</p>'}</div>
+        <p class="help" style="margin:0">特卖对所有人都一样；到了开始时间自动开始，结束时间自动结束。<br>Sales are the same for everyone. They start and end by themselves at the times you set (shown in your time zone).</p>
+      </div>`;
+    box.querySelectorAll('[data-art]').forEach((a) => { if (a.dataset.art) a.appendChild(spriteCanvas(a.dataset.art, 34)); });
+    box.querySelectorAll('[data-dur]').forEach((b) => { b.onclick = () => { const st = Date.parse($('#sa-start', box).value) || Date.now(); $('#sa-end', box).value = toInput(st + +b.dataset.dur * 864e5); sfx.click(); }; });
+    const read = (pctEl, sEl, eEl) => {
+      const pct = Math.round(+pctEl.value), start = Date.parse(sEl.value), end = Date.parse(eEl.value);
+      if (!(pct >= 1 && pct <= 90)) { toast('折扣要在 1–90% 之间 · % off must be 1 to 90'); return null; }
+      if (!start || !end || end <= start) { toast('结束时间要在开始之后 · The end must be after the start'); return null; }
+      return { pct, start, end };
+    };
+    $('#sa-add', box).onclick = async () => {
+      const m = /\[([^\]]+)\]\s*$/.exec($('#sa-item', box).value.trim()), id = m && m[1];
+      if (!id || !ITEMS[id]) return toast('从列表里选一个商品 · Pick an item from the list');
+      const v = read($('#sa-pct', box), $('#sa-start', box), $('#sa-end', box)); if (!v) return;
+      try { await Sales.addSale({ item: id, ...v }); sfx.coin(); toast(`🏷️ ${esc(ITEMS[id].en)} · ${v.pct}% off`); render(); }
+      catch (e) { toast('没保存成功 · Could not save the sale'); console.warn(e); }
+    };
+    box.querySelectorAll('.sa-row').forEach((row) => {
+      $('[data-save]', row).onclick = async () => {
+        const v = read($('.sa-p', row), $('.sa-s', row), $('.sa-e', row)); if (!v) return;
+        try { await Sales.updateSale(row.dataset.id, v); sfx.click(); toast('💾 Saved'); render(); } catch (e) { toast('没保存成功 · Could not save'); }
+      };
+      $('[data-del]', row).onclick = async () => {
+        if (!(await confirmBox('删除这个特卖？ Remove this sale?', 'The item goes back to its normal price.', '删除 Remove', '取消 Cancel'))) return;
+        try { await Sales.removeSale(row.dataset.id); render(); } catch (e) { toast('没删除成功 · Could not remove'); }
+      };
+    });
+    return box;
+  }
+  // countdowns tick every second; when a sale starts or ends, the shelves are redrawn with the new prices
+  const tick = setInterval(() => {
+    if (!n.isConnected) { clearInterval(tick); return; }
+    let flip = false;
+    n.querySelectorAll('[data-ends]').forEach((el) => { const ms = +el.dataset.ends - Date.now(); el.textContent = Sales.left(ms); if (ms <= 0) flip = true; });
+    if (flip && !n.querySelector('.sale-admin input:focus')) render();
+  }, 1000);
+  // new sales arrived from the server: redraw (unless the admin is in the middle of typing one)
+  const unSales = Sales.onSales(() => { if (!n.isConnected) { unSales(); return; } if (!n.querySelector('.sale-admin input:focus')) { const y = window.scrollY; render(); window.scrollTo(0, y); } });
+
   // always ask first, so nothing is bought by a stray tap
   async function askBuy(id) {
     const it = ITEMS[id], cost = S.price(id), coins = S.get().coins;
@@ -296,7 +378,7 @@ export function shopScreen({ go, tab = 'food' }) {
   $('#subcats', n).onclick = (e) => { const b = e.target.closest('[data-sub]'); if (b) { subcat = b.dataset.sub; subroom = 'all'; sfx.click(); render(); } };
   $('#q', n).addEventListener('input', () => render());
   $('#reset', n).onclick = () => { tryOn = { ...S.get().kitten.equipped }; drawKitten(); render(); };
-  n._mounted = () => { drawKitten(); render(); };
+  n._mounted = () => { drawKitten(); render(); Sales.loadSales(); };
   n._refresh = () => { const y = window.scrollY; render(); window.scrollTo(0, y); };   // new data arrived: redraw in place, same aisle
   return n;
 }

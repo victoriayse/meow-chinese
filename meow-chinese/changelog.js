@@ -738,4 +738,5 @@ export const CHANGES = [
   { v: 271, items: ['Fixed: sending coins to a friend at the ATM always failed', 'A pop-up and a phone notification tell you when a friend sends you coins'] },
   { v: 272, items: ['Extra safety: a game can only ever be saved to the account it belongs to (a parent and a linked child never mix, even by accident)'] },
   { v: 273, items: ['Fixed: opening the app on a second device could reset the bank balance to 0'] },
+  { v: 274, items: ['New red 🏷️ Sale aisle (first in the shop) with a countdown to when the sale ends', 'Items on sale show a red % OFF badge and the old price crossed out, in every aisle', 'Admin: put any item on sale from the Sale aisle — choose the % and the start and end dates, schedule sales ahead, edit or remove them', 'New furniture: table lamp, bonsai, baby pink stand mixer, baby pink blender, white vanity table, toy house, fireplace, white & baby pink grand piano (20% off this week)'] },
 ];

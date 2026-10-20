@@ -26,6 +26,7 @@ import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, s
 import * as Pets from './pets.js';
 import * as Care from './petcare.js';
 import { bankScreen } from './atm.js';
+import * as Sales from './sales.js';
 import * as Radio from './radio.js';
 import * as Visit from './visit.js';
 import * as Places from './places.js';
@@ -1555,6 +1556,7 @@ Friends.startFriends((news) => {
 });
 // pets wander around the house all the time (friends visiting see them too)
 Pets.startPets();
+Sales.startSales();   // 🏷️ shop sales (the same for everyone)
 Places.startPublishing();   // the admin's cinema furniture, saved online for everyone
 Pets.onPets((snap) => Visit.hostPets(snap));
 Radio.onRadio(() => Visit.hostRadio(Radio.status()));

@@ -494,10 +494,17 @@ export function play() {
 }
 
 // ---------- shop ----------
-export const price = (id) => (Number.isFinite(state.prices?.[id]) ? state.prices[id] : ITEMS[id].price);
+export const basePrice = (id) => (Number.isFinite(state.prices?.[id]) ? state.prices[id] : ITEMS[id].price);
+// 🏷️ v274: shop sales (set by the admin, the same for everyone): { item, pct, starts_at, ends_at } from the server
+let SALES = [];
+export function setSales(rows) { SALES = (rows || []).map((r) => ({ ...r, start: Date.parse(r.starts_at), end: Date.parse(r.ends_at) })).filter((r) => r.item && r.pct > 0 && r.end > r.start); }
+export const allSales = () => SALES.slice();
+export const activeSale = (id, now = Date.now()) => { const b = baseId(id); let best = null; for (const r of SALES) if (r.item === b && now >= r.start && now < r.end && (!best || r.pct > best.pct)) best = r; return best; };
+export const price = (id) => { const p = basePrice(id), sale = activeSale(id); return sale && p > 0 ? Math.max(1, Math.round(p * (1 - sale.pct / 100))) : p; };
 export function setPrice(id, v) {
   v = Math.round(Number(v));
   if (!Number.isFinite(v) || v < 0) return;
+  state.prices = state.prices || {};
   if (v === ITEMS[id].price) delete state.prices[id]; else state.prices[id] = v;
   save();
 }
@@ -562,7 +569,7 @@ export const inCage = (id) => !(state.cageOff || []).includes(id);
 export function toggleCageThing(id) { state.cageOff = state.cageOff || []; const i = state.cageOff.indexOf(id); if (i >= 0) state.cageOff.splice(i, 1); else state.cageOff.push(id); save(); return i >= 0; }
 // ---------- selling things back to the shop (30% of the price) ----------
 export const SELL_RATE = 0.3;
-export const sellPrice = (id) => Math.max(1, Math.floor(price(baseId(id)) * SELL_RATE));
+export const sellPrice = (id) => Math.max(1, Math.floor(basePrice(baseId(id)) * SELL_RATE));
 export function sellItem(id) {
   const it = ITEMS[id];
   if (!it || !state.owned.includes(id) || it.special || it.cat === 'pet') return 0;

@@ -780,14 +780,14 @@ function pricesView(rerender) {
     const g = html`<div><h3>${label}</h3><div class="price-grid"></div></div>`;
     const grid = $('.price-grid', g);
     Object.entries(ITEMS).filter(([id, it]) => !id.includes('#') && (cat === 'pets' ? it.cat === 'petfood' || !!it.petBowl : it.cat === cat && !it.petBowl)).forEach(([id, it]) => {
-      const changed = S.price(id) !== it.price;
+      const changed = S.basePrice(id) !== it.price;
       const row = html`<label class="price-row ${changed ? 'changed' : ''}">
           <span class="ico"></span>
           <span class="nm"><span class="zh">${it.name}</span><small>${it.en} · default ${it.price}</small></span>
-          <input type="number" min="0" max="9999" inputmode="numeric" value="${S.price(id)}">
+          <input type="number" min="0" max="9999" inputmode="numeric" value="${S.basePrice(id)}">
         </label>`;
       $('.ico', row).appendChild(spriteCanvas(id, 32));
-      $('input', row).onchange = (e) => { S.setPrice(id, e.target.value); row.classList.toggle('changed', S.price(id) !== it.price); e.target.value = S.price(id); toast('Price saved ✓'); };
+      $('input', row).onchange = (e) => { S.setPrice(id, e.target.value); row.classList.toggle('changed', S.basePrice(id) !== it.price); e.target.value = S.basePrice(id); toast('Price saved ✓'); };
       grid.appendChild(row);
     });
     box.appendChild(g);
