@@ -2424,18 +2424,48 @@ img.gone { min-height: 40px; font-size: 11px; }
 .sale-banner .sb-tag { font-family: var(--px); font-size: 24px; }
 .sale-banner .sb-tag .zh { font-family: var(--zh); }
 .sale-banner .sb-time b { font-family: var(--px); font-size: 20px; background: #fff; color: #c41f36; border-radius: 6px; padding: 0 8px; }
-.sale-admin { grid-column: 1 / -1; }
-.sa-form { display: grid; grid-template-columns: 2fr 1fr 1.3fr 1.3fr; gap: 8px; align-items: end; }
+.sale-admin { grid-column: 1 / -1; min-width: 0; max-width: 100%; box-sizing: border-box; overflow: hidden; }
+.sa-form { display: grid; grid-template-columns: minmax(0,2fr) minmax(0,1fr) minmax(0,1.3fr) minmax(0,1.3fr); gap: 8px; align-items: end; }
+.sa-form > * { min-width: 0; }
 .sa-form .sa-dur { grid-column: 1 / 4; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.sa-form input { width: 100%; box-sizing: border-box; }
-.sa-list { display: grid; gap: 6px; }
-.sa-row { display: grid; grid-template-columns: 40px 1.4fr 70px 1fr 1fr auto; gap: 6px; align-items: center; padding: 6px; border: 2px solid #e6dccb; border-radius: 10px; background: #fff; }
+.sa-form input { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; }
+/* iPhone draws date boxes wider than the screen unless told not to */
+.sale-admin input[type=datetime-local] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; min-height: 2.4em; text-align: left; }
+.sale-admin input[type=datetime-local]::-webkit-date-and-time-value { text-align: left; }
+.sa-list { display: grid; gap: 6px; min-width: 0; }
+.sa-row { display: grid; grid-template-columns: 40px minmax(0,1.4fr) 70px minmax(0,1fr) minmax(0,1fr) auto; gap: 6px; align-items: center; padding: 6px; border: 2px solid #e6dccb; border-radius: 10px; background: #fff; min-width: 0; }
+.sa-row > * { min-width: 0; }
 .sa-row.live { border-color: #e8384f; background: #fff1f3; } .sa-row.done { opacity: .55; }
-.sa-row .sa-nm { display: grid; } .sa-row .sa-nm small { color: #6b6280; }
+.sa-row .sa-nm { display: grid; } .sa-row .sa-nm small { color: #6b6280; overflow-wrap: anywhere; }
 .sa-row .sa-pp { display: flex; align-items: center; gap: 2px; } .sa-row .sa-p { width: 52px; }
-.sa-row input { font: inherit; font-size: 13px; padding: 4px; border: 2px solid var(--ink); border-radius: 6px; min-width: 0; }
+.sa-row input { font: inherit; font-size: 13px; padding: 4px; border: 2px solid var(--ink); border-radius: 6px; min-width: 0; width: 100%; box-sizing: border-box; }
+.sa-row .sa-p { width: 52px; }
 .sa-row .sa-btns { display: flex; gap: 4px; }
-@media (max-width: 760px) { .sa-form { grid-template-columns: 1fr 1fr; } .sa-form .sa-dur { grid-column: 1 / -1; } .sa-row { grid-template-columns: 40px 1fr 70px; } .sa-row .sa-s, .sa-row .sa-e { grid-column: span 3; } .sa-row .sa-btns { grid-column: span 3; justify-content: flex-end; } }
+@media (max-width: 760px) {
+  .sa-form { grid-template-columns: minmax(0,1fr) 84px; }
+  .sa-form .field { margin: 0; }
+  .sa-form .field:nth-of-type(3), .sa-form .field:nth-of-type(4) { grid-column: 1 / -1; }
+  .sa-form .sa-dur { grid-column: 1 / -1; }
+  .sa-form .sa-dur small { flex-basis: 100%; }
+  .sa-form .sa-dur .btn { flex: 1 1 0; padding-left: 2px; padding-right: 2px; min-width: 0; white-space: nowrap; font-size: 13px; }
+  .sa-form #sa-add { grid-column: 1 / -1; }
+  .sale-admin input { font-size: 16px; }
+  .sa-row { grid-template-columns: 34px minmax(0,1fr) 70px; }
+  .sa-row .sa-s, .sa-row .sa-e { grid-column: 1 / -1; font-size: 15px; }
+  .sa-row .sa-btns { grid-column: 1 / -1; justify-content: flex-end; }
+}
 
 /* v276: the sale countdown keeps its width while the seconds tick */
 .sale-banner .sb-time b, .product .sale-left span { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* v279: narrow phones — everything in the top bar fits (nothing cut off on the right) */
+@media (max-width: 440px) {
+  .topbar { gap: 5px; padding-left: 6px; padding-right: 6px; }
+  .topbar .icon-btn { width: 34px; height: 34px; font-size: 16px; flex: none; }
+  .topbar .pill { min-height: 32px; padding: 2px 6px 2px 4px; font-size: 14px; gap: 3px; border-width: 2px; min-width: 0; }
+  .topbar .pill img, .topbar .pill canvas { width: 18px !important; height: 18px !important; }
+  .topbar .app-ver { font-size: 10px; padding: 1px 4px; flex: none; }
+  .topbar .brand canvas { max-width: 34px; height: auto; }
+  .topbar .spacer { min-width: 0; }
+}
+@media (max-width: 360px) { .topbar .app-ver { display: none; } }
