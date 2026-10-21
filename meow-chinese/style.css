@@ -2514,3 +2514,9 @@ img.gone { min-height: 40px; font-size: 11px; }
   .joystick { display: none !important; }
   .tn-hit .tn-key { display: block; }
 }
+/* v282: phones / tablets — joystick on the left edge, HIT on the right edge (the chat sits between them) */
+@media (pointer: coarse), (hover: none) {
+  .visit-log .joystick { order: -1; }
+  .visit-log .tn-hit { order: 2; }
+  .visit-log:has(.joystick) { margin-left: max(6px, env(safe-area-inset-left)); margin-right: max(6px, env(safe-area-inset-right)); }
+}

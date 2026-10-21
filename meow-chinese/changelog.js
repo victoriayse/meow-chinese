@@ -746,4 +746,5 @@ export const CHANGES = [
   { v: 279, items: ['📱 Sale settings fit on a phone screen (dates, buttons and the list)', '📱 The top bar fits on narrow phones — the 🔒 button is no longer cut off'] },
   { v: 280, items: ['👗 Dresses flare out below the waist like the skirts do (pink dress, qipao, princess dresses, pinafores and the new dresses)'] },
   { v: 281, items: ['🎾 New Tennis Court — walk ▶ right from the Stadium! 2–4 players (up to 2 a side), 10 coins to play, winners get 20', '🎾 Press HIT (or H on a computer) to swing your racket at the ball — watch out for the net and the lines', '🕹️ No joystick on computers — use the arrow keys'] },
+  { v: 282, items: ['🕹️ On phones the joystick is on the left edge and 🎾 HIT on the right edge'] },
 ];
