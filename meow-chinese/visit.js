@@ -3,6 +3,7 @@ import { openPoster, openVideo, openRadio, openBoard } from './media.js';
 import * as CafeTables from './cafe-tables.js';
 import { wireHomeTables, wirePlaceTables } from './home-tables.js';
 import { createStadium, joystick, JOYSTICK } from './stadium.js';
+import { createTennis } from './tennis.js';
 import { wireCanteen } from './canteen.js';
 import { createCarnival } from './carnival.js';
 import { wireSupermarket, SUPER_ROOM } from './supermarket.js';
@@ -189,7 +190,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   const box = $('#house', n), sub = $('#vt-sub', n);
   const others = new OtherCats();
   let house = null, host = null, roomKey = startRoom, mine = { x: 30, y: 6, room: startRoom, left: false }, lockedOut = false;
-  let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null, carnival = null, myWalkPose = null;
+  let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null, tennis = null, carnival = null, myWalkPose = null;
 
   let refreshingPlace = false, welcomed = false, sushiApi = null, zenStop = null;
   // 🍣 SushiMeow: the bill must be paid before she can leave
@@ -212,6 +213,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       if (!p || p.id === me) return;
       if (ev.startsWith('sushi')) { if (sushiApi && p && p.room === roomKey && p.id !== me) sushiApi.onBroadcast(ev, p); return; }
       if (stadium && (ev === 'ball' || ev === 'match')) { stadium.onBroadcast(ev, p); return; }
+      if (tennis && (ev === 'tshot' || ev === 'tmatch' || ev === 'tswing')) { tennis.onBroadcast(ev, p); return; }
       if (carnival && ev.startsWith('wheel-')) { carnival.onBroadcast(ev, p); return; }
       if (ev === 'locked' && p.to === me && !gotHouse) {
         clearInterval(kt); lockedOut = true;
@@ -265,7 +267,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   // this visit's chat, newest at the bottom (only kept while you are in the house)
   const vlog = chatLog([]);
   $('#vlog', n).appendChild(vlog.el);
-  $('#vlog', n).insertAdjacentHTML('beforeend', placeKey === 'stadium' ? JOYSTICK : DPAD);
+  $('#vlog', n).insertAdjacentHTML('beforeend', placeKey === 'stadium' ? '<button type="button" class="tn-hit hidden" aria-label="Hit">🎾<b><span class="zh">击球</span> HIT</b><small class="tn-key">⌨ H</small></button>' + JOYSTICK : DPAD);
   // the arrows (set up once; they move whichever room she is in); the stadium uses a joystick instead
   (placeKey === 'stadium' ? (el, o) => { joystick(el, o); walker(document.createElement('div'), o); } : walker)($(placeKey === 'stadium' ? '.joystick' : '.dpad', n), {
     isAlive: () => n.isConnected,
@@ -297,7 +299,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
             nx = mine.x; ny = Math.min(ny, mine.y);
           }
         }
-        mine.x = nx; mine.y = ny; gateWatch();
+        mine.x = nx; mine.y = ny; if (tennis && roomKey === 'tennis') tennis.keepIn(mine, dy); gateWatch();
         // just came through a door and still holding ▲: don't bounce straight back (re-arm once she lets go or turns)
         const now = Date.now(); if (!doorArmed && (dy <= 0 || now - lastStepAt > 400)) doorArmed = true; lastStepAt = now;
         if (dy > 0 && doorArmed && placeKey === 'cinema' && room0 && walkIntoDoor(room0)) return;
@@ -327,6 +329,11 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   // ⚽ the stadium's soccer match
   stadium = placeKey === 'stadium' ? createStadium({ me, ch, others, getMine: () => mine, getMyEl: () => myEl,
     teleport: (x, y) => { if (!myEl) return; mine.seat = null; mine.x = x; mine.y = y; place(); sendMine(); } }) : null;
+  // 🎾 the tennis court (to the right of the pitch)
+  tennis = placeKey === 'stadium' ? createTennis({ me, ch, others, getMine: () => mine, getMyEl: () => myEl, getMyKv: () => myKv, getRoomKey: () => roomKey,
+    teleport: (x, y, left) => { if (!myEl) return; mine.seat = null; mine.x = x; mine.y = y; mine.left = !!left; if (myKv) myKv.setFacing(!!left); place(); sendMine(); } }) : null;
+  if (tennis) tennis.mountButton($('.tn-hit', n));
+  if (tennis && location.hostname === 'localhost') window.__tennis = tennis;   // (tests only)
   // 🎡 the carnival's Ferris wheel (ticket booth, rides together, souvenir photos)
   carnival = placeKey === 'carnival' ? createCarnival({ me, ch, others, getMine: () => mine, myLook, sendMine, getRoomKey: () => roomKey,
     landAtExit: (together) => { mine.seat = null; mine.x = together ? 84 : 86; mine.y = 6; mine.left = true; if (myEl) { place(); myKv && myKv.jump(); } } }) : null;
@@ -466,6 +473,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     room.appendChild(myEl);
     others.attach(room, roomKey);
     if (stadium && roomKey === 'stadium') stadium.attach(room);
+    if (tennis && roomKey === 'tennis') tennis.attach(room);
     if (carnival) carnival.attach(room);
     sizeCols(); fitHouse(box, unit); requestAnimationFrame(() => { if (unit.isConnected) { sizeCols(); fitHouse(box, unit); } });
     drawRoom($('#roombg', box), isNight(), roomKey, (house.styles || {})[roomKey]); drawRoof($('#roof', box)); studioBarre(room, roomKey === 'basement');
@@ -810,7 +818,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     setCatZ(null);
     if (carnival) carnival.stop();
     if (P && S.dropPlaceFood()) toast('🍽️ <span class="zh">吃的喝的不能带走哦</span> Food and drinks stay behind when you leave', { ms: 2600 });
-    Radio.stop(); clearInterval(kt); if (stadium) stadium.stop(); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
+    Radio.stop(); clearInterval(kt); if (stadium) stadium.stop(); if (tennis) tennis.stop(); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
   $('#leave', n).onclick = () => { if (unpaid()) return; leave(); if (P) go('map'); else go('friend', { id: hostId }); };
   const deco = $('#vdeco', n); if (deco) deco.onclick = () => { if (!gotHouse) return; leave(); go('home', { view: 'house', room: roomKey, arrange: true, openStorage: true }); };   // the admin: furnish this room
   $('#vphone', n).onclick = () => import('./phone.js').then((P) => P.openPhone({ start: 'home' }));   // the phone works at a friend's house too

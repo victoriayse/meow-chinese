@@ -9546,6 +9546,36 @@ export function drawRoom(canvas, night = false, kind = 'living', style = null) {
         R(x0 === 0 ? 4 : x0, m0 - 1, 1, m1 - m0 + 2, '#ffffff');
       });
       open = true;
+    } else if (kind === 'tennis') {
+      // 🎾 the tennis court (right of the soccer pitch): small stands, a green windscreen, a blue hard court with white lines
+      R(0, 0, W, H, night ? '#14204f' : '#2d3d7a');
+      const top = Math.round(H * 0.36);
+      for (let y = 17, row = 0; y < top - 6; y += 5, row++) {            // a few rows of seats with fans
+        R(0, y, W, 4, row % 2 ? '#c9d3de' : '#aab6c6'); R(0, y + 4, W, 1, '#5b6170');
+        for (let x = (row * 3) % 7; x < W; x += 7) {
+          const c = ['#e8384f', '#6cb6f2', '#ffd23f', '#ff9ec4', '#7cbd52', '#ffffff', '#f2a65a'][(x * 5 + row * 3) % 7];
+          R(x, y - 1, 2, 2, (x + row) % 4 ? c : '#3a2a35'); R(x, y + 1, 2, 2, c);
+        }
+      }
+      R(0, 0, W, 16, night ? '#0d1638' : '#22305f');
+      R(33, 3, 54, 12, '#3a2a35'); R(34, 4, 52, 10, '#1c1530'); R(33, 3, 54, 1, '#ffd23f'); R(33, 14, 54, 1, '#ffd23f');   // the scoreboard
+      [[6, 3], [20, 5], [98, 4], [112, 3]].forEach(([x, y]) => { R(x, y, 4, 3, '#fff4c2'); R(x + 1, y + 3, 2, 8, '#8a8d99'); });  // floodlights
+      R(0, top - 7, W, 8, night ? '#1f5a3a' : '#2e7d4f');                                      // the green windscreen on the fence
+      for (let x = 0; x < W; x += 4) R(x, top - 7, 1, 8, night ? '#1a4d32' : '#286d45');
+      R(0, top - 8, W, 1, '#8a8d99'); for (let x = 0; x < W; x += 12) R(x, top - 9, 1, 2, '#8a8d99');
+      [[14, '#ffd23f'], [52, '#ffffff'], [92, '#ff9ec4']].forEach(([x, c]) => { R(x, top - 5, 14, 4, c); R(x + 2, top - 4, 10, 2, '#2e7d4f'); });   // sponsor boards
+      R(0, top + 1, W, H - top - 1, night ? '#2f6b4a' : '#4f9a6a');                         // the run-off area
+      const row = (b) => Math.round(H * (1 - b / 100)), WL = '#ffffff';
+      const t = row(46), bt = row(4), x0 = 10, x1 = 110, mid = 60;
+      R(x0, t, x1 - x0, bt - t, night ? '#2b5f99' : '#3d7fc4');                              // the court
+      for (let y = t + 2; y < bt; y += 3) for (let x = x0 + ((y * 3) % 5); x < x1; x += 5) R(x, y, 1, 1, night ? '#2a5890' : '#3a78ba');
+      R(x0, t, x1 - x0, 1, WL); R(x0, bt, x1 - x0 + 1, 1, WL); R(x0, t, 1, bt - t, WL); R(x1, t, 1, bt - t + 1, WL);   // outside lines
+      const al = Math.round((bt - t) * 0.12); R(x0, t + al, x1 - x0, 1, WL); R(x0, bt - al, x1 - x0, 1, WL);           // doubles alleys
+      R(mid - 24, t + al, 1, bt - t - 2 * al, WL); R(mid + 24, t + al, 1, bt - t - 2 * al, WL);                       // service lines
+      R(mid - 24, Math.round((t + bt) / 2), 48, 1, WL);                                                                // centre service line
+      R(x0, Math.round((t + bt) / 2), 2, 1, WL); R(x1 - 1, Math.round((t + bt) / 2), 2, 1, WL);                     // centre marks
+      R(mid, t - 1, 1, bt - t + 2, 'rgba(0,0,0,.25)');                                                                 // the net's shadow
+      open = true;
     } else if (kind === 'carnivalsquare' || kind === 'carnivalwheel') {
       // 🎪 the carnival: open sky, striped tents (the square) or the big Ferris wheel (its own area), string lights
       R(0, 0, W, floorY, night ? '#1a1f5c' : '#9fd6f7');

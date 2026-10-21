@@ -726,6 +726,8 @@ export const ROOMS = [
   { key: 'parkgarden', zh: '花园', en: 'Garden', icon: '🌷', place: 'park', outdoor: true },
   // the stadium (a public place on the 🗺️ map): a soccer pitch, the whole room is the field
   { key: 'stadium', zh: '体育场', en: 'Stadium', icon: '🏟️', place: 'stadium', outdoor: true, maxY: 52 },
+  // 🎾 v281: the tennis court, to the right of the pitch (up to 2 a side)
+  { key: 'tennis', zh: '网球场', en: 'Tennis Court', icon: '🎾', place: 'stadium', outdoor: true, maxY: 50 },
   // 🎪 the carnival (a public place on the 🗺️ map): Main Square ▶ Ferris Wheel
   { key: 'carnivalsquare', zh: '嘉年华广场', en: 'Main Square', icon: '🎪', place: 'carnival', outdoor: true },
   { key: 'carnivalwheel', zh: '摩天轮', en: 'Ferris Wheel', icon: '🎡', place: 'carnival', outdoor: true },
@@ -751,7 +753,7 @@ function schoolNeighbors(key) {
   if (l) out.left = roomInfo(l); if (rt) out.right = roomInfo(rt); if (u) out.up = roomInfo(u); if (d) out.down = roomInfo(d);
   return out;
 }
-export const PLACE_ROOMS = { mall: MALL_ROOMS, cinema: ['theatre1', 'lobby', 'theatre2'], cafe: CAFE_ROOMS, park: ['park', 'playground', 'parkgarden'], stadium: ['stadium'], carnival: ['carnivalsquare', 'carnivalwheel'], school: ['schooloffice', 'schooloutdoor', 'schoolcanteen', 'schoolmusic', 'schoolhall', 'schoolclass', 'schoolstaff'] };   // left to right
+export const PLACE_ROOMS = { mall: MALL_ROOMS, cinema: ['theatre1', 'lobby', 'theatre2'], cafe: CAFE_ROOMS, park: ['park', 'playground', 'parkgarden'], stadium: ['stadium', 'tennis'], carnival: ['carnivalsquare', 'carnivalwheel'], school: ['schooloffice', 'schooloutdoor', 'schoolcanteen', 'schoolmusic', 'schoolhall', 'schoolclass', 'schoolstaff'] };   // left to right
 // the admin (who furnishes the public places): app.js tells us who is signed in
 let adminCheck = () => false;
 export const setAdminCheck = (fn) => { adminCheck = fn; };

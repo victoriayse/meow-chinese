@@ -185,6 +185,7 @@ export function createStadium({ me, ch, others, getMine, getMyEl, teleport }) {
   // ---------- buttons ----------
   async function join(side) {
     if (busy) return;
+    if (S.get().tennisTicket) return toast('🎾 <span class="zh">先打完网球赛</span> Finish your tennis match first');
     const tk = myTicket();
     if (tk && (!match || tk.match !== match.id)) { poll(); return toast('正在结算上一场 · Finishing your last match — try again in a moment'); }
     const p = myPlayer();
@@ -268,6 +269,7 @@ export function createStadium({ me, ch, others, getMine, getMyEl, teleport }) {
     if (live() && m.players && m.players.length) ['red', 'blue'].forEach((side) => { const s = document.createElement('span'); s.className = `st-${side}-names`; s.textContent = `${TEAM[side].dot} ${names(side) || '—'}`; roster.append(s); });
   }
   function paintTeams() {
+    if (!room || !room.isConnected) return;   // over on the tennis court: the tennis match colours the name tags there
     const team = new Map(((match && match.status !== 'done' && match.status !== 'cancelled' && match.players) || []).map((p) => [p.id, p.side]));
     others.ids().forEach((id) => { const c = others.m.get(id); if (c && c.el) { const t = team.get(id) || ''; if (c.el.dataset.team !== t) c.el.dataset.team = t; } });
     const mine = getMyEl(); if (mine) { const t = team.get(me) || ''; if (mine.dataset.team !== t) mine.dataset.team = t; }

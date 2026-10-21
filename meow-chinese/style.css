@@ -2469,3 +2469,48 @@ img.gone { min-height: 40px; font-size: 11px; }
   .topbar .spacer { min-width: 0; }
 }
 @media (max-width: 360px) { .topbar .app-ver { display: none; } }
+
+/* v281: 🎾 the tennis court */
+.room[data-room="tennis"] .vcat .kflip { scale: .7; transform-origin: 50% 100%; }
+.tn-net { position: absolute; left: 50%; bottom: 3%; height: 48%; width: 9px; transform: translateX(-50%); z-index: 4; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,.85) 0 1px, transparent 1px 5px), repeating-linear-gradient(90deg, rgba(255,255,255,.7) 0 1px, rgba(30,30,50,.35) 1px 3px);
+  border-left: 2px solid #fff; border-right: 2px solid rgba(255,255,255,.6); box-shadow: 3px 0 0 rgba(0,0,0,.18); }
+.tn-net .post { position: absolute; left: 50%; width: 6px; transform: translateX(-50%); background: #3a3d55; border-radius: 2px; }
+.tn-net .post.far { top: -8%; height: 12%; } .tn-net .post.near { bottom: -2%; height: 14%; }
+.tn-net.shake { animation: tnshake .5s ease-out; }
+@keyframes tnshake { 0% { transform: translateX(-50%); } 20% { transform: translateX(-30%) skewY(-4deg); } 45% { transform: translateX(-68%) skewY(3deg); } 70% { transform: translateX(-42%) skewY(-1deg); } 100% { transform: translateX(-50%); } }
+.tn-ball { position: absolute; transform: translate(-50%, 50%); z-index: 245; pointer-events: none; }
+.tn-ball canvas { display: block; image-rendering: pixelated; }
+.tn-shadow { position: absolute; width: 26px; height: 10px; border-radius: 50%; background: rgba(10,14,40,.6); z-index: 3; pointer-events: none; transform: translate(-50%, 50%); }
+.tn-mark { position: absolute; width: 34px; height: 14px; border-radius: 50%; border: 3px dashed #ffd23f; transform: translate(-50%, 50%); z-index: 3; pointer-events: none; animation: tnmark .6s ease-in-out infinite alternate; }
+@keyframes tnmark { from { opacity: .45; } to { opacity: 1; } }
+.tn-ball.hidden, .tn-shadow.hidden, .tn-mark.hidden { display: none; }
+.tn-call { position: absolute; transform: translate(-50%, 0) scale(.6); z-index: 246; pointer-events: none; opacity: 0; white-space: nowrap;
+  font-weight: 900; font-size: 26px; color: #fff; background: #3d8be0; border: 3px solid var(--ink); border-radius: 12px; padding: 2px 12px; box-shadow: 0 4px 0 rgba(43,33,64,.4); }
+.tn-call.out { background: #e8384f; } .tn-call.net { background: #f2a65a; } .tn-call.point { background: #4fb348; }
+.tn-call.show { animation: tncall 1.6s ease-out forwards; }
+@keyframes tncall { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.6); } 15% { opacity: 1; transform: translate(-50%, 0) scale(1.1); } 25% { transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -14px) scale(1); } }
+/* the racket: held up beside her; a swing winds back then sweeps through */
+.room .kflip:has(.t-racket) { position: relative; }
+.t-racket { position: absolute; right: 9%; bottom: 13%; z-index: 3; pointer-events: none; }
+.t-racket.l { right: auto; left: 9%; transform: scaleX(-1); }
+.t-racket canvas { display: block; image-rendering: pixelated; transform-origin: 50% 72%; transform: rotate(32deg); }
+.t-racket.swing canvas { animation: tnswing .34s ease-out; }
+@keyframes tnswing { 0% { transform: rotate(32deg); } 30% { transform: rotate(-35deg); } 62% { transform: rotate(115deg); } 100% { transform: rotate(32deg); } }
+/* the big HIT button beside the joystick */
+.tn-hit { flex: none; align-self: center; width: 100px; height: 100px; border-radius: 50%; border: 4px solid #fff; background: radial-gradient(circle at 38% 35%, #f4ff9a, #c8e03a 55%, #93ad1c);
+  box-shadow: 0 5px 0 rgba(43,33,64,.45); display: grid; place-items: center; align-content: center; gap: 0; font-size: 30px; line-height: 1; color: var(--ink);
+  touch-action: none; user-select: none; -webkit-user-select: none; cursor: pointer; }
+.tn-hit b { font-size: 14px; font-weight: 900; }
+.tn-hit:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(43,33,64,.45); }
+.tn-hit.ready { animation: tnready .45s ease-in-out infinite alternate; border-color: #ffd23f; }
+@keyframes tnready { from { box-shadow: 0 5px 0 rgba(43,33,64,.45), 0 0 0 0 rgba(255,210,63,.9); } to { box-shadow: 0 5px 0 rgba(43,33,64,.45), 0 0 0 10px rgba(255,210,63,0); } }
+.tn-hit.hidden { display: none; }
+@media (max-width: 600px) { .tn-hit { width: 88px; height: 88px; font-size: 26px; } .tn-hit b { font-size: 12px; } }
+.tennis-hud .sb-clock { min-width: 2.5em; }
+/* v281: computers (a mouse and a keyboard): no joystick — the arrow keys walk, H hits */
+.tn-hit .tn-key { display: none; font-size: 11px; font-weight: 800; opacity: .75; }
+@media (hover: hover) and (pointer: fine) {
+  .joystick { display: none !important; }
+  .tn-hit .tn-key { display: block; }
+}

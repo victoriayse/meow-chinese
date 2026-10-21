@@ -745,4 +745,5 @@ export const CHANGES = [
   { v: 278, items: ['🔍 Search your storage box — type a name in English or Chinese', '🪟 Furniture can go behind the curtains: tap ⬇ until it says "Behind the curtain" (⬆ brings it out)', '📅 The 10-day check-in reward is switched off for now', '🗺️ New map button next to the bag, top left'] },
   { v: 279, items: ['📱 Sale settings fit on a phone screen (dates, buttons and the list)', '📱 The top bar fits on narrow phones — the 🔒 button is no longer cut off'] },
   { v: 280, items: ['👗 Dresses flare out below the waist like the skirts do (pink dress, qipao, princess dresses, pinafores and the new dresses)'] },
+  { v: 281, items: ['🎾 New Tennis Court — walk ▶ right from the Stadium! 2–4 players (up to 2 a side), 10 coins to play, winners get 20', '🎾 Press HIT (or H on a computer) to swing your racket at the ball — watch out for the net and the lines', '🕹️ No joystick on computers — use the arrow keys'] },
 ];
