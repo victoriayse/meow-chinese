@@ -121,6 +121,21 @@ export function practiceScreen({ go, kind, id }) {
   const main = $('#main', n);
   if (!set) { main.innerHTML = '<p class="help">找不到这个练习。 This set is gone.</p>'; return n; }
   const parsed = parseSet(kind, set.text);
+  // 🔀 mix up the choices every time she plays (parents usually type the right answer first)
+  // the answer's place is dealt from a shuffled "bag" of places, so they spread out evenly and never repeat back-to-back
+  if (kind === 'choice') {
+    let bag = [], prev = -1;
+    parsed.items = parsed.items.map((it) => {
+      const n = it.opts.length;
+      if (!bag.length || bag.some((x) => x >= n)) bag = shuffle([...Array(n).keys()]);
+      let k = bag.findIndex((x) => x !== prev && x < n); if (k < 0) k = 0;
+      const slot = bag.splice(k, 1)[0]; prev = slot;
+      const others = shuffle(it.opts.filter((_, x) => x !== it.ans));
+      const opts = others.slice(0, slot).concat([it.opts[it.ans]], others.slice(slot));
+      return { ...it, opts, ans: slot };
+    });
+  }
+  if (kind === 'match' && parsed.bank) parsed.bank = shuffle(parsed.bank);
   if (!parsed.items.length) { main.innerHTML = '<p class="help">这个练习是空的。 This set has no questions.</p>'; return n; }
   const lim = S.canDo(kind, set);
   if (!lim.ok) {
@@ -142,10 +157,10 @@ export function practiceScreen({ go, kind, id }) {
     Promise.all([Promise.resolve(reading).catch(() => {}), wait(1000)]).then(() => wait(reading ? 400 : 0)).then(() => { if (i === here && n.isConnected) after(); });
   };
   const bad = (el) => { sfx.oops(); tries++; if (el) { el.classList.add('shake', 'wrong'); setTimeout(() => el.classList.remove('shake'), 500); } };
-  const next = () => { i++; tries = 0; if (i >= total) finish(); else render(); };
+  const next = () => { i++; tries = 0; if (i >= total) { if (mcq) tabs.hidden = false; finish(); } else render(); };
 
   // ✏️ 涂卡 Shading tab (Word choice / Word match): an answer sheet of oval bubbles, one row per question.
-  // She can shade any time; when she checks (or hands in), every row that is shaded neatly on the right answer AND was
+  // She shades once every question is done; when she checks (or hands in), every row that is shaded neatly on the right answer AND was
   // answered right first time earns the bonus (parents set how much). Paid once a day per set.
   const mcq = kind === 'choice' || kind === 'match';
   const answers = parsed.items.map((it) => (kind === 'choice' ? it.ans : kind === 'match' ? parsed.bank.indexOf(it.ans) : -1));
@@ -159,7 +174,7 @@ export function practiceScreen({ go, kind, id }) {
     if (t === 's') spane.scrollIntoView({ block: 'start', behavior: 'smooth' });
   };
   if (mcq) {
-    tabs.hidden = false;
+    tabs.hidden = true;   // ✏️ the shading sheet opens once every question is done
     tabs.querySelectorAll('button').forEach((b) => { b.onclick = () => { sfx.click(); showTab(b.dataset.t); }; });
     sheet = shadingSheet(counts, { onChange: () => { if (!sheetDone) say(''); } });
     spane.innerHTML = `<div class="sp-head"><b>✏️ <span class="zh">涂卡</span> Shading sheet</b>${per() && S.shadeBonusOpen(kind, set.id) ? `<span class="sp-bonus">BONUS +${per()}${coinI(14)} <small>/ <span class="zh">题</span></small></span>` : ''}</div>
@@ -180,7 +195,7 @@ export function practiceScreen({ go, kind, id }) {
   };
   function checkSheet() {
     if (sheetDone) return;
-    if (i < total) { sfx.miss(); return say('<span class="zh">先做完题目，再检查涂卡。</span> Finish the questions first, then check your shading.', false); }
+    if (i < total) { sfx.miss(); showTab('q'); return; }
     const list = sheet.problems(answers);
     if (!list.length) return handIn();
     const p = list[0], [zh, en] = WHY[p.kind](p.r + 1);
