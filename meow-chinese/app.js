@@ -554,6 +554,7 @@ function homeScreen(params = {}) {
   S.essayNotifications();
   S.purgeOldMessages(); Coffee.purgeEspresso();
   if (Auth.user() && !Places.isAdmin()) S.movePlaygroundToStorage();   // v158: the playground is now part of the public Park
+  if (Auth.user() && !Places.isAdmin() && S.tidyStudio()) setTimeout(() => toast('🩰 <span class="zh">工作室搬到地图上了！你的东西放进了储物箱。</span> The Studio has moved to the 🗺️ map! Your things from there are in your storage box.', { ms: 5000 }), 1500);
   const inHouse = params.view === 'house' && (S.unlocked('decor') || (S.roomInfo(params.room).place && Places.isAdmin()));
   const roomKey = inHouse && S.roomOpen(params.room) ? S.roomInfo(params.room).key : 'living';
   const roomRI = S.roomInfo(roomKey);

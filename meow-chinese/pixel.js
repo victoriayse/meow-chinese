@@ -12593,6 +12593,31 @@ ITEMS.mapbank = { cat: 'map', name: '银行', en: 'Bank map icon', price: 0, spe
     'oooooooooooooooooooooooo',
   ] };
 
+ITEMS.mapstudio = { cat: 'map', name: '工作室', en: 'Studio map icon', price: 0, special: true,   // v284: the 🩰 Studio pin
+  pal: { o: O, p: '#ffd1de', P: '#ff7aa8', w: '#ffffff', y: '#ffd23f', m: '#bfe3f7', M: '#e6f5ff', d: '#c98f58', k: '#3a2a35' },
+  art: [
+    '........oooooooo........',
+    '........oyyPPyyo........',
+    '........oyyPPyyo........',
+    '........oooooooo........',
+    '...........oo...........',
+    'oooooooooooooooooooooooo',
+    'owPPwwPPwwPPwwPPwwPPwwPo',
+    'owPPwwPPwwPPwwPPwwPPwwPo',
+    'oooooooooooooooooooooooo',
+    'oppppppppppppppppppppppo',
+    'opoooooooooooopooooooopo',
+    'opomMmmmmmmmmopoPPPPPopo',
+    'opoMmmmmkkmmmopoPmmmPopo',
+    'opomMmmmPkPmmopoPmmmPopo',
+    'opoddddddddddopoPPPyPopo',
+    'opomMmmmmmmmmopoPPPPPopo',
+    'opoooooooooooopoPPPPPopo',
+    'oppppppppppppppoPPPPPopo',
+    'oooooooooooooooooooooooo',
+    '..............ooooooooo.',
+  ] };
+
 // 🏷️ v274: new furniture for the Sale aisle (original designs)
 ITEMS.tablelamp = { cat: 'decor', name: '台灯', en: 'Table lamp', price: 60, spot: 'back-mid-right', power: 'light',
   pal: { o: O, y: '#ffe7a8', l: '#fff8d8', d: '#e8c27a', k: '#c9a46a', w: '#fff6ee', p: '#f6a3b7' },

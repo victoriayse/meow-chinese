@@ -706,10 +706,10 @@ export const ROOMS = [
   { key: 'garden', zh: '花园', en: 'Garden', icon: '🌳', lock: 'garden', outdoor: true },
   // up and down from the living room (▲ ▼ arrows)
   { key: 'rooftop', zh: '天台', en: 'Rooftop', icon: '☀️', lock: 'rooftop', vert: 'up', outdoor: true },
-  { key: 'basement', zh: '室内工作室', en: 'Indoor studio', icon: '🏋️', lock: 'basement', vert: 'down', noRoof: true },   // downstairs: a studio / gym
+  { key: 'basement', zh: '室内工作室', en: 'Indoor studio', icon: '🏋️', place: 'studio', noRoof: true },   // v284: now the 🩰 Studio on the map (was downstairs at home)   // downstairs: a studio / gym
   // downstairs, either side of the studio
-  { key: 'lounge', zh: '休息区', en: 'Lounging area', icon: '☕', lock: 'basement', below: true, noRoof: true },
-  { key: 'changing', zh: '更衣室', en: 'Changing room', icon: '👗', lock: 'basement', below: true, noRoof: true },
+  { key: 'lounge', zh: '休息区', en: 'Lounging area', icon: '☕', place: 'studio', noRoof: true },
+  { key: 'changing', zh: '更衣室', en: 'Changing room', icon: '👗', place: 'studio', noRoof: true },
   // the cinema (a public place on the 🗺️ map): only the admin furnishes it, everyone can go in
   { key: 'theatre1', zh: '1号影厅', en: 'Theatre 1', icon: '🎬', place: 'cinema', noRoof: true },
   { key: 'lobby', zh: '电影院大堂', en: 'Cinema lobby', icon: '🍿', place: 'cinema', noRoof: true },
@@ -753,14 +753,13 @@ function schoolNeighbors(key) {
   if (l) out.left = roomInfo(l); if (rt) out.right = roomInfo(rt); if (u) out.up = roomInfo(u); if (d) out.down = roomInfo(d);
   return out;
 }
-export const PLACE_ROOMS = { mall: MALL_ROOMS, cinema: ['theatre1', 'lobby', 'theatre2'], cafe: CAFE_ROOMS, park: ['park', 'playground', 'parkgarden'], stadium: ['stadium', 'tennis'], carnival: ['carnivalsquare', 'carnivalwheel'], school: ['schooloffice', 'schooloutdoor', 'schoolcanteen', 'schoolmusic', 'schoolhall', 'schoolclass', 'schoolstaff'] };   // left to right
+export const PLACE_ROOMS = { mall: MALL_ROOMS, cinema: ['theatre1', 'lobby', 'theatre2'], cafe: CAFE_ROOMS, park: ['park', 'playground', 'parkgarden'], stadium: ['stadium', 'tennis'], studio: ['lounge', 'basement', 'changing'], carnival: ['carnivalsquare', 'carnivalwheel'], school: ['schooloffice', 'schooloutdoor', 'schoolcanteen', 'schoolmusic', 'schoolhall', 'schoolclass', 'schoolstaff'] };   // left to right
 // the admin (who furnishes the public places): app.js tells us who is signed in
 let adminCheck = () => false;
 export const setAdminCheck = (fn) => { adminCheck = fn; };
 export const isAdmin = () => { try { return !!adminCheck(); } catch { return false; } };
 // a theatre's four tiers of steps: the floor heights (room %) a cinema chair snaps to
 export const THEATRE_TIERS = [27, 18, 9, 1];
-const DOWNSTAIRS = ['lounge', 'basement', 'changing'];   // left to right
 // the rooms next to this one: ◀ ▶ along the row of rooms, ▲ ▼ only from the living room
 export function roomNeighbors(key) {
   const row = ROOMS.filter((r) => !r.vert && !r.below && !r.place), i = row.findIndex((r) => r.key === key), me = roomInfo(key);
@@ -769,17 +768,29 @@ export function roomNeighbors(key) {
   if (me.place === 'cafe') return Object.fromEntries(Object.entries(CAFE_NEIGHBORS[key] || {}).map(([d, k]) => [d, roomInfo(k)]));
   if (me.place) { const p = PLACE_ROOMS[me.place], j = p.indexOf(key); return { left: j > 0 ? roomInfo(p[j - 1]) : null, right: j < p.length - 1 ? roomInfo(p[j + 1]) : null }; }
   if (me.vert === 'up') return { down: roomInfo('living') };
-  if (me.vert === 'down' || me.below) {      // downstairs: lounge ◀ studio ▶ changing room, ▲ back up from the studio
-    const j = DOWNSTAIRS.indexOf(key);
-    return { left: j > 0 ? roomInfo(DOWNSTAIRS[j - 1]) : null, right: j < DOWNSTAIRS.length - 1 ? roomInfo(DOWNSTAIRS[j + 1]) : null, ...(key === 'basement' ? { up: roomInfo('living') } : {}) };
-  }
-  return { left: row[i - 1] || null, right: row[i + 1] || null, ...(key === 'living' ? { up: roomInfo('rooftop'), down: roomInfo('basement') } : {}) };
+  return { left: row[i - 1] || null, right: row[i + 1] || null, ...(key === 'living' ? { up: roomInfo('rooftop') } : {}) };
 }
 // how far back (up the screen) she can walk: the basement is all floor
 export const roomMaxY = (key) => roomInfo(key).maxY || 30;
 export const roomInfo = (key) => ROOMS.find((r) => r.key === key) || ROOMS.find((r) => r.key === 'living');
 export const roomOpen = (key) => { const r = roomInfo(key); if (r.place) return isAdmin(); return !r.lock || unlocked(r.lock); };
 // which room a piece of furniture stands in (she can move it to another open room)
+// v284: the studio, lounge and changing room moved from home to the 🩰 Studio on the map. Her own furniture that was
+// down there goes back into her storage box (run on every home visit, so an older device syncing them back is tidied too)
+const STUDIO_ROOMS = ['basement', 'lounge', 'changing'];
+export function tidyStudio() {
+  if (isAdmin()) return 0;
+  const st = state, room = st.decorRoom || {}; let n = 0;
+  (st.owned || []).forEach((id) => {
+    if (!STUDIO_ROOMS.includes(room[id])) return;
+    delete room[id]; if (st.decorPos) delete st.decorPos[id];
+    if (!st.decorHidden.includes(id)) st.decorHidden.push(id);
+    n++;
+  });
+  if (st.catSeat && STUDIO_ROOMS.includes(st.catSeat.room)) st.catSeat = null;
+  if (n) save();
+  return n;
+}
 export const roomOf = (id) => { const r = (state.decorRoom || {})[id] || (ITEMS[id] && ITEMS[id].room) || 'living'; return roomInfo(r).place && !isAdmin() ? 'living' : r; };   // cinema things bought by anyone else go home
 export function setDecorRoom(id, room) {
   state.decorRoom = state.decorRoom || {};
@@ -945,8 +956,8 @@ export function finishPlay(first, total) {
 }
 
 // ---------- level unlocks ----------
-export const UNLOCKS = { head: 5, feet: 10, acc: 15, body: 20, decor: 25, bedroom: 35, garden: 40, kitchen: 45, toilet: 50, rooftop: 55, basement: 60 };
-export const UNLOCK_NAMES = { head: '头饰 Hair accessories', feet: '鞋子 Shoes', acc: '配饰 Extras', body: '衣服 Clothes', decor: '我的家 Home & furniture', bedroom: '卧室 Bedroom (right room)', kitchen: '厨房 Kitchen (left room)', garden: '花园 Garden (outside, right of the bedroom)', toilet: '浴室 Bathroom (left of the kitchen)', rooftop: '天台 Rooftop (up from the living room)', basement: '室内工作室 Indoor studio (down from the living room)' };
+export const UNLOCKS = { head: 5, feet: 10, acc: 15, body: 20, decor: 25, bedroom: 35, garden: 40, kitchen: 45, toilet: 50, rooftop: 55 };
+export const UNLOCK_NAMES = { head: '头饰 Hair accessories', feet: '鞋子 Shoes', acc: '配饰 Extras', body: '衣服 Clothes', decor: '我的家 Home & furniture', bedroom: '卧室 Bedroom (right room)', kitchen: '厨房 Kitchen (left room)', garden: '花园 Garden (outside, right of the bedroom)', toilet: '浴室 Bathroom (left of the kitchen)', rooftop: '天台 Rooftop (up from the living room)' };
 export const unlocked = (key) => !(key in UNLOCKS) || !!state.settings.unlockAll || level() >= UNLOCKS[key];
 export function nextUnlock() {
   const lv = level();
