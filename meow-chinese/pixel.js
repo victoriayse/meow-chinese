@@ -308,7 +308,8 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
     if (item && item.wear) stamp(out, item.art, item.pal, item.wear.x, item.wear.y);
     // 👜 a handbag hangs from her raised front paw: draw the paw over the top of the handle
     if (slot === 'bag' && item && item.wear) {
-      const px = item.wear.x + Math.floor(item.art[0].length / 2) - 2, py = item.wear.y - 1;
+      // (a photo-studio prop says where her paw grips its stick)
+      const px = item.wear.x + (item.paw ? item.paw.x : Math.floor(item.art[0].length / 2) - 2), py = item.wear.y + (item.paw ? item.paw.y : -1);
       ['.ooo.', 'owwwo', 'owowo', '.o.o.'].forEach((row, y) => [...row].forEach((ch, x) => {
         if (ch === '.' || !out[py + y] || px + x < 0 || px + x >= out[py + y].length) return;
         out[py + y][px + x] = ch === 'o' ? P.o : P.w;
@@ -9404,6 +9405,18 @@ export function drawRoom(canvas, night = false, kind = 'living', style = null) {
       }
       R(0, H - 2, W, 2, '#3a1420');
       noWindow = true;
+    } else if (kind === 'mallphoto') {
+      // 📸 the Korean-style photo studio: pastel lilac walls, a pink neon camera sign, fairy lights, a checkered floor
+      noWindow = true;
+      R(0, 0, W, floorY, '#efe4ff');
+      for (let x = 0; x < W; x += 10) R(x, 0, 5, floorY, '#e8dbff');
+      R(0, 0, W, 2, '#c9b4f0');
+      for (let x = 2; x < W; x += 6) { R(x, 3 + ((x / 6) % 2 | 0), 1, 1, '#8a8d99'); R(x, 4 + ((x / 6) % 2 | 0), 2, 2, ['#fff3a8', '#ffb3d1', '#bfe3f7'][(x / 6) % 3 | 0]); }   // fairy lights
+      const cx = Math.round(W / 2);   // the neon camera sign (behind the middle booth's top)
+      R(cx - 7, 7, 14, 1, '#ff5fa8'); R(cx - 7, 7, 1, 7, '#ff5fa8'); R(cx + 6, 7, 1, 7, '#ff5fa8'); R(cx - 7, 13, 14, 1, '#ff5fa8'); R(cx - 3, 6, 4, 1, '#ff5fa8');
+      R(cx - 2, 9, 4, 1, '#ff5fa8'); R(cx - 2, 12, 4, 1, '#ff5fa8'); R(cx - 3, 10, 1, 2, '#ff5fa8'); R(cx + 2, 10, 1, 2, '#ff5fa8'); R(cx + 4, 8, 1, 1, '#fff3a8');
+      R(0, floorY - 3, W, 3, '#c9b4f0'); R(0, floorY - 1, W, 1, '#a68bd6');
+      for (let y = floorY, row = 0; y < H; y += 6, row++) for (let x = (row % 2) * 6; x < W; x += 12) { R(x, y, 6, 6, '#ffd6e6'); R(x + 6, y, 6, 6, '#ffffff'); }
     } else if (kind === 'mallbuffet') {
       // 🍱 the buffet: white tiled feature wall, warm lamps, pale marble floor
       noWindow = true;

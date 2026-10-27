@@ -73,6 +73,8 @@ export function purgeOld() {
 // the viewfinder: brackets round what the camera sees, a shutter button, and ✕ to put the camera away
 export function openCamera({ onSaved, onSend } = {}) {
   if (!Auth.user()) { toast('📷 <span class="zh">要先登录才能拍照</span> Please log in to take photos'); return; }
+  // 📸 no phone cameras in the Photo Studio — that's what the booths are for
+  if (document.querySelector('#room[data-room="mallphoto"]')) { sfx.miss(); toast('📸 <span class="zh">照相馆里不能用手机拍照，去照相亭拍吧！</span> No phone cameras in the Photo Studio — use a photo booth!', { ms: 3200 }); return; }
   const root = target(), R = () => root.getBoundingClientRect();
   const ui = html`<div class="cam-ui" role="dialog" aria-label="Camera">
       <div class="cam-frame"><i class="cb tl"></i><i class="cb tr"></i><i class="cb bl"></i><i class="cb br"></i><span class="cam-rec">● 📷 <span class="zh">相机</span> Camera</span></div>

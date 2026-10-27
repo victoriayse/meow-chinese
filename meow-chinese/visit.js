@@ -24,7 +24,8 @@ import * as Auth from './auth.js';
 import { managing } from './cloud.js';
 import { Channel } from './rt.js';
 import { drawRoom, drawRoof, ITEMS, SNACKS } from './pixel.js';
-import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal } from './ui.js';
+import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal, getProps } from './ui.js';
+import * as Photo from './photostudio.js';
 import { sfx, zenMusic } from './audio.js';
 import { wireDisplays } from './display-racks.js';
 import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, boothView, freeSlot, hearNote, PetLayer, roomArrowsHtml, catZ, setCatZ, inPool, stackDecor, studioBarre, rideFx, walkPoseOf } from './house.js';
@@ -43,7 +44,7 @@ function toiletVisit(id) {
 
 export function myLook() {
   const s = S.get(), k = s.kitten;
-  return { name: s.childName && !String(k.name).includes(s.childName) ? `${s.childName}的${k.name}` : k.name, level: S.level(), fur: k.fur, equipped: { ...(k.equipped || {}) }, hold: s.holding || null };
+  return { name: s.childName && !String(k.name).includes(s.childName) ? `${s.childName}的${k.name}` : k.name, level: S.level(), fur: k.fur, equipped: { ...(k.equipped || {}), ...(getProps() || {}) }, hold: s.holding || null };   // (📸 studio props show to everyone there)
 }
 const clampPos = (p) => ({ ...p, x: Math.max(6, Math.min(94, p.x)), y: Math.max(1, Math.min(S.roomMaxY(p.room || 'living'), p.y)) });
 // send at most ~8 moves a second, and always the last one
@@ -367,6 +368,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
 
   let lastRoom = null;
   function render() {
+    if (lastRoom === Photo.ROOM && roomKey !== Photo.ROOM && Photo.leaveStudio()) { if (myKv) myKv.draw(); }   // 📸 the props stay in the studio
     if (P && lastRoom === SUSHI_ROOM && roomKey !== SUSHI_ROOM) { const n3 = leaveSushi(); if (n3) toast('🍣 <span class="zh">寿司喵的食物留在店里</span> SushiMeow food stays at the restaurant', { ms: 2400 }); if (myKv) myKv.draw(); }
     if (P && lastRoom === BUFFET_ROOM && roomKey !== BUFFET_ROOM) { const n2 = leaveBuffet(); if (n2) toast('🍱 <span class="zh">自助餐的食物留在餐厅里</span> Buffet food stays at the buffet', { ms: 2400 }); if (myKv) myKv.draw(); }
     const justEntered = P && roomKey === BUFFET_ROOM && lastRoom !== BUFFET_ROOM;
@@ -474,6 +476,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     others.attach(room, roomKey);
     if (stadium && roomKey === 'stadium') stadium.attach(room);
     if (tennis && roomKey === 'tennis') tennis.attach(room);
+    if (P && placeKey === 'mall' && roomKey === Photo.ROOM) Photo.attach(room, { onWear: () => { if (myKv) myKv.draw(); sendMine(); } });
     if (carnival) carnival.attach(room);
     sizeCols(); fitHouse(box, unit); requestAnimationFrame(() => { if (unit.isConnected) { sizeCols(); fitHouse(box, unit); } });
     drawRoom($('#roombg', box), isNight(), roomKey, (house.styles || {})[roomKey]); drawRoof($('#roof', box)); studioBarre(room, roomKey === 'basement');
@@ -814,6 +817,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   const leave = () => {
     if (left) return; left = true;
     if (zenStop) { zenStop(); zenStop = null; }
+    Photo.leaveStudio();   // 📸 never take studio props home
     if (P) { leaveBuffet(); leaveSushi(); setInSushi(false); if (placeKey === 'cinema') leaveCinema(); }
     setCatZ(null);
     if (carnival) carnival.stop();

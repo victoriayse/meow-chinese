@@ -2558,3 +2558,40 @@ img.gone { min-height: 40px; font-size: 11px; }
 .cam-rv-txt { font-weight: 800; text-align: center; } .cam-rv-txt small { display: block; font-weight: 700; color: #6b6280; font-size: 12px; }
 .cam-rv-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 @media (max-width: 600px) { .cam-shutter { width: 70px; height: 70px; } .cam-shutter i { width: 50px; height: 50px; } .cam-frame .cb { width: 24px; height: 24px; border-width: 4px; } }
+
+/* v286: 📸 the mall's Photo Studio — three booths on the back wall, a props rack, the booth session and the strip */
+.ps-hud { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.ps-sign { position: absolute; left: 50%; top: 1.5%; transform: translateX(-50%); white-space: nowrap; background: rgba(255,255,255,.92); border: 2px solid var(--ink); border-radius: 999px; padding: 1px 10px; font-weight: 800; font-size: clamp(10px, 1.6vw, 15px); color: #7a2a5a; }
+.ps-booths { position: absolute; left: 3%; right: 3%; top: 12%; bottom: 34%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4%; }
+.ps-booth { pointer-events: auto; position: relative; border: 3px solid var(--ink); border-radius: 14px 14px 4px 4px; padding: 0; cursor: pointer; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 0 rgba(43,33,64,.3); font: inherit; }
+.ps-booth.ps-floral { background: #ff9ec4; } .ps-booth.ps-airplane { background: #5aa7e8; } .ps-booth.ps-castle { background: #ffcf3a; }
+.ps-bname { display: block; padding: 3px 2px 2px; font-weight: 900; font-size: clamp(9px, 1.5vw, 14px); line-height: 1.1; color: #fff; text-shadow: 0 1px 0 rgba(0,0,0,.35); }
+.ps-bname small { display: block; font-size: .8em; }
+.ps-window { position: relative; flex: 1; margin: 0 6% 4px; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; background: #fff; }
+.ps-peek { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.ps-curtain { position: absolute; right: 6%; top: calc(1.2em + 10px); bottom: 4px; width: 26%; background: repeating-linear-gradient(90deg, #fff 0 5px, #f2eaf8 5px 9px); border-left: 2px solid var(--ink); border-radius: 0 4px 4px 0; pointer-events: none; }
+.ps-go { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 0 8px; font-weight: 900; font-size: clamp(10px, 1.5vw, 14px); white-space: nowrap; color: var(--ink); }
+.ps-booth:hover .ps-go, .ps-booth:focus-visible .ps-go { background: #fff3a8; }
+.ps-rack { pointer-events: auto; position: absolute; left: 2%; bottom: 3%; display: grid; place-items: center; gap: 0; padding: 4px 10px; border: 3px solid var(--ink); border-radius: 12px; background: #fff0f6; font-size: clamp(16px, 2.6vw, 24px); line-height: 1.1; cursor: pointer; box-shadow: 0 3px 0 rgba(43,33,64,.3); }
+.ps-rack .zh { font-size: .6em; font-weight: 900; } .ps-rack small { font-size: .5em; font-weight: 800; }
+.ps-propbox { max-width: 560px; }
+.ps-preview { display: grid; place-items: center; background: #f3ecff; border: 3px solid var(--ink); border-radius: 12px; padding: 6px; }
+.ps-slots { display: grid; gap: 8px; max-height: 46vh; overflow-y: auto; }
+.ps-slot > b { display: block; font-size: 14px; margin-bottom: 3px; }
+.ps-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; }
+.ps-prop { display: grid; justify-items: center; gap: 2px; padding: 4px 2px; border: 2px solid var(--ink); border-radius: 10px; background: #fff; cursor: pointer; font: inherit; }
+.ps-prop.on { background: #ffe0ec; border-color: #ff3d7f; box-shadow: 0 0 0 2px #ff9ec4; }
+.ps-prop small { font-size: 10px; line-height: 1.15; text-align: center; }
+.ps-pic canvas { image-rendering: pixelated; display: block; }
+.ps-session { align-items: center; text-align: center; }
+.ps-stage { position: relative; width: min(320px, 78vw); aspect-ratio: 4 / 3; border: 4px solid var(--ink); border-radius: 10px; overflow: hidden; }
+.ps-live { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.ps-count { position: absolute; inset: 0; display: grid; place-items: center; font-size: 72px; font-weight: 900; color: #fff; text-shadow: 0 4px 0 rgba(0,0,0,.45); pointer-events: none; }
+.ps-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.ps-flash.go { animation: camflash .5s ease-out; }
+.ps-thumbs { display: flex; gap: 6px; justify-content: center; }
+.ps-thumbs i { width: 64px; height: 48px; border: 2px dashed #b8a8d0; border-radius: 6px; overflow: hidden; display: block; background: #faf7ff; }
+.ps-thumbs i canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+.ps-tip { margin: 0; font-weight: 800; font-size: 18px; }
+.ps-result { align-items: center; }
+.ps-strip { width: min(220px, 56vw); max-height: 60vh; object-fit: contain; border: 3px solid var(--ink); border-radius: 8px; box-shadow: 0 6px 0 rgba(43,33,64,.3); image-rendering: pixelated; }

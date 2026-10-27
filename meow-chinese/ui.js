@@ -34,6 +34,11 @@ export const heartI = (size = 22) => `<i data-icon="heart" data-size="${size}"><
 export const foodI = (size = 22) => `<i data-icon="fish" data-size="${size}"></i>`;
 
 // ---------- kitten view ----------
+// 📸 photo-studio props: borrowed things she wears only inside the studio (kept in memory, never saved —
+// so they can't follow her home, even if the app is closed in the studio)
+let props = null;
+export const getProps = () => props;
+export function setProps(p) { props = p && Object.keys(p).length ? { ...p } : null; }
 export class KittenView {
   constructor({ scale = 7, equipped = null, fur = null, interactive = false, onTap = null } = {}) {
     this.scale = scale; this.equippedOverride = equipped; this.furOverride = fur;
@@ -45,7 +50,7 @@ export class KittenView {
     this.timer = setInterval(() => this.step(), 400);
   }
   get fur() { return this.furOverride || get().kitten.fur; }
-  get equipped() { return this.equippedOverride || get().kitten.equipped; }
+  get equipped() { if (this.equippedOverride) return this.equippedOverride; const e = get().kitten.equipped; return props ? { ...e, ...props } : e; }
   // a snack in her paw: her own kitten holds what she picked; friends' kittens are told (setHeld)
   get held() { if (this.heldOverride !== undefined) return this.heldOverride; const s = get(); return !this.furOverride && s ? s.holding || null : null; }
   setHeld(kind) { kind = kind || null; if (this.heldOverride !== kind) { this.heldOverride = kind; this.draw(); } }
