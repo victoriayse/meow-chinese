@@ -2595,3 +2595,15 @@ img.gone { min-height: 40px; font-size: 11px; }
 .ps-tip { margin: 0; font-weight: 800; font-size: 18px; }
 .ps-result { align-items: center; }
 .ps-strip { width: min(220px, 56vw); max-height: 60vh; object-fit: contain; border: 3px solid var(--ink); border-radius: 8px; box-shadow: 0 6px 0 rgba(43,33,64,.3); image-rendering: pixelated; }
+/* v287: 🤳 photo-booth poses */
+.ps-poses { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; width: min(420px, 92vw); }
+.ps-pose { display: grid; justify-items: center; gap: 1px; padding: 3px 1px; border: 2px solid var(--ink); border-radius: 10px; background: #fff; cursor: pointer; font: inherit; }
+.ps-pose span { font-size: 22px; line-height: 1.1; }
+.ps-pose small { font-size: 9.5px; line-height: 1.1; font-weight: 700; }
+.ps-pose.on { background: #ffe0ec; border-color: #ff3d7f; box-shadow: 0 0 0 2px #ff9ec4; }
+.ps-who { font-weight: 800; font-size: 13px; color: #6b6280; text-align: center; }
+.ps-session { max-height: 92vh; overflow-y: auto; }
+@media (max-width: 600px) { .ps-poses { grid-template-columns: repeat(4, 1fr); } .ps-stage { width: min(300px, 84vw); } }
+.ps-pose small .zh { font-size: 11.5px; font-weight: 800; }
+.ps-poses { width: 100%; max-width: 420px; box-sizing: border-box; }
+@media (max-width: 600px) { .ps-session .ps-tip { font-size: 14px; } .ps-pose span { font-size: 19px; } }

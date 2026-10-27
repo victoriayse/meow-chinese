@@ -215,6 +215,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       if (ev.startsWith('sushi')) { if (sushiApi && p && p.room === roomKey && p.id !== me) sushiApi.onBroadcast(ev, p); return; }
       if (stadium && (ev === 'ball' || ev === 'match')) { stadium.onBroadcast(ev, p); return; }
       if (tennis && (ev === 'tshot' || ev === 'tmatch' || ev === 'tswing')) { tennis.onBroadcast(ev, p); return; }
+      if (ev.startsWith('pb-')) { if (P && placeKey === 'mall' && roomKey === Photo.ROOM) Photo.onBroadcast(ev, p); return; }   // 📸 photo booths
       if (carnival && ev.startsWith('wheel-')) { carnival.onBroadcast(ev, p); return; }
       if (ev === 'locked' && p.to === me && !gotHouse) {
         clearInterval(kt); lockedOut = true;
@@ -476,7 +477,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     others.attach(room, roomKey);
     if (stadium && roomKey === 'stadium') stadium.attach(room);
     if (tennis && roomKey === 'tennis') tennis.attach(room);
-    if (P && placeKey === 'mall' && roomKey === Photo.ROOM) Photo.attach(room, { onWear: () => { if (myKv) myKv.draw(); sendMine(); } });
+    if (P && placeKey === 'mall' && roomKey === Photo.ROOM) Photo.attach(room, { me, ch, name: myLook().name, onWear: () => { if (myKv) myKv.draw(); sendMine(); } });
     if (carnival) carnival.attach(room);
     sizeCols(); fitHouse(box, unit); requestAnimationFrame(() => { if (unit.isConnected) { sizeCols(); fitHouse(box, unit); } });
     drawRoom($('#roombg', box), isNight(), roomKey, (house.styles || {})[roomKey]); drawRoof($('#roof', box)); studioBarre(room, roomKey === 'basement');
