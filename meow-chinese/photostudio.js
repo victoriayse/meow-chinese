@@ -292,6 +292,13 @@ function closeBooth(why) {
   }
   drawBooth();
 }
+// she walks out in the middle of the photos: they stop (no strip for her — the host gets her coins back)
+function stopShoot() {
+  if (!mine || !mine.shooting) return;
+  mine.cancelled = true; mine.shooting = false;
+  leaveBooth();
+  toast('⏹ <span class="zh">离开了照相亭，拍照停止了</span> You left the booth — the photos stopped', { ms: 2600 });
+}
 // she walks out before the photos start (or the host cancels)
 function leaveBooth() {
   if (!mine || mine.shooting) return;
@@ -355,10 +362,10 @@ function openMachine() {
   // the props on the tray: tap them to try some on
   ['ppartyhat', 'pbunnyears', 'pheartboppers', 'psignheart', 'pstarglasses'].forEach((id) => $('.pb-props', box).append(spriteCanvas(id, 34)));
   $('.pb-props', box).onclick = () => { sfx.click(); openProps(() => { link && link.onWear && link.onWear(); }, box); };
-  $('.pb-exit', box).onclick = () => { sfx.click(); if (mine && mine.shooting) return toast('📸 <span class="zh">拍完再走！</span> Wait for the photos to finish!'); if (mine) mine.closing = true; leaveBooth(); closeModal(); };
+  $('.pb-exit', box).onclick = () => { sfx.click(); if (mine) mine.closing = true; if (mine && mine.shooting) stopShoot(); else leaveBooth(); closeModal(); };
   if (!mine) return;
   mine.view = box; mine.closing = false;
-  openModal(box, { onClose: () => { if (mine && !mine.closing && !mine.shooting) leaveBooth(); } });
+  openModal(box, { onClose: () => { if (!mine || mine.closing) return; if (mine.shooting) stopShoot(); else leaveBooth(); } });
   box.closest('#modal') && box.closest('#modal').classList.add('pb-modal');
   hydrateIcons(box);
   screen();
@@ -443,14 +450,16 @@ async function runShoot(delay) {
   const b = booth; if (!b || !b.theme) return;
   mine.shooting = true; mine.shot = 0;
   if (!$('.ps-live', mine.view || document.createElement('div'))) screen();   // make sure the camera is showing
-  const box = mine.view, theme = b.theme, T = THEMES[theme];
-  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const run = mine, box = mine.view, theme = b.theme, T = THEMES[theme];
+  const gone = () => run.cancelled || mine !== run || !box || !box.isConnected;   // she walked out: stop
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms)).then(() => { if (gone()) throw new Error('left'); });
   const q = (sel) => box && box.isConnected ? $(sel, box) : null;
   const tip = (h) => { const e = q('.ps-tip'); if (e) e.innerHTML = h; };
   const btns = q('.ps-btns'); if (btns) btns.style.display = 'none';
   tip('<span class="zh">准备好了吗？可以一直走动、换姿势哦！</span> Get ready — keep moving and changing poses!');
-  await wait(delay);
+  try { await wait(delay); } catch { return; }
   const shots = [];
+  try {
   for (let i = 0; i < 4; i++) {
     mine.shot = i; tip(SHOTS[i][1]);
     for (const n of ['3', '2', '1']) { const c = q('.ps-count'); if (c) c.textContent = n; sfx.click(); await wait(COUNT_MS / 3); }
@@ -462,6 +471,7 @@ async function runShoot(delay) {
     await wait(GAP_MS);
     const c2 = q('.ps-count'); if (c2) c2.textContent = '';
   }
+  } catch { return; }   // she left the booth part-way: no more photos, nothing saved
   tip('<span class="zh">正在打印…看看出相口！</span> Printing… look at the photo outlet!');
   const pic = strip(theme, shots), size = (booth || b).members.size;
   if (b.host === (link && link.me)) send('pb-close', { sid: b.sid });
@@ -471,8 +481,8 @@ async function runShoot(delay) {
   if (slot) { const im = document.createElement('img'); im.className = 'pb-printed'; im.src = pic.toDataURL('image/jpeg', 0.85); slot.append(im); sfx.fanfare(); }
   try {
     const entry = await Gallery.savePhoto(pic, `📸 ${T.zh} ${T.en}${size > 1 ? ` · ${size} 🐱` : ''} · 喵喵照相馆`);
-    await wait(1800);
-    mine.paid = false; mine.closing = true; mine = null;
+    await new Promise((r) => setTimeout(r, 1800));
+    if (mine === run) { mine.paid = false; mine.closing = true; mine = null; }
     closeModal(); result(pic, entry);
   } catch (e) {
     mine.shooting = false; refund(e.message === 'full' ? '🖼️ 相册满了 · Your gallery is full —' : '📸 <span class="zh">没存好</span> Could not save the photos —');
@@ -518,7 +528,7 @@ export function attach(room, { me, ch, name, onWear }) {
 }
 // leaving the studio: out of the booth (coins back if it hadn't started), and the props go back on the rack
 export function leaveStudio() {
-  if (mine && !mine.shooting) leaveBooth();
+  if (mine) { if (mine.shooting) stopShoot(); else leaveBooth(); }
   booth = null; link = null; hudEl = null;
   if (!getProps()) return false;
   setProps(null);

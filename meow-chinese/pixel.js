@@ -305,6 +305,7 @@ export function kittenGrid(fur = 'ginger', mood = 'normal', equipped = {}, frame
   ['back', 'neck', 'bag', 'face', 'head'].forEach((slot) => {
     const id = equipped[slot];
     const item = id && ITEMS[id];
+    if (back && (slot === 'face' || slot === 'neck')) return;   // seen from behind: no masks, glasses or necklaces (they're on her front)
     if (item && item.wear && item.behind) {   // 🪽 wings go BEHIND her: only where nothing of her is drawn
       item.art.forEach((row, y) => [...row].forEach((ch, x) => { const gy = item.wear.y + y, gx = item.wear.x + x; if (ch !== '.' && out[gy] && gx >= 0 && gx < out[gy].length && !out[gy][gx]) out[gy][gx] = item.pal[ch]; }));
     } else if (item && item.wear) stamp(out, item.art, item.pal, item.wear.x, item.wear.y);

@@ -754,4 +754,5 @@ export const CHANGES = [
   { v: 287, items: ['📸 Photo booths for up to 4 cats! Whoever opens the booth pays 10 coins — friends join free, and everyone gets the photo strip', '🚶 Walk around inside the booth (tap where to stand) right up until each photo is snapped', '🤳 12 poses to choose from: smile, wink, laugh, love, wow, shy, cool, sleepy, side pose, jump, lie down and turn around'] },
   { v: 288, items: ['🪽 New wings in the Photo Studio: angel, fairy, butterfly and bat wings now spread up behind your cat (and never cover her face)'] },
   { v: 289, items: ['📸 The Photo Studio now has one big MEOW 4-CUT photo booth: walk in, put in 10 coins, pick a theme, pose — and your strip prints out of the photo outlet!', '🎨 3 new themes: Vintage black & white, Fluffy Clouds and Fairytale (6 themes in all)', '🎀 Try on props right inside the booth from the props tray'] },
+  { v: 290, items: ['📸 Leaving the photo booth in the middle stops the photos (the coins come back)', '🔙 Turn-around pose: masks, glasses and necklaces no longer show on the back of her head'] },
 ];
