@@ -207,7 +207,7 @@ function groupScene(theme, members, names = false, bounce = 1) {
   const list = [...members.values()].sort((a, b) => b.y - a.y);
   const base = list.length <= 1 ? 1 : list.length === 2 ? 0.86 : 0.74;
   list.forEach((m) => {
-    const P = poseOf(m.pose), cat = catCanvas(m.look, m.pose), k = Math.min(1, 228 / (P.lie ? cat.height * 1.9 : cat.height)) * base * (1 - m.y / 20 * 0.22);
+    const P = poseOf(m.pose), cat = catCanvas(m.look, m.pose), k = Math.min(1, 228 / (P.lie ? cat.height * 1.9 : cat.height)) * base * (1 - m.y / 20 * 0.22) * 0.7;   // (v291: 30% smaller in the photos)
     const w = cat.width * k, h = cat.height * k, cx = (m.x / 100) * 320, bottom = 246 - m.y * 2.6 - (P.lift || 0) * bounce;
     x.save();
     if (m.left && P.side) { x.translate(cx, 0); x.scale(-1, 1); x.drawImage(cat, -w / 2, bottom - h, w, h); }   // (only the side pose turns; signs stay readable)
