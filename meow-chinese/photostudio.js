@@ -15,6 +15,9 @@ export const THEMES = {
   floral: { zh: '花花咖啡馆', en: 'Floral Cafe', icon: '🌸', strip: '#ffd6e6', ink: '#c2185b' },
   airplane: { zh: '飞机', en: 'Airplane', icon: '✈️', strip: '#cfe8ff', ink: '#1f5aa8' },
   castle: { zh: '充气城堡', en: 'Bouncy Castle', icon: '🏰', strip: '#fff1a8', ink: '#c0392b' },
+  vintage: { zh: '复古黑白', en: 'Vintage B&W', icon: '🎞️', strip: '#1e1e22', ink: '#f2f2f2', mono: true },
+  clouds: { zh: '软软云朵', en: 'Fluffy Clouds', icon: '☁️', strip: '#e6f0ff', ink: '#5a6fc0' },
+  fairytale: { zh: '童话世界', en: 'Fairytale', icon: '🧚', strip: '#efe0ff', ink: '#7a3fb0' },
 };
 const SLOTS = [['head', '🎉 头上 Head'], ['face', '🕶️ 脸上 Face'], ['back', '🪽 翅膀 Wings'], ['bag', '🪧 拿着 Hold'], ['neck', '📿 脖子 Neck']];
 
@@ -43,6 +46,34 @@ function backdrop(theme) {
     R(0, 44, W, H - 44, '#4a5a7a'); for (let xx = 0; xx < W; xx += 6) R(xx, 44, 3, H - 44, '#56688c');   // aisle carpet
     R(24, 18, 32, 30, '#3d6fc4'); R(24, 18, 32, 3, '#5a8ae0'); R(28, 14, 24, 6, '#3d6fc4'); R(30, 15, 20, 3, '#ffffff');   // her seat (headrest cover)
     R(22, 44, 36, 4, '#2a4f8f');
+  } else if (theme === 'vintage') {
+    // an old-time photo studio: a draped curtain, a column with a vase of flowers, a plain floor (made black & white later)
+    R(0, 0, W, H, '#8a7a6a');
+    for (let xx = 0; xx < W; xx += 6) { R(xx, 0, 3, 46, '#a89684'); R(xx + 3, 0, 1, 46, '#6f6152'); }
+    for (let xx = 0; xx < W; xx++) R(xx, 0, 1, 4 + Math.round(2 * Math.abs(Math.sin(xx / 5))), '#5a4e42');   // the swag at the top
+    R(6, 22, 9, 24, '#d8d0c4'); R(5, 21, 11, 2, '#efe9df'); R(5, 44, 11, 2, '#efe9df'); for (let yy = 24; yy < 44; yy += 3) R(8, yy, 1, 2, '#bdb3a4');   // the column
+    dot(10, 17, 3, '#efe9df'); R(9, 18, 3, 3, '#cfc6b8'); dot(8, 15, 1, '#ffffff'); dot(12, 14, 1, '#ffffff'); dot(10, 13, 1, '#ffffff');   // vase of flowers
+    R(66, 30, 8, 16, '#4a4038'); R(64, 30, 12, 2, '#6f6152'); R(69, 26, 2, 4, '#4a4038');   // an old camera on a stand
+    R(0, 46, W, H - 46, '#6f6152'); for (let yy = 48; yy < H; yy += 4) R(0, yy, W, 1, '#5a4e42');
+  } else if (theme === 'clouds') {
+    // a pastel sky full of puffy clouds, a little rainbow and sparkles
+    ['#ffd6e6', '#f2dcff', '#dfe6ff', '#cfe8ff', '#cfe8ff'].forEach((col, i) => R(0, i * 9, W, 9, col));
+    [[16, 10, 7], [58, 7, 6], [40, 20, 5]].forEach(([cx, cy, r]) => { dot(cx, cy, r, '#ffffff'); dot(cx - r, cy + 2, r - 2, '#ffffff'); dot(cx + r, cy + 2, r - 2, '#ffffff'); R(cx - r * 2 + 2, cy + 2, r * 4 - 4, r - 1, '#ffffff'); });
+    ['#ff8aa0', '#ffb86b', '#ffe27a', '#8fe08a', '#7cc8f2', '#c4a3ff'].forEach((col, i) => { for (let a = 0; a <= 180; a += 3) { const rad = a * Math.PI / 180; R(Math.round(66 + (13 - i) * Math.cos(rad)), Math.round(40 - (13 - i) * Math.sin(rad) * 0.8), 1, 1, col); } });   // rainbow
+    [[6, 30], [30, 4], [74, 22], [50, 34]].forEach(([sx, sy]) => { R(sx, sy - 1, 1, 3, '#ffffff'); R(sx - 1, sy, 3, 1, '#ffffff'); });
+    for (let xx = -4; xx < W + 4; xx += 8) dot(xx, 49, 6, xx % 16 ? '#ffffff' : '#f4f7ff');   // a bank of clouds to stand on
+    R(0, 51, W, H - 51, '#ffffff');
+  } else if (theme === 'fairytale') {
+    // a starry twilight, a pink castle on the hill, toadstools and sparkles
+    R(0, 0, W, H, '#3a2f6e'); R(0, 18, W, 12, '#5a3f8a'); R(0, 30, W, 8, '#8a5aa8');
+    [[5, 4], [18, 9], [33, 3], [47, 7], [70, 4], [76, 13], [26, 15], [60, 14]].forEach(([sx, sy]) => R(sx, sy, 1, 1, '#fff3a8'));
+    dot(66, 7, 4, '#fff3a8'); dot(68, 6, 4, '#3a2f6e');   // crescent moon
+    R(26, 18, 28, 20, '#ffc6e6'); [[24, 12], [36, 8], [50, 12]].forEach(([tx, ty]) => { R(tx, ty + 4, 6, 30 - ty, '#ffb3d9'); for (let k = 0; k < 4; k++) R(tx + k, ty + 3 - k, 6 - 2 * k, 1, '#a77be6'); R(tx + 2, ty - 1, 2, 1, '#ffd23f'); });   // castle and towers
+    R(37, 28, 6, 10, '#7a3fb0'); dot(40, 28, 3, '#7a3fb0');   // the door
+    [[30, 22], [47, 22], [39, 16]].forEach(([wx, wy]) => R(wx, wy, 2, 3, '#fff3a8'));
+    R(0, 38, W, H - 38, '#5fae4a'); for (let xx = 0; xx < W; xx += 5) R(xx, 38, 2, 1, '#7cd07a');
+    [[8, 44, '#e8384f'], [72, 46, '#ff6f9c']].forEach(([mx, my, col]) => { R(mx - 1, my, 3, 5, '#fff4e8'); dot(mx, my, 3, col); R(mx - 2, my - 1, 1, 1, '#ffffff'); R(mx + 1, my - 2, 1, 1, '#ffffff'); });   // toadstools
+    [[14, 30], [64, 32], [20, 50], [58, 52]].forEach(([sx, sy]) => { R(sx, sy - 1, 1, 3, '#fff3a8'); R(sx - 1, sy, 3, 1, '#fff3a8'); });
   } else {
     R(0, 0, W, H, '#9fd6f7'); R(0, 0, W, 10, '#7cc2f2');
     [[8, 10, '#ff6f9c'], [70, 6, '#ffd23f'], [16, 4, '#7cd07a'], [62, 16, '#c4a3ff']].forEach(([bx, by, col]) => { dot(bx, by, 3, col); R(bx, by + 4, 1, 8, '#ffffff'); });   // balloons
@@ -83,7 +114,7 @@ function strip(theme, shots) {
 }
 
 // ---------- 🎀 the props rack: borrow things to wear (one per slot) ----------
-function openProps(onWear) {
+function openProps(onWear, inside = null) {
   const box = html`<div class="card stack ps-propbox">
       <div class="h-title"><span class="zh">🎀 照相道具</span><span class="en">Photo props</span></div>
       <p class="help" style="margin:0"><span class="zh">免费试戴！离开照相馆就会自动拿掉。</span> Free to try on! They come off when you leave the studio.</p>
@@ -104,16 +135,22 @@ function openProps(onWear) {
   };
   draw();
   $('#ps-off', box).onclick = () => { setProps(null); sfx.click(); kv.draw(); onWear(); draw(); };
+  if (inside) {   // in the booth: a panel over the machine
+    const wrap = html`<div class="pb-overlay"></div>`; wrap.append(box); inside.append(wrap);
+    $('#ps-done', box).onclick = () => { sfx.click(); wrap.remove(); };
+    hydrateIcons(box); return;
+  }
   $('#ps-done', box).onclick = () => { sfx.click(); closeModal(); };
   openModal(box); hydrateIcons(box);
 }
 
-// ---------- 📸 the booths: up to 4 cats in one booth, walking about until each photo is snapped ----------
-// The cat who opens a booth is its host; anyone else in the studio can join until the host presses Start.
-// Only the cat who opens the booth pays (10 coins, paid back if it never starts); friends join free.
-// Everyone in the booth gets the same strip in their own gallery.
-// Over the studio's line: pb-open (the host, repeated as a heartbeat) · pb-join / pb-pos (where each cat stands)
-// · pb-start (the 4 shots begin) · pb-leave · pb-close.
+// ---------- 📸 the photo booth (one, in the middle of the studio): up to 4 cats, walking about until each snap ----------
+// Walk in → the inside of the booth: a white photo machine with a glowing top, light bars, sample strips stuck round the
+// screen and a tray of props. On its screen: put in 10 coins → pick a theme → the live camera (tap where to stand, pick a
+// pose) → Start → 4 photos → the strip slides out of the PHOTO OUTLET. Only the cat who pays (the host) pays; friends in
+// the studio can squeeze in free until she presses Start. Everyone gets the strip in their own gallery.
+// Over the studio's line (all with booth:'main'): pb-open (host heartbeat, with the theme) · pb-join / pb-pos · pb-start
+// · pb-leave · pb-close.
 export const MAX_CATS = 4;
 // 🤳 poses she can pick in the booth (and change any time, even during the 3-2-1)
 export const POSES = {
@@ -133,14 +170,15 @@ export const POSES = {
 const poseOf = (k) => POSES[k] || POSES.smile;
 const SHOTS = [['smile', '<span class="zh">第一张！摆个姿势！</span> Photo 1 — strike a pose!'], ['wink', '<span class="zh">第二张！换个姿势！</span> Photo 2 — new pose!'], ['laugh', '<span class="zh">第三张！</span> Photo 3!'], ['love', '<span class="zh">最后一张！</span> Last one!']];
 const COUNT_MS = 3000, GAP_MS = 900, START_IN = 1200;
-const booths = {};            // theme → { sid, host, at, started, members: Map(id → { look, name, x, y, left, seen }) }
-let link = null;              // { me, ch, name } while she is in the studio
-let mine = null;              // her own booth session: { theme, sid, paid, view }
+let booth = null;   // { sid, host, at, theme, started, members: Map(id → { look, name, x, y, left, pose, seen }) }
+let link = null;    // { me, ch, name } while she is in the studio
+let mine = null;    // she is in the booth: { sid, paid, view, shooting, ... } — or { welcome: true } before paying
 const now = () => Date.now();
 const clampX = (x) => Math.max(10, Math.min(90, x)), clampY = (y) => Math.max(0, Math.min(20, y));
-const send = (ev, p) => { if (link) link.ch.send(ev, { id: link.me, ...p }); };
+const send = (ev, p) => { if (link) link.ch.send(ev, { id: link.me, booth: 'main', ...p }); };
+const lookNow = () => myLook();
 
-// draw everyone in the booth: further back = a little smaller and higher; facing the way they last walked
+// ---------- drawing everyone in the booth ----------
 const catCache = new Map();
 function catCanvas(look, poseKey) {
   const P = poseOf(poseKey), key = `${look.fur}|${poseKey}|${JSON.stringify(look.equipped || {})}`;
@@ -151,7 +189,18 @@ function catCanvas(look, poseKey) {
   }
   return catCache.get(key);
 }
-function groupScene(theme, members, _unused, names = false, bounce = 1) {
+// 🎞️ the vintage theme: black & white, a little film grain and dark corners
+function monochrome(c) {
+  const x = c.getContext('2d'), img = x.getImageData(0, 0, c.width, c.height), d = img.data, w = c.width, h = c.height;
+  for (let i = 0; i < d.length; i += 4) {
+    const p = i / 4, px = p % w, py = (p / w) | 0, vx = (px / w - 0.5), vy = (py / h - 0.5);
+    let g = 0.3 * d[i] + 0.59 * d[i + 1] + 0.11 * d[i + 2];
+    g = (g - 128) * 1.15 + 128 + ((p * 7919) % 17 - 8) - (vx * vx + vy * vy) * 160;
+    d[i] = d[i + 1] = d[i + 2] = Math.max(0, Math.min(255, g));
+  }
+  x.putImageData(img, 0, 0); return c;
+}
+function groupScene(theme, members, names = false, bounce = 1) {
   const c = document.createElement('canvas'); c.width = 320; c.height = 240;
   const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
   x.drawImage(backdrop(theme), 0, 0, 320, 240);
@@ -164,10 +213,12 @@ function groupScene(theme, members, _unused, names = false, bounce = 1) {
     if (m.left && P.side) { x.translate(cx, 0); x.scale(-1, 1); x.drawImage(cat, -w / 2, bottom - h, w, h); }   // (only the side pose turns; signs stay readable)
     else x.drawImage(cat, cx - w / 2, bottom - h, w, h);
     x.restore();
-    if (names && m.name) { x.font = '700 11px system-ui, sans-serif'; x.textAlign = 'center'; const tw = x.measureText(m.name).width + 8; x.fillStyle = m.me ? '#ff6f9c' : 'rgba(43,33,64,.75)'; x.fillRect(cx - tw / 2, bottom - 2, tw, 14); x.fillStyle = '#fff'; x.fillText(m.name, cx, bottom + 9); }
   });
+  if (THEMES[theme] && THEMES[theme].mono) monochrome(c);
+  if (names) list.forEach((m) => { if (!m.name) return; const cx = (m.x / 100) * 320, bottom = 246 - m.y * 2.6; x.font = '700 11px system-ui, sans-serif'; x.textAlign = 'center'; const tw = x.measureText(m.name).width + 8; x.fillStyle = m.me ? '#ff6f9c' : 'rgba(43,33,64,.75)'; x.fillRect(cx - tw / 2, bottom - 2, tw, 14); x.fillStyle = '#fff'; x.fillText(m.name, cx, bottom + 9); });
   return c;
 }
+const themeThumb = (k) => { const c = groupScene(k, new Map()); c.className = 'pb-thumb'; return c; };
 
 // ---------- paying (and paying back) ----------
 function pay() {
@@ -185,93 +236,90 @@ const canShoot = () => {
   return true;
 };
 
-// ---------- tapping a booth ----------
-async function tapBooth(theme) {
-  const T = THEMES[theme], b = booths[theme];
-  if (mine) { if (mine.theme === theme) return openView(); return toast('📸 <span class="zh">你已经在另一个照相亭里了</span> You are already in another booth'); }
+// ---------- walking into the booth ----------
+function enterBooth() {
+  if (mine && mine.view && mine.view.isConnected) return;
+  if (mine && mine.sid) return openMachine();
   if (!canShoot()) return;
-  if (b && b.started) return toast(`⏳ <span class="zh">${T.zh}正在拍照，等一下</span> The ${T.en} booth is busy — try again in a moment`, { ms: 2400 });
-  if (b && b.members.size >= MAX_CATS) return toast(`<span class="zh">这个照相亭满了（${MAX_CATS}只猫）</span> This booth is full (${MAX_CATS} cats)`);
-  const host = b && b.members.get(b.host), joining = !!b;
-  const ok = await confirmBox(`${T.icon} <span class="zh">${T.zh}照相亭</span> ${T.en} booth`,
-    joining ? `<span class="zh">和 ${host ? host.name : '朋友'} 一起拍！免费加入，照片也会存进你的手机相册。</span><br>Join ${host ? host.name : 'your friend'} in the booth — it's free! You get the photo strip in your 🖼️ Gallery too.<br><small>🎀 <span class="zh">想戴道具？先去道具架！</span> Want props? Visit the props rack first!</small>`
-      : `<span class="zh">${FEE}金币拍一条四格照片，会存进手机相册。朋友可以免费进来一起拍（最多${MAX_CATS}只猫）！</span><br>${FEE} coins for a strip of 4 photos — it goes into your phone's 🖼️ Gallery. Friends can join you for free (up to ${MAX_CATS} cats)!<br><small>🎀 <span class="zh">想戴道具？先去道具架！</span> Want props? Visit the props rack first!</small>`,
-    joining ? '➕ 加入 Join (free)' : `📸 付 ${FEE} Pay`, '取消 Cancel');
-  if (!ok || mine) return;
-  const b2 = booths[theme];
-  if (joining && (!b2 || b2.started || b2.sid !== b.sid || b2.members.size >= MAX_CATS)) return toast('<span class="zh">来晚了一步！</span> Too late — that booth just closed or filled up');
-  if (!joining && b2) return toast('<span class="zh">刚好有人进去了，可以点一下加入！</span> Someone just went in — tap again to join them!');
-  if (!joining && !pay()) return;   // only the cat who opens the booth pays
-  const me = { look: lookNow(), name: link.name, x: 30 + Math.random() * 40, y: 6, left: false, pose: 'smile', seen: now(), me: true };
-  if (joining) {
-    mine = { theme, sid: b.sid, paid: false };
-    b.members.set(link.me, me); send('pb-join', { theme, sid: b.sid, look: me.look, name: me.name, x: me.x, y: me.y, left: me.left, pose: me.pose });
-  } else {
-    const sid = S.uid();
-    booths[theme] = { sid, host: link.me, at: now(), started: 0, members: new Map([[link.me, me]]) };
-    mine = { theme, sid, paid: true };
-    heartbeat();
+  const b = booth;
+  if (b && b.started) return toast('⏳ <span class="zh">照相亭正在拍照，等一下</span> The photo booth is busy — try again in a moment', { ms: 2400 });
+  if (b && b.members.size >= MAX_CATS) return toast(`<span class="zh">照相亭满了（${MAX_CATS}只猫）</span> The booth is full (${MAX_CATS} cats)`);
+  if (b) {   // someone is already inside: squeeze in for free
+    const me = { look: lookNow(), name: link.name, x: 30 + Math.random() * 40, y: 6, left: false, pose: 'smile', seen: now(), me: true };
+    mine = { sid: b.sid, paid: false };
+    b.members.set(link.me, me); send('pb-join', { sid: b.sid, look: me.look, name: me.name, x: me.x, y: me.y, left: me.left, pose: me.pose });
+    sfx.click(); drawBooth(); openMachine(); return;
   }
-  drawBooths(); openView();
+  mine = { welcome: true };
+  openMachine();
 }
-const lookNow = () => myLook();
-
-// the host says "this booth is open" every second and a half; everyone says where they stand
+// she puts in her 10 coins: the booth is hers (her friends can join until Start)
+function claim() {
+  if (booth) { sfx.miss(); toast('<span class="zh">刚好有人进来了！你可以免费加入他们。</span> Someone just went in — you can join them for free!'); mine = null; closeModal(); return false; }
+  if (!pay()) return false;
+  const sid = S.uid(), me = { look: lookNow(), name: link.name, x: 38 + Math.random() * 24, y: 6, left: false, pose: 'smile', seen: now(), me: true };
+  booth = { sid, host: link.me, at: now(), theme: null, started: 0, members: new Map([[link.me, me]]) };
+  mine = { ...(mine || {}), welcome: false, sid, paid: true };   // (keeps the machine on screen)
+  heartbeat(); drawBooth();
+  return true;
+}
+// the host says "the booth is open (with this theme)" every second and a half; everyone says where they stand
 function heartbeat() {
-  if (!mine || !link) return;
-  const b = booths[mine.theme]; if (!b || b.sid !== mine.sid) return;
+  if (!mine || !mine.sid || !link) return;
+  const b = booth; if (!b || b.sid !== mine.sid) return;
   const m = b.members.get(link.me); if (!m) return;
   m.seen = now(); m.look = lookNow();
-  if (b.host === link.me) send('pb-open', { theme: mine.theme, sid: b.sid, at: b.at, started: !!b.started, look: m.look, name: m.name, x: m.x, y: m.y, left: m.left, pose: m.pose });
-  else send('pb-pos', { theme: mine.theme, sid: b.sid, look: m.look, name: m.name, x: m.x, y: m.y, left: m.left, pose: m.pose });
+  const pos = { sid: b.sid, look: m.look, name: m.name, x: m.x, y: m.y, left: m.left, pose: m.pose };
+  if (b.host === link.me) send('pb-open', { ...pos, at: b.at, theme: b.theme, started: !!b.started }); else send('pb-pos', pos);
 }
 setInterval(() => {
   heartbeat();
-  // forget booths whose host went quiet, and cats who left without saying so
-  Object.entries(booths).forEach(([theme, b]) => {
-    if (!b) return;
+  const b = booth;
+  if (b && !b.started) {
     const host = b.members.get(b.host);
-    if (b.host !== (link && link.me) && (!host || now() - host.seen > 6000) && !b.started) { closeBooth(theme, '<span class="zh">照相亭关了</span> The booth closed —'); return; }
-    b.members.forEach((m, id) => { if (!m.me && id !== b.host && now() - m.seen > 6000 && !b.started) b.members.delete(id); });
-  });
-  drawBooths();
-}, 1500);
-
-function closeBooth(theme, why) {
-  const b = booths[theme]; delete booths[theme];
-  if (mine && mine.theme === theme && (!b || b.sid === mine.sid)) {
-    if (!mine.shooting) { refund(why); if (mine.view) { mine.closing = true; closeModal(); } mine = null; }
+    if (b.host !== (link && link.me) && (!host || now() - host.seen > 6000)) closeBooth('<span class="zh">照相亭关了</span> The booth closed —');
+    else b.members.forEach((m, id) => { if (!m.me && id !== b.host && now() - m.seen > 6000) b.members.delete(id); });
   }
-  drawBooths();
+  drawBooth();
+}, 1500);
+function closeBooth(why) {
+  const b = booth; booth = null;
+  if (mine && mine.sid && (!b || b.sid === mine.sid) && !mine.shooting) {
+    refund(why);
+    if (mine.view && mine.view.isConnected) { mine.closing = true; closeModal(); }
+    if (!mine.paid) toast(`🚪 ${why.replace(/—$/, '')}`, { ms: 2200 });
+    mine = null;
+  }
+  drawBooth();
 }
-// she walks out of the booth before it starts (or the host cancels it)
+// she walks out before the photos start (or the host cancels)
 function leaveBooth() {
-  if (!mine) return;
-  const b = booths[mine.theme];
-  if (mine.shooting) return;
-  if (b && b.sid === mine.sid) {
-    if (b.host === link.me) { send('pb-close', { theme: mine.theme, sid: b.sid }); delete booths[mine.theme]; }
-    else { b.members.delete(link.me); send('pb-leave', { theme: mine.theme, sid: b.sid }); }
+  if (!mine || mine.shooting) return;
+  const b = booth;
+  if (mine.sid && b && b.sid === mine.sid) {
+    if (b.host === link.me) { send('pb-close', { sid: b.sid }); booth = null; }
+    else { b.members.delete(link.me); send('pb-leave', { sid: b.sid }); }
   }
   refund('<span class="zh">离开照相亭</span> Left the booth —');
-  mine = null; drawBooths();
+  mine = null; drawBooth();
 }
 
 // ---------- messages from the others in the studio ----------
 export function onBroadcast(ev, p) {
-  if (!link || !p || !THEMES[p.theme]) return;
-  let b = booths[p.theme];
+  if (!link || !p || p.booth !== 'main') return;
+  const b = booth;
   const member = () => ({ look: p.look || { fur: 'ginger', equipped: {} }, name: String(p.name || '🐱').slice(0, 24), x: clampX(+p.x || 50), y: clampY(+p.y || 0), left: !!p.left, pose: POSES[p.pose] ? p.pose : 'smile', seen: now() });
   if (ev === 'pb-open') {
     if (b && b.sid !== p.sid) {
-      // two cats opened the same booth at once: the earlier one keeps it
+      // two cats paid at the same moment: the earlier one keeps the booth (the other gets her coins back)
       const theirs = [+p.at || 0, p.id], ours = [b.at, b.host];
-      if (theirs[0] < ours[0] || (theirs[0] === ours[0] && theirs[1] < ours[1])) { closeBooth(p.theme, '<span class="zh">别人先进去了</span> Someone got there first —'); b = null; }
+      if (theirs[0] < ours[0] || (theirs[0] === ours[0] && theirs[1] < ours[1])) closeBooth('<span class="zh">别人先进去了</span> Someone got there first —');
       else return;
     }
-    if (!b) b = booths[p.theme] = { sid: p.sid, host: p.id, at: +p.at || now(), started: 0, members: new Map() };
-    b.members.set(p.id, member());
-    if (p.started && !b.started) b.started = now();
+    if (!booth) booth = { sid: p.sid, host: p.id, at: +p.at || now(), theme: null, started: 0, members: new Map() };
+    booth.theme = THEMES[p.theme] ? p.theme : null;
+    booth.members.set(p.id, member());
+    if (p.started && !booth.started) booth.started = now();
   } else if (ev === 'pb-join' || ev === 'pb-pos') {
     if (!b || b.sid !== p.sid) return;
     if (!b.members.has(p.id) && b.members.size >= MAX_CATS) return;
@@ -279,117 +327,156 @@ export function onBroadcast(ev, p) {
   } else if (ev === 'pb-leave') {
     if (b && b.sid === p.sid) b.members.delete(p.id);
   } else if (ev === 'pb-close') {
-    if (b && b.sid === p.sid) closeBooth(p.theme, '<span class="zh">照相亭关了</span> The booth was closed —');
+    if (b && b.sid === p.sid) closeBooth('<span class="zh">照相亭关了</span> The booth was closed —');
   } else if (ev === 'pb-start') {
     if (!b || b.sid !== p.sid) return;
-    b.started = now();
-    if (mine && mine.sid === p.sid) runShoot(b, +p.in || START_IN);
+    b.started = now(); if (THEMES[p.theme]) b.theme = p.theme;
+    if (mine && mine.sid === p.sid) runShoot(+p.in || START_IN);
   }
-  drawBooths();
+  drawBooth();
 }
 
-// ---------- inside the booth: walk about (tap / drag where to stand, or the arrow keys) ----------
-function openView() {
-  const b = booths[mine.theme], T = THEMES[mine.theme];
-  if (!b) return;
-  const host = b.host === link.me;
-  const box = html`<div class="card stack ps-session ps-${mine.theme}">
-      <div class="h-title"><span class="zh">${T.icon} ${T.zh}照相亭</span><span class="en">${T.en} booth</span></div>
-      <div class="ps-stage"><canvas class="ps-live"></canvas><div class="ps-count"></div><div class="ps-flash"></div></div>
-      <div class="ps-thumbs">${[0, 1, 2, 3].map(() => '<i></i>').join('')}</div>
-      <p class="ps-tip"></p>
-      <div class="ps-poses" role="group" aria-label="Poses">${Object.entries(POSES).map(([k, P]) => `<button type="button" class="ps-pose ${k === 'smile' ? 'on' : ''}" data-pose="${k}" title="${P.en}"><span>${P.ic}</span><small><span class="zh">${P.zh}</span><br>${P.en}</small></button>`).join('')}</div>
-      <div class="ps-who"></div>
-      <div class="row ps-btns" style="justify-content:center">${host ? '<button type="button" class="btn green" id="ps-start">▶ <span class="zh">开始拍照</span> Start</button>' : ''}<button type="button" class="btn white" id="ps-leave">↩ <span class="zh">离开</span> ${host ? 'Cancel' : 'Leave'}</button></div>
+// ---------- inside the booth: the photo machine ----------
+function openMachine() {
+  const samples = ['floral', 'clouds', 'fairytale', 'vintage', 'castle', 'airplane'];
+  const box = html`<div class="pb-machine" role="dialog" aria-label="Photo booth">
+      <div class="pb-top"><b>📸 MEOW 4-CUT</b><small><span class="zh">喵喵四格照相亭</span></small></div>
+      <div class="pb-body">
+        <i class="pb-light l"></i><i class="pb-light r"></i>
+        <div class="pb-stick l"></div><div class="pb-stick r"></div>
+        <div class="pb-screen"><div class="pb-screen-in"></div></div>
+      </div>
+      <div class="pb-panel"></div>
+      <div class="pb-tray"><span class="pb-props" title="Props"></span><div class="pb-outlet"><b>PHOTO OUTLET</b><span class="pb-slot"></span></div></div>
+      <button type="button" class="pb-exit">↩ <span class="zh">离开照相亭</span> Leave the booth</button>
     </div>`;
+  // little sample strips stuck around the screen (like a real booth)
+  ['l', 'r'].forEach((side, si) => { const st = $(`.pb-stick.${side}`, box); [0, 1].forEach((k) => { const strip2 = document.createElement('div'); strip2.className = 'pb-sample'; for (let j = 0; j < 3; j++) { const t = themeThumb(samples[(si * 2 + k + j) % samples.length]); strip2.append(t); } st.append(strip2); }); });
+  // the props on the tray: tap them to try some on
+  ['ppartyhat', 'pbunnyears', 'pheartboppers', 'psignheart', 'pstarglasses'].forEach((id) => $('.pb-props', box).append(spriteCanvas(id, 34)));
+  $('.pb-props', box).onclick = () => { sfx.click(); openProps(() => { link && link.onWear && link.onWear(); }, box); };
+  $('.pb-exit', box).onclick = () => { sfx.click(); if (mine && mine.shooting) return toast('📸 <span class="zh">拍完再走！</span> Wait for the photos to finish!'); if (mine) mine.closing = true; leaveBooth(); closeModal(); };
+  if (!mine) return;
   mine.view = box; mine.closing = false;
+  openModal(box, { onClose: () => { if (mine && !mine.closing && !mine.shooting) leaveBooth(); } });
+  box.closest('#modal') && box.closest('#modal').classList.add('pb-modal');
+  hydrateIcons(box);
+  screen();
+}
+// what the machine's screen shows now
+function screen() {
+  if (!mine || !mine.view || !mine.view.isConnected) return;
+  const box = mine.view, scr = $('.pb-screen-in', box), panel = $('.pb-panel', box), b = booth;
+  const host = b && b.host === link.me;
+  scr.innerHTML = ''; panel.innerHTML = '';
+  if (mine.welcome) {
+    scr.append(html`<div class="pb-welcome"><div class="pb-big">👋 <span class="zh">欢迎光临！</span></div><p>Welcome to MEOW 4-CUT!</p><p class="pb-small"><span class="zh">投${FEE}金币，拍一条四格照片</span><br>${FEE} coins · a strip of 4 photos · friends can join free</p></div>`);
+    const btn = html`<button type="button" class="pb-coin">🪙 <span class="zh">投币</span> Insert ${FEE} coins</button>`;
+    btn.onclick = () => { if (!claim()) return; screen(); };
+    panel.append(btn); return;
+  }
+  if (!b || b.sid !== mine.sid) return;
+  if (!b.theme) {
+    if (host) {
+      scr.append(html`<div class="pb-themes-title">🎨 <span class="zh">选一个主题</span> Pick a theme</div>`);
+      const grid = html`<div class="pb-themes"></div>`;
+      Object.entries(THEMES).forEach(([k, T]) => { const t = html`<button type="button" class="pb-theme" data-theme="${k}"><span class="pb-tname">${T.icon} <span class="zh">${T.zh}</span><small>${T.en}</small></span></button>`; t.prepend(themeThumb(k)); t.onclick = () => { sfx.click(); b.theme = k; heartbeat(); screen(); }; grid.append(t); });
+      scr.append(grid);
+    } else scr.append(html`<div class="pb-welcome"><div class="pb-big">⏳</div><p><span class="zh">房主正在选主题…</span><br>The host is picking a theme…</p></div>`);
+    return;
+  }
+  liveView(scr, panel, host);
+}
+// the live camera: tap where to stand, pick a pose; the host presses Start
+function liveView(scr, panel, host) {
+  const box = mine.view, T = THEMES[booth.theme];
+  scr.append(html`<div class="ps-stage"><canvas class="ps-live"></canvas><div class="ps-count"></div><div class="ps-flash"></div><span class="pb-theme-tag">${T.icon} ${T.en}</span></div>`);
+  scr.append(html`<div class="ps-thumbs">${[0, 1, 2, 3].map(() => '<i></i>').join('')}</div>`);
+  panel.append(html`<p class="ps-tip">${host ? '<span class="zh">点屏幕走过去，再选个姿势。人齐了就按开始！</span><br>Tap the screen to walk, pick a pose — press Start when everyone is ready!' : '<span class="zh">点屏幕走过去，再选个姿势。等房主按开始！</span><br>Tap the screen to walk and pick a pose — the host will press Start!'}</p>`);
+  panel.append(html`<div class="ps-poses" role="group" aria-label="Poses">${Object.entries(POSES).map(([k, P]) => `<button type="button" class="ps-pose" data-pose="${k}" title="${P.en}"><span>${P.ic}</span><small><span class="zh">${P.zh}</span><br>${P.en}</small></button>`).join('')}</div>`);
+  panel.append(html`<div class="ps-who"></div>`);
+  panel.append(html`<div class="row ps-btns" style="justify-content:center">${host ? '<button type="button" class="btn green" id="ps-start">▶ <span class="zh">开始拍照</span> Start</button><button type="button" class="btn white" id="ps-theme">🎨 <span class="zh">换主题</span> Theme</button>' : ''}</div>`);
   const live = $('.ps-live', box); live.width = 320; live.height = 240;
-  const tip = $('.ps-tip', box);
-  const setTip = () => { if (!mine || mine.shooting) return; tip.innerHTML = host ? '<span class="zh">点照片里的地方走过去，再选个姿势。人齐了就按开始！</span><br>Tap where to stand and pick a pose. When everyone is ready, press Start!' : '<span class="zh">点照片里的地方走过去，再选个姿势。等房主按开始！</span><br>Tap where to stand and pick a pose — the host will press Start!'; };
-  setTip();
-  // where she is heading (tap / drag on the photo); she walks there
-  const me = () => (booths[mine && mine.theme] || { members: new Map() }).members.get(link.me);
+  const me = () => (booth || { members: new Map() }).members.get(link.me);
+  const markPose = () => { const m = me(); box.querySelectorAll('.ps-pose').forEach((x) => x.classList.toggle('on', !!m && x.dataset.pose === (m.pose || 'smile'))); };
+  box.querySelectorAll('.ps-pose').forEach((pb) => { pb.onclick = () => { const m = me(); if (!m) return; m.pose = pb.dataset.pose; sfx.click(); heartbeat(); markPose(); }; });
+  markPose();
   let target = null, lastSent = 0, held = null;
   const aim = (e) => { const r = live.getBoundingClientRect(); target = { x: clampX(((e.clientX - r.left) / r.width) * 100), y: clampY((1 - (e.clientY - r.top) / r.height) * 100 * 0.42 - 4) }; };
   live.addEventListener('pointerdown', (e) => { e.preventDefault(); held = e.pointerId; try { live.setPointerCapture(held); } catch {} aim(e); });
   live.addEventListener('pointermove', (e) => { if (e.pointerId === held) aim(e); });
   ['pointerup', 'pointercancel'].forEach((ev) => live.addEventListener(ev, (e) => { if (e.pointerId === held) held = null; }));
-  box.querySelectorAll('.ps-pose').forEach((pb) => { pb.onclick = () => {
-    const m = me(); if (!m) return;
-    m.pose = pb.dataset.pose; sfx.click(); heartbeat();
-    box.querySelectorAll('.ps-pose').forEach((x) => x.classList.toggle('on', x === pb));
-  }; });
-  { const m = me(); if (m) box.querySelectorAll('.ps-pose').forEach((x) => x.classList.toggle('on', x.dataset.pose === (m.pose || 'smile'))); }
   const keys = new Set();
   const kd = (e) => { if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) { keys.add(e.key); e.preventDefault(); target = null; } };
   const ku = (e) => keys.delete(e.key);
   window.addEventListener('keydown', kd); window.addEventListener('keyup', ku);
   let last = 0;
   const frame = (t) => {
-    if (!box.isConnected) { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); return; }
+    if (!live.isConnected) { window.removeEventListener('keydown', kd); window.removeEventListener('keyup', ku); return; }
     const dt = Math.min(0.05, (t - (last || t)) / 1000); last = t;
-    const m = me(), b2 = booths[mine && mine.theme];
+    const m = me(), b2 = booth;
     if (m) {
       let dx = 0, dy = 0;
       if (keys.has('ArrowLeft')) dx -= 1; if (keys.has('ArrowRight')) dx += 1; if (keys.has('ArrowUp')) dy += 1; if (keys.has('ArrowDown')) dy -= 1;
       if (target) { const ex = target.x - m.x, ey = target.y - m.y, d = Math.hypot(ex, ey * 2); if (d < 0.6) target = null; else { dx = ex / d; dy = (ey * 2) / d; } }
-      if (dx || dy) {
-        m.x = clampX(m.x + dx * 38 * dt); m.y = clampY(m.y + dy * 14 * dt); if (Math.abs(dx) > 0.2) m.left = dx < 0;
-        if (now() - lastSent > 140) { lastSent = now(); heartbeat(); }
-      }
+      if (dx || dy) { m.x = clampX(m.x + dx * 38 * dt); m.y = clampY(m.y + dy * 14 * dt); if (Math.abs(dx) > 0.2) m.left = dx < 0; if (now() - lastSent > 140) { lastSent = now(); heartbeat(); } }
     }
-    if (b2) {
-      live.getContext('2d').drawImage(groupScene(mine.theme, b2.members, null, !(mine && mine.snapping), Math.abs(Math.sin(t / 220))), 0, 0);
+    if (b2 && b2.theme) {
+      live.getContext('2d').drawImage(groupScene(b2.theme, b2.members, !(mine && mine.snapping), Math.abs(Math.sin(t / 220))), 0, 0);
       const who = $('.ps-who', box), list = [...b2.members.values()].map((x) => x.name + (x.me ? ' (你 you)' : '')).join(' · ');
-      if (who.dataset.l !== list) { who.dataset.l = list; who.innerHTML = `🐱 ${b2.members.size}/${MAX_CATS}: ${list}`; }
-      const st = $('#ps-start', box); if (st) st.disabled = !!(mine && mine.shooting);
+      if (who && who.dataset.l !== list) { who.dataset.l = list; who.innerHTML = `🐱 ${b2.members.size}/${MAX_CATS}: ${list}`; }
     }
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
   const st = $('#ps-start', box);
-  if (st) st.onclick = () => { const b2 = booths[mine.theme]; if (!b2 || b2.started) return; sfx.click(); b2.started = now(); send('pb-start', { theme: mine.theme, sid: b2.sid, in: START_IN }); runShoot(b2, START_IN); };
-  $('#ps-leave', box).onclick = () => { sfx.click(); mine.closing = true; leaveBooth(); closeModal(); };
-  openModal(box, { onClose: () => { if (mine && !mine.closing && !mine.shooting) leaveBooth(); } });
+  if (st) st.onclick = () => { const b2 = booth; if (!b2 || b2.started) return; sfx.click(); b2.started = now(); send('pb-start', { sid: b2.sid, theme: b2.theme, in: START_IN }); runShoot(START_IN); };
+  const th = $('#ps-theme', box);
+  if (th) th.onclick = () => { sfx.click(); booth.theme = null; heartbeat(); screen(); };
+  // a guest whose host changes the theme: redraw with the new one
+  mine.shownTheme = booth.theme;
 }
 
 // ---------- the 4 shots: 3-2-1 (keep moving!) then snap — the same moment on every screen ----------
-async function runShoot(b, delay) {
+async function runShoot(delay) {
   if (!mine || mine.shooting) return;
+  const b = booth; if (!b || !b.theme) return;
   mine.shooting = true; mine.shot = 0;
-  const box = mine.view, theme = mine.theme, T = THEMES[theme];
+  if (!$('.ps-live', mine.view || document.createElement('div'))) screen();   // make sure the camera is showing
+  const box = mine.view, theme = b.theme, T = THEMES[theme];
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const q = (sel) => box && box.isConnected ? $(sel, box) : null;
   const tip = (h) => { const e = q('.ps-tip'); if (e) e.innerHTML = h; };
   const btns = q('.ps-btns'); if (btns) btns.style.display = 'none';
-  tip('<span class="zh">准备好了吗？可以一直走动哦！</span> Get ready — you can keep moving!');
+  tip('<span class="zh">准备好了吗？可以一直走动、换姿势哦！</span> Get ready — keep moving and changing poses!');
   await wait(delay);
   const shots = [];
   for (let i = 0; i < 4; i++) {
     mine.shot = i; tip(SHOTS[i][1]);
     for (const n of ['3', '2', '1']) { const c = q('.ps-count'); if (c) c.textContent = n; sfx.click(); await wait(COUNT_MS / 3); }
     const c = q('.ps-count'); if (c) c.textContent = '📸';
-    mine.snapping = true;
-    const shot = groupScene(theme, (booths[theme] || b).members, null, false, 1);
-    mine.snapping = false;
+    mine.snapping = true; const shot = groupScene(theme, (booth || b).members, false, 1); mine.snapping = false;
     const fl = q('.ps-flash'); if (fl) { fl.classList.remove('go'); void fl.offsetWidth; fl.classList.add('go'); }
     sfx.coin(); shots.push(shot);
     const th = box && box.querySelectorAll('.ps-thumbs i')[i]; if (th) { const ti = document.createElement('canvas'); ti.width = 80; ti.height = 60; ti.getContext('2d').drawImage(shot, 0, 0, 80, 60); th.append(ti); }
     await wait(GAP_MS);
     const c2 = q('.ps-count'); if (c2) c2.textContent = '';
   }
-  tip('<span class="zh">正在打印…</span> Printing your strip…');
-  const pic = strip(theme, shots), size = (booths[theme] || b).members.size;
-  const host = b.host === (link && link.me);
-  if (host) send('pb-close', { theme, sid: b.sid });
-  delete booths[theme];
+  tip('<span class="zh">正在打印…看看出相口！</span> Printing… look at the photo outlet!');
+  const pic = strip(theme, shots), size = (booth || b).members.size;
+  if (b.host === (link && link.me)) send('pb-close', { sid: b.sid });
+  booth = null; drawBooth();
+  // the strip slides out of the PHOTO OUTLET
+  const slot = q('.pb-slot');
+  if (slot) { const im = document.createElement('img'); im.className = 'pb-printed'; im.src = pic.toDataURL('image/jpeg', 0.85); slot.append(im); sfx.fanfare(); }
   try {
     const entry = await Gallery.savePhoto(pic, `📸 ${T.zh} ${T.en}${size > 1 ? ` · ${size} 🐱` : ''} · 喵喵照相馆`);
+    await wait(1800);
     mine.paid = false; mine.closing = true; mine = null;
-    closeModal(); result(pic, entry); drawBooths();
+    closeModal(); result(pic, entry);
   } catch (e) {
     mine.shooting = false; refund(e.message === 'full' ? '🖼️ 相册满了 · Your gallery is full —' : '📸 <span class="zh">没存好</span> Could not save the photos —');
-    mine.closing = true; mine = null; closeModal(); drawBooths();
+    mine.closing = true; mine = null; closeModal();
   }
 }
 function result(pic, entry) {
@@ -400,45 +487,42 @@ function result(pic, entry) {
   $('.ps-strip', box).src = pic.toDataURL('image/jpeg', 0.85);
   $('#ps-ok', box).onclick = () => { sfx.click(); closeModal(); };
   $('#ps-send', box).onclick = async () => { sfx.click(); closeModal(); const Phone = await import('./phone.js'); Phone.openPhone({ start: 'sendphoto', args: [entry.path] }); };
-  openModal(box); hydrateIcons(box); confetti(); sfx.fanfare();
+  openModal(box); hydrateIcons(box); confetti();
 }
 
-// ---------- in the room: the studio sign, three booths (free / join / busy) and the props rack ----------
+// ---------- in the studio: one big photo booth, its sign, and the props rack ----------
 let hudEl = null;
-function drawBooths() {
+function drawBooth() {
+  // a guest sees the host's theme choice as it happens
+  if (mine && mine.view && mine.view.isConnected && !mine.shooting && booth && mine.sid === booth.sid && (booth.theme || null) !== (mine.shownTheme || null)) { mine.shownTheme = booth.theme; screen(); }
   if (!hudEl || !hudEl.isConnected) return;
-  hudEl.querySelectorAll('.ps-booth').forEach((el) => {
-    const b = booths[el.dataset.theme], go = $('.ps-go', el);
-    const mineHere = mine && mine.theme === el.dataset.theme;
-    const html2 = mineHere ? '🐱 <span class="zh">你在这里</span> You' : !b ? `📸 ${FEE}${coinI(12)}` : b.started ? '⏳ <span class="zh">拍照中</span> Busy' : b.members.size >= MAX_CATS ? `<span class="zh">满了</span> Full` : `➕ <span class="zh">免费加入</span> Join free ${b.members.size}/${MAX_CATS}`;
-    if (go.dataset.h !== html2) { go.dataset.h = html2; go.innerHTML = html2; hydrateIcons(go); }
-    el.classList.toggle('busy', !!(b && (b.started || b.members.size >= MAX_CATS)) && !mineHere);
-    el.classList.toggle('joinable', !!(b && !b.started && b.members.size < MAX_CATS) && !mineHere);
-  });
+  const el = $('.pb-booth', hudEl), go = $('.ps-go', el), b = booth;
+  const inside = mine && mine.sid && b && mine.sid === b.sid;
+  const h = inside ? '🐱 <span class="zh">你在里面</span> You\'re inside' : !b ? `📸 <span class="zh">进去拍照</span> Walk in · ${FEE}${coinI(12)}` : b.started ? '⏳ <span class="zh">拍照中</span> Busy' : b.members.size >= MAX_CATS ? '<span class="zh">满了</span> Full' : `➕ <span class="zh">免费加入</span> Join free ${b.members.size}/${MAX_CATS}`;
+  if (go.dataset.h !== h) { go.dataset.h = h; go.innerHTML = h; hydrateIcons(go); }
+  el.classList.toggle('busy', !!(b && (b.started || b.members.size >= MAX_CATS)) && !inside);
+  el.classList.toggle('joinable', !!(b && !b.started && b.members.size < MAX_CATS) && !inside);
 }
 export function attach(room, { me, ch, name, onWear }) {
-  link = { me, ch, name: String(name || S.get().kitten.name || '🐱').slice(0, 24) };
+  link = { me, ch, name: String(name || S.get().kitten.name || '🐱').slice(0, 24), onWear };
   const hud = html`<div class="ps-hud">
       <div class="ps-sign">📸 <span class="zh">喵喵照相馆</span> Photo Studio · <b>${FEE}</b>${coinI(14)}<small>/ strip · <span class="zh">朋友免费</span> friends free</small></div>
-      <div class="ps-booths">${Object.entries(THEMES).map(([k, T]) => `<button type="button" class="ps-booth ps-${k}" data-theme="${k}"><span class="ps-bname">${T.icon} <span class="zh">${T.zh}</span><small>${T.en}</small></span><span class="ps-window"></span><span class="ps-curtain"></span><span class="ps-go"></span></button>`).join('')}</div>
+      <button type="button" class="pb-booth" aria-label="Photo booth"><span class="pb-btop">📸 MEOW 4-CUT</span><span class="pb-bdoor"><span class="pb-bcurtain"></span><span class="pb-bpeek"></span></span><span class="ps-go"></span></button>
       <button type="button" class="ps-rack">🎀 <span class="zh">道具</span><small>Props</small></button>
     </div>`;
-  hud.querySelectorAll('.ps-booth').forEach((b) => {
-    const cv = scene(b.dataset.theme, myLook(), 'happy', false, 0, true); cv.className = 'ps-peek'; $('.ps-window', b).append(cv);
-    b.onclick = (e) => { e.stopPropagation(); sfx.click(); tapBooth(b.dataset.theme); };
-  });
+  $('.pb-bpeek', hud).append(themeThumb('floral'));
+  $('.pb-booth', hud).onclick = (e) => { e.stopPropagation(); sfx.click(); enterBooth(); };
   $('.ps-rack', hud).onclick = (e) => { e.stopPropagation(); sfx.click(); openProps(() => { onWear && onWear(); }); };
   hud.addEventListener('pointerdown', (e) => e.stopPropagation());
-  room.append(hud); hydrateIcons(hud); hudEl = hud; drawBooths();
+  room.append(hud); hydrateIcons(hud); hudEl = hud; drawBooth();
 }
-// leaving the studio: out of any booth (coins back if it hadn't started), and the props go back on the rack
+// leaving the studio: out of the booth (coins back if it hadn't started), and the props go back on the rack
 export function leaveStudio() {
   if (mine && !mine.shooting) leaveBooth();
-  Object.keys(booths).forEach((k) => delete booths[k]);
-  link = null; hudEl = null;
+  booth = null; link = null; hudEl = null;
   if (!getProps()) return false;
   setProps(null);
   toast('🎀 <span class="zh">道具留在照相馆了</span> The props stay at the Photo Studio', { ms: 2200 });
   return true;
 }
-export const _debug = () => ({ booths, mine });
+export const _debug = () => ({ booth, mine });
