@@ -5,6 +5,7 @@ import { $, html, esc, toast, openModal, closeModal, confetti, coinI, hydrateIco
 import { sfx, speak } from './audio.js';
 import * as Visit from './visit.js';
 import * as Gallery from './gallery.js';
+import * as Camera from './camera.js';
 import * as Delivery from './delivery.js';
 import { acceptedFriends, refreshFriends, sendLetter, onInbox, markRead, refreshSeen, onSeen, errorText, LETTER_MAX, setActivity, isOnline, doingText, lastSeen, friendName } from './friends.js';
 
@@ -28,6 +29,7 @@ const APPS = [
   { key: 'calc', icon: '🧮', zh: '计算器', en: 'Calc' },
   { key: 'clock', icon: '⏰', zh: '时钟', en: 'Clock' },
   { key: 'notes', icon: '📒', zh: '记事本', en: 'Notes' },
+  { key: 'camera', icon: '📷', zh: '相机', en: 'Camera' },
   { key: 'gallery', icon: '🖼️', zh: '相册', en: 'Gallery' },
   { key: 'delivery', icon: '🛵', zh: '外卖', en: 'Delivery' },
   { key: 'ttt', icon: '⭕', zh: '井字棋', en: 'Tic-tac-toe' },
@@ -62,8 +64,9 @@ setInterval(() => {
 }, 500);
 
 // ---------- the phone ----------
-export function openPhone({ start = 'home', after } = {}) {
+export function openPhone({ start = 'home', args = [], after } = {}) {
   S.essayNotifications();
+  Camera.purgeOld();   // 📷 camera photos clear themselves after 10 days
   const n = html`<div class="phone" role="dialog" aria-label="Phone">
       <div class="ph-top">
         <div class="ph-screen">
@@ -213,11 +216,18 @@ export function openPhone({ start = 'home', after } = {}) {
     // ----- 🛵 delivery: MeowMart (groceries) and MeowFood (meals) -----
     delivery() { Delivery.mountApp(body, { header, go }); },
     dlmenu(kind) { Delivery.mountMenu(body, kind, { header, back, ask }); },
+    // ----- 📷 the camera: the phone goes away and a viewfinder opens over the screen she is on -----
+    camera() {
+      closeModal();
+      setTimeout(() => Camera.openCamera({ onSend: (entry) => openPhone({ start: 'sendphoto', args: [entry.path], after }) }), 120);
+    },
     // ----- 🖼️ the gallery: every photo she took (100 at most) -----
     gallery() {
+      Camera.purgeOld();
       const list = Gallery.photos();
       header(`🖼️ 相册 Gallery <small class="ph-count">${list.length}/${Gallery.GALLERY_MAX}</small>`);
-      if (!list.length) { body.appendChild(html`<p class="ph-empty">还没有照片。<br>No photos yet.<br><br>坐摩天轮的时候可以拍纪念照！<br>Take a souvenir photo on the 🎡 Ferris wheel at the Carnival!</p>`); return; }
+      if (!list.length) { body.appendChild(html`<p class="ph-empty">还没有照片。<br>No photos yet.<br><br>用 📷 相机拍照，或者坐摩天轮拍纪念照！<br>Take photos with the 📷 Camera, or a souvenir on the 🎡 Ferris wheel!</p>`); return; }
+      if (list.some((p) => p.cam)) body.appendChild(html`<div class="ph-tip">⏳ 相机拍的照片${Camera.PHOTO_DAYS}天后自动删除。<br>Camera photos clear after ${Camera.PHOTO_DAYS} days.</div>`);
       const grid = html`<div class="ph-gallery"></div>`;
       list.forEach((p) => {
         const b = html`<button class="ph-thumb" aria-label="Photo"><img></button>`;
@@ -231,7 +241,7 @@ export function openPhone({ start = 'home', after } = {}) {
       const p = Gallery.photos().find((x) => x.path === path);
       header('🖼️ 照片 Photo');
       if (!p) { body.appendChild(html`<p class="ph-empty">照片不见了。 This photo was deleted.</p>`); return; }
-      const v = html`<div class="ph-photo"><img><p class="ph-photo-cap">${esc(p.title || '')}<small>${new Date(p.at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' })}</small></p>
+      const v = html`<div class="ph-photo"><img><p class="ph-photo-cap">${esc(p.title || '')}<small>${new Date(p.at).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' })}${p.cam ? ` · ⏳ ${Math.max(1, Math.ceil(Camera.PHOTO_DAYS - (Date.now() - p.at) / 864e5))} <span class="zh">天后删除</span> days left` : ''}</small></p>
           <button class="ph-btn green block" id="ph-send">💬 <span class="zh">发给朋友</span> Send to a friend</button>
           <button class="ph-btn red block" id="ph-del">🗑 <span class="zh">删除</span> Delete</button></div>`;
       Gallery.fillImg($('img', v), path);
@@ -646,5 +656,5 @@ export function openPhone({ start = 'home', after } = {}) {
   m.classList.add('phone-modal');
   const clear = new MutationObserver(() => { if (!n.isConnected) { m.classList.remove('phone-modal'); clear.disconnect(); } });
   clear.observe(m, { childList: true });
-  if (start === 'home') go('home'); else { go('home'); go(start); }
+  if (start === 'home') go('home'); else { go('home'); go(start, ...args); }
 }

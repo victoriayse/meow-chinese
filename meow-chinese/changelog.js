@@ -749,4 +749,5 @@ export const CHANGES = [
   { v: 282, items: ['🕹️ On phones the joystick is on the left edge and 🎾 HIT on the right edge'] },
   { v: 283, items: ['🔀 Word choice: the answers are mixed up every time you play, spread over all the places', '🔀 Word match: the word box is in a new order each time', '✏️ The Shading sheet opens once all the questions are done'] },
   { v: 284, items: ['🩰 New Studio on the 🗺️ map: the Indoor studio, Lounging area and Changing room moved there from home (everyone meets there now)', '📦 Furniture you had in those rooms is back in your storage box', '🗺️ Smaller map pins'] },
+  { v: 285, items: ['🎁 30 new things for your home: rainbow bean bag, hanging egg chair, unicorn rocking horse, castle tent, reading teepee, lava lamp, neon heart, galaxy projector, ice cream cart, cotton candy machine, retro arcade, ball pit, mini trampoline and lots more!', '📷 New Camera app on your phone: frame your cat and snap a photo. Photos go to your Gallery, clear after 10 days, and can be sent to friends'] },
 ];
