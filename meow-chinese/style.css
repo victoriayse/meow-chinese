@@ -1835,7 +1835,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .stadium-hud .st-end { pointer-events: auto; font-size: 19px; padding: 4px 12px; border-width: 3px; }
 .stadium-hud .st-end.hidden { display: none; }
 /* v160: cats are 30% smaller on the pitch (name tags stay readable) */
-.room[data-room="stadium"] .vcat .kflip, .room[data-room="mallbuffet"] .vcat .kflip { scale: .7; transform-origin: 50% 100%; }
+.room[data-room="stadium"] .kflip, .room[data-room="mallbuffet"] .kflip { scale: .7; transform-origin: 50% 100%; }
 /* v161: 🕹️ the stadium's joystick (instead of the arrow buttons) */
 .joystick { position: absolute; right: 10px; bottom: 10px; z-index: 300; width: 112px; height: 112px; border-radius: 50%;
   background: radial-gradient(circle, rgba(29,31,69,.55) 0 55%, rgba(29,31,69,.8) 56%); border: 3px solid #fff; box-shadow: 0 4px 0 rgba(43,33,64,.4);
@@ -2032,7 +2032,7 @@ input[type=range] { width: 100%; accent-color: var(--pink-d); }
 .subrooms .subcat { font-size: 12px; padding: 3px 9px; background: #ffe2b8; border-width: 2px; }
 .subrooms .subcat.on { background: #ffd23f; }
 /* v202: 🎬 cats in the cinema are 30% smaller (like the buffet), and so are the cinema's host and waiter */
-.room[data-room="theatre1"] .vcat .kflip, .room[data-room="lobby"] .vcat .kflip, .room[data-room="theatre2"] .vcat .kflip { scale: .7; transform-origin: 50% 100%; }
+.room[data-room="theatre1"] .kflip, .room[data-room="lobby"] .kflip, .room[data-room="theatre2"] .kflip { scale: .7; transform-origin: 50% 100%; }
 .room[data-room="theatre1"] .decor .tux-cat .kitten-wrap, .room[data-room="lobby"] .decor .tux-cat .kitten-wrap, .room[data-room="theatre2"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
 /* the ticket host stands behind her stand (only her head and shoulders show over it) */
 /* v202: the cinema gates' "Gate 1" / "Gate 2" sign, standing on the gate's top bar */
@@ -2161,10 +2161,10 @@ img.gone { min-height: 40px; font-size: 11px; }
 .carn-hint { animation: carn-hint-bob 1.6s ease-in-out infinite; }
 @keyframes carn-hint-bob { 0%, 100% { transform: translateX(-50%); } 50% { transform: translate(-50%, -3px); } }
 /* v223: 🌳 cats and helpers are 30% smaller everywhere in the park (Park, Playground, Garden) */
-.room[data-room="park"] .vcat .kflip, .room[data-room="playground"] .vcat .kflip, .room[data-room="parkgarden"] .vcat .kflip { scale: .7; transform-origin: 50% 100%; }
+.room[data-room="park"] .kflip, .room[data-room="playground"] .kflip, .room[data-room="parkgarden"] .kflip { scale: .7; transform-origin: 50% 100%; }
 .room[data-room="park"] .decor .tux-cat .kitten-wrap, .room[data-room="playground"] .decor .tux-cat .kitten-wrap, .room[data-room="parkgarden"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
 /* ---------- v224: 🛒 supermarket, 🛵 delivery ---------- */
-.room[data-room="mallsupermarket"] .vcat .kflip { scale: .7; transform-origin: 50% 100%; }
+.room[data-room="mallsupermarket"] .kflip { scale: .7; transform-origin: 50% 100%; }
 .room[data-room="mallsupermarket"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
 .dl-bag { position: absolute; bottom: 4%; z-index: 30; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; animation: dl-drop .5s ease-out; }
 .dl-bag canvas { display: block; image-rendering: pixelated; filter: drop-shadow(0 3px 0 rgba(0,0,0,.25)); }
@@ -2208,7 +2208,7 @@ img.gone { min-height: 40px; font-size: 11px; }
 @keyframes cm-pour { 0% { height: 0; } 20% { height: 38px; } 85% { height: 38px; } 100% { height: 0; top: 130px; } }
 .cm-msg { margin: 0; }
 /* 🛒 the Supermarket: cats and the shop assistant 30% smaller */
-.room[data-room="mallsupermarket"] .vcat .kflip, .room[data-room="mallsupermarket"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
+.room[data-room="mallsupermarket"] .kflip, .room[data-room="mallsupermarket"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
 .dl-row .pr, .dl-total { white-space: nowrap; }
 /* coffee machine: line the pour and the cup up with the machine's spout */
 .cm-stage { height: 130px; }
@@ -2226,7 +2226,7 @@ img.gone { min-height: 40px; font-size: 11px; }
 .decor.door-swing.door-open > canvas.swing-door { transform: rotateY(-112deg); filter: brightness(.88); }
 .dl-bag.no-drop { animation: none; }
 /* 🍣 SushiMeow */
-.room[data-room="mallsushi"] .vcat .kflip, .room[data-room="mallsushi"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
+.room[data-room="mallsushi"] .kflip, .room[data-room="mallsushi"] .decor .tux-cat .kitten-wrap { scale: .7; transform-origin: 50% 100%; }
 .decor .belt-lane { position: absolute; clip-path: inset(-200% 0 -20% 0); pointer-events: none; z-index: 2; }   /* (only the two ends cut the plates off — never the dome tops) */
 .decor .belt-lane .bplate { position: absolute; bottom: 6%; width: 9%; aspect-ratio: 1.25; transform: translateX(-50%); padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; }
 .decor .belt-lane .bplate.gone { visibility: hidden; }
@@ -2471,7 +2471,7 @@ img.gone { min-height: 40px; font-size: 11px; }
 @media (max-width: 360px) { .topbar .app-ver { display: none; } }
 
 /* v281: 🎾 the tennis court */
-.room[data-room="tennis"] .vcat .kflip { scale: .7; transform-origin: 50% 100%; }
+.room[data-room="tennis"] .kflip { scale: .7; transform-origin: 50% 100%; }
 .tn-net { position: absolute; left: 50%; bottom: 3%; height: 48%; width: 9px; transform: translateX(-50%); z-index: 4; pointer-events: none;
   background: repeating-linear-gradient(0deg, rgba(255,255,255,.85) 0 1px, transparent 1px 5px), repeating-linear-gradient(90deg, rgba(255,255,255,.7) 0 1px, rgba(30,30,50,.35) 1px 3px);
   border-left: 2px solid #fff; border-right: 2px solid rgba(255,255,255,.6); box-shadow: 3px 0 0 rgba(0,0,0,.18); }
@@ -2662,7 +2662,7 @@ img.gone { min-height: 40px; font-size: 11px; }
 .pb-outlet { min-height: 34px; }
 
 /* ---------- 🕹️ v292: the Game Center and 🙈 Hide & Seek ---------- */
-.room[data-room^="hs"] .vcat .kflip { scale: .7; transform-origin: 50% 100%; }
+.room[data-room^="hs"] .kflip { scale: .7; transform-origin: 50% 100%; }
 .room.hs-game .vcat:not(.me) .nametag { visibility: hidden; }
 .gc-hud, .hs-hud { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .gc-title { position: absolute; left: 50%; top: 9%; transform: translateX(-50%); font-weight: 900; letter-spacing: 2px; font-size: clamp(13px, 2.4vw, 24px); color: #fff; text-shadow: 0 0 6px #ff5fa8, 0 0 12px #ff5fa8; white-space: nowrap; }
