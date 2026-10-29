@@ -731,6 +731,13 @@ export const ROOMS = [
   // 🎪 the carnival (a public place on the 🗺️ map): Main Square ▶ Ferris Wheel
   { key: 'carnivalsquare', zh: '嘉年华广场', en: 'Main Square', icon: '🎪', place: 'carnival', outdoor: true },
   { key: 'carnivalwheel', zh: '摩天轮', en: 'Ferris Wheel', icon: '🎡', place: 'carnival', outdoor: true },
+  // 🕹️ v292: the Game Center (English only): a hall of doors ▸ 🙈 Hide & Seek: Waiting Lobby ▸ Room 1 ▸ … ▸ Room 4
+  { key: 'gchall', zh: '', en: 'Game Center', icon: '🕹️', place: 'gamecenter', noRoof: true },
+  { key: 'hslobby', zh: '', en: 'Waiting Lobby', icon: '⏳', place: 'gamecenter', noRoof: true },
+  { key: 'hsroom1', zh: '', en: 'Room 1 · Fun Ball Pit', icon: '🔴', place: 'gamecenter', noRoof: true },
+  { key: 'hsroom2', zh: '', en: 'Room 2 · Toy Store', icon: '🧸', place: 'gamecenter', noRoof: true },
+  { key: 'hsroom3', zh: '', en: 'Room 3 · Castle', icon: '🏰', place: 'gamecenter', noRoof: true },
+  { key: 'hsroom4', zh: '', en: 'Room 4 · Pet Store', icon: '🐾', place: 'gamecenter', noRoof: true },
 ];
 ROOMS.push(...MALL_ROOM_INFO);
 // the school (a public place on the 🗺️ map), laid out as a little grid [column, row]:
@@ -753,7 +760,7 @@ function schoolNeighbors(key) {
   if (l) out.left = roomInfo(l); if (rt) out.right = roomInfo(rt); if (u) out.up = roomInfo(u); if (d) out.down = roomInfo(d);
   return out;
 }
-export const PLACE_ROOMS = { mall: MALL_ROOMS, cinema: ['theatre1', 'lobby', 'theatre2'], cafe: CAFE_ROOMS, park: ['park', 'playground', 'parkgarden'], stadium: ['stadium', 'tennis'], studio: ['lounge', 'basement', 'changing'], carnival: ['carnivalsquare', 'carnivalwheel'], school: ['schooloffice', 'schooloutdoor', 'schoolcanteen', 'schoolmusic', 'schoolhall', 'schoolclass', 'schoolstaff'] };   // left to right
+export const PLACE_ROOMS = { mall: MALL_ROOMS, cinema: ['theatre1', 'lobby', 'theatre2'], cafe: CAFE_ROOMS, park: ['park', 'playground', 'parkgarden'], stadium: ['stadium', 'tennis'], studio: ['lounge', 'basement', 'changing'], carnival: ['carnivalsquare', 'carnivalwheel'], gamecenter: ['gchall', 'hslobby', 'hsroom1', 'hsroom2', 'hsroom3', 'hsroom4'], school: ['schooloffice', 'schooloutdoor', 'schoolcanteen', 'schoolmusic', 'schoolhall', 'schoolclass', 'schoolstaff'] };   // left to right
 // the admin (who furnishes the public places): app.js tells us who is signed in
 let adminCheck = () => false;
 export const setAdminCheck = (fn) => { adminCheck = fn; };

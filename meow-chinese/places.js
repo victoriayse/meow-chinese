@@ -10,6 +10,7 @@ import { rest, managing } from './cloud.js';
 import { roomLayout } from './house.js';
 import { Channel } from './rt.js';
 import { cafeLayout, prepareCafe, clearCafeStarter, isCafeStarter } from './cafe.js';
+import * as HS from './hideseek.js';
 
 export const ADMIN_IDS = ['9d0ff106-393a-4de4-8ab4-e8636c8c7f8f'];   // Victoria
 export const isAdmin = () => { const u = Auth.user(); return !!(u && ADMIN_IDS.includes(u.id) && !managing()); };
@@ -26,6 +27,7 @@ export const PLACES = {
   school: { zh: '学校', en: 'School', icon: '🏫', rooms: S.PLACE_ROOMS.school, start: 'schooloffice' },
   carnival: { zh: '嘉年华', en: 'Carnival', icon: '🎡', rooms: S.PLACE_ROOMS.carnival, start: 'carnivalsquare' },
   studio: { zh: '工作室', en: 'Studio', icon: '🩰', rooms: S.PLACE_ROOMS.studio, start: 'basement' },   // v284: was downstairs at home
+  gamecenter: { zh: '', en: 'Game Center', icon: '🕹️', rooms: S.PLACE_ROOMS.gamecenter, start: 'gchall' },   // v292: 🙈 Hide & Seek (English only)
 };
 
 // the layout everyone sees: { rooms: { theatre1: [...], lobby: [...], theatre2: [...] }, open, power, styles }
@@ -72,6 +74,10 @@ export async function loadPlace(place) {
         st.decorHidden = st.decorHidden.filter((o) => o !== got);
       });
       st.mallKiosks158 = true; S.save();
+    }
+    if (place === 'gamecenter') {   // 🙈 the Hide & Seek rooms start furnished (the admin gets that furniture to move / keep)
+      if (isAdmin()) HS.applySeed();
+      HS.fillSeed(layout);
     }
     if (place === 'cafe') {
       // Ignore old starter copies even if an older open device publishes them again.
@@ -167,11 +173,12 @@ const PINS = [
   { key: 'carnival', zh: '嘉年华', en: 'Carnival', icon: '🎡', x: 12, y: 56 },
   { key: 'bank', zh: '银行', en: 'Bank', icon: '🏦', x: 90, y: 30 },
   { key: 'studio', zh: '工作室', en: 'Studio', icon: '🩰', x: 50, y: 72 },
+  { key: 'gamecenter', zh: '', en: 'Game Center', icon: '🕹️', x: 12, y: 20 },
 ];
 export function mapScreen({ go }) {
   const n = html`<section class="screen"><div class="card stack map-card">
       <div class="h-title"><span class="zh">🗺️ 地图</span><span class="en">Map</span></div>
-      <p class="help" style="margin:0">点一个地方去看看！电影院、咖啡馆、商场、公园、体育场、工作室、学校和嘉年华是大家的地方，在那里可以见到所有人。<br>Tap a place to go there. The cinema, cafe, mall, park, stadium, studio, school and carnival are public — you'll see everyone who is there.</p>
+      <p class="help" style="margin:0">点一个地方去看看！电影院、咖啡馆、商场、公园、体育场、工作室、学校、嘉年华和游戏中心是大家的地方，在那里可以见到所有人。<br>Tap a place to go there. The cinema, cafe, mall, park, stadium, studio, school, carnival and Game Center are public — you'll see everyone who is there.</p>
       <div class="map-box"><canvas class="map-art"></canvas>
         ${PINS.map((p) => `<button class="map-pin ${p.soon ? 'pin-soon' : ''}" data-pin="${p.key}" style="left:${p.x}%;top:${p.y}%"><span class="ic">${p.icon}</span><span class="lb"><span class="zh">${p.zh}</span> ${p.en}${p.soon ? '<small>即将开放 Coming soon</small>' : ''}</span></button>`).join('')}
       </div></div></section>`;

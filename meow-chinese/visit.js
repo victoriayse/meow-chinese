@@ -26,6 +26,7 @@ import { Channel } from './rt.js';
 import { drawRoom, drawRoof, ITEMS, SNACKS } from './pixel.js';
 import { $, html, esc, toast, KittenView, hydrateIcons, openModal, closeModal, getProps } from './ui.js';
 import * as Photo from './photostudio.js';
+import { createHideSeek, HALL as GC_HALL, LOBBY as HS_LOBBY } from './hideseek.js';
 import { sfx, zenMusic } from './audio.js';
 import { wireDisplays } from './display-racks.js';
 import { HOUSE, fitHouse, houseK, roomLayout, decorEl, depthOf, OtherCats, say, chatBar, walker, DPAD, chatLog, wirePlayable, applyPower, emoteIcon, seatSpot, blanket, boothView, freeSlot, hearNote, PetLayer, roomArrowsHtml, catZ, setCatZ, inPool, stackDecor, studioBarre, rideFx, walkPoseOf } from './house.js';
@@ -191,7 +192,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   const box = $('#house', n), sub = $('#vt-sub', n);
   const others = new OtherCats();
   let house = null, host = null, roomKey = startRoom, mine = { x: 30, y: 6, room: startRoom, left: false }, lockedOut = false;
-  let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null, tennis = null, carnival = null, myWalkPose = null;
+  let myWrap = null, myEl = null, myKv = null, gotHouse = false, hostHere = false, petLayer = null, stadium = null, tennis = null, carnival = null, myWalkPose = null, hs = null;
 
   let refreshingPlace = false, welcomed = false, sushiApi = null, zenStop = null;
   // 🍣 SushiMeow: the bill must be paid before she can leave
@@ -215,6 +216,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       if (ev.startsWith('sushi')) { if (sushiApi && p && p.room === roomKey && p.id !== me) sushiApi.onBroadcast(ev, p); return; }
       if (stadium && (ev === 'ball' || ev === 'match')) { stadium.onBroadcast(ev, p); return; }
       if (tennis && (ev === 'tshot' || ev === 'tmatch' || ev === 'tswing')) { tennis.onBroadcast(ev, p); return; }
+      if (ev === 'hs') { if (hs) hs.onBroadcast(p); return; }   // 🙈 hide & seek
       if (ev.startsWith('pb-')) { if (P && placeKey === 'mall' && roomKey === Photo.ROOM) Photo.onBroadcast(ev, p); return; }   // 📸 photo booths
       if (carnival && ev.startsWith('wheel-')) { carnival.onBroadcast(ev, p); return; }
       if (ev === 'locked' && p.to === me && !gotHouse) {
@@ -305,6 +307,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
         // just came through a door and still holding ▲: don't bounce straight back (re-arm once she lets go or turns)
         const now = Date.now(); if (!doorArmed && (dy <= 0 || now - lastStepAt > 400)) doorArmed = true; lastStepAt = now;
         if (dy > 0 && doorArmed && placeKey === 'cinema' && room0 && walkIntoDoor(room0)) return;
+        if (dy > 0 && doorArmed && hs && room0 && hs.walkDoor(room0)) { if (myEl) place(); return; }
       }
       if (dy > 0 && room0) {   // walking up into the front of a stage: climb on
         const H = room0.clientHeight, W = room0.clientWidth;
@@ -340,6 +343,12 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   carnival = placeKey === 'carnival' ? createCarnival({ me, ch, others, getMine: () => mine, myLook, sendMine, getRoomKey: () => roomKey,
     landAtExit: (together) => { mine.seat = null; mine.x = together ? 84 : 86; mine.y = 6; mine.left = true; if (myEl) { place(); myKv && myKv.jump(); } } }) : null;
   if (carnival && location.hostname === 'localhost') window.__carn = carnival;   // (tests only)
+  // 🙈 the Game Center's Hide & Seek
+  hs = placeKey === 'gamecenter' ? createHideSeek({ me, ch, others, host: n, getMine: () => mine, getRoomKey: () => roomKey, isAdmin: Places.isAdmin, say,
+    getMyWrap: () => myWrap, refreshRoom: () => { Places.savePlace(placeKey).then(() => refreshPlace()); },
+    teleport: (room, x, y) => { if (!gotHouse) return; doorArmed = false; mine.seat = null; mine.x = x; mine.y = y; if (room !== roomKey) { roomKey = room; mine.room = room; render(); } else if (myEl) place(); sendMine(); } }) : null;
+  if (hs && location.hostname === 'localhost') window.__hs = hs;   // (tests only)
+  if (location.hostname === 'localhost') window.__vb = (ev, p) => ch.on.onBroadcast(ev, p);   // (tests only)
   ch.open();
   // a public place: its furniture is saved online (people there say hello over the channel)
   if (P) Places.loadPlace(placeKey).then((h) => {
@@ -376,6 +385,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     const sushiArrive = P && roomKey === SUSHI_ROOM && lastRoom !== SUSHI_ROOM;
     if (justEntered) leaveBuffet();   // a fresh visit: any old pass (or buffet food) from an earlier visit is gone — pay again
     if (P && placeKey === 'cinema' && lastRoom === null) leaveCinema();   // 🎟️ a new trip to the cinema: buy new tickets
+    if (hs && lastRoom !== roomKey) hs.entered(roomKey, lastRoom);
     lastRoom = roomKey;
     // a public place: every one of its areas is open (new areas appear without the admin re-saving the layout)
     const info = S.roomInfo(roomKey), open = P ? [...new Set([...(house.open || []), ...(S.PLACE_ROOMS[placeKey] || [])])] : house.open || ['living'];
@@ -479,6 +489,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     if (tennis && roomKey === 'tennis') tennis.attach(room);
     if (P && placeKey === 'mall' && roomKey === Photo.ROOM) Photo.attach(room, { me, ch, name: myLook().name, onWear: () => { if (myKv) myKv.draw(); sendMine(); } });
     if (carnival) carnival.attach(room);
+    if (hs) hs.attach(room, roomKey);
     sizeCols(); fitHouse(box, unit); requestAnimationFrame(() => { if (unit.isConnected) { sizeCols(); fitHouse(box, unit); } });
     drawRoom($('#roombg', box), isNight(), roomKey, (house.styles || {})[roomKey]); drawRoof($('#roof', box)); studioBarre(room, roomKey === 'basement');
     room.querySelectorAll('.decor').forEach((el) => { el.style.zIndex = depthOf(el, room); }); stackDecor(room);
@@ -501,8 +512,9 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     hearRadio();
     box.querySelector('.mall-directory')?.addEventListener('click', () => openMallDirectory(roomKey, (key) => { if (unpaid()) return; roomKey=key; mine.room=key; mine.seat=null; mine.boothClosed=false; mine.x=30; mine.y=6; render(); sendMine(); }));
     // 🚪 the cinema: a Left door / Right door takes the place of that side's arrow (walk into the door to go through)
+    if (hs && (roomKey === GC_HALL || roomKey === HS_LOBBY)) box.querySelectorAll('.room-nav.right').forEach((b) => b.remove());   // 🚪 through the doors instead
     if (placeKey === 'cinema') box.querySelectorAll('.room-nav.left, .room-nav.right').forEach((b) => { const side = b.classList.contains('left') ? 'left' : 'right'; if (doorEl(room, side)) b.remove(); });
-    box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { if (unpaid()) return; roomKey = b.dataset.room; mine.room = roomKey; mine.seat = null; sfx.click(); render(); sendMine(); }; });
+    box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { if (unpaid()) return; if (hs && !hs.canGo(b.dataset.room)) return; roomKey = b.dataset.room; mine.room = roomKey; mine.seat = null; sfx.click(); render(); sendMine(); }; });
     // Each arrival gets one greeting sequence, even if the layout refreshes.
     if (placeKey === 'cafe' && roomKey === 'cafeentrance' && !welcomed && room.querySelector('.cafe-greeter')) {
       welcomed = true;
@@ -823,7 +835,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     setCatZ(null);
     if (carnival) carnival.stop();
     if (P && S.dropPlaceFood()) toast('🍽️ <span class="zh">吃的喝的不能带走哦</span> Food and drinks stay behind when you leave', { ms: 2600 });
-    Radio.stop(); clearInterval(kt); if (stadium) stadium.stop(); if (tennis) tennis.stop(); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
+    Radio.stop(); clearInterval(kt); if (stadium) stadium.stop(); if (tennis) tennis.stop(); if (hs) hs.stop(); ch.send('bye', { id: me }); setTimeout(() => ch.close(), 150); };
   $('#leave', n).onclick = () => { if (unpaid()) return; leave(); if (P) go('map'); else go('friend', { id: hostId }); };
   const deco = $('#vdeco', n); if (deco) deco.onclick = () => { if (!gotHouse) return; leave(); go('home', { view: 'house', room: roomKey, arrange: true, openStorage: true }); };   // the admin: furnish this room
   $('#vphone', n).onclick = () => import('./phone.js').then((P) => P.openPhone({ start: 'home' }));   // the phone works at a friend's house too
