@@ -2663,7 +2663,7 @@ img.gone { min-height: 40px; font-size: 11px; }
 
 /* ---------- 🕹️ v292: the Game Center and 🙈 Hide & Seek ---------- */
 .room[data-room^="hs"] .kflip { scale: .7; transform-origin: 50% 100%; }
-.room.hs-game .vcat:not(.me) .nametag { visibility: hidden; }
+.room.hs-game .nametag { visibility: hidden; }   /* 🙈 no name labels while a game is on */
 .gc-hud, .hs-hud { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .gc-title { position: absolute; left: 50%; top: 9%; transform: translateX(-50%); font-weight: 900; letter-spacing: 2px; font-size: clamp(13px, 2.4vw, 24px); color: #fff; text-shadow: 0 0 6px #ff5fa8, 0 0 12px #ff5fa8; white-space: nowrap; }
 .gc-door, .hs-ldoor { position: absolute; top: 34%; height: 30%; pointer-events: auto; background: transparent; border: 0; padding: 0; cursor: pointer; }

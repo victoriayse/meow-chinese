@@ -355,7 +355,7 @@ export function createHideSeek({ me, ch, others, host, getMine, getRoomKey, tele
   function attach(room, rk) {
     roomEl = room; mslot.innerHTML = '';
     const g = game, playing = g && g.status === 'play';
-    room.classList.toggle('hs-game', !!(playing && PLAY_ROOMS.includes(rk)));
+    room.classList.toggle('hs-game', !!(playing && isHsRoom(rk)));
     room.classList.toggle('hs-area', isHsRoom(rk) || rk === HALL);
     room.addEventListener('click', roomTap, true);
     if (rk === HALL) {
@@ -387,7 +387,7 @@ export function createHideSeek({ me, ch, others, host, getMine, getRoomKey, tele
   function draw() {
     if (!roomEl || !roomEl.isConnected) return;
     const rk = getRoomKey(), g = game, ph = phase();
-    roomEl.classList.toggle('hs-game', !!(g && g.status === 'play' && PLAY_ROOMS.includes(rk)));
+    roomEl.classList.toggle('hs-game', !!(g && g.status === 'play' && isHsRoom(rk)));
     if (rk === HALL) {
       const st = roomEl.querySelector('.gc-door[data-door="hs"] .gc-dstatus'); if (!st) return;
       const n = g && g.status !== 'done' ? g.players.filter((x) => x.active).length : 0;
