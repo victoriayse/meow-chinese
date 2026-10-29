@@ -432,7 +432,7 @@ export function createHideSeek({ me, ch, others, host, getMine, getRoomKey, tele
   }
   function showResults() { draw(); }
 
-  // 👻 a faint copy of every cat drawn over the furniture: a cat tucked behind something is never completely invisible
+  // 👂 the tips of every cat's ears are drawn over the furniture: a cat tucked behind something is never 100% hidden
   let ghostRaf = 0;
   function ghosts() {
     ghostRaf = 0;
@@ -448,7 +448,14 @@ export function createHideSeek({ me, ch, others, host, getMine, getRoomKey, tele
       if (hidden) return;
       Object.assign(g.style, { left: `${((r.left - rr.left) / rr.width) * 100}%`, top: `${((r.top - rr.top) / rr.height) * 100}%`, width: `${(r.width / rr.width) * 100}%`, height: `${(r.height / rr.height) * 100}%` });
       if (g.width !== src.width || g.height !== src.height) { g.width = src.width; g.height = src.height; }
-      const c = g.getContext('2d'); c.clearRect(0, 0, g.width, g.height); c.drawImage(src, 0, 0);
+      const c = g.getContext('2d'); c.clearRect(0, 0, g.width, g.height);
+      const sc = src.getContext('2d', { willReadFrequently: true }), w = src.width, h = src.height, px = sc.getImageData(0, 0, w, h).data;
+      let top = -1, bot = -1;
+      for (let y = 0; y < h && top < 0; y++) for (let x = 0; x < w; x++) if (px[(y * w + x) * 4 + 3] > 40) { top = y; break; }
+      for (let y = h - 1; y >= 0 && bot < 0; y--) for (let x = 0; x < w; x++) if (px[(y * w + x) * 4 + 3] > 40) { bot = y; break; }
+      if (top < 0) return;
+      const band = Math.max(2, Math.round((bot - top) * 0.09));   // just the ear tips (or the top of a hat)
+      c.drawImage(src, 0, top, w, band, 0, top, w, band);
     });
     roomEl.querySelectorAll('.hs-ghost').forEach((g) => { if (!seen.has(g)) g.remove(); });
     ghostRaf = requestAnimationFrame(ghosts);
