@@ -761,4 +761,5 @@ export const CHANGES = [
   { v: 294, items: ['🙈 Hide & Seek: no more faint outline — a hiding cat is now hidden behind the furniture except for the tips of her ears peeking out'] },
   { v: 295, items: ['🙈 Hide & Seek: no more peeking ears — the furniture in Rooms 1–4 is now about as tall as a cat, so a hiding cat naturally shows just a little over the top', '🧸 Many more pieces in each room (four rows from the back wall to the front) for lots more hiding spots'] },
   { v: 296, items: ['🛠 While furnishing a public place, your cat is now shown at the same size as visitors see her there (Game Center, Stadium, Tennis, Cinema, Park, Buffet, Supermarket, SushiMeow)'] },
+  { v: 297, items: ['⧉ Moving furniture: a new Duplicate button puts another one right beside it — from your storage box if you have a spare, otherwise it buys one (if you have enough coins)', '🐱 Moving furniture: a new cat button sets a piece to stay IN FRONT of cats (yellow), BEHIND cats (grey), or normal'] },
 ];

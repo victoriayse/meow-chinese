@@ -2746,3 +2746,11 @@ img.gone { min-height: 40px; font-size: 11px; }
 .hs-mslot .hs-seekbtns button { flex: 1; flex-direction: row; justify-content: center; gap: 6px; font-size: 18px; padding: 6px; }
 .hs-mslot .hs-seekbtns button b { font-size: 15px; }
 .hs-mslot .hs-seekbtns small { display: none; }
+/* v297: ⧉ duplicate · 🐱 in front of / behind the cats (shown while moving furniture) */
+.decor .dup-btn, .decor .catz-btn { display: none; position: absolute; top: -5px; width: 15px; height: 15px; padding: 0; font-size: 8px; line-height: 1; background: #fff; border: 1px solid var(--ink); border-radius: 50%; cursor: pointer; z-index: 2; transform: scale(var(--inv, 1)); transform-origin: top left; }
+.decor .dup-btn { left: calc(-5px + 18px * var(--inv, 1)); font-weight: 900; }
+.decor .catz-btn { left: calc(-5px + 36px * var(--inv, 1)); }
+.decor .catz-btn.front { background: #ffd23f; box-shadow: 0 0 0 2px #e8384f; }
+.decor .catz-btn.back { background: #c9d3de; filter: grayscale(.6); }
+.room.arranging .decor .dup-btn, .room.arranging .decor .catz-btn { display: grid; place-items: center; pointer-events: auto; }
+@media (max-width: 600px) { .decor .dup-btn, .decor .catz-btn { width: 12px; height: 12px; font-size: 7px; } .decor .dup-btn { left: calc(-5px + 15px * var(--inv, 1)); } .decor .catz-btn { left: calc(-5px + 30px * var(--inv, 1)); } }

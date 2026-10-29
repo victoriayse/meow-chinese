@@ -22,7 +22,7 @@ import * as Friends from './friends.js';
 import { openPhone, PHONE_ICON } from './phone.js';
 import { wireDisplays } from './display-racks.js';
 import { wireHomeTables } from './home-tables.js';
-import { HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, boothView, catFace, freeSlot, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx, walkPoseOf, behindCurtainOk } from './house.js';
+import { catLayerZ, HOUSE, fitHouse as fitHouseBox, houseK, roomLayout, decorEl, chatBar, say, chatLog, wirePlayable, applyPower, wirePower, emoteIcon, seatSpot, blanket, boothView, catFace, freeSlot, PetLayer, roomArrowsHtml, inPool, stackDecor, studioBarre, rideFx, walkPoseOf, behindCurtainOk } from './house.js';
 import * as Pets from './pets.js';
 import * as Care from './petcare.js';
 import { bankScreen } from './atm.js';
@@ -710,7 +710,7 @@ function homeScreen(params = {}) {
   // things lower down the room stand in front of things further back
   const depth = (el) => {
     if (el.classList.contains('flat')) return 1;
-    return 2 + Math.round(((el.offsetTop + el.offsetHeight) / room.clientHeight) * 100);
+    return catLayerZ(el, 2 + Math.round(((el.offsetTop + el.offsetHeight) / room.clientHeight) * 100));
   };
   // turn the starting spot into left/top percentages, kept inside the room
   const pin = (el) => {
@@ -1106,6 +1106,44 @@ function homeScreen(params = {}) {
         const way = it.frames && it.frames.front ? S.cycleFacing(id) : S.toggleFacing(id); sfx.click();
         const say = it.sushiBelt ? (way === 'front' ? ['竖放', 'Running front to back'] : way === 'back' ? ['反过来放', 'Mats on the other side'] : ['横放', 'Running across']) : it.sideToBelt && way === 'front' ? ['侧坐', 'Sideways (facing the belt)'] : way === 'front' ? ['面向前面', 'Facing you'] : it.flip ? (way === 'back' ? ['转到另一边', 'Turned the other way'] : ['侧放', 'Sideways']) : way === 'back' ? ['转向后面', 'Facing the back'] : ['转向前面', 'Facing the front'];
         toast(`🔄 <span class="zh">${it.name}${say[0]}</span> ${say[1]}`);
+        Visit.hostResendHouse(); redrawArranging();
+      };
+    });
+    // ⧉ another one just like it, next to it: from the storage box if there's a spare, otherwise bought (if she has the coins)
+    room.querySelectorAll('.decor .dup-btn').forEach((b) => {
+      b.addEventListener('pointerdown', (e) => e.stopPropagation());
+      b.onclick = (e) => {
+        e.stopPropagation();
+        const d = b.closest('.decor'), id = d.dataset.id, base = id.split('#')[0], it = ITEMS[base];
+        let got = (s.owned || []).find((o) => o.split('#')[0] === base && (s.decorHidden || []).includes(o)), paid = 0;
+        if (!got) {
+          const cost = S.price(base);
+          if (s.coins < cost) { sfx.miss(); return toast(`💰 <span class="zh">金币不够</span> Insufficient coins — another ${esc(it.en || it.name)} costs ${cost} coins`, { ms: 2600 }); }
+          remember();
+          got = S.buy(base);
+          if (!got) { sfx.miss(); return toast('🚫 <span class="zh">这个不能再买了</span> This one can\'t be bought again', { ms: 2200 }); }
+          paid = cost;
+        } else remember();
+        S.placeDecor(got, roomKey);
+        const p = pin(d), W = room.clientWidth, w = W ? (d.offsetWidth / W) * 100 : 10;
+        s.decorPos[got] = { x: p.x + w + 1 > 98 ? Math.max(0, p.x - w - 1) : p.x + Math.min(w + 1, 98 - p.x - w), y: p.y };
+        if ((s.decorScale || {})[id]) (s.decorScale ||= {})[got] = s.decorScale[id];
+        if ((s.facing || {})[id]) (s.facing ||= {})[got] = s.facing[id];
+        if ((s.decorCatZ || {})[id]) (s.decorCatZ ||= {})[got] = s.decorCatZ[id];
+        S.save(); sfx.coin();
+        toast(paid ? `⧉ <span class="zh">又买了一个${it.name}</span> Bought another ${esc(it.en || '')} — ${paid} coins` : `⧉ <span class="zh">从收纳箱拿出一个${it.name}</span> Another one from your storage box`, { ms: 2200 });
+        Visit.hostResendHouse(); redrawArranging();
+      };
+    });
+    // 🐱 on a piece of furniture: normal → always in front of the cats → always behind them
+    room.querySelectorAll('.decor .catz-btn').forEach((b) => {
+      b.addEventListener('pointerdown', (e) => e.stopPropagation());
+      b.onclick = (e) => {
+        e.stopPropagation(); remember();
+        const id = b.closest('.decor').dataset.id, m = (s.decorCatZ ||= {}), now = m[id], next = !now ? 'front' : now === 'front' ? 'back' : null;
+        if (next) m[id] = next; else delete m[id];
+        S.save(); sfx.click();
+        toast(next === 'front' ? '🐱 <span class="zh">在猫咪前面</span> Always IN FRONT of cats' : next === 'back' ? '🐱 <span class="zh">在猫咪后面</span> Always BEHIND cats' : '🐱 <span class="zh">正常</span> Normal (depends where the cat stands)', { ms: 1800 });
         Visit.hostResendHouse(); redrawArranging();
       };
     });

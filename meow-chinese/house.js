@@ -138,9 +138,9 @@ export function roomLayout(s, roomKey, roomOf) {
     const fv = (s.facing || {})[id];
     const back = ((it.frames && it.frames.back) || it.flip) && fv === 'back';   // turned round (or sideways)
     const front = it.frames && it.frames.front && fv === 'front';            // facing straight into the room
-    const layer = (s.decorLayer || {})[id] || 0;
+    const layer = (s.decorLayer || {})[id] || 0, catz = (s.decorCatZ || {})[id];
     const opened = (it.tapOpen || it.panel || it.gate) && !!(s.openThings || {})[id];   // (the buffet gate: held open by the admin)   // changing cubicle: curtain pulled open   // dragged on top of something: stays in front of it
-    return { id, scale, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : front ? { facing: 'front' } : {}), ...(layer ? { layer } : {}), ...(opened ? { opened } : {}), ...(text != null ? { text } : {}), ...(video ? { video } : {}), ...(it.displaySlots ? { stock: (s.displayStock || {})[id] || {} } : {}) };
+    return { id, scale, kind: flat ? 'flat' : 'stand', css, ...(photo ? { photo } : {}), ...(cage ? { cage } : {}), ...(back ? { facing: 'back' } : front ? { facing: 'front' } : {}), ...(layer ? { layer } : {}), ...(catz ? { catz } : {}), ...(opened ? { opened } : {}), ...(text != null ? { text } : {}), ...(video ? { video } : {}), ...(it.displaySlots ? { stock: (s.displayStock || {})[id] || {} } : {}) };
   }).filter(Boolean).concat(((s.roomStyle || {})[roomKey] || {}).pool ? [(() => {
     // the swimming pool (from 🎨 Renovate): she can move it like furniture
     const id = `@pool-${roomKey}`, saved = pos[id];
@@ -170,7 +170,7 @@ export function closedCurtain(g) {
   return out;
 }
 // one piece of furniture as a page element
-export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, opened, text, video, stock = {}, scale = 1 }, { putAway = false, videoPick = putAway && isAdmin(), videoOwner = videoPick } = {}) {
+export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, catz, opened, text, video, stock = {}, scale = 1 }, { putAway = false, videoPick = putAway && isAdmin(), videoOwner = videoPick } = {}) {
   scale = Math.max(0.25, Math.min(2, +scale || 1));
   if (kind === 'pool') return poolEl({ id, css, scale });
   const it = ITEMS[id]; if (!it) return null;
@@ -396,12 +396,17 @@ export function decorEl({ id, css, kind, photo, closed, cage, facing, layer, ope
     wrap.appendChild(bt);
   }
   if (layer) wrap.dataset.layer = layer;
+  if (catz === 'front' || catz === 'back') wrap.dataset.catz = catz;
   if (it.radio) wrap.classList.add('radio');
   if (it.garland) wrap.classList.add('garland');
   if (putAway && kind !== 'curtain') {                // ⬆ ⬇ put it in front of / behind other things (shown while moving furniture)
     const up = document.createElement('button'); up.className = 'layer-btn up'; up.type = 'button'; up.title = 'Bring to front'; up.textContent = '⬆';
     const dn = document.createElement('button'); dn.className = 'layer-btn down'; dn.type = 'button'; dn.title = 'Send behind'; dn.textContent = '⬇';
     wrap.append(up, dn);
+    // ⧉ another one of these · 🐱 always in front of / behind the cats
+    const du = document.createElement('button'); du.className = 'dup-btn'; du.type = 'button'; du.title = 'Duplicate'; du.textContent = '⧉';
+    const cz = document.createElement('button'); cz.className = `catz-btn ${catz || ''}`; cz.type = 'button'; cz.title = catz === 'front' ? 'In front of cats' : catz === 'back' ? 'Behind cats' : 'In front of / behind cats'; cz.textContent = '🐱';
+    wrap.append(du, cz);
   }
   if (putAway && ((it.frames && (it.frames.back || it.frames.front)) || it.flip)) {      // 🔄 turn it round / sideways (shown while moving furniture)
     const tb = document.createElement('button'); tb.className = 'turn-btn'; tb.type = 'button'; tb.title = 'Turn around'; tb.textContent = '🔄'; wrap.appendChild(tb);
@@ -435,7 +440,7 @@ export function stackDecor(roomEl) {
       if (!lay(a)) return;
       const A = box(a);
       els.forEach((b) => {
-        if (a === b || !overlap(A, box(b))) return;
+        if (a === b || (a.dataset.catz || '') !== (b.dataset.catz || '') || !overlap(A, box(b))) return;
         const za = +a.style.zIndex || 0, zb = +b.style.zIndex || 0;
         if (lay(a) > lay(b) && za <= zb + 2) a.style.zIndex = zb + 3;   // +3: also in front of a desk's front (drawn 2 above it, over a seated cat)
         else if (lay(a) < lay(b) && za >= zb) a.style.zIndex = Math.max(2, zb - 1);
@@ -462,8 +467,10 @@ export const setCatZ = (f) => { zHook = f; };
 export const catZ = (x, y) => { const z = 2 + Math.round(100 - y); return zHook ? zHook(x, y, z) : z; };
 export function depthOf(el, room) {
   if (el.classList.contains('flat')) return 1;
-  return 2 + Math.round(((el.offsetTop + el.offsetHeight) / room.clientHeight) * 100);
+  return catLayerZ(el, 2 + Math.round(((el.offsetTop + el.offsetHeight) / room.clientHeight) * 100));
 }
+// furniture set to stay in front of the cats (z 150+) or behind them (z 20–46), wherever they stand
+export const catLayerZ = (el, z) => (el.dataset.catz === 'front' ? 150 + Math.round(z / 4) : el.dataset.catz === 'back' ? 20 + Math.round(z / 4) : z);
 
 // ---------- speech bubbles (chat) ----------
 export const CHAT_MAX = 60;
