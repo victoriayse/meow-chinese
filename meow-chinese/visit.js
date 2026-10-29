@@ -346,7 +346,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   // 🙈 the Game Center's Hide & Seek
   hs = placeKey === 'gamecenter' ? createHideSeek({ me, ch, others, host: n, getMine: () => mine, getRoomKey: () => roomKey, isAdmin: Places.isAdmin, say,
     getMyWrap: () => myWrap, refreshRoom: () => { Places.savePlace(placeKey).then(() => refreshPlace()); },
-    teleport: (room, x, y) => { if (!gotHouse) return; doorArmed = false; mine.seat = null; mine.x = x; mine.y = y; if (room !== roomKey) { roomKey = room; mine.room = room; render(); } else if (myEl) place(); sendMine(); } }) : null;
+    teleport: (room, x, y) => { if (!gotHouse) return; doorArmed = false; mine.seat = null; mine.x = x; mine.y = y; if (room !== roomKey) { roomKey = room; mine.room = room; render(); } else if (myEl) place(); knock(); } }) : null;   // (knock: everyone here shows themselves again)
   if (hs && location.hostname === 'localhost') window.__hs = hs;   // (tests only)
   if (location.hostname === 'localhost') window.__vb = (ev, p) => ch.on.onBroadcast(ev, p);   // (tests only)
   ch.open();
@@ -514,7 +514,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     // 🚪 the cinema: a Left door / Right door takes the place of that side's arrow (walk into the door to go through)
     if (hs && (roomKey === GC_HALL || roomKey === HS_LOBBY)) box.querySelectorAll('.room-nav.right').forEach((b) => b.remove());   // 🚪 through the doors instead
     if (placeKey === 'cinema') box.querySelectorAll('.room-nav.left, .room-nav.right').forEach((b) => { const side = b.classList.contains('left') ? 'left' : 'right'; if (doorEl(room, side)) b.remove(); });
-    box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { if (unpaid()) return; if (hs && !hs.canGo(b.dataset.room)) return; roomKey = b.dataset.room; mine.room = roomKey; mine.seat = null; sfx.click(); render(); sendMine(); }; });
+    box.querySelectorAll('.room-nav').forEach((b) => { b.onclick = () => { if (unpaid()) return; if (hs && !hs.canGo(b.dataset.room)) return; roomKey = b.dataset.room; mine.room = roomKey; mine.seat = null; sfx.click(); render(); if (hs) knock(); else sendMine(); }; });
     // Each arrival gets one greeting sequence, even if the layout refreshes.
     if (placeKey === 'cafe' && roomKey === 'cafeentrance' && !welcomed && room.querySelector('.cafe-greeter')) {
       welcomed = true;
