@@ -757,4 +757,5 @@ export const CHANGES = [
   { v: 290, items: ['📸 Leaving the photo booth in the middle stops the photos (the coins come back)', '🔙 Turn-around pose: masks, glasses and necklaces no longer show on the back of her head'] },
   { v: 291, items: ['📸 Cats are 30% smaller in the photo booth, so more of the theme shows in your photos'] },
   { v: 292, items: ['🕹️ New Game Center on the map! Three doors: 🙈 Hide & Seek is open, the other two are being renovated', '🙈 Hide & Seek for 2–8 cats: wait in the lobby, the host picks the hiders (half the players), hiders get 90 seconds to hide, then START! and the seekers have 5 minutes to find them', '🏠 Four themed rooms to hide in: Fun Ball Pit, Toy Store, Castle and Pet Store, full of new furniture to tuck behind', '🔍 Seekers tap a hiding cat (or press 🔍 Found you!), and 🔔 Meow! shows which rooms the hiders are in', '🪙 Coins for playing: 10 if you are never found, 5 for every cat you find (5 games a day)'] },
+  { v: 293, items: ['🙈 Hide & Seek: a cat hiding behind furniture now always shows as a faint outline — tricky to spot, but never completely invisible'] },
 ];

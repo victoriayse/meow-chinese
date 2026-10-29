@@ -2663,7 +2663,6 @@ img.gone { min-height: 40px; font-size: 11px; }
 
 /* ---------- 🕹️ v292: the Game Center and 🙈 Hide & Seek ---------- */
 .room[data-room^="hs"] .vcat .kflip { scale: .7; transform-origin: 50% 100%; }
-.room.hs-game .decor { opacity: .86; }   /* a hiding cat is only just visible through the furniture */
 .room.hs-game .vcat:not(.me) .nametag { visibility: hidden; }
 .gc-hud, .hs-hud { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .gc-title { position: absolute; left: 50%; top: 9%; transform: translateX(-50%); font-weight: 900; letter-spacing: 2px; font-size: clamp(13px, 2.4vw, 24px); color: #fff; text-shadow: 0 0 6px #ff5fa8, 0 0 12px #ff5fa8; white-space: nowrap; }
@@ -2747,3 +2746,4 @@ img.gone { min-height: 40px; font-size: 11px; }
 .hs-mslot .hs-seekbtns button { flex: 1; flex-direction: row; justify-content: center; gap: 6px; font-size: 18px; padding: 6px; }
 .hs-mslot .hs-seekbtns button b { font-size: 15px; }
 .hs-mslot .hs-seekbtns small { display: none; }
+.hs-ghost { position: absolute; z-index: 240; opacity: .32; pointer-events: none; image-rendering: pixelated; }

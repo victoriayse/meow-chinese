@@ -363,6 +363,7 @@ export function createHideSeek({ me, ch, others, host, getMine, getRoomKey, tele
     }
     draw();
     if (!game || isHsRoom(rk)) poll();
+    if (PLAY_ROOMS.includes(rk) && !ghostRaf) ghostRaf = requestAnimationFrame(ghosts);
   }
   function draw() {
     if (!roomEl || !roomEl.isConnected) return;
@@ -431,10 +432,31 @@ export function createHideSeek({ me, ch, others, host, getMine, getRoomKey, tele
   }
   function showResults() { draw(); }
 
+  // 👻 a faint copy of every cat drawn over the furniture: a cat tucked behind something is never completely invisible
+  let ghostRaf = 0;
+  function ghosts() {
+    ghostRaf = 0;
+    if (stopped || !roomEl || !roomEl.isConnected || !PLAY_ROOMS.includes(getRoomKey())) return;
+    const rr = roomEl.getBoundingClientRect(), seen = new Set();
+    if (rr.width) roomEl.querySelectorAll('.vcat').forEach((cat) => {
+      const src = cat.querySelector('.kflip canvas'); if (!src || !src.width) return;
+      let g = cat.hsGhost;
+      if (!g || !g.isConnected) { g = cat.hsGhost = document.createElement('canvas'); g.className = 'hs-ghost'; roomEl.appendChild(g); }
+      seen.add(g);
+      const r = src.getBoundingClientRect(), hidden = cat.classList.contains('riding-away') || !r.width;
+      g.style.display = hidden ? 'none' : '';
+      if (hidden) return;
+      Object.assign(g.style, { left: `${((r.left - rr.left) / rr.width) * 100}%`, top: `${((r.top - rr.top) / rr.height) * 100}%`, width: `${(r.width / rr.width) * 100}%`, height: `${(r.height / rr.height) * 100}%` });
+      if (g.width !== src.width || g.height !== src.height) { g.width = src.width; g.height = src.height; }
+      const c = g.getContext('2d'); c.clearRect(0, 0, g.width, g.height); c.drawImage(src, 0, 0);
+    });
+    roomEl.querySelectorAll('.hs-ghost').forEach((g) => { if (!seen.has(g)) g.remove(); });
+    ghostRaf = requestAnimationFrame(ghosts);
+  }
   function stop() {
     if (stopped) return;
     const p = meP(); if (p && p.active) rpc('hs_leave').catch(() => {});
-    stopped = true; clearInterval(tickT); clearInterval(pollT); document.removeEventListener('keydown', keyH);
+    stopped = true; cancelAnimationFrame(ghostRaf); clearInterval(tickT); clearInterval(pollT); document.removeEventListener('keydown', keyH);
     timerEl.remove(); mslot.remove(); document.querySelectorAll('.hs-banner').forEach((b) => b.remove());
   }
   return { attach, canGo, entered, walkDoor, onBroadcast, stop, poll, _debug: () => ({ game, phase: phase(), offset }), _apply: apply };
