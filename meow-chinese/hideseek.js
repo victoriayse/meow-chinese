@@ -32,16 +32,30 @@ export const LOBBY_DOOR = { x0: 78, x1: 94, to: 'hsroom1' };
 
 // ---------- the furniture she starts with (the admin can move, store or add to it) ----------
 // [item, left %, foot % (up from the floor's front edge)]
+// rows of furniture at four depths (foot 25 at the back … 3 at the front), each piece about as tall as a cat
+const row = (foot, list) => list.map(([id, x]) => [id, x, foot]);
 const SEED = {
   hslobby: [['hsarcade', 3, 27], ['hsarcade', 15, 27], ['hsbench', 8, 4], ['hsbench', 56, 4], ['hsbigball', 44, 22]],
-  hsroom1: [['hsslidetower', 3, 22], ['hsclimbnet', 74, 22], ['hsbouncy', 44, 26], ['hsballpit', 34, 12], ['hsfoamblocks', 14, 7], ['hsbigball', 80, 4],
-    ['hsbigball', 24, 23], ['hsfoamblocks', 62, 18], ['trampoline', 58, 2], ['ballpit', 4, 2]],
-  hsroom2: [['hstoyshelf', 2, 26], ['hstoyshelf', 22, 26], ['hsdollhouse', 76, 24], ['hstoyrocket', 60, 22], ['hsgiantteddy', 40, 12],
-    ['hsabcblocks', 6, 7], ['hsgifts', 82, 6], ['hstoychest', 60, 2], ['rockingunicorn', 24, 2], ['hsgifts', 44, 26], ['hsabcblocks', 30, 17]],
-  hsroom3: [['hspillar', 3, 26], ['hspillar', 88, 26], ['hstapestry', 15, 26], ['hsthrone', 44, 24], ['hsarmour', 33, 21], ['hsarmour', 62, 21],
-    ['hsturret', 72, 10], ['hscrates', 8, 6], ['hstreasure', 46, 3], ['hstapestry', 70, 27], ['hscrates', 86, 3]],
-  hsroom4: [['hsaquarium', 2, 25], ['hspetfood', 28, 25], ['hscattree', 52, 22], ['hspetcounter', 68, 26], ['hsbirdcage', 89, 14],
-    ['hsdoghouse', 64, 6], ['hshutch', 6, 5], ['hspetfood', 34, 7], ['hscattree', 14, 18], ['hshutch', 40, 15]],
+  hsroom1: [
+    ...row(25, [['hsslidetower', 4], ['hsbouncy', 16], ['hsclimbnet', 34], ['hsbigball', 48], ['hsfoamblocks', 62], ['hsbouncy', 78]]),
+    ...row(17, [['hsballpit', 6], ['hsbigball', 32], ['hsfoamblocks', 46], ['hsclimbnet', 62], ['hsslidetower', 76], ['hsbigball', 87]]),
+    ...row(10, [['hsfoamblocks', 4], ['hsbigball', 19], ['hsballpit', 33], ['hsfoamblocks', 60], ['hsbouncy', 75]]),
+    ...row(3, [['trampoline', 8], ['hsbigball', 38], ['ballpit', 54], ['hsfoamblocks', 84]])],
+  hsroom2: [
+    ...row(25, [['hstoyshelf', 3], ['hstoyshelf', 13], ['hsdollhouse', 24], ['hstoyrocket', 37], ['hstoyshelf', 46], ['hstoyshelf', 56], ['hsdollhouse', 70], ['hsgifts', 84]]),
+    ...row(17, [['hsgiantteddy', 6], ['hstoychest', 20], ['hsabcblocks', 38], ['hsgifts', 54], ['hsgiantteddy', 68], ['hsabcblocks', 84]]),
+    ...row(10, [['hsgifts', 10], ['hstoyrocket', 26], ['hsgiantteddy', 36], ['hstoychest', 50], ['hsgifts', 70], ['hstoyrocket', 87]]),
+    ...row(3, [['hsabcblocks', 4], ['rockingunicorn', 22], ['hstoychest', 44], ['hsgiantteddy', 64], ['hsgifts', 84]])],
+  hsroom3: [
+    ...row(25, [['hspillar', 3], ['hstapestry', 10], ['hsarmour', 21], ['hsthrone', 30], ['hstapestry', 40], ['hsthrone', 52], ['hsarmour', 62], ['hstapestry', 70], ['hsturret', 80], ['hspillar', 92]]),
+    ...row(17, [['hscrates', 6], ['hsturret', 22], ['hstreasure', 34], ['hscrates', 52], ['hsarmour', 68], ['hscrates', 84]]),
+    ...row(10, [['hsarmour', 4], ['hscrates', 14], ['hsthrone', 30], ['hsturret', 44], ['hstreasure', 58], ['hscrates', 76], ['hsturret', 90]]),
+    ...row(3, [['hstreasure', 8], ['hscrates', 30], ['hstreasure', 50], ['hscrates', 70], ['hsarmour', 88]])],
+  hsroom4: [
+    ...row(25, [['hsaquarium', 3], ['hspetfood', 18], ['hscattree', 30], ['hspetfood', 40], ['hspetcounter', 52], ['hsaquarium', 72], ['hsbirdcage', 88]]),
+    ...row(17, [['hshutch', 6], ['hsdoghouse', 24], ['hspetfood', 40], ['hscattree', 54], ['hshutch', 66], ['hsdoghouse', 84]]),
+    ...row(10, [['hspetfood', 4], ['hsbirdcage', 16], ['hsaquarium', 24], ['hsdoghouse', 42], ['hspetfood', 58], ['hscattree', 72], ['hshutch', 82]]),
+    ...row(3, [['hsdoghouse', 8], ['hshutch', 30], ['hspetfood', 50], ['hsaquarium', 66], ['hsbirdcage', 90]])],
 };
 const W_PCT = 5 / 720 * 100, H_PCT = 5 / 600 * 100;   // one art pixel of furniture, in room %
 const posOf = (id, x, foot) => { const it = ITEMS[id]; const h = it.art.length * H_PCT * (it.size || 1); return { x, y: Math.round((100 - foot - h) * 10) / 10 }; };
@@ -62,14 +76,20 @@ export function fillSeed(layout) {
   return layout;
 }
 // the admin: put the starting furniture into her own rooms once (she can then move it, store it, add more)
+const SEED_V = 2;   // v295: cat-sized furniture, laid out again
 export function applySeed() {
-  const st = S.get(); if (st.hsSeeded) return false;
+  const st = S.get(); if (st.hsSeedV === SEED_V) return false;
+  if (st.hsSeeded) {   // the first (too-big) furniture comes out of the Hide & Seek rooms
+    const out = new Set((st.owned || []).filter((id) => HS_ROOMS.includes((st.decorRoom || {})[id])));
+    st.owned = st.owned.filter((id) => !out.has(id)); out.forEach((id) => { delete st.decorRoom[id]; delete st.decorPos[id]; });
+    st.decorHidden = (st.decorHidden || []).filter((id) => !out.has(id));
+  }
   Object.entries(SEED).forEach(([room, list]) => list.forEach(([id, x, foot]) => {
     if (!ITEMS[id]) return;
     const got = S.newCopyId(id); st.owned.push(got); st.decorRoom[got] = room; st.decorPos[got] = posOf(id, x, foot);
     st.decorHidden = st.decorHidden.filter((o) => o !== got);
   }));
-  st.hsSeeded = true; S.save(); return true;
+  st.hsSeeded = true; st.hsSeedV = SEED_V; S.save(); return true;
 }
 // the admin: one more piece of Hide & Seek furniture into this room
 function adminAddFurniture(room, done) {
@@ -363,7 +383,6 @@ export function createHideSeek({ me, ch, others, host, getMine, getRoomKey, tele
     }
     draw();
     if (!game || isHsRoom(rk)) poll();
-    if (PLAY_ROOMS.includes(rk) && !ghostRaf) ghostRaf = requestAnimationFrame(ghosts);
   }
   function draw() {
     if (!roomEl || !roomEl.isConnected) return;
@@ -432,38 +451,10 @@ export function createHideSeek({ me, ch, others, host, getMine, getRoomKey, tele
   }
   function showResults() { draw(); }
 
-  // 👂 the tips of every cat's ears are drawn over the furniture: a cat tucked behind something is never 100% hidden
-  let ghostRaf = 0;
-  function ghosts() {
-    ghostRaf = 0;
-    if (stopped || !roomEl || !roomEl.isConnected || !PLAY_ROOMS.includes(getRoomKey())) return;
-    const rr = roomEl.getBoundingClientRect(), seen = new Set();
-    if (rr.width) roomEl.querySelectorAll('.vcat').forEach((cat) => {
-      const src = cat.querySelector('.kflip canvas'); if (!src || !src.width) return;
-      let g = cat.hsGhost;
-      if (!g || !g.isConnected) { g = cat.hsGhost = document.createElement('canvas'); g.className = 'hs-ghost'; roomEl.appendChild(g); }
-      seen.add(g);
-      const r = src.getBoundingClientRect(), hidden = cat.classList.contains('riding-away') || !r.width;
-      g.style.display = hidden ? 'none' : '';
-      if (hidden) return;
-      Object.assign(g.style, { left: `${((r.left - rr.left) / rr.width) * 100}%`, top: `${((r.top - rr.top) / rr.height) * 100}%`, width: `${(r.width / rr.width) * 100}%`, height: `${(r.height / rr.height) * 100}%` });
-      if (g.width !== src.width || g.height !== src.height) { g.width = src.width; g.height = src.height; }
-      const c = g.getContext('2d'); c.clearRect(0, 0, g.width, g.height);
-      const sc = src.getContext('2d', { willReadFrequently: true }), w = src.width, h = src.height, px = sc.getImageData(0, 0, w, h).data;
-      let top = -1, bot = -1;
-      for (let y = 0; y < h && top < 0; y++) for (let x = 0; x < w; x++) if (px[(y * w + x) * 4 + 3] > 40) { top = y; break; }
-      for (let y = h - 1; y >= 0 && bot < 0; y--) for (let x = 0; x < w; x++) if (px[(y * w + x) * 4 + 3] > 40) { bot = y; break; }
-      if (top < 0) return;
-      const band = Math.max(2, Math.round((bot - top) * 0.09));   // just the ear tips (or the top of a hat)
-      c.drawImage(src, 0, top, w, band, 0, top, w, band);
-    });
-    roomEl.querySelectorAll('.hs-ghost').forEach((g) => { if (!seen.has(g)) g.remove(); });
-    ghostRaf = requestAnimationFrame(ghosts);
-  }
   function stop() {
     if (stopped) return;
     const p = meP(); if (p && p.active) rpc('hs_leave').catch(() => {});
-    stopped = true; cancelAnimationFrame(ghostRaf); clearInterval(tickT); clearInterval(pollT); document.removeEventListener('keydown', keyH);
+    stopped = true; clearInterval(tickT); clearInterval(pollT); document.removeEventListener('keydown', keyH);
     timerEl.remove(); mslot.remove(); document.querySelectorAll('.hs-banner').forEach((b) => b.remove());
   }
   return { attach, canGo, entered, walkDoor, onBroadcast, stop, poll, _debug: () => ({ game, phase: phase(), offset }), _apply: apply };

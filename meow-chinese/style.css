@@ -2746,4 +2746,3 @@ img.gone { min-height: 40px; font-size: 11px; }
 .hs-mslot .hs-seekbtns button { flex: 1; flex-direction: row; justify-content: center; gap: 6px; font-size: 18px; padding: 6px; }
 .hs-mslot .hs-seekbtns button b { font-size: 15px; }
 .hs-mslot .hs-seekbtns small { display: none; }
-.hs-ghost { position: absolute; z-index: 240; pointer-events: none; image-rendering: pixelated; }
