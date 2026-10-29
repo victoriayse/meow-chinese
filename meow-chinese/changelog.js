@@ -764,4 +764,5 @@ export const CHANGES = [
   { v: 297, items: ['⧉ Moving furniture: a new Duplicate button puts another one right beside it — from your storage box if you have a spare, otherwise it buys one (if you have enough coins)', '🐱 Moving furniture: a new cat button sets a piece to stay IN FRONT of cats (yellow), BEHIND cats (grey), or normal'] },
   { v: 298, items: ['🙈 Hide & Seek: once a game starts, nobody\'s name label shows (your own too) — in the lobby and all four rooms'] },
   { v: 299, items: ['🙈 Hide & Seek: in the Waiting Lobby everyone\'s name label shows again (they\'re only hidden in Rooms 1–4 during a game)', '👀 Walking into a Game Center room now makes everyone already there show up straight away'] },
+  { v: 300, items: ['🔧 Fixed: cats could not see each other in the Game Center or the Studio', '👥 Public places now show how many cats are there under the place name (or ⚠️ if the live connection is not working)'] },
 ];

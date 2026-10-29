@@ -2754,3 +2754,5 @@ img.gone { min-height: 40px; font-size: 11px; }
 .decor .catz-btn.back { background: #c9d3de; filter: grayscale(.6); }
 .room.arranging .decor .dup-btn, .room.arranging .decor .catz-btn { display: grid; place-items: center; pointer-events: auto; }
 @media (max-width: 600px) { .decor .dup-btn, .decor .catz-btn { width: 12px; height: 12px; font-size: 7px; } .decor .dup-btn { left: calc(-5px + 15px * var(--inv, 1)); } .decor .catz-btn { left: calc(-5px + 30px * var(--inv, 1)); } }
+.visit-home .visit-title .vt-live { font-size: 12px; opacity: .9; }
+.visit-home .visit-title .vt-live.bad { color: #ffd23f; }

@@ -184,7 +184,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
   const n = html`<section class="visit-home">
       <div class="visit-top"><button class="btn white small" id="leave">← ${P ? '<span class="zh">地图</span> Map' : '<span class="zh">回家</span> Leave'}</button><button class="btn white small visit-phone" id="vphone" title="Meow phone">📱</button>
         ${P && Places.isAdmin() ? '<button class="btn yellow small" id="vdeco" title="Decorate">🛠 <span class="zh">布置</span></button>' : ''}
-        <div class="visit-title">${P ? `<span class="zh">${P.icon} ${P.zh}</span> ${P.en}<small id="vt-sub">加载中… Loading…</small>` : `<span class="zh">🏠 ${esc(name || '朋友')}的家</span><small id="vt-sub">敲门中… Knocking…</small>`}</div></div>
+        <div class="visit-title">${P ? `<span class="zh">${P.icon} ${P.zh}</span> ${P.en}<small id="vt-sub">加载中… Loading…</small><small class="vt-live" id="vt-live">🔌 …</small>` : `<span class="zh">🏠 ${esc(name || '朋友')}的家</span><small id="vt-sub">敲门中… Knocking…</small>`}</div></div>
       <div class="stage in-house"><div class="house" id="house"></div></div>
       <div class="visit-log" id="vlog"></div>
       <div class="visit-chat" id="vchat"></div>
@@ -208,6 +208,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
     presenceKey: me,
     onStatus: (st, info) => {
       if (st === 'joined') { ch.track({ id: me }); knock(); if (P && gotHouse) refreshPlace(); }
+      showLive(st);
 
       if (st === 'denied') { sub.textContent = '不能进去 · Can\'t visit this house'; }
     },
@@ -261,6 +262,7 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       } else if (ev === 'bye') others.remove(p.id);
     },
     onPresence: (present, joins, leaves) => {
+      showLive('joined');
       leaves.forEach((id) => {
         if (id === hostId) { hostHere = false; others.remove(id); sub.textContent = '朋友离开了 · Your friend left'; Radio.stop(); }
         else others.remove(id);
@@ -268,6 +270,13 @@ export function visitScreen({ go, id: hostId, name = '', place: placeKey = null,
       if (joins.includes(hostId) && gotHouse && !hostHere) knock();
     },
   });
+  // 👥 how many cats are here right now (and whether the live connection is working)
+  function showLive(st) {
+    const el = $('#vt-live', n); if (!el) return;
+    if (st === 'joined') { const k = Math.max(1, ch.present.size); el.textContent = `👥 ${k} here`; el.classList.remove('bad'); }
+    else if (st === 'denied') { el.textContent = '⚠️ Can\'t connect here'; el.classList.add('bad'); }
+    else if (st === 'closed') { el.textContent = '🔌 Reconnecting…'; el.classList.add('bad'); }
+  }
   // this visit's chat, newest at the bottom (only kept while you are in the house)
   const vlog = chatLog([]);
   $('#vlog', n).appendChild(vlog.el);
